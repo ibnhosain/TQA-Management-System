@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Environment variables (SECRET! - Token আছে)
+.env
+*.env
+
+# Logs
+*.log
+
+# OS
+.DS_Store

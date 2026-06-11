@@ -1,0 +1,2 @@
+web: gunicorn tqa_backend.wsgi --bind 0.0.0.0:$PORT
+worker: celery -A tqa_backend worker -B -l info
