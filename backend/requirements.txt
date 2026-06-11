@@ -17,4 +17,5 @@ psycopg2-binary>=2.9        # PostgreSQL
 # অটোমেশন
 celery>=5.3
 redis>=5.0
+django-celery-beat>=2.6
 requests>=2.31              # Twilio/Meta WhatsApp API কল
