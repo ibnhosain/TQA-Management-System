@@ -7,10 +7,15 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
 
 
 class UserSerializer(serializers.ModelSerializer):
+    # Frontend "name" ও "sub" নামে খোঁজে — তাই name_bn/sub_title এর alias:
+    name = serializers.CharField(source="name_bn", required=False)
+    sub = serializers.CharField(source="sub_title", required=False, allow_blank=True)
+
     class Meta:
         model = User
-        fields = ["id", "username", "role", "name_bn", "sub_title", "phone", "country",
-                  "guardian", "email", "monthly_fee", "monthly_salary", "can_fix_cross"]
+        fields = ["id", "username", "role", "name", "name_bn", "sub", "sub_title",
+                  "phone", "country", "guardian", "email", "monthly_fee",
+                  "monthly_salary", "can_fix_cross"]
 
 
 class UserAdminSerializer(UserSerializer):

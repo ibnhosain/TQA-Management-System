@@ -437,22 +437,32 @@ const coverageOf = (course) => {
 
 /* ═══════════════ লগইন ═══════════════ */
 function Login({ onLogin, onAdmission }) {
-  const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState("");
-const go = async (uu, pp) => {
-  try {
-    const { login } = await import("./api");
-    const me = await login(uu, pp);
-    onLogin(me);
-  } catch {
-    setErr("ভুল আইডি বা পাসওয়ার্ড!");
-  }
-};
-  const demo = [
-    { label: "পরিচালক", icon: "👑", u: "director" },
-    { label: "এডমিন", icon: "🛡️", u: "admin" },
-    { label: "উস্তাদ", icon: "👳", u: "ustad1" },
-    { label: "স্টুডেন্ট", icon: "🎓", u: "student1" },
+  /* ভূমিকার তালিকা — কার্ড হিসেবে দেখানো হয় */
+  const ROLES = [
+    { key: "director", label: "পরিচালক", icon: "👑", desc: "সার্বিক তত্ত্বাবধান — ফি, বেতন, রিপোর্ট ও সকল ক্ষমতা" },
+    { key: "admin", label: "এডমিন", icon: "🛡️", desc: "শিক্ষার্থী, উস্তাদ, ক্লাস ও পেমেন্ট ব্যবস্থাপনা" },
+    { key: "teacher", label: "উস্তাদ / উস্তাদা", icon: "📖", desc: "ক্লাস, হাজিরা, পড়ানো ও শিক্ষার্থীর অগ্রগতি" },
+    { key: "student", label: "স্টুডেন্ট", icon: "🎓", desc: "রুটিন, পড়া, পরীক্ষা ও ফি-এর হিসাব" },
   ];
+  /* ওয়েবসাইটের login.html থেকে ?role=admin দিয়ে এলে সরাসরি ফর্মে */
+  const initRole = (() => {
+    try { const r = new URLSearchParams(window.location.search).get("role"); return ROLES.some((x) => x.key === r) ? r : null; } catch { return null; }
+  })();
+  const [role, setRole] = useState(initRole);
+  const [u, setU] = useState(""); const [p, setP] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
+  const go = async () => {
+    if (!u.trim() || !p) { setErr("আইডি ও পাসওয়ার্ড দুটোই লিখুন"); return; }
+    setBusy(true); setErr("");
+    try {
+      const { login } = await import("./api");
+      const me = await login(u.trim(), p);
+      onLogin(me);
+    } catch {
+      setErr("ভুল আইডি বা পাসওয়ার্ড!");
+    } finally { setBusy(false); }
+  };
   const [apply, setApply] = useState(false);
   const [ok, setOk] = useState(false);
   const [af, setAf] = useState({ name: "", age: "", guardian: "", country: "", contact: "", course: "নুরানী কায়দা", msg: "" });
@@ -469,20 +479,54 @@ const go = async (uu, pp) => {
           <h1 style={{ color: "#fff", fontSize: 24, margin: "4px 0 2px", fontWeight: 800 }}>তারবিয়াতুল কুরআন একাডেমি</h1>
           <div style={{ color: "#cfe6d8", fontSize: 13 }}>ম্যানেজমেন্ট সিস্টেম — এডমিন · উস্তাদ/উস্তাদা · স্টুডেন্ট</div>
         </div>
-        <div style={{ ...S.card, borderRadius: 20, padding: 24 }}>
-          <label style={S.label}>ইউজার আইডি</label>
-          <input style={S.input} value={u} onChange={(e) => setU(e.target.value)} placeholder="আইডি / জিমেইল / মোবাইল নম্বর" />
-          <div style={{ height: 12 }} />
-          <label style={S.label}>পাসওয়ার্ড</label>
-          <input style={S.input} type="password" value={p} onChange={(e) => setP(e.target.value)} placeholder="••••" onKeyDown={(e) => e.key === "Enter" && go(u, p)} />
-          {err && <div style={{ color: C.red, fontSize: 12.5, marginTop: 8 }}>{err}</div>}
-          <Btn style={{ width: "100%", justifyContent: "center", marginTop: 16 }} onClick={() => go(u, p)}>লগ ইন করুন</Btn>
-          <div style={{ textAlign: "center", fontSize: 11.5, color: C.muted, margin: "14px 0 8px" }}>— ডেমো অ্যাকাউন্ট (পাসওয়ার্ড: 1234) —</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {demo.map((d) => <Btn key={d.u} kind="soft" sm style={{ justifyContent: "center" }} onClick={() => go(d.u, "1234")}>{d.icon} {d.label}</Btn>)}
-          </div>
-          <Btn kind="ghost" style={{ width: "100%", justifyContent: "center", marginTop: 14 }} onClick={() => setApply(true)}>🎓 নতুন শিক্ষার্থী? ভর্তি আবেদন করুন</Btn>
-          {ok && <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, background: C.greenBg, color: C.green, fontSize: 12.5, fontWeight: 700, textAlign: "center" }}>✔ আবেদন জমা হয়েছে! এডমিন গ্রহণ করলে লগইন তথ্য জানানো হবে ইনশাআল্লাহ।</div>}
+        <div style={{ ...S.card, borderRadius: 20, padding: 22 }}>
+          {!role ? (
+            <>
+              {/* ── ধাপ ১: ভূমিকা বাছাই ── */}
+              <div style={{ fontWeight: 800, fontSize: 16, textAlign: "center", marginBottom: 4 }}>আপনি কে হিসেবে লগইন করবেন?</div>
+              <div style={{ fontSize: 12.5, color: C.muted, textAlign: "center", marginBottom: 14 }}>আপনার ভূমিকা বাছাই করুন</div>
+              <div style={{ display: "grid", gap: 10 }}>
+                {ROLES.map((r) => (
+                  <button key={r.key} onClick={() => { setRole(r.key); setErr(""); }}
+                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, border: `1.5px solid ${C.line}`, background: "#fff", cursor: "pointer", textAlign: "left", width: "100%", fontFamily: "inherit" }}>
+                    <span style={{ fontSize: 26, flexShrink: 0 }}>{r.icon}</span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: "block", fontWeight: 800, fontSize: 14.5, color: C.text }}>{r.label}</span>
+                      <span style={{ display: "block", fontSize: 11.5, color: C.muted, marginTop: 2 }}>{r.desc}</span>
+                    </span>
+                    <span style={{ color: C.emerald, fontWeight: 800, flexShrink: 0 }}>→</span>
+                  </button>
+                ))}
+              </div>
+              <Btn kind="ghost" style={{ width: "100%", justifyContent: "center", marginTop: 14 }} onClick={() => setApply(true)}>🎓 নতুন শিক্ষার্থী? ভর্তি আবেদন করুন</Btn>
+              {ok && <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, background: C.greenBg, color: C.green, fontSize: 12.5, fontWeight: 700, textAlign: "center" }}>✔ আবেদন জমা হয়েছে! এডমিন গ্রহণ করলে লগইন তথ্য জানানো হবে ইনশাআল্লাহ।</div>}
+            </>
+          ) : (
+            <>
+              {/* ── ধাপ ২: আইডি ও পাসওয়ার্ড ── */}
+              <button onClick={() => { setRole(null); setErr(""); }}
+                style={{ background: "none", border: "none", color: C.muted, fontSize: 12.5, cursor: "pointer", padding: 0, marginBottom: 12, fontFamily: "inherit" }}>← ভূমিকা বদলান</button>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                <span style={{ fontSize: 30 }}>{ROLES.find((r) => r.key === role).icon}</span>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>{ROLES.find((r) => r.key === role).label} লগইন</div>
+                  <div style={{ fontSize: 11.5, color: C.muted }}>আপনার আইডি ও পাসওয়ার্ড দিন</div>
+                </div>
+              </div>
+              <label style={S.label}>আইডি</label>
+              <input style={{ ...S.input, width: "100%", boxSizing: "border-box" }} value={u} onChange={(e) => setU(e.target.value)} placeholder="আইডি / ইমেইল / মোবাইল নম্বর" autoFocus />
+              <div style={{ height: 12 }} />
+              <label style={S.label}>পাসওয়ার্ড</label>
+              <div style={{ position: "relative" }}>
+                <input style={{ ...S.input, width: "100%", boxSizing: "border-box", paddingRight: 44 }} type={showPass ? "text" : "password"} value={p}
+                  onChange={(e) => setP(e.target.value)} placeholder="••••••••" onKeyDown={(e) => e.key === "Enter" && go()} />
+                <button onClick={() => setShowPass((s) => !s)} title={showPass ? "পাসওয়ার্ড লুকান" : "পাসওয়ার্ড দেখুন"} aria-label={showPass ? "পাসওয়ার্ড লুকান" : "পাসওয়ার্ড দেখুন"}
+                  style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 17, padding: 2, lineHeight: 1 }}>{showPass ? "🙈" : "👁️"}</button>
+              </div>
+              {err && <div style={{ color: C.red, fontSize: 12.5, marginTop: 8 }}>{err}</div>}
+              <Btn style={{ width: "100%", justifyContent: "center", marginTop: 16, opacity: busy ? 0.7 : 1 }} onClick={go}>{busy ? "যাচাই হচ্ছে…" : "লগ ইন করুন"}</Btn>
+            </>
+          )}
         </div>
       </div>
       {apply && (

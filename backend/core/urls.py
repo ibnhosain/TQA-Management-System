@@ -6,6 +6,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from . import views
+from .auth import FlexTokenObtainPairView
 from . import cron
 
 router = DefaultRouter()
@@ -29,7 +30,7 @@ router.register("notifications", views.NotificationViewSet, basename="notificati
 router.register("wa-messages", views.WaMessageViewSet)
 
 urlpatterns = [
-    path("auth/login", TokenObtainPairView.as_view()),
+    path("auth/login", FlexTokenObtainPairView.as_view()),  # আইডি/ইমেইল/ফোন — যেকোনোটা দিয়ে
     path("auth/refresh", TokenRefreshView.as_view()),
     # Cron endpoints (cron-job.org থেকে ডাকা হয় — Celery ছাড়া scheduled কাজ)
     path("cron/reminders/", cron.cron_reminders),
