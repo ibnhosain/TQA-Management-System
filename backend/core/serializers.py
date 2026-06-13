@@ -207,6 +207,9 @@ class SentReceiptSerializer(serializers.ModelSerializer):
 
 
 class AdmissionSerializer(serializers.ModelSerializer):
+    # website forms.js "payment_ref" পাঠায় → trx_id এ ম্যাপ
+    payment_ref = serializers.CharField(source="trx_id", required=False, allow_blank=True)
+
     class Meta:
         model = Admission
         fields = "__all__"

@@ -271,14 +271,25 @@ class SentReceipt(models.Model):
 
 # ─────────────────────────── ভর্তি, ছুটি, মূল্যায়ন ───────────────────────────
 class Admission(models.Model):
+    """ওয়েবসাইট থেকে আসা আবেদন — ভর্তি / ফ্রি ট্রায়াল / যোগাযোগ বার্তা"""
     STATUS = [("pending", "অপেক্ষমাণ"), ("accepted", "গৃহীত"), ("rejected", "বাতিল")]
+    KIND = [("admission", "ভর্তি"), ("enroll", "ভর্তি"), ("trial", "ফ্রি ট্রায়াল"), ("contact", "যোগাযোগ")]
+    kind = models.CharField(max_length=10, choices=KIND, default="admission")
     name = models.CharField(max_length=120)
     age = models.PositiveIntegerField(null=True, blank=True)
-    guardian = models.CharField(max_length=120)
+    guardian = models.CharField(max_length=120, blank=True, default="")
     country = models.CharField(max_length=60, blank=True)
-    contact = models.CharField(max_length=80)
-    course_name = models.CharField(max_length=150)
+    contact = models.CharField(max_length=80)            # WhatsApp নম্বর / ইমেইল
+    email = models.CharField(max_length=120, blank=True)
+    course_name = models.CharField(max_length=150, blank=True)
+    preferred_time = models.CharField(max_length=120, blank=True)
     message = models.TextField(blank=True)
+    # ভর্তির পেমেন্ট তথ্য ($৫ এককালীন + প্রথম মাস অগ্রিম):
+    payment_method = models.CharField(max_length=30, blank=True)   # bKash/Nagad/Bank/...
+    trx_id = models.CharField(max_length=80, blank=True)
+    screenshot = models.FileField(upload_to="admission_proofs/", null=True, blank=True)
+    # ট্রায়াল/যোগাযোগে এডমিন WhatsApp রিপ্লাই পাঠিয়েছেন কিনা:
+    replied = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=STATUS, default="pending")
     forwarded_to_director = models.BooleanField(default=False)  # এডমিন → পরিচালক
     created_student = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)

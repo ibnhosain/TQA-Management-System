@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.response import Response
 
 from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
@@ -319,16 +320,59 @@ class SentReceiptViewSet(viewsets.ModelViewSet):
 
 
 # ─────────────────────────── ভর্তি, ছুটি, মূল্যায়ন ───────────────────────────
+class _PublicFormThrottle(AnonRateThrottle):
+    rate = "5/min"  # একই ভিজিটর মিনিটে সর্বোচ্চ ৫টি ফরম — spam ঠেকাতে
+
+
 class AdmissionViewSet(viewsets.ModelViewSet):
     queryset = Admission.objects.all().order_by("-applied_at")
     serializer_class = AdmissionSerializer
 
+    def get_throttles(self):
+        if self.action == "create":
+            return [_PublicFormThrottle()]
+        return super().get_throttles()
+
     def get_permissions(self):
         if self.action == "create":
-            return []  # ওয়েবসাইটের পাবলিক ভর্তি ফরম
+            return []  # ওয়েবসাইটের পাবলিক ভর্তি/ট্রায়াল/যোগাযোগ ফরম
         if self.action == "accept":
             return [IsDirector()]  # গ্রহণ কেবল পরিচালক
         return [IsAdminLevel()]
+
+    def perform_create(self, serializer):
+        """ওয়েবসাইট থেকে নতুন আবেদন এলেই এডমিন ও পরিচালককে নোটিফিকেশন"""
+        a = serializer.save()
+        kind_bn = {"trial": "ফ্রি ট্রায়াল অনুরোধ", "contact": "যোগাযোগ বার্তা", "enroll": "ভর্তি আবেদন (পেমেন্টসহ)", "admission": "ভর্তি আবেদন"}.get(a.kind, "ভর্তি আবেদন")
+        notify(f"🌐 ওয়েবসাইট থেকে নতুন {kind_bn}: {a.name}" + (f" ({a.course_name})" if a.course_name else ""),
+               User.objects.filter(role__in=["admin", "director"]))
+
+    @action(detail=True, methods=["post"])
+    def send_reply(self, request, pk=None):
+        """এক ক্লিকে প্রস্তুত WhatsApp বার্তা — ট্রায়াল/যোগাযোগের রিপ্লাই"""
+        a = self.get_object()
+        phone = "".join(ch for ch in a.contact if ch.isdigit())
+        if len(phone) < 8:
+            return Response({"error": "এই আবেদনে বৈধ WhatsApp নম্বর নেই"}, status=400)
+        if a.kind == "trial":
+            text = (f"আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম, তারবিয়াতুল কুরআন একাডেমিতে "
+                    f"\"{a.course_name or 'কুরআন'}\" কোর্সের ফ্রি ট্রায়াল ক্লাসের জন্য {a.name}-এর অনুরোধটি "
+                    f"আমরা পেয়েছি, আলহামদুলিল্লাহ। আপনার পছন্দের সময় ({a.preferred_time or 'আলোচনাসাপেক্ষ'}) "
+                    f"বিবেচনায় রেখে ক্লাস শিডিউল চূড়ান্ত করতে আমরা শীঘ্রই এই নম্বরে যোগাযোগ করছি ইনশাআল্লাহ। "
+                    f"জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি")
+        else:
+            text = (f"আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম {a.name}, আপনার বার্তাটি আমরা পেয়েছি, "
+                    f"আলহামদুলিল্লাহ। আমাদের একজন প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবেন ইনশাআল্লাহ। "
+                    f"জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি")
+        from .tasks import dispatch_whatsapp
+        m = WaMessage.objects.create(to_name=a.name, phone=phone, text=text, reason="reminder")
+        try:
+            dispatch_whatsapp(m.id)
+        except Exception:
+            pass  # WhatsApp ব্যর্থ হলেও replied চিহ্নিত হবে — আউটবক্স থেকে আবার পাঠানো যায়
+        a.replied = True
+        a.save(update_fields=["replied"])
+        return Response({"replied": True, "wa_status": WaMessage.objects.get(pk=m.pk).status})
 
     @action(detail=True, methods=["post"])
     def forward(self, request, pk=None):  # এডমিন → পরিচালক বরাবর পাঠান
@@ -355,6 +399,23 @@ class AdmissionViewSet(viewsets.ModelViewSet):
         a.status = "accepted"
         a.created_student = student
         a.save()
+        # গ্রহণের পর অভিভাবকের WhatsApp এ আইডি-পাসওয়ার্ডসহ স্বাগত বার্তা
+        phone = "".join(ch for ch in a.contact if ch.isdigit())
+        if len(phone) >= 8:
+            text = (f"আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম, আলহামদুলিল্লাহ — "
+                    f"তারবিয়াতুল কুরআন একাডেমিতে {a.name}-এর ভর্তি নিশ্চিত হয়েছে। "
+                    f"নিয়মিত ক্লাসে যোগ দিতে আমাদের ম্যানেজমেন্ট পোর্টালে লগইন করুন:\n\n"
+                    f"🔗 https://app.tarbiyatulquran.org\n"
+                    f"👤 আইডি: {username}\n"
+                    f"🔑 পাসওয়ার্ড: {pwd}\n\n"
+                    f"প্রথমবার লগইন করে পাসওয়ার্ডটি পরিবর্তন করে নেবেন। "
+                    f"জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি")
+            from .tasks import dispatch_whatsapp
+            m = WaMessage.objects.create(to_name=a.name, phone=phone, text=text, reason="reminder")
+            try:
+                dispatch_whatsapp(m.id)
+            except Exception:
+                pass
         return Response({"username": username, "password": pwd})  # অভিভাবককে জানানোর জন্য
 
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])
