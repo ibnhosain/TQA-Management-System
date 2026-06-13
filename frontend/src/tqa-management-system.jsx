@@ -459,8 +459,16 @@ function Login({ onLogin, onAdmission }) {
       const { login } = await import("./api");
       const me = await login(u.trim(), p);
       onLogin(me);
-    } catch {
-      setErr("ভুল আইডি বা পাসওয়ার্ড!");
+    } catch (err) {
+      // ব্যাকএন্ড না থাকলে বা নেটওয়ার্ক এরর হলে — mock USERS দিয়ে fallback
+      const found = USERS.find(
+        (x) => (x.user === u.trim() || x.email === u.trim() || x.phone === u.trim()) && x.pass === p
+      );
+      if (found) {
+        onLogin({ ...found, name_bn: found.name, sub_title: found.sub });
+      } else {
+        setErr("ভুল আইডি বা পাসওয়ার্ড!");
+      }
     } finally { setBusy(false); }
   };
   const [apply, setApply] = useState(false);
@@ -1572,9 +1580,25 @@ function ManageView({ db, setDb, refresh }) {
   const [show, setShow] = useState(false);
   const [report, setReport] = useState(null); // কার বিস্তারিত রিপোর্ট দেখা হচ্ছে
   const [f, setF] = useState({ role: "student", name: "", user: "", pass: genPass(), fee: 4500, salary: 10000, sub: "", courseId: COURSES[0].id });
-  const addUser = () => {
+  const addUser = async () => {
     if (!f.name || !f.user || !f.pass) return notice("নাম, লগইন আইডি (জিমেইল/নম্বর) ও পাসওয়ার্ড দিন।");
     if (USERS.some((x) => x.user === f.user)) return notice("এই লগইন আইডি আগে থেকেই আছে — অন্যটি দিন।");
+    // ব্যাকএন্ডে সংরক্ষণ (পাসওয়ার্ডসহ)
+    try {
+      const { api } = await import("./api");
+      const payload = {
+        username: f.user,
+        name_bn: f.name,
+        sub_title: f.sub || (f.role === "student" ? "নতুন স্টুডেন্ট" : f.role === "teacher" ? "উস্তাদ/উস্তাদা" : "একাডেমিক এডমিন"),
+        role: f.role,
+        password: f.pass,
+        ...(f.role === "student" ? { monthly_fee: +f.fee } : {}),
+        ...(f.role === "teacher" ? { monthly_salary: +f.salary } : {}),
+      };
+      await api.saveUser(payload);
+    } catch {
+      // ব্যাকএন্ড না থাকলে local-এ যোগ করি (mock mode)
+    }
     const id = f.role[0] + uid();
     USERS.push({ id, role: f.role, name: f.name, sub: f.sub || (f.role === "student" ? "নতুন স্টুডেন্ট" : f.role === "teacher" ? "উস্তাদ/উস্তাদা" : "একাডেমিক এডমিন"), user: f.user, pass: f.pass, ...(f.role === "student" ? { fee: +f.fee } : {}), ...(f.role === "teacher" ? { salary: +f.salary } : {}) });
     if (f.role === "student") COURSES.find((c) => c.id === f.courseId)?.studentIds.push(id);
@@ -2132,8 +2156,25 @@ function AllStudentsView({ db, setDb, user, refresh }) {
   const [edit, setEdit] = useState(null); // {id?} — null=বন্ধ, {}=নতুন
   const students = USERS.filter((u) => u.role === "student");
   const waHi = (s) => `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম ${s.guardian || "অভিভাবক"}, তারবিয়াতুল কুরআন একাডেমির পক্ষ থেকে ${s.name}-এর বিষয়ে যোগাযোগ করছি।`;
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!edit.name || !edit.user) return notice("নাম ও আইডি দিন।");
+    // ব্যাকএন্ডে সংরক্ষণ (পাসওয়ার্ডসহ)
+    try {
+      const { api } = await import("./api");
+      const payload = {
+        username: edit.user,
+        name_bn: edit.name,
+        country: edit.country,
+        phone: edit.phone,
+        email: edit.email,
+        guardian: edit.guardian,
+        monthly_fee: +edit.fee,
+        ...(edit.pass ? { password: edit.pass } : {}),
+      };
+      await api.saveUser(payload, edit.id || undefined);
+    } catch {
+      // ব্যাকএন্ড না থাকলে local-এ সংরক্ষণ (mock mode)
+    }
     if (edit.id) { // বিদ্যমান এডিট
       const u = USERS.find((x) => x.id === edit.id);
       Object.assign(u, { name: edit.name, country: edit.country, phone: edit.phone, email: edit.email, guardian: edit.guardian, fee: +edit.fee, user: edit.user, pass: edit.pass });
