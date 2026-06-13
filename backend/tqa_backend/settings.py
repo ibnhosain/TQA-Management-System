@@ -140,6 +140,9 @@ SIMPLE_JWT = {
 }
 
 # ── CORS ──────────────────────────────────────────────────────────
+# CORS_ALLOW_ALL_ORIGINS=True হলে সব origin অনুমতি পাবে (public API-র জন্য)
+CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL_ORIGINS", "False").lower() in ("true", "1", "yes")
+
 # Frontend এর URL — কমা দিয়ে একাধিক দেওয়া যায়
 CORS_ALLOWED_ORIGINS = [
     o.strip() for o in os.environ.get(
