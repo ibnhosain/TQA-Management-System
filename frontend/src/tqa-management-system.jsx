@@ -455,20 +455,30 @@ function Login({ onLogin, onAdmission }) {
   const go = async () => {
     if (!u.trim() || !p) { setErr("আইডি ও পাসওয়ার্ড দুটোই লিখুন"); return; }
     setBusy(true); setErr("");
+    const q = u.trim();
     try {
       const { login } = await import("./api");
-      const me = await login(u.trim(), p);
-      onLogin(me);
+      const me = await login(q, p);
+      // backend এর user object কে frontend (mock) format এ রূপান্তর:
+      // backend দেয় {id:সংখ্যা, name_bn, sub_title, monthly_fee, monthly_salary, ...}
+      // frontend আশা করে {id, name, sub, user, fee, salary, ...}
+      onLogin({
+        ...me,
+        id: me.id,
+        name: me.name || me.name_bn,
+        sub: me.sub || me.sub_title || "",
+        user: me.username,
+        pass: p,
+        fee: me.monthly_fee,
+        salary: me.monthly_salary,
+      });
     } catch (err) {
-      // ব্যাকএন্ড না থাকলে বা নেটওয়ার্ক এরর হলে — mock USERS দিয়ে fallback
+      // backend না থাকলে / নেটওয়ার্ক এরর — mock USERS দিয়ে চেষ্টা
       const found = USERS.find(
-        (x) => (x.user === u.trim() || x.email === u.trim() || x.phone === u.trim()) && x.pass === p
+        (x) => (x.user === q || x.email === q || x.phone === q) && x.pass === p
       );
-      if (found) {
-        onLogin({ ...found, name_bn: found.name, sub_title: found.sub });
-      } else {
-        setErr("ভুল আইডি বা পাসওয়ার্ড!");
-      }
+      if (found) onLogin(found);
+      else setErr("ভুল আইডি বা পাসওয়ার্ড!");
     } finally { setBusy(false); }
   };
   const [apply, setApply] = useState(false);
@@ -1580,36 +1590,65 @@ function ManageView({ db, setDb, refresh }) {
   const [show, setShow] = useState(false);
   const [report, setReport] = useState(null); // কার বিস্তারিত রিপোর্ট দেখা হচ্ছে
   const [f, setF] = useState({ role: "student", name: "", user: "", pass: genPass(), fee: 4500, salary: 10000, sub: "", courseId: COURSES[0].id });
+  const [allUsers, setAllUsers] = useState(USERS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // ব্যাকএন্ড থেকে সব ব্যবহারকারী লোড — ব্যর্থ হলে mock USERS
+  const loadUsers = async () => {
+    setLoading(true);
+    try {
+      const { api } = await import("./api");
+      const data = await api.allUsers();
+      setAllUsers(data.map((u) => ({
+        id: u.id, role: u.role, name: u.name || u.name_bn, sub: u.sub || u.sub_title || "",
+        user: u.username, pass: u.password || "••••", fee: u.monthly_fee, salary: u.monthly_salary,
+        guardian: u.guardian, country: u.country, phone: u.phone, email: u.email,
+      })));
+    } catch {
+      setAllUsers(USERS);
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { loadUsers(); }, []);
+
   const addUser = async () => {
     if (!f.name || !f.user || !f.pass) return notice("নাম, লগইন আইডি (জিমেইল/নম্বর) ও পাসওয়ার্ড দিন।");
-    if (USERS.some((x) => x.user === f.user)) return notice("এই লগইন আইডি আগে থেকেই আছে — অন্যটি দিন।");
-    // ব্যাকএন্ডে সংরক্ষণ (পাসওয়ার্ডসহ)
+    setSaving(true);
     try {
       const { api } = await import("./api");
       const payload = {
-        username: f.user,
-        name_bn: f.name,
+        username: f.user, name_bn: f.name, role: f.role, password: f.pass,
         sub_title: f.sub || (f.role === "student" ? "নতুন স্টুডেন্ট" : f.role === "teacher" ? "উস্তাদ/উস্তাদা" : "একাডেমিক এডমিন"),
-        role: f.role,
-        password: f.pass,
         ...(f.role === "student" ? { monthly_fee: +f.fee } : {}),
         ...(f.role === "teacher" ? { monthly_salary: +f.salary } : {}),
       };
       await api.saveUser(payload);
-    } catch {
-      // ব্যাকএন্ড না থাকলে local-এ যোগ করি (mock mode)
-    }
-    const id = f.role[0] + uid();
-    USERS.push({ id, role: f.role, name: f.name, sub: f.sub || (f.role === "student" ? "নতুন স্টুডেন্ট" : f.role === "teacher" ? "উস্তাদ/উস্তাদা" : "একাডেমিক এডমিন"), user: f.user, pass: f.pass, ...(f.role === "student" ? { fee: +f.fee } : {}), ...(f.role === "teacher" ? { salary: +f.salary } : {}) });
-    if (f.role === "student") COURSES.find((c) => c.id === f.courseId)?.studentIds.push(id);
-    if (f.role === "teacher") setDb((d) => ({ ...d, permissions: { ...d.permissions, fixCross: { ...d.permissions.fixCross, [id]: false } } }));
-    setShow(false); setF({ ...f, name: "", user: "", pass: genPass() }); refresh();
+      await loadUsers();
+      setShow(false); setF({ ...f, name: "", user: "", pass: genPass() });
+    } catch (err) {
+      // ব্যাকএন্ড না থাকলে / আইডি ডুপ্লিকেট — mock এ যোগ
+      if (USERS.some((x) => x.user === f.user)) { setSaving(false); return notice("এই লগইন আইডি আগে থেকেই আছে — অন্যটি দিন।"); }
+      const id = f.role[0] + uid();
+      USERS.push({ id, role: f.role, name: f.name, sub: f.sub || (f.role === "student" ? "নতুন স্টুডেন্ট" : f.role === "teacher" ? "উস্তাদ/উস্তাদা" : "একাডেমিক এডমিন"), user: f.user, pass: f.pass, ...(f.role === "student" ? { fee: +f.fee } : {}), ...(f.role === "teacher" ? { salary: +f.salary } : {}) });
+      if (f.role === "student") COURSES.find((c) => c.id === f.courseId)?.studentIds.push(id);
+      if (f.role === "teacher") setDb((d) => ({ ...d, permissions: { ...d.permissions, fixCross: { ...d.permissions.fixCross, [id]: false } } }));
+      setAllUsers([...USERS]);
+      setShow(false); setF({ ...f, name: "", user: "", pass: genPass() }); refresh();
+    } finally { setSaving(false); }
   };
-  const delUser = (u) => askConfirm(`${u.name}-কে মুছে ফেলবেন? এটি ফিরিয়ে আনা যাবে না।`, () => {
-    const i = USERS.findIndex((x) => x.id === u.id);
-    if (i > -1) USERS.splice(i, 1);
-    COURSES.forEach((c) => { c.studentIds = c.studentIds.filter((s) => s !== u.id); });
-    refresh();
+
+  const delUser = (u) => askConfirm(`${u.name}-কে মুছে ফেলবেন? এটি ফিরিয়ে আনা যাবে না।`, async () => {
+    try {
+      const { api } = await import("./api");
+      await api.deleteUser(u.id);
+      await loadUsers();
+    } catch {
+      const i = USERS.findIndex((x) => x.id === u.id);
+      if (i > -1) USERS.splice(i, 1);
+      COURSES.forEach((c) => { c.studentIds = c.studentIds.filter((s) => s !== u.id); });
+      setAllUsers([...USERS]);
+      refresh();
+    }
   });
   const togglePerm = (tid) => setDb((d) => ({ ...d, permissions: { ...d.permissions, fixCross: { ...d.permissions.fixCross, [tid]: !d.permissions.fixCross[tid] } } }));
   const roleBn = { director: "পরিচালক", admin: "এডমিন", teacher: "উস্তাদ/উস্তাদা", student: "স্টুডেন্ট" };
@@ -1671,10 +1710,11 @@ function ManageView({ db, setDb, refresh }) {
   return (
     <Section title="ম্যানেজ সেটিংস" sub="পরিচালকের পূর্ণ নিয়ন্ত্রণ — সবার আইডি-পাসওয়ার্ড, বিস্তারিত রিপোর্ট; কোনো কিছুই আড়াল নয়"
       action={<Btn onClick={() => setShow(true)}>+ নতুন ব্যবহারকারী</Btn>}>
+      {loading && <div style={{ padding: "10px 0", fontSize: 13, color: C.muted }}>⏳ ব্যবহারকারী তালিকা লোড হচ্ছে…</div>}
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>👥 সকল ব্যবহারকারী — আইডি, পাসওয়ার্ড ও রিপোর্টসহ</div>
         <Table head={["নাম", "ভূমিকা", "লগইন আইডি", "পাসওয়ার্ড", "রিপোর্ট", "অ্যাকশন"]}
-          rows={USERS.map((u) => [u.name,
+          rows={allUsers.map((u) => [u.name,
             <Tag key="r" color={u.role === "director" ? C.red : u.role === "admin" ? C.emerald : u.role === "teacher" ? C.gold : C.blue} bg={C.cream}>{roleBn[u.role]}</Tag>,
             u.user,
             <code key="p" style={{ background: C.cream, padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>{u.pass}</code>,
@@ -1684,7 +1724,7 @@ function ManageView({ db, setDb, refresh }) {
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 4 }}>🔑 বিশেষ অনুমতি — ভুল সংশোধন</div>
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>সাধারণত লাল ক্রস (✘) কেবল এডমিন/পরিচালক ঠিক করতে পারেন। কোনো উস্তাদের ভুল হলে তাকে সাময়িক এডিটের সুযোগ দিন:</div>
-        {USERS.filter((u) => u.role === "teacher").map((t) => (
+        {allUsers.filter((u) => u.role === "teacher").map((t) => (
           <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, background: C.cream, marginBottom: 6, flexWrap: "wrap" }}>
             <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, minWidth: 140 }}>{t.name}</span>
             {db.permissions.fixCross[t.id] ? <Tag>অনুমতি চালু ✔</Tag> : <Tag color={C.muted} bg={"#fff"}>বন্ধ</Tag>}
@@ -1717,7 +1757,7 @@ function ManageView({ db, setDb, refresh }) {
             <div><label style={S.label}>কোর্স</label><select style={S.input} value={f.courseId} onChange={(e) => setF({ ...f, courseId: e.target.value })}>{COURSES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
           </div>}
           {f.role === "teacher" && <div style={{ marginTop: 10 }}><label style={S.label}>মাসিক বেতন (৳)</label><input type="number" style={S.input} value={f.salary} onChange={(e) => setF({ ...f, salary: e.target.value })} /></div>}
-          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={addUser}>যোগ করুন — আইডি ও পাসওয়ার্ড তৈরি হবে</Btn>
+          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: saving ? 0.7 : 1 }} onClick={addUser}>{saving ? "তৈরি হচ্ছে…" : "যোগ করুন — আইডি ও পাসওয়ার্ড তৈরি হবে"}</Btn>
         </Modal>
       )}
     </Section>
@@ -2154,42 +2194,71 @@ function MyReceiptsView({ db, user }) {
 function AllStudentsView({ db, setDb, user, refresh }) {
   const [detail, setDetail] = useState(null);
   const [edit, setEdit] = useState(null); // {id?} — null=বন্ধ, {}=নতুন
-  const students = USERS.filter((u) => u.role === "student");
+  const [students, setStudents] = useState(USERS.filter((u) => u.role === "student"));
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // ব্যাকএন্ড থেকে স্টুডেন্ট তালিকা লোড — ব্যর্থ হলে mock USERS
+  const loadStudents = async () => {
+    setLoading(true);
+    try {
+      const { api } = await import("./api");
+      const data = await api.allStudents();
+      // backend format → frontend format
+      setStudents(data.map((s) => ({
+        id: s.id, role: "student", name: s.name || s.name_bn, sub: s.sub || s.sub_title || "",
+        user: s.username, pass: s.password || "••••", fee: s.monthly_fee,
+        guardian: s.guardian, country: s.country, phone: s.phone, email: s.email,
+      })));
+    } catch {
+      setStudents(USERS.filter((u) => u.role === "student"));
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { loadStudents(); }, []);
+
   const waHi = (s) => `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম ${s.guardian || "অভিভাবক"}, তারবিয়াতুল কুরআন একাডেমির পক্ষ থেকে ${s.name}-এর বিষয়ে যোগাযোগ করছি।`;
+
   const saveEdit = async () => {
     if (!edit.name || !edit.user) return notice("নাম ও আইডি দিন।");
-    // ব্যাকএন্ডে সংরক্ষণ (পাসওয়ার্ডসহ)
+    setSaving(true);
     try {
       const { api } = await import("./api");
       const payload = {
-        username: edit.user,
-        name_bn: edit.name,
-        country: edit.country,
-        phone: edit.phone,
-        email: edit.email,
-        guardian: edit.guardian,
-        monthly_fee: +edit.fee,
+        username: edit.user, name_bn: edit.name, role: "student",
+        country: edit.country, phone: edit.phone, email: edit.email,
+        guardian: edit.guardian, monthly_fee: +edit.fee || 4500,
         ...(edit.pass ? { password: edit.pass } : {}),
       };
       await api.saveUser(payload, edit.id || undefined);
+      await loadStudents();          // ব্যাকএন্ড থেকে নতুন তালিকা
+      setEdit(null);
     } catch {
-      // ব্যাকএন্ড না থাকলে local-এ সংরক্ষণ (mock mode)
-    }
-    if (edit.id) { // বিদ্যমান এডিট
-      const u = USERS.find((x) => x.id === edit.id);
-      Object.assign(u, { name: edit.name, country: edit.country, phone: edit.phone, email: edit.email, guardian: edit.guardian, fee: +edit.fee, user: edit.user, pass: edit.pass });
-    } else { // নতুন স্টুডেন্ট যোগ
-      const id = "s" + uid();
-      USERS.push({ id, role: "student", name: edit.name, sub: courseById(COURSES, edit.courseId)?.name || "নতুন স্টুডেন্ট", user: edit.user, pass: edit.pass || genPass(), fee: +edit.fee || 4500, guardian: edit.guardian, country: edit.country, phone: edit.phone, email: edit.email });
-      COURSES.find((c) => c.id === edit.courseId)?.studentIds.push(id);
-    }
-    setEdit(null); refresh();
+      // ব্যাকএন্ড না থাকলে — mock এ সংরক্ষণ
+      if (edit.id) {
+        const u = USERS.find((x) => x.id === edit.id);
+        if (u) Object.assign(u, { name: edit.name, country: edit.country, phone: edit.phone, email: edit.email, guardian: edit.guardian, fee: +edit.fee, user: edit.user, pass: edit.pass });
+      } else {
+        const id = "s" + uid();
+        USERS.push({ id, role: "student", name: edit.name, sub: courseById(COURSES, edit.courseId)?.name || "নতুন স্টুডেন্ট", user: edit.user, pass: edit.pass || genPass(), fee: +edit.fee || 4500, guardian: edit.guardian, country: edit.country, phone: edit.phone, email: edit.email });
+        COURSES.find((c) => c.id === edit.courseId)?.studentIds.push(id);
+      }
+      setStudents(USERS.filter((u) => u.role === "student"));
+      setEdit(null); refresh();
+    } finally { setSaving(false); }
   };
-  const delStudent = (s) => askConfirm(`${s.name}-কে মুছে ফেলবেন?`, () => {
-    const i = USERS.findIndex((x) => x.id === s.id);
-    if (i > -1) USERS.splice(i, 1);
-    COURSES.forEach((c) => { c.studentIds = c.studentIds.filter((x) => x !== s.id); });
-    refresh();
+
+  const delStudent = (s) => askConfirm(`${s.name}-কে মুছে ফেলবেন?`, async () => {
+    try {
+      const { api } = await import("./api");
+      await api.deleteUser(s.id);
+      await loadStudents();
+    } catch {
+      const i = USERS.findIndex((x) => x.id === s.id);
+      if (i > -1) USERS.splice(i, 1);
+      COURSES.forEach((c) => { c.studentIds = c.studentIds.filter((x) => x !== s.id); });
+      setStudents(USERS.filter((u) => u.role === "student"));
+      refresh();
+    }
   });
   /* এক স্টুডেন্টের পূর্ণ চিত্র */
   const Detail = ({ s }) => {
@@ -2232,6 +2301,7 @@ function AllStudentsView({ db, setDb, user, refresh }) {
   return (
     <Section title="সকল স্টুডেন্ট" sub={isDir(user) ? "সম্পূর্ণ তালিকা — এডিট, যোগ ও মুছে ফেলার নিয়ন্ত্রণ কেবল পরিচালকের" : "সম্পূর্ণ তালিকা — আপনি (এডমিন) কেবল দেখতে পারবেন"}
       action={isDir(user) && <Btn onClick={() => setEdit({ name: "", country: "", phone: "", email: "", guardian: "", fee: 4500, user: "", pass: genPass(), courseId: COURSES[0].id })}>+ নতুন স্টুডেন্ট</Btn>}>
+      {loading && <div style={{ padding: "10px 0", fontSize: 13, color: C.muted }}>⏳ তালিকা লোড হচ্ছে…</div>}
       <Table head={["স্টুডেন্ট নাম", "দেশ", "আইডি", "পাসওয়ার্ড", "WhatsApp নম্বর", "বিস্তারিত", ...(isDir(user) ? ["অ্যাকশন"] : [])]}
         rows={students.map((s) => [
           <b key="n">{s.name}</b>,
@@ -2262,7 +2332,7 @@ function AllStudentsView({ db, setDb, user, refresh }) {
             <div><label style={S.label}>পাসওয়ার্ড</label><div style={{ display: "flex", gap: 6 }}><input style={{ ...S.input, flex: 1 }} value={edit.pass} onChange={(e) => setEdit({ ...edit, pass: e.target.value })} /><Btn kind="soft" sm onClick={() => setEdit({ ...edit, pass: genPass() })}>🎲</Btn></div></div>
           </div>
           {!edit.id && <div style={{ marginTop: 10 }}><label style={S.label}>কোর্স</label><select style={S.input} value={edit.courseId} onChange={(e) => setEdit({ ...edit, courseId: e.target.value })}>{COURSES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>}
-          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={saveEdit}>{edit.id ? "✏️ সংরক্ষণ করুন" : "+ যোগ করুন"}</Btn>
+          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: saving ? 0.7 : 1 }} onClick={saveEdit}>{saving ? "সংরক্ষণ হচ্ছে…" : edit.id ? "✏️ সংরক্ষণ করুন" : "+ যোগ করুন"}</Btn>
         </Modal>
       )}
     </Section>
@@ -2387,32 +2457,78 @@ function WaOutboxView({ db, setDb, user }) {
 function CourseManagerView({ db, setDb, refresh }) {
   const [edit, setEdit] = useState(null); // null=বন্ধ, {}=নতুন, {id}=এডিট
   const PALETTE = [C.emerald, C.gold, C.blue, C.red, "#7c3aed", "#0f766e"];
-  const save = () => {
+  const [courses, setCourses] = useState(COURSES);
+  const [teachers, setTeachers] = useState(USERS.filter((u) => u.role === "teacher"));
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // ব্যাকএন্ড থেকে কোর্স + উস্তাদ তালিকা লোড — ব্যর্থ হলে mock
+  const loadCourses = async () => {
+    setLoading(true);
+    try {
+      const { api } = await import("./api");
+      const [cs, us] = await Promise.all([api.courses(), api.allUsers()]);
+      setCourses(cs.map((c) => ({
+        id: c.id, name: c.name, teacherId: c.teacher, teacherName: c.teacher_name,
+        color: c.color, books: c.books || [], studentIds: c.students || [],
+        studentCount: c.student_count, lectures: [],
+      })));
+      setTeachers(us.filter((u) => u.role === "teacher").map((t) => ({
+        id: t.id, name: t.name || t.name_bn, sub: t.sub || t.sub_title || "",
+      })));
+    } catch {
+      setCourses(COURSES);
+      setTeachers(USERS.filter((u) => u.role === "teacher"));
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { loadCourses(); }, []);
+
+  const save = async () => {
     if (!edit.name?.trim()) return notice("কোর্সের নাম দিন।");
     const books = edit.books || []; // একাডেমিক বই তালিকার আইডি
-    if (edit.id) {
-      const c = COURSES.find((x) => x.id === edit.id);
-      Object.assign(c, { name: edit.name, teacherId: edit.teacherId, color: edit.color, books });
-    } else {
-      COURSES.push({ id: "c" + uid(), name: edit.name, teacherId: edit.teacherId, color: edit.color, books, studentIds: [], lectures: [] });
-    }
-    setEdit(null); refresh();
+    setSaving(true);
+    try {
+      const { api } = await import("./api");
+      const payload = { name: edit.name, teacher: edit.teacherId, color: edit.color, books };
+      await api.saveCourse(payload, edit.id || undefined);
+      await loadCourses();
+      setEdit(null);
+    } catch {
+      // ব্যাকএন্ড না থাকলে — mock এ সংরক্ষণ
+      if (edit.id) {
+        const c = COURSES.find((x) => x.id === edit.id);
+        if (c) Object.assign(c, { name: edit.name, teacherId: edit.teacherId, color: edit.color, books });
+      } else {
+        COURSES.push({ id: "c" + uid(), name: edit.name, teacherId: edit.teacherId, color: edit.color, books, studentIds: [], lectures: [] });
+      }
+      setCourses([...COURSES]);
+      setEdit(null); refresh();
+    } finally { setSaving(false); }
   };
-  const del = (c) => askConfirm(`"${c.name}" কোর্সটি মুছে ফেলবেন? এর ক্লাস ও রুটিনও সরে যাবে এবং কোথাও আর দেখা যাবে না।`, () => {
-    const i = COURSES.findIndex((x) => x.id === c.id);
-    if (i > -1) COURSES.splice(i, 1);
-    setDb((d) => ({ ...d, classes: d.classes.filter((k) => k.courseId !== c.id), routine: (d.routine || []).filter((r) => r.courseId !== c.id) }));
-    refresh();
+
+  const del = (c) => askConfirm(`"${c.name}" কোর্সটি মুছে ফেলবেন? এর ক্লাস ও রুটিনও সরে যাবে এবং কোথাও আর দেখা যাবে না।`, async () => {
+    try {
+      const { api } = await import("./api");
+      await api.deleteCourse(c.id);
+      await loadCourses();
+    } catch {
+      const i = COURSES.findIndex((x) => x.id === c.id);
+      if (i > -1) COURSES.splice(i, 1);
+      setDb((d) => ({ ...d, classes: d.classes.filter((k) => k.courseId !== c.id), routine: (d.routine || []).filter((r) => r.courseId !== c.id) }));
+      setCourses([...COURSES]);
+      refresh();
+    }
   });
   return (
     <Section title="কোর্স ব্যবস্থাপনা" sub="নতুন কোর্স যোগ, এডিট ও বাদ — কেবল পরিচালকের নিয়ন্ত্রণে; এখানকার তালিকাই সর্বত্র (রুটিন, শিডিউল, লেকচার প্ল্যান, ভর্তি ফরম) দেখা যায়"
-      action={<Btn onClick={() => setEdit({ name: "", teacherId: USERS.find((u) => u.role === "teacher")?.id, color: PALETTE[0], books: [] })}>+ নতুন কোর্স</Btn>}>
+      action={<Btn onClick={() => setEdit({ name: "", teacherId: teachers[0]?.id, color: PALETTE[0], books: [] })}>+ নতুন কোর্স</Btn>}>
+      {loading && <div style={{ padding: "10px 0", fontSize: 13, color: C.muted }}>⏳ কোর্স তালিকা লোড হচ্ছে…</div>}
       <div style={{ display: "grid", gap: 10 }}>
-        {COURSES.map((c) => (
+        {courses.map((c) => (
           <div key={c.id} style={{ ...S.card, padding: 16, borderLeft: `4px solid ${c.color || C.emerald}`, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 220 }}>
               <div style={{ fontWeight: 800, fontSize: 15 }}>{c.name}</div>
-              <div style={{ fontSize: 12.5, color: C.muted }}>উস্তাদ: {userById(c.teacherId).name || "—"} · শিক্ষার্থী: {bn(c.studentIds.length)} জন · বই: {bn((c.books || []).length)}টি · লেকচার: {bn(c.lectures.length)}টি</div>
+              <div style={{ fontSize: 12.5, color: C.muted }}>উস্তাদ: {c.teacherName || userById(c.teacherId).name || "—"} · শিক্ষার্থী: {bn(c.studentCount != null ? c.studentCount : (c.studentIds?.length || 0))} জন · বই: {bn((c.books || []).length)}টি{c.lectures?.length ? ` · লেকচার: ${bn(c.lectures.length)}টি` : ""}</div>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               <Btn sm kind="soft" onClick={() => setEdit({ id: c.id, name: c.name, teacherId: c.teacherId, color: c.color || C.emerald, books: [...(c.books || [])] })}>✏️ এডিট</Btn>
@@ -2426,7 +2542,7 @@ function CourseManagerView({ db, setDb, refresh }) {
           <label style={S.label}>কোর্সের নাম</label>
           <input style={S.input} value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="যেমন: সহীহ মাসনুন দুআ কোর্স" />
           <div style={{ marginTop: 10 }}><label style={S.label}>দায়িত্বপ্রাপ্ত উস্তাদ/উস্তাদা</label>
-            <select style={S.input} value={edit.teacherId} onChange={(e) => setEdit({ ...edit, teacherId: e.target.value })}>{USERS.filter((u) => u.role === "teacher").map((t) => <option key={t.id} value={t.id}>{t.name} ({t.sub})</option>)}</select></div>
+            <select style={S.input} value={edit.teacherId} onChange={(e) => setEdit({ ...edit, teacherId: e.target.value })}>{teachers.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.sub})</option>)}</select></div>
           <div style={{ marginTop: 10 }}><label style={S.label}>রং</label>
             <div style={{ display: "flex", gap: 8 }}>
               {PALETTE.map((p) => <button key={p} onClick={() => setEdit({ ...edit, color: p })} style={{ width: 34, height: 34, borderRadius: 10, cursor: "pointer", background: p, border: edit.color === p ? "3px solid #1a1f2e" : "2px solid #fff", boxShadow: "0 1px 4px rgba(0,0,0,.2)" }} />)}
@@ -2451,7 +2567,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                 })}
               </div>
             )}</div>
-          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={save}>{edit.id ? "✏️ সংরক্ষণ করুন" : "+ কোর্স যোগ করুন — সর্বত্র দেখা যাবে"}</Btn>
+          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: saving ? 0.7 : 1 }} onClick={save}>{saving ? "সংরক্ষণ হচ্ছে…" : edit.id ? "✏️ সংরক্ষণ করুন" : "+ কোর্স যোগ করুন — সর্বত্র দেখা যাবে"}</Btn>
         </Modal>
       )}
     </Section>

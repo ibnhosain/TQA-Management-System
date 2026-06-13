@@ -73,6 +73,7 @@ export const api = {
   // কোর্স · বই · সিলেবাস · লেকচার
   courses: () => request("/courses/"),
   saveCourse: (d, id) => request(id ? `/courses/${id}/` : "/courses/", { method: id ? "PATCH" : "POST", body: d }),
+  deleteCourse: (id) => request(`/courses/${id}/`, { method: "DELETE" }),
   books: () => request("/books/"),
   uploadBook: (name, file) => {  // একাডেমিক বই — ডিভাইস থেকে যেকোনো ফরমেট
     const f = new FormData(); f.append("name", name); f.append("file", file);
@@ -135,7 +136,9 @@ export const api = {
   waSendNow: (id) => request(`/wa-messages/${id}/send_now/`, { method: "POST" }),
 
   // ব্যবহারকারী (পরিচালক)
+  allUsers: () => request("/users/"),
   allStudents: () => request("/users/students/"),
   saveUser: (d, id) => request(id ? `/users/${id}/` : "/users/", { method: id ? "PATCH" : "POST", body: d }),
+  deleteUser: (id) => request(`/users/${id}/`, { method: "DELETE" }),
   toggleFixCross: (id) => request(`/users/${id}/toggle_fix_cross/`, { method: "POST" }),
 };
