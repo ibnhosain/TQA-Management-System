@@ -186,6 +186,16 @@ else:
         "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
     }
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "ERROR"},
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+    },
+}
+
 LANGUAGE_CODE = "bn"
 TIME_ZONE = "Asia/Dhaka"
 USE_I18N = True
