@@ -60,8 +60,15 @@ class AcademicBookViewSet(viewsets.ModelViewSet):
     permission_classes = [ReadAllWriteDirector]
 
     def get_queryset(self):
-        # সকল লগইন-করা user সব বই দেখতে পারবে; যোগ/মুছা শুধু পরিচালক (permission দিয়ে নিয়ন্ত্রিত)
         return AcademicBook.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        import traceback as tb
+        try:
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            tb.print_exc()
+            return Response({"error": str(e), "type": type(e).__name__}, status=500)
 
 
 class CourseViewSet(viewsets.ModelViewSet):
