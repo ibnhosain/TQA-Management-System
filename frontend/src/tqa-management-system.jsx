@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { api, login } from "./api";
+import { api, login, downloadBackup } from "./api";
 
 /* ═══════════════════════════════════════════════════════════
    তারবিয়াতুল কুরআন একাডেমি — ম্যানেজমেন্ট সিস্টেম (TQA-MS)
@@ -1883,6 +1883,41 @@ function AdmissionsView({ db, setDb, user, refresh }) {
   );
 }
 
+/* ═══════════════ ডেটা ব্যাকআপ কার্ড ═══════════════ */
+function BackupCard() {
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const handleDownload = async () => {
+    setBusy(true); setErr(null); setDone(false);
+    try {
+      await downloadBackup();
+      setDone(true);
+      setTimeout(() => setDone(false), 4000);
+    } catch (e) {
+      setErr(e.message || "ব্যর্থ হয়েছে");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div style={{ ...S.card, border: `1.5px solid ${C.emerald}`, marginBottom: 14 }}>
+      <div style={{ fontWeight: 800, marginBottom: 4 }}>💾 ডেটা ব্যাকআপ</div>
+      <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
+        সকল ডেটা (ব্যবহারকারী, কোর্স, ফি, ভর্তি, বই, উপস্থিতি ইত্যাদি) JSON ফাইলে ডাউনলোড করুন।
+        যেকোনো সময় সার্ভার পরিবর্তন করলেও ডেটা কাছে থাকবে।
+      </div>
+      <Btn kind="soft" onClick={handleDownload} style={{ opacity: busy ? 0.7 : 1 }}>
+        {busy ? "⏳ ডাউনলোড হচ্ছে…" : "⬇️ সম্পূর্ণ ব্যাকআপ ডাউনলোড করুন (.json)"}
+      </Btn>
+      {done && <div style={{ marginTop: 8, fontSize: 12.5, color: C.emerald, fontWeight: 600 }}>✔ ডাউনলোড সম্পন্ন হয়েছে — ফাইলটি নিরাপদ জায়গায় রাখুন।</div>}
+      {err && <div style={{ marginTop: 8, fontSize: 12.5, color: C.red }}>{err}</div>}
+    </div>
+  );
+}
+
 /* ═══════════════ ম্যানেজ সেটিংস — কেবল পরিচালক (পূর্ণ নিয়ন্ত্রণ, কিছুই আড়াল নয়) ═══════════════ */
 function ManageView({ db, setDb, refresh }) {
   const [show, setShow] = useState(false);
@@ -2027,6 +2062,7 @@ function ManageView({ db, setDb, refresh }) {
           </div>
         ))}
       </div>
+      <BackupCard />
       <div style={{ ...S.card, border: `1.5px solid #f3c9b8` }}>
         <div style={{ fontWeight: 800, marginBottom: 4, color: C.red }}>⚠️ ডেঞ্জার জোন</div>
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>ক্লাস, পরীক্ষা, নোটিশ, বই — প্রতিটি পেজে পরিচালকের জন্য আলাদা "মুছুন" বাটন চালু আছে। এছাড়া:</div>
@@ -3144,8 +3180,8 @@ function AcademicBooksView({ db, setDb, user, courses }) {
       let resp = await cache.match(url);
       if (!resp) {
         setStatus("downloading"); // প্রথমবার: backend থেকে আনো
-        const fresh = await fetch(url, { mode: "cors" });
-        if (!fresh.ok) throw new Error("fetch failed");
+        const fresh = await fetch(url, { credentials: "omit" });
+        if (!fresh.ok) throw Object.assign(new Error("not found"), { status: fresh.status });
         await cache.put(url, fresh.clone());
         resp = await cache.match(url);
       }
@@ -3156,9 +3192,15 @@ function AcademicBooksView({ db, setDb, user, courses }) {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
       setStatus("done");
       setTimeout(() => setStatus(null), 1800);
-    } catch {
-      window.open(url, "_blank"); // fallback: সরাসরি URL খোলো
-      setStatus(null);
+    } catch (e) {
+      if (e?.status === 404) {
+        notice("ফাইলটি সার্ভারে পাওয়া যাচ্ছে না। পরিচালক বইটি আবার আপলোড করুন।");
+        setStatus(null);
+      } else {
+        // CORS বা অন্য error → সরাসরি new tab এ খোলো (browser cache ব্যবহার হবে)
+        window.open(url, "_blank");
+        setStatus(null);
+      }
     }
   };
   /* বইয়ের নামে ক্লিক → প্রথমবার ডাউনলোড + cache, পরেরবার cache থেকে সরাসরি */

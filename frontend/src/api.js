@@ -169,3 +169,18 @@ export const api = {
   deleteUser: (id) => request(`/users/${id}/`, { method: "DELETE" }),
   toggleFixCross: (id) => request(`/users/${id}/toggle_fix_cross/`, { method: "POST" }),
 };
+
+/** পরিচালকের সম্পূর্ণ ডেটা ব্যাকআপ — JSON ডাউনলোড */
+export async function downloadBackup() {
+  const res = await fetch(`${BASE}/export/`, {
+    headers: access ? { Authorization: `Bearer ${access}` } : {},
+  });
+  if (!res.ok) throw new Error("ব্যাকআপ নামাতে ব্যর্থ হয়েছে");
+  const blob = await res.blob();
+  const today = new Date().toISOString().slice(0, 10);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `tqa-backup-${today}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}

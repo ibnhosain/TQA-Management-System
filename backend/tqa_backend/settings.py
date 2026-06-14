@@ -166,10 +166,25 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"  # collectstatic এখানে জমা করবে
-STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
-}
+
+# ── Cloud Storage (Cloudinary) ────────────────────────────────────
+# CLOUDINARY_URL থাকলে সব uploaded file Cloudinary তে যাবে (permanent)
+# না থাকলে local filesystem এ (development)
+CLOUDINARY_URL = os.environ.get("CLOUDINARY_URL", "")
+
+if CLOUDINARY_URL:
+    import cloudinary
+    cloudinary.config(api_proxy=None)       # Render এর proxy এর সাথে conflict এড়ানো
+    INSTALLED_APPS += ["cloudinary_storage", "cloudinary"]
+    STORAGES = {
+        "default": {"BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage"},
+        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    }
+else:
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    }
 
 LANGUAGE_CODE = "bn"
 TIME_ZONE = "Asia/Dhaka"

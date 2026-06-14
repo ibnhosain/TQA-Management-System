@@ -13,7 +13,11 @@ env/
 # Django
 db.sqlite3
 *.sqlite3
-media/
+media/*
+!media/.gitkeep
+!media/books/
+media/books/*
+!media/books/.gitkeep
 staticfiles/
 
 # Celery

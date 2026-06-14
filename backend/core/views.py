@@ -1,9 +1,11 @@
 """TQA-MS — DRF ViewSets ও workflow actions (অ্যাপ: core)"""
+import json
 from datetime import date
 from django.db.models import Q, Avg, Count
+from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes as pc
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.response import Response
@@ -57,13 +59,9 @@ class AcademicBookViewSet(viewsets.ModelViewSet):
     serializer_class = AcademicBookSerializer
     permission_classes = [ReadAllWriteDirector]
 
-    def get_queryset(self):  # রোল অনুযায়ী: এডমিন-লেভেল সব; বাকিরা নিজের কোর্সের বই
-        u = self.request.user
-        if u.role in ("director", "admin"):
-            return AcademicBook.objects.all()
-        if u.role == "teacher":
-            return AcademicBook.objects.filter(course__teacher=u).distinct()
-        return AcademicBook.objects.filter(course__students=u).distinct()
+    def get_queryset(self):
+        # সকল লগইন-করা user সব বই দেখতে পারবে; যোগ/মুছা শুধু পরিচালক (permission দিয়ে নিয়ন্ত্রিত)
+        return AcademicBook.objects.all()
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -541,3 +539,41 @@ class LibraryBookViewSet(viewsets.ModelViewSet):
     queryset = LibraryBook.objects.all()
     serializer_class = LibraryBookSerializer
     permission_classes = [ReadAllWriteAdmin]  # সবাই দেখতে পারে, যোগ/মুছা এডমিন+
+
+
+# ─────────────────────────── ডেটা এক্সপোর্ট (পরিচালক মাত্র) ───────────────────────────
+@api_view(["GET"])
+@pc([IsDirector])
+def export_all_data(request):
+    """সম্পূর্ণ ডেটাবেস JSON হিসেবে ডাউনলোড — কেবল পরিচালক"""
+    from django.core import serializers as dj_ser
+
+    def qs_to_list(qs):
+        return json.loads(dj_ser.serialize("json", qs))
+
+    payload = {
+        "exported_at": timezone.now().isoformat(),
+        "users": qs_to_list(User.objects.exclude(is_superuser=True)),
+        "courses": qs_to_list(Course.objects.all()),
+        "academic_books": qs_to_list(AcademicBook.objects.all()),
+        "library_books": qs_to_list(LibraryBook.objects.all()),
+        "admissions": qs_to_list(Admission.objects.all()),
+        "fee_payments": qs_to_list(FeePayment.objects.all()),
+        "due_months": qs_to_list(DueMonth.objects.all()),
+        "teacher_payments": qs_to_list(TeacherPayment.objects.all()),
+        "sent_receipts": qs_to_list(SentReceipt.objects.all()),
+        "notices": qs_to_list(Notice.objects.all()),
+        "leave_requests": qs_to_list(LeaveRequest.objects.all()),
+        "assignments": qs_to_list(Assignment.objects.all()),
+        "exams": qs_to_list(Exam.objects.all()),
+        "exam_results": qs_to_list(ExamResult.objects.all()),
+        "class_sessions": qs_to_list(ClassSession.objects.all()),
+        "attendance": qs_to_list(Attendance.objects.all()),
+        "ratings": qs_to_list(Rating.objects.all()),
+    }
+
+    content = json.dumps(payload, ensure_ascii=False, indent=2)
+    filename = f"tqa-backup-{date.today().isoformat()}.json"
+    resp = HttpResponse(content, content_type="application/json; charset=utf-8")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return resp

@@ -7,27 +7,28 @@ services:
     buildCommand: >-
       pip install -r requirements.txt &&
       python manage.py collectstatic --noinput &&
-      python manage.py migrate
+      python manage.py migrate &&
+      python manage.py create_director
     startCommand: gunicorn tqa_backend.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
       - key: SECRET_KEY
-        generateValue: true    # Render নিজেই random key তৈরি করবে
+        generateValue: true
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
         value: ".onrender.com"
       - key: CORS_ALLOW_ALL_ORIGINS
-        value: "True"          # যেকোনো frontend থেকে API call করতে পারবে
+        value: "True"
       - key: CRON_SECRET
-        generateValue: true    # cron-job.org এর জন্য secret key
+        generateValue: true
       - key: DATABASE_URL
-        fromDatabase:
-          name: tqa-db
-          property: connectionString
-
-databases:
-  - name: tqa-db
-    databaseName: tqa_ms
-    user: tqa_user
-    plan: free
-    region: singapore
+        sync: false    # Neon dashboard থেকে নিয়ে manually বসান (স্থায়ী)
+      - key: CLOUDINARY_URL
+        sync: false    # Cloudinary dashboard থেকে নিয়ে manually বসান (স্থায়ী)
+      - key: DIRECTOR_USERNAME
+        sync: false    # পরিচালকের লগইন আইডি — Render dashboard এ বসান
+      - key: DIRECTOR_PASSWORD
+        sync: false    # পরিচালকের পাসওয়ার্ড — Render dashboard এ বসান
+      - key: DIRECTOR_NAME
+        sync: false    # পরিচালকের নাম বাংলায়
+# Render এর built-in database বাদ — Neon ব্যবহার করুন (কখনো expire হয় না)

@@ -40,5 +40,7 @@ urlpatterns = [
     path("cron/reminders/", cron.cron_reminders),
     path("cron/daily/", cron.cron_daily),
     path("cron/monthly/", cron.cron_monthly),
+    # পরিচালক সব ডেটা ডাউনলোড করতে পারবেন — JSON ব্যাকআপ
+    path("export/", views.export_all_data),
     path("", include(router.urls)),
 ]
