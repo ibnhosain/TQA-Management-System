@@ -3077,7 +3077,6 @@ function SyllabusView({ db, setDb, courses, user }) {
 /* ═══════════════ একাডেমিক বইসমূহ — পরিচালক আপলোড করেন; যে যার কোর্সের বই দেখে ═══════════════ */
 function AcademicBooksView({ db, setDb, user, courses }) {
   const [form, setForm] = useState(null); // {name, file, fileObj}
-  const [viewer, setViewer] = useState(null); // ক্লিক করা বই — এখানেই খুলবে
   const [books, setBooks] = useState(db.academicBooks || []);
 
   const BASE_MEDIA = (import.meta.env?.VITE_API_URL || "http://localhost:8000/api").replace(/\/api$/, "");
@@ -3126,40 +3125,54 @@ function AcademicBooksView({ db, setDb, user, courses }) {
       setBooks((prev) => prev.filter((x) => x.id !== b.id));
     }
   });
-  /* বইয়ের নামে ক্লিক → এখানেই (ইন-অ্যাপ ভিউয়ারে) খুলবে — ডাউনলোড নয় */
-  const BookLink = ({ b }) => (
-    <span onClick={() => setViewer(b)}
-      style={{ fontWeight: 800, fontSize: 14, color: C.emerald, cursor: "pointer", borderBottom: `1.5px dashed ${C.emerald}` }}
-      title="ক্লিক করলেই এখানে খুলবে">
-      📖 {b.name}
-    </span>
-  );
-  /* ইন-অ্যাপ বই ভিউয়ার: PDF → iframe, ছবি → img, অন্য ফরমেট → বার্তা + বিকল্প */
-  const BookViewer = ({ b }) => {
-    const { url, mime } = useMemo(() => dataUrlToBlobUrl(b.file.data), [b.id]);
-    const isPdf = mime === "application/pdf";
-    const isImg = mime.startsWith("image/");
+  /* Cache API: প্রথমবার backend থেকে ডাউনলোড করে cache এ রাখে,
+     পরেরবার সরাসরি cache থেকে ডিভাইসের default reader এ খোলে */
+  const openBook = async (b, setStatus) => {
+    const url = b.file?.data;
+    if (!url) return;
+    // Local data URL (নতুন আপলোড, এখনো backend এ যায়নি)
+    if (url.startsWith("data:")) {
+      const { url: blobUrl } = dataUrlToBlobUrl(url);
+      const a = document.createElement("a");
+      a.href = blobUrl; a.target = "_blank"; a.rel = "noopener"; a.click();
+      return;
+    }
+    // Backend HTTP/HTTPS URL → Cache API ব্যবহার করে
+    try {
+      setStatus("loading");
+      const cache = await caches.open("tqa-books-v1");
+      let resp = await cache.match(url);
+      if (!resp) {
+        setStatus("downloading"); // প্রথমবার: backend থেকে আনো
+        const fresh = await fetch(url, { mode: "cors" });
+        if (!fresh.ok) throw new Error("fetch failed");
+        await cache.put(url, fresh.clone());
+        resp = await cache.match(url);
+      }
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl; a.target = "_blank"; a.rel = "noopener"; a.click();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+      setStatus("done");
+      setTimeout(() => setStatus(null), 1800);
+    } catch {
+      window.open(url, "_blank"); // fallback: সরাসরি URL খোলো
+      setStatus(null);
+    }
+  };
+  /* বইয়ের নামে ক্লিক → প্রথমবার ডাউনলোড + cache, পরেরবার cache থেকে সরাসরি */
+  const BookLink = ({ b }) => {
+    const [status, setStatus] = useState(null);
+    const busy = status === "loading" || status === "downloading";
     return (
-      <div onClick={() => setViewer(null)} style={{ position: "fixed", inset: 0, zIndex: 220, background: "rgba(18,63,40,.6)", display: "grid", placeItems: "center", padding: 12 }}>
-        <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 860, maxHeight: "92vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderBottom: `1px solid ${C.line}` }}>
-            <b style={{ flex: 1, fontSize: 14.5 }}>📖 {b.name} <Tag color={C.blue} bg={C.blueBg}>{bookExt(b.file.name)}</Tag></b>
-            <button onClick={() => setViewer(null)} style={{ border: "none", background: C.cream, borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 15 }}>✕</button>
-          </div>
-          <div style={{ flex: 1, overflow: "auto", background: "#525659", display: "grid", placeItems: isImg ? "center" : "stretch" }}>
-            {isPdf && <iframe src={url} title={b.name} style={{ width: "100%", height: "78vh", border: "none", background: "#fff" }} />}
-            {isImg && <img src={b.file.data} alt={b.name} style={{ maxWidth: "100%", maxHeight: "78vh", objectFit: "contain" }} />}
-            {!isPdf && !isImg && (
-              <div style={{ background: "#fff", padding: 34, textAlign: "center" }}>
-                <div style={{ fontSize: 40 }}>📄</div>
-                <div style={{ fontWeight: 800, fontSize: 15, margin: "10px 0 4px" }}>{b.file.name}</div>
-                <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>এই ফরমেট ({bookExt(b.file.name)}) ব্রাউজারে সরাসরি প্রদর্শন করা যায় না — চাইলে ফাইলটি নিয়ে ডিভাইসের রিডারে দেখতে পারেন।</div>
-                <a href={url} download={b.file.name} style={{ textDecoration: "none" }}><Btn>⬇️ ফাইলটি নিন</Btn></a>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <span onClick={() => !busy && openBook(b, setStatus)}
+        style={{ fontWeight: 800, fontSize: 14, color: busy ? C.muted : C.emerald, cursor: busy ? "wait" : "pointer", borderBottom: `1.5px dashed ${busy ? C.muted : C.emerald}` }}
+        title={busy ? "একটু অপেক্ষা করুন…" : "ক্লিক করলেই ডিভাইসের রিডারে খুলবে (প্রথমবার ডাউনলোড হবে, পরেরবার সাথে সাথে)"}>
+        {status === "downloading" ? "⏳" : status === "done" ? "⚡" : "📖"} {b.name}
+        {status === "downloading" && <span style={{ fontSize: 11, fontWeight: 400, marginLeft: 6, color: C.muted }}>ডাউনলোড হচ্ছে…</span>}
+        {status === "done" && <span style={{ fontSize: 11, fontWeight: 400, marginLeft: 6, color: C.green }}>খুলছে…</span>}
+      </span>
     );
   };
   const Card = (b) => (
@@ -3177,6 +3190,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
   return (
     <Section title="একাডেমিক বইসমূহ" sub={isAdm(user) ? "একাডেমির সকল বইয়ের কেন্দ্রীয় তালিকা — কোর্স তৈরির সময় এখান থেকেই বই সিলেক্ট হয়" : "আপনার কোর্সের নির্ধারিত বইসমূহ — নামে ক্লিক করলেই খুলবে"}
       action={isDir(user) && <Btn onClick={() => setForm({ name: "", file: null })}>+ বই যোগ করুন</Btn>}>
+      {/* viewer state সরানো হয়েছে — BookLink সরাসরি ডিভাইসে খোলে */}
       {visible.length === 0 && (
         <div style={{ ...S.card, textAlign: "center", color: C.muted, padding: 28 }}>
           📚 {isAdm(user) ? "এখনো কোনো বই যোগ হয়নি — \"+ বই যোগ করুন\" দিয়ে শুরু করুন।" : "আপনার কোর্সে এখনো কোনো বই নির্ধারিত হয়নি।"}
@@ -3197,7 +3211,6 @@ function AcademicBooksView({ db, setDb, user, courses }) {
           );
         })
       )}
-      {viewer && <BookViewer b={viewer} />}
       {form && (
         <Modal title="+ বই যোগ করুন" onClose={() => setForm(null)}>
           <label style={S.label}>বইয়ের নাম লিখুন</label>
