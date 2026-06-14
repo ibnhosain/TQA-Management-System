@@ -276,6 +276,17 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
         notify(f"{pay.student.name_bn} — {pay.month_label} মাসের ফি পরিশোধ করেছে, "
                f"পরিচালকের ভেরিফাই বাকি।", admins())
 
+    @action(detail=False, permission_classes=[IsAuthenticated])
+    def dues(self, request):  # বকেয়া মাসের তালিকা — স্টুডেন্ট নিজের, পরিচালক সবার
+        u = request.user
+        if u.role == "student":
+            qs = DueMonth.objects.filter(user=u)
+        elif u.role in ("director", "admin"):
+            qs = DueMonth.objects.all().select_related("user")
+        else:
+            qs = DueMonth.objects.none()
+        return Response(DueMonthSerializer(qs, many=True).data)
+
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])
     def verify(self, request, pk=None):  # ভেরিফাই — কেবল পরিচালক
         pay = self.get_object()

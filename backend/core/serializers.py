@@ -21,9 +21,13 @@ class UserSerializer(serializers.ModelSerializer):
 class UserAdminSerializer(UserSerializer):
     """কেবল পরিচালকের জন্য — পাসওয়ার্ড সেট/রিসেটসহ (কিছুই আড়াল নয়)"""
     password = serializers.CharField(write_only=True, required=False)
+    due_months = serializers.SerializerMethodField()
 
     class Meta(UserSerializer.Meta):
-        fields = UserSerializer.Meta.fields + ["password"]
+        fields = UserSerializer.Meta.fields + ["password", "due_months"]
+
+    def get_due_months(self, obj):
+        return list(obj.due_months.values_list("month_label", flat=True))
 
     def create(self, validated):
         pwd = validated.pop("password", None)

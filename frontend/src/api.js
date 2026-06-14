@@ -79,16 +79,23 @@ export const api = {
     const f = new FormData(); f.append("name", name); f.append("file", file);
     return request("/books/", { method: "POST", body: f, isForm: true });
   },
+  deleteBook: (id) => request(`/books/${id}/`, { method: "DELETE" }),
   syllabus: (courseId) => request(`/syllabus/?course=${courseId}`),
   addSyllabus: (d) => request("/syllabus/", { method: "POST", body: d }),
+  editSyllabus: (id, d) => request(`/syllabus/${id}/`, { method: "PATCH", body: d }),
+  deleteSyllabus: (id) => request(`/syllabus/${id}/`, { method: "DELETE" }),
   lectures: (courseId) => request(`/lectures/?course=${courseId}`),
   createLecture: (course, title, syllabus_item_ids) =>            // সিলেবাস থেকে টপিক সিলেকশন
     request("/lectures/", { method: "POST", body: { course, title, syllabus_item_ids } }),
+  editLecture: (id, d) => request(`/lectures/${id}/`, { method: "PATCH", body: d }),
+  deleteLecture: (id) => request(`/lectures/${id}/`, { method: "DELETE" }),
   markTopic: (topic_id, covered) =>                               // ✔/✘ — সবুজ/লাল
     request("/lectures/mark_topic/", { method: "POST", body: { topic_id, covered } }),
 
   // অ্যাসাইনমেন্ট ও পরীক্ষা
   assignments: () => request("/assignments/"),
+  createAssignment: (d) => request("/assignments/", { method: "POST", body: d }),
+  deleteAssignment: (id) => request(`/assignments/${id}/`, { method: "DELETE" }),
   submitAssignment: (id, { answers, file, note }) => {
     const f = new FormData();
     if (answers) f.append("answers", JSON.stringify(answers));
@@ -99,11 +106,23 @@ export const api = {
   gradeAssignment: (id, submission_id, mark) =>
     request(`/assignments/${id}/grade/`, { method: "POST", body: { submission_id, mark } }),
   exams: () => request("/exams/"),
+  createExam: (d) => request("/exams/", { method: "POST", body: d }),
+  deleteExam: (id) => request(`/exams/${id}/`, { method: "DELETE" }),
+  submitExam: (id, { answers, file, note }) => {
+    const f = new FormData();
+    if (answers) f.append("answers", JSON.stringify(answers));
+    if (file) f.append("file", file);
+    if (note) f.append("note", note);
+    return request(`/exams/${id}/submit/`, { method: "POST", body: f, isForm: true });
+  },
+  gradeExam: (id, submission_id, mark) =>
+    request(`/exams/${id}/grade/`, { method: "POST", body: { submission_id, mark } }),
   examDirectMark: (id, student_id, mark) =>
     request(`/exams/${id}/direct_mark/`, { method: "POST", body: { student_id, mark } }),
 
   // ফি ও বেতন ও রিসিট
   myFees: () => request("/fees/"),
+  myDues: () => request("/fees/dues/"),
   payFee: ({ amount, month_label, method, trx_id, screenshot }) => {  // বিকাশ/নগদ/ব্যাংক + স্ক্রিনশট
     const f = new FormData();
     f.append("amount", amount); f.append("month_label", month_label);
@@ -121,12 +140,14 @@ export const api = {
   admissions: () => request("/admissions/"),
   forwardAdmission: (id) => request(`/admissions/${id}/forward/`, { method: "POST" }),
   acceptAdmission: (id, opts) => request(`/admissions/${id}/accept/`, { method: "POST", body: opts }),
+  rejectAdmission: (id) => request(`/admissions/${id}/reject/`, { method: "POST" }),
   leaves: () => request("/leaves/"),
   applyLeave: (d) => request("/leaves/", { method: "POST", body: d }),
   forwardLeave: (id) => request(`/leaves/${id}/forward/`, { method: "POST" }),
   decideLeave: (id, approve) => request(`/leaves/${id}/decide/`, { method: "POST", body: { approve } }),
 
   // মূল্যায়ন · নোটিশ · নোটিফিকেশন · WhatsApp
+  ratings: () => request("/ratings/"),
   rateClass: (d) => request("/ratings/", { method: "POST", body: d }),
   teacherRatingSummary: (teacherId) => request(`/ratings/teacher_summary/?teacher=${teacherId}`),
   notices: () => request("/notices/"),
