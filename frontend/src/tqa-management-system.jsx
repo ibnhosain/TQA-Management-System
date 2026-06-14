@@ -3164,21 +3164,16 @@ function AcademicBooksView({ db, setDb, user, courses }) {
      পরেরবার সরাসরি cache থেকে ডিভাইসের default reader এ খোলে */
   const openBook = async (b, setStatus) => {
     const url = b.file?.data;
-    if (!url) return;
-    // Local data URL (নতুন আপলোড, এখনো backend এ যায়নি)
-    if (url.startsWith("data:")) {
-      const { url: blobUrl } = dataUrlToBlobUrl(url);
-      const a = document.createElement("a");
-      a.href = blobUrl; a.target = "_blank"; a.rel = "noopener"; a.click();
-      return;
-    }
-    // Backend HTTP/HTTPS URL → Cache API ব্যবহার করে
+    if (!url) return notice("এই বইয়ের কোনো ফাইল সংযুক্ত নেই।");
     try {
-      setStatus("loading");
       const cache = await caches.open("tqa-books-v1");
       let resp = await cache.match(url);
-      if (!resp) {
-        setStatus("downloading"); // প্রথমবার: backend থেকে আনো
+      if (resp) {
+        // ইতিমধ্যে ডিভাইসে সংরক্ষিত আছে → আর নামাবে না, সরাসরি খোলো
+        setStatus("opening");
+      } else {
+        // প্রথমবার → backend থেকে একবারই নামিয়ে সংরক্ষণ করো
+        setStatus("downloading");
         const fresh = await fetch(url, { credentials: "omit" });
         if (!fresh.ok) throw Object.assign(new Error("not found"), { status: fresh.status });
         await cache.put(url, fresh.clone());
@@ -3194,25 +3189,27 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     } catch (e) {
       if (e?.status === 404) {
         notice("ফাইলটি সার্ভারে পাওয়া যাচ্ছে না। পরিচালক বইটি আবার আপলোড করুন।");
-        setStatus(null);
       } else {
-        // CORS বা অন্য error → সরাসরি new tab এ খোলো (browser cache ব্যবহার হবে)
+        // CORS বা অন্য সমস্যা → সরাসরি নতুন ট্যাবে খোলো (ব্রাউজার নিজে cache করবে)
         window.open(url, "_blank");
-        setStatus(null);
       }
+      setStatus(null);
     }
   };
   /* বইয়ের নামে ক্লিক → প্রথমবার ডাউনলোড + cache, পরেরবার cache থেকে সরাসরি */
   const BookLink = ({ b }) => {
     const [status, setStatus] = useState(null);
-    const busy = status === "loading" || status === "downloading";
+    const busy = status === "downloading" || status === "opening";
+    const msg = status === "downloading" ? "প্রথমবার নামছে…"
+              : status === "opening" ? "ডিভাইস থেকে খুলছে…"
+              : status === "done" ? "খুলছে…" : null;
+    const icon = status === "downloading" ? "⏳" : status === "opening" ? "⚡" : status === "done" ? "✅" : "📖";
     return (
       <span onClick={() => !busy && openBook(b, setStatus)}
         style={{ fontWeight: 800, fontSize: 14, color: busy ? C.muted : C.emerald, cursor: busy ? "wait" : "pointer", borderBottom: `1.5px dashed ${busy ? C.muted : C.emerald}` }}
-        title={busy ? "একটু অপেক্ষা করুন…" : "ক্লিক করলেই ডিভাইসের রিডারে খুলবে (প্রথমবার ডাউনলোড হবে, পরেরবার সাথে সাথে)"}>
-        {status === "downloading" ? "⏳" : status === "done" ? "⚡" : "📖"} {b.name}
-        {status === "downloading" && <span style={{ fontSize: 11, fontWeight: 400, marginLeft: 6, color: C.muted }}>ডাউনলোড হচ্ছে…</span>}
-        {status === "done" && <span style={{ fontSize: 11, fontWeight: 400, marginLeft: 6, color: C.green }}>খুলছে…</span>}
+        title={busy ? "একটু অপেক্ষা করুন…" : "ক্লিক করলেই খুলবে — প্রথমবার একবার নামবে, পরেরবার সরাসরি ডিভাইস থেকে"}>
+        {icon} {b.name}
+        {msg && <span style={{ fontSize: 11, fontWeight: 400, marginLeft: 6, color: C.muted }}>{msg}</span>}
       </span>
     );
   };
