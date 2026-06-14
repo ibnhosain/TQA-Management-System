@@ -459,9 +459,6 @@ function Login({ onLogin, onAdmission }) {
     const q = u.trim();
     try {
       const me = await login(q, p);
-      // backend এর user object কে frontend (mock) format এ রূপান্তর:
-      // backend দেয় {id:সংখ্যা, name_bn, sub_title, monthly_fee, monthly_salary, ...}
-      // frontend আশা করে {id, name, sub, user, fee, salary, ...}
       onLogin({
         ...me,
         id: me.id,
@@ -472,13 +469,12 @@ function Login({ onLogin, onAdmission }) {
         fee: me.monthly_fee,
         salary: me.monthly_salary,
       });
-    } catch (err) {
-      // backend না থাকলে / নেটওয়ার্ক এরর — mock USERS দিয়ে চেষ্টা
-      const found = USERS.find(
-        (x) => (x.user === q || x.email === q || x.phone === q) && x.pass === p
-      );
-      if (found) onLogin(found);
-      else setErr("ভুল আইডি বা পাসওয়ার্ড!");
+    } catch (e) {
+      if (e?.status === 401 || e?.message?.includes("401")) {
+        setErr("ভুল আইডি বা পাসওয়ার্ড!");
+      } else {
+        setErr("সার্ভার সংযোগ নেই। ব্যাকএন্ড চালু আছে কি?");
+      }
     } finally { setBusy(false); }
   };
   const [apply, setApply] = useState(false);

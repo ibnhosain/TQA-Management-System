@@ -3,6 +3,7 @@
 লগইন (JWT): POST /api/auth/login {username, password} → {access, refresh}
 """
 from django.urls import path, include
+from django.http import JsonResponse
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from . import views
@@ -33,6 +34,8 @@ router.register("library-books", views.LibraryBookViewSet)
 urlpatterns = [
     path("auth/login", FlexTokenObtainPairView.as_view()),  # আইডি/ইমেইল/ফোন — যেকোনোটা দিয়ে
     path("auth/refresh", TokenRefreshView.as_view()),
+    # Render free tier ঘুম ভাঙানো — cron-job.org প্রতি ১৪ মিনিটে পিং করে
+    path("ping/", lambda r: JsonResponse({"ok": True, "service": "TQA-MS"})),
     # Cron endpoints (cron-job.org থেকে ডাকা হয় — Celery ছাড়া scheduled কাজ)
     path("cron/reminders/", cron.cron_reminders),
     path("cron/daily/", cron.cron_daily),
