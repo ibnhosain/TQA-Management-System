@@ -3138,13 +3138,12 @@ function AcademicBooksView({ db, setDb, user, courses }) {
   const pickFile = (e) => {
     const f = e.target.files[0];
     if (!f) return;
-    const r = new FileReader();
-    r.onload = () => setForm((x) => ({ ...x, fileObj: f, file: { data: r.result, name: f.name, type: f.type } }));
-    r.readAsDataURL(f);
+    // বড় বই data-URL এ পড়লে ব্রাউজার দীর্ঘক্ষণ আটকে যায় — শুধু আসল ফাইল রাখি, নামটুকু দেখাই
+    setForm((x) => ({ ...x, fileObj: f, file: { name: f.name, type: f.type } }));
   };
   const save = async () => {
     if (!form.name.trim()) return notice("বইয়ের নাম লিখুন।");
-    if (!form.fileObj && !form.file) return notice("ডিভাইস থেকে বইয়ের ফাইল যুক্ত করুন।");
+    if (!(form.fileObj instanceof File)) return notice("ডিভাইস থেকে বইয়ের ফাইল যুক্ত করুন।");
     try {
       await api.uploadBook(form.name.trim(), form.fileObj);
       await loadData();
@@ -3222,7 +3221,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
       <div style={{ flex: 1, minWidth: 200 }}>
         <BookLink b={b} />
         <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3 }}>
-          <Tag color={C.blue} bg={C.blueBg}>{bookExt(b.file.name)}</Tag> {b.file.name} · যোগ: {fmtDate(b.date)}
+          <Tag color={C.blue} bg={C.blueBg}>{bookExt(b.file?.name)}</Tag> {b.file?.name || "ফাইল সংযুক্ত নেই"} · যোগ: {fmtDate(b.date)}
           {isAdm(user) && <span> · কোর্স: {bookCourses(b.id).map((c) => c.name).join(", ") || "কোনো কোর্সে যুক্ত নয়"}</span>}
         </div>
       </div>

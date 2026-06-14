@@ -67,8 +67,10 @@ class AcademicBookViewSet(viewsets.ModelViewSet):
         name = request.data.get("name", "").strip()
         if not name:
             return Response({"error": "নাম দিন"}, status=400)
-        file_url = ""
         uploaded = request.FILES.get("file")
+        if not uploaded:
+            return Response({"error": "বইয়ের ফাইল যুক্ত করুন"}, status=400)
+        file_url = ""
         if uploaded:
             cloudinary_url = os.environ.get("CLOUDINARY_URL", "")
             if cloudinary_url:

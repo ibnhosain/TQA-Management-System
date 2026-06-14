@@ -270,6 +270,9 @@ class WaMessageSerializer(serializers.ModelSerializer):
 
 
 class LibraryBookSerializer(serializers.ModelSerializer):
+    # "#" বা খালি লিংককে URLField বৈধতা যাচাইয়ে আটকানো হবে না (নইলে "বৈধ URL দিন" এরর)
+    link = serializers.CharField(required=False, allow_blank=True, default="#", max_length=500)
+
     class Meta:
         model = LibraryBook
         fields = ["id", "cls", "title", "author", "link", "file_type", "created_at"]
