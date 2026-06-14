@@ -3148,11 +3148,11 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     try {
       await api.uploadBook(form.name.trim(), form.fileObj);
       await loadData();
-    } catch {
-      setBooks((prev) => [...prev, { id: "b" + uid(), name: form.name.trim(), file: form.file, date: todayISO() }]);
-      setDb((d) => ({ ...d, academicBooks: [...(d.academicBooks || []), { id: "b" + uid(), name: form.name.trim(), file: form.file, date: todayISO() }] }));
+      setForm(null);
+    } catch (e) {
+      const msg = e?.data?.error || e?.message || "অজানা সমস্যা";
+      notice(`বই যোগ ব্যর্থ: ${msg}`);
     }
-    setForm(null);
   };
   const del = (b) => askConfirm(`"${b.name}" বইটি মুছে ফেলবেন? কোর্সগুলো থেকেও সরে যাবে।`, async () => {
     try { await api.deleteBook(b.id); await loadData(); }
