@@ -868,18 +868,40 @@ function LecturePlan({ db, courses, user, refresh }) {
 
 /* ═══════════════ হাজিরা রিপোর্ট (ফিচার ৪) ═══════════════ */
 function AttendanceView({ db, courses, user }) {
-  const rows = db.attendance
-    .map((a) => ({ a, k: db.classes.find((k) => k.id === a.classId) }))
-    .filter(({ k }) => k && courseById(courses, k.courseId).id)
-    .filter(({ a }) => (user.role === "student" ? a.userId === user.id : user.role === "teacher" ? true : true))
-    .map(({ a, k }) => {
-      const c = courseById(courses, k.courseId);
-      const ok = a.minutes >= 40;
-      return [userById(a.userId).name, c.name, fmtDate(k.date), `${bn(a.minutes)} মিনিট`, ok ? <Tag key="t">উপস্থিত ✔</Tag> : <Tag key="t" color={C.red} bg={C.redBg}>অনুপস্থিত (৪০ মিনিটের কম)</Tag>];
+  const [sessions, setSessions] = useState(null);
+
+  useEffect(() => {
+    api.classes().then(setSessions).catch(() => setSessions(null));
+  }, []);
+
+  let rows;
+  if (sessions) {
+    rows = sessions.flatMap((k) =>
+      (k.attendance || []).map((a) => ({
+        name: a.user_name || "—",
+        courseName: k.course_name || courseById(courses, k.course || k.courseId).name,
+        date: k.date, minutes: a.minutes || 0, userId: a.user,
+      }))
+    )
+    .filter((r) => user.role === "student" ? String(r.userId) === String(user.id) : true)
+    .map((r) => {
+      const ok = r.minutes >= 40;
+      return [r.name, r.courseName, fmtDate(r.date), `${bn(r.minutes)} মিনিট`, ok ? <Tag key="t">উপস্থিত ✔</Tag> : <Tag key="t" color={C.red} bg={C.redBg}>অনুপস্থিত (৪০ মিনিটের কম)</Tag>];
     });
+  } else {
+    rows = db.attendance
+      .map((a) => ({ a, k: db.classes.find((k) => k.id === a.classId) }))
+      .filter(({ k }) => k && courseById(courses, k.courseId).id)
+      .filter(({ a }) => user.role === "student" ? a.userId === user.id : true)
+      .map(({ a, k }) => {
+        const c = courseById(courses, k.courseId);
+        const ok = a.minutes >= 40;
+        return [userById(a.userId).name, c.name, fmtDate(k.date), `${bn(a.minutes)} মিনিট`, ok ? <Tag key="t">উপস্থিত ✔</Tag> : <Tag key="t" color={C.red} bg={C.redBg}>অনুপস্থিত (৪০ মিনিটের কম)</Tag>];
+      });
+  }
   return (
     <Section title="হাজিরা রিপোর্ট" sub="ন্যূনতম ৪০ মিনিট ক্লাসে থাকলে তবেই হাজিরা গণ্য হয়">
-      <Table head={["নাম", "কোর্স", "তারিখ", "উপস্থিতি", "অবস্থা"]} rows={rows} />
+      <Table head={["নাম", "কোর্স", "তারিখ", "উপস্থিতি", "অবস্থা"]} rows={rows} empty="কোনো হাজিরা রেকর্ড নেই" />
     </Section>
   );
 }
@@ -1310,50 +1332,84 @@ function ExamsView({ db, setDb, courses, user }) {
 
 /* ═══════════════ স্টুডেন্ট প্রোফাইল ও অগ্রগতি রিপোর্ট (ফিচার ৭) ═══════════════ */
 function ProgressView({ db, setDb, courses, user }) {
-  const students = user.role === "student" ? [user] : USERS.filter((u) => u.role === "student");
+  const [allStudents, setAllStudents] = useState(user.role === "student" ? [user] : USERS.filter((u) => u.role === "student"));
   const [pay, setPay] = useState(false);
   const [maker, setMaker] = useState(false);
   const [pf, setPf] = useState({ method: "বিকাশ", trx: "" });
-  const [sel, setSel] = useState(students[0]?.id);
-  const st = userById(sel);
-  const stCourses = courses.filter((c) => c.studentIds.includes(sel));
-  const att = db.attendance.filter((a) => a.userId === sel);
+  const [sel, setSel] = useState(allStudents[0]?.id || user.id);
+  const [fees, setFees] = useState(db.feePayments || []);
+  const [duesMap, setDuesMap] = useState(db.dueMonths || {});
+  const [sessions, setSessions] = useState(null);
+  const [examList, setExamList] = useState(db.exams || []);
+
+  const loadData = async () => {
+    try {
+      const tasks = [api.myFees(), api.myDues(), api.classes(), api.exams()];
+      if (user.role !== "student") tasks.push(api.allStudents());
+      const [feesData, duesData, sessData, examsData, studsData] = await Promise.all(tasks);
+      setFees(feesData.map((p) => ({ id: p.id, studentId: p.student || p.studentId, amount: +p.amount, month: p.month_label || p.month, date: p.paid_at || p.date, method: p.method + (p.trx_id ? ` (Trx: ${p.trx_id})` : ""), status: p.status })));
+      const dm = {};
+      duesData.forEach((d) => { const uid2 = String(d.user || d.userId); if (!dm[uid2]) dm[uid2] = []; dm[uid2].push(d.month_label || d.month); });
+      setDuesMap(dm);
+      setSessions(sessData);
+      setExamList(examsData.map((e) => ({ ...e, courseId: e.course || e.courseId, total: e.total_marks || e.total, marks: e.results || e.marks || {} })));
+      if (studsData) setAllStudents(studsData.map((s) => ({ id: s.id, name: s.name || s.name_bn, sub: s.sub || s.sub_title, fee: s.monthly_fee || s.fee, role: "student" })));
+    } catch { /* keep mock */ }
+  };
+  useEffect(() => { loadData(); }, [user.id]);
+
+  const st = allStudents.find((s) => String(s.id) === String(sel)) || userById(sel);
+  const selId = String(sel);
+  const stCourses = courses.filter((c) => (c.studentIds || c.students || []).some((x) => String(x) === selId));
+  const att = sessions
+    ? sessions.flatMap((k) => (k.attendance || []).filter((a) => String(a.user) === selId).map((a) => ({ minutes: a.minutes || 0 })))
+    : db.attendance.filter((a) => String(a.userId) === selId);
   const present = att.filter((a) => a.minutes >= 40).length;
   const missed = att.filter((a) => a.minutes < 40).length;
-  const paid = db.feePayments.filter((p) => p.studentId === sel).reduce((s, p) => s + p.amount, 0);
-  const due = (db.dueMonths[sel] || []).length * (st.fee || 0);
-  const makeups = db.makeups.filter((m) => m.studentId === sel);
-  const exams = db.exams.filter((e) => e.marks[sel] != null);
-  const recordPay = () => {
-    const month = (db.dueMonths[sel] || [])[0];
-    if (!month) return;
-    setDb((d) => ({ ...d,
-      feePayments: [...d.feePayments, { id: uid(), studentId: sel, amount: st.fee, month, date: todayISO(), method: "নগদ গ্রহণ (অফিস)", status: "verified" }],
-      dueMonths: { ...d.dueMonths, [sel]: d.dueMonths[sel].slice(1) } }));
+  const myFees = fees.filter((p) => String(p.studentId) === selId);
+  const paid = myFees.reduce((s, p) => s + (+p.amount || 0), 0);
+  const dueMonths = duesMap[selId] || db.dueMonths?.[sel] || [];
+  const due = dueMonths.length * (st?.monthly_fee || st?.fee || 0);
+  const makeups = (db.makeups || []).filter((m) => String(m.studentId) === selId);
+  const exams = examList.filter((e) => e.marks && e.marks[sel] != null);
+  const recordPay = async () => {
+    const month = dueMonths[0]; if (!month) return;
+    try {
+      await api.payFee({ amount: st.fee, month_label: month, method: "নগদ গ্রহণ (অফিস)" });
+      await loadData();
+    } catch {
+      setFees((prev) => [...prev, { id: uid(), studentId: sel, amount: st.fee, month, date: todayISO(), method: "নগদ গ্রহণ (অফিস)", status: "verified" }]);
+      setDuesMap((prev) => ({ ...prev, [selId]: (prev[selId] || []).slice(1) }));
+    }
   };
-  const studentPay = () => {
-    const month = (db.dueMonths[sel] || [])[0];
-    if (!month) return;
-    setDb((d) => ({ ...d,
-      feePayments: [...d.feePayments, { id: uid(), studentId: sel, amount: st.fee, month, date: todayISO(), method: pf.method + (pf.trx ? ` (Trx: ${pf.trx})` : ""), status: "pending" }],
-      dueMonths: { ...d.dueMonths, [sel]: d.dueMonths[sel].slice(1) },
-      notifications: [{ id: uid(), for: ["admin1", "dir1"], text: `${st.name} — ${month} মাসের ফি ${pf.method}-এ পরিশোধ করেছে, পরিচালকের ভেরিফাই বাকি।`, date: todayISO(), read: false }, ...d.notifications] }));
+  const studentPay = async () => {
+    const month = dueMonths[0]; if (!month) return;
+    try {
+      await api.payFee({ amount: st.fee, month_label: month, method: pf.method, trx_id: pf.trx });
+      await loadData();
+    } catch {
+      setFees((prev) => [...prev, { id: uid(), studentId: sel, amount: st.fee, month, date: todayISO(), method: pf.method + (pf.trx ? ` (Trx: ${pf.trx})` : ""), status: "pending" }]);
+      setDuesMap((prev) => ({ ...prev, [selId]: (prev[selId] || []).slice(1) }));
+    }
     setPay(false); setPf({ method: "বিকাশ", trx: "" });
   };
-  const verifyPay = (pid) => setDb((d) => ({ ...d, feePayments: d.feePayments.map((p) => p.id === pid ? { ...p, status: "verified" } : p) }));
+  const verifyPay = async (pid) => {
+    try { await api.verifyFee(pid); await loadData(); }
+    catch { setFees((prev) => prev.map((p) => p.id === pid ? { ...p, status: "verified" } : p)); }
+  };
   return (
     <Section title="শিক্ষার্থীর অগ্রগতি ও রিপোর্ট" sub="অগ্রগতি · ফি · মিসিং ক্লাস · মেকআপ ক্লাস — সব এক জায়গায়" action={isAdm(user) && <Btn kind="gold" sm onClick={() => setMaker(true)}>🧾 রিসিট বানান</Btn>}>
       {maker && <ReceiptMaker user={user} onClose={() => setMaker(false)} />}
       {user.role !== "student" && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-          {students.map((s) => <Btn key={s.id} sm kind={sel === s.id ? "primary" : "soft"} onClick={() => setSel(s.id)}>{s.name}</Btn>)}
+          {allStudents.map((s) => <Btn key={s.id} sm kind={String(sel) === String(s.id) ? "primary" : "soft"} onClick={() => setSel(s.id)}>{s.name}</Btn>)}
         </div>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, marginBottom: 14 }}>
         <Stat icon="✅" label="উপস্থিত ক্লাস" value={bn(present)} />
         <Stat icon="❌" label="মিসিং ক্লাস" value={bn(missed)} accent={C.red} note="৪০ মিনিটের কম উপস্থিতিসহ" />
         <Stat icon="💰" label="পরিশোধিত ফি" value={`৳${bn(paid.toLocaleString("en"))}`} accent={C.gold} />
-        <Stat icon="⏳" label="বকেয়া" value={`৳${bn(due.toLocaleString("en"))}`} accent={C.red} note={(db.dueMonths[sel] || []).join(", ") || "নেই"} />
+        <Stat icon="⏳" label="বকেয়া" value={`৳${bn(due.toLocaleString("en"))}`} accent={C.red} note={dueMonths.join(", ") || "নেই"} />
       </div>
       <div style={{ display: "grid", gap: 14 }}>
         <div style={{ ...S.card }}>
@@ -1370,13 +1426,13 @@ function ProgressView({ db, setDb, courses, user }) {
             <div style={{ fontWeight: 800 }}>💳 ফি পরিশোধের ইতিহাস</div>
             <span style={{ display: "flex", gap: 8 }}>{user.role === "student" && due > 0 && <Btn sm kind="gold" onClick={() => setPay(true)}>💳 ফি পরিশোধ করুন</Btn>}{isAdm(user) && due > 0 && <Btn sm kind="gold" onClick={recordPay}>+ এক মাসের পেমেন্ট রেকর্ড করুন</Btn>}</span>
           </div>
-          <Table head={["মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "অবস্থা", "রিসিট"]} rows={db.feePayments.filter((p) => p.studentId === sel).map((p) => [p.month, `৳${bn(p.amount.toLocaleString("en"))}`, fmtDate(p.date), p.method,
+          <Table head={["মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "অবস্থা", "রিসিট"]} rows={myFees.map((p) => [p.month, `৳${bn((+p.amount).toLocaleString("en"))}`, fmtDate(p.date), p.method,
             p.status === "pending"
               ? (isDir(user) ? <Btn key="v" sm kind="gold" onClick={() => verifyPay(p.id)}>✔ ভেরিফাই করুন</Btn> : <Tag key="t" color={C.gold} bg={C.amberBg}>⏳ পেন্ডিং</Tag>)
               : <Tag key="t">যাচাইকৃত ✔</Tag>,
-            <Btn key="r" sm kind="soft" onClick={() => printReceipt({ ...p, date: fmtDate(p.date) }, st, "ফি পরিশোধ রিসিট")}>🧾 PDF</Btn>])} />
+            <Btn key="r" sm kind="soft" onClick={() => printReceipt({ ...p, date: fmtDate(p.date) }, st, "ফি পরিশোধ রিসিট")}>🧾 PDF</Btn>])} empty="কোনো পেমেন্ট নেই" />
           {pay && (
-            <Modal title={`ফি পরিশোধ — ${(db.dueMonths[sel] || [])[0] || ""}`} onClose={() => setPay(false)}>
+            <Modal title={`ফি পরিশোধ — ${dueMonths[0] || ""}`} onClose={() => setPay(false)}>
               <div style={{ ...S.card, padding: 12, background: C.amberBg, border: "none", marginBottom: 12, fontSize: 13 }}>পরিমাণ: <b>৳{bn((st.fee || 0).toLocaleString("en"))}</b> · পরিশোধের পর এডমিন যাচাই করলে নিশ্চিত হবে।</div>
               <label style={S.label}>পেমেন্ট মাধ্যম</label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
@@ -1408,15 +1464,36 @@ function ProgressView({ db, setDb, courses, user }) {
 /* ═══════════════ হিসাব-নিকাশ (ফিচার ৯) ═══════════════ */
 function AccountsView({ db, setDb, user }) {
   const [maker, setMaker] = useState(false);
-  const income = db.feePayments.reduce((s, p) => s + p.amount, 0);
-  const expense = db.teacherPayments.reduce((s, p) => s + p.amount, 0);
-  const teachers = USERS.filter((u) => u.role === "teacher");
-  const payTeacher = (t) => {
-    const month = (db.dueMonths[t.id] || [])[0];
-    if (!month) return;
-    setDb((d) => ({ ...d,
-      teacherPayments: [...d.teacherPayments, { id: uid(), teacherId: t.id, amount: t.salary, month, date: todayISO(), method: "ব্যাংক" }],
-      dueMonths: { ...d.dueMonths, [t.id]: d.dueMonths[t.id].slice(1) } }));
+  const [fees, setFees] = useState(db.feePayments || []);
+  const [salaries, setSalaries] = useState(db.teacherPayments || []);
+  const [teachers, setTeachers] = useState(USERS.filter((u) => u.role === "teacher"));
+  const [duesMap, setDuesMap] = useState(db.dueMonths || {});
+
+  const loadData = async () => {
+    try {
+      const [feesData, salData, usersData, duesData] = await Promise.all([api.myFees(), api.salaries(), api.allUsers(), api.myDues()]);
+      setFees(feesData.map((p) => ({ ...p, amount: +p.amount })));
+      setSalaries(salData.map((p) => ({ ...p, teacherId: p.teacher || p.teacherId, amount: +p.amount, month: p.month_label || p.month, teacher_name: p.teacher_name })));
+      setTeachers(usersData.filter((u) => u.role === "teacher").map((u) => ({ id: u.id, name: u.name || u.name_bn, salary: u.monthly_salary || u.salary || 0, role: "teacher" })));
+      const dm = {};
+      duesData.forEach((d) => { const k = String(d.user || d.userId); if (!dm[k]) dm[k] = []; dm[k].push(d.month_label || d.month); });
+      setDuesMap(dm);
+    } catch { /* keep mock */ }
+  };
+  useEffect(() => { loadData(); }, []);
+
+  const income = fees.reduce((s, p) => s + (+p.amount || 0), 0);
+  const expense = salaries.reduce((s, p) => s + (+p.amount || 0), 0);
+  const payTeacher = async (t) => {
+    const dues = duesMap[String(t.id)] || db.dueMonths?.[t.id] || [];
+    const month = dues[0]; if (!month) return;
+    try {
+      await api.sendReceipt({ to_user: t.id, kind: "বেতন পরিশোধ ভাউচার", month_label: month, amount: t.salary || t.monthly_salary, method: "ব্যাংক" });
+      await loadData();
+    } catch {
+      setSalaries((prev) => [...prev, { id: uid(), teacherId: t.id, teacher_name: t.name, amount: t.salary, month, date: todayISO(), method: "ব্যাংক" }]);
+      setDuesMap((prev) => ({ ...prev, [String(t.id)]: (prev[String(t.id)] || []).slice(1) }));
+    }
   };
   return (
     <Section title="হিসাব-নিকাশ" sub="আয় (স্টুডেন্ট ফি) · ব্যয় (উস্তাদদের বেতন) · বকেয়া" action={<Btn kind="gold" onClick={() => setMaker(true)}>🧾 রিসিট বানান</Btn>}>
@@ -1430,21 +1507,26 @@ function AccountsView({ db, setDb, user }) {
         <div style={{ fontWeight: 800, marginBottom: 10 }}>👳 উস্তাদদের বেতন</div>
         <Table head={["নাম", "মাসিক বেতন", "বকেয়া মাস", "অ্যাকশন"]}
           rows={teachers.map((t) => {
-            const dues = db.dueMonths[t.id] || [];
-            return [t.name, `৳${bn(t.salary.toLocaleString("en"))}`, dues.length ? <Tag key="d" color={C.red} bg={C.redBg}>{dues.join(", ")}</Tag> : <Tag key="d">পরিশোধিত ✔</Tag>, dues.length ? <Btn key="b" sm kind="gold" onClick={() => payTeacher(t)}>পেমেন্ট দিন</Btn> : "—"];
+            const dues = duesMap[String(t.id)] || db.dueMonths?.[t.id] || [];
+            return [t.name, `৳${bn((t.salary || t.monthly_salary || 0).toLocaleString("en"))}`, dues.length ? <Tag key="d" color={C.red} bg={C.redBg}>{dues.join(", ")}</Tag> : <Tag key="d">পরিশোধিত ✔</Tag>, dues.length ? <Btn key="b" sm kind="gold" onClick={() => payTeacher(t)}>পেমেন্ট দিন</Btn> : "—"];
           })} />
       </div>
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>📤 বেতন পরিশোধের ইতিহাস</div>
-        <Table head={["উস্তাদ", "মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "ভাউচার"]} rows={db.teacherPayments.map((p) => [userById(p.teacherId).name, p.month, `৳${bn(p.amount.toLocaleString("en"))}`, fmtDate(p.date), p.method, <Btn key="r" sm kind="soft" onClick={() => printReceipt({ ...p, date: fmtDate(p.date) }, userById(p.teacherId), "বেতন পরিশোধ ভাউচার")}>🧾 PDF</Btn>])} />
+        <Table head={["উস্তাদ", "মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "ভাউচার"]} rows={salaries.map((p) => {
+          const tName = p.teacher_name || userById(p.teacherId || p.teacher)?.name || "—";
+          return [tName, p.month || p.month_label, `৳${bn((+p.amount || 0).toLocaleString("en"))}`, fmtDate(p.paid_at || p.date), p.method, <Btn key="r" sm kind="soft" onClick={() => printReceipt({ ...p, month: p.month || p.month_label, date: fmtDate(p.paid_at || p.date) }, { name: tName }, "বেতন পরিশোধ ভাউচার")}>🧾 PDF</Btn>];
+        })} empty="কোনো পেমেন্ট ইতিহাস নেই" />
       </div>
       <div style={{ ...S.card }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>📥 স্টুডেন্ট ফি বকেয়া</div>
         <Table head={["স্টুডেন্ট", "মাসিক ফি", "বকেয়া মাস", "বকেয়া টাকা"]}
-          rows={USERS.filter((u) => u.role === "student").map((s) => {
-            const dues = db.dueMonths[s.id] || [];
-            return [s.name, `৳${bn(s.fee.toLocaleString("en"))}`, dues.join(", ") || "—", dues.length ? <Tag key="t" color={C.red} bg={C.redBg}>৳{bn((dues.length * s.fee).toLocaleString("en"))}</Tag> : <Tag key="t">পরিশোধিত ✔</Tag>];
-          })} />
+          rows={Object.entries(duesMap).filter(([, months]) => months.length > 0).map(([sid, months]) => {
+            const feeData = fees.find((p) => String(p.student || p.studentId) === sid);
+            const monthlyFee = feeData?.amount || 0;
+            const name = USERS.find((u) => String(u.id) === sid)?.name || "স্টুডেন্ট " + sid;
+            return [name, `৳${bn(monthlyFee.toLocaleString("en"))}`, months.join(", "), <Tag key="t" color={C.red} bg={C.redBg}>৳{bn((months.length * monthlyFee).toLocaleString("en"))}</Tag>];
+          })} empty="কোনো বকেয়া নেই ✔" />
       </div>
     </Section>
   );
@@ -1452,11 +1534,31 @@ function AccountsView({ db, setDb, user }) {
 
 /* ═══════════════ ওয়েবসাইট ফর্ম সাবমিশন (ফিচার ৮) ═══════════════ */
 function FormsView({ db, setDb }) {
-  const toggle = (id) => setDb((d) => ({ ...d, forms: d.forms.map((f) => f.id === id ? { ...f, status: f.status === "new" ? "replied" : "new" } : f) }));
+  const [forms, setForms] = useState(db.forms || []);
+
+  useEffect(() => {
+    api.admissions().then((data) => {
+      const contactForms = data.filter((a) => a.kind === "trial" || a.kind === "contact");
+      if (contactForms.length > 0) setForms(contactForms.map((a) => ({
+        id: a.id, type: a.kind === "trial" ? "ফ্রি ট্রায়াল" : "যোগাযোগ",
+        name: a.name, contact: a.contact || a.email, msg: a.message || a.msg,
+        date: a.applied_at || a.date, status: a.replied ? "replied" : "new",
+      })));
+    }).catch(() => { /* keep mock */ });
+  }, []);
+
+  const toggle = async (id) => {
+    const f = forms.find((x) => x.id === id);
+    const newStatus = f?.status === "new" ? "replied" : "new";
+    try {
+      await api.replyAdmission(id, newStatus === "replied");
+    } catch { /* ignore */ }
+    setForms((prev) => prev.map((x) => x.id === id ? { ...x, status: newStatus } : x));
+  };
   return (
     <Section title="ওয়েবসাইট ফর্ম সাবমিশন" sub="tarbiyatulquran.org-এর যোগাযোগ ও ফ্রি ট্রায়াল ফর্ম থেকে আসা তথ্য">
       <div style={{ display: "grid", gap: 10 }}>
-        {db.forms.map((f) => (
+        {forms.map((f) => (
           <div key={f.id} style={{ ...S.card, padding: 16, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-start", borderLeft: `4px solid ${f.status === "new" ? C.gold : C.line}` }}>
             <div style={{ flex: 1, minWidth: 220 }}>
               <div style={{ fontWeight: 800 }}>{f.name} <Tag color={C.blue} bg={C.blueBg}>{f.type}</Tag> {f.status === "new" && <Tag color={C.gold} bg={C.amberBg}>নতুন</Tag>}</div>
@@ -1475,7 +1577,8 @@ function FormsView({ db, setDb }) {
 function BooksView({ db, setDb, user }) {
   const [show, setShow] = useState(false);
   const [f, setF] = useState({ cls: "", title: "", author: "", link: "#", type: "PDF" });
-  const groups = [...new Set(db.books.map((b) => b.cls))];
+  const [books, setBooks] = useState(db.books || []);
+  const groups = [...new Set(books.map((b) => b.cls))];
   return (
     <Section title="বই লাইব্রেরি" sub="সকল শ্রেণির পাঠ্যবই ও সহায়ক বই — ডাউনলোডযোগ্য"
       action={isAdm(user) && <Btn onClick={() => setShow(true)}>+ বই যোগ করুন</Btn>}>
@@ -1483,13 +1586,13 @@ function BooksView({ db, setDb, user }) {
         <div key={g} style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 800, fontSize: 14.5, marginBottom: 8, color: C.emerald }}>📗 {g}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 10 }}>
-            {db.books.filter((b) => b.cls === g).map((b) => (
+            {books.filter((b) => b.cls === g).map((b) => (
               <div key={b.id} style={{ ...S.card, padding: 14 }}>
                 <div style={{ fontWeight: 700, fontSize: 13.5 }}>{b.title}</div>
                 <div style={{ fontSize: 12, color: C.muted, margin: "3px 0 8px" }}>{b.author}</div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <Tag color={C.blue} bg={C.blueBg}>{b.type}</Tag>
-                  <span style={{ display: "flex", gap: 8, alignItems: "center" }}><a href={b.link} style={{ fontSize: 12.5, fontWeight: 700, color: C.emerald, textDecoration: "none" }}>⬇ ডাউনলোড</a>{isDir(user) && <Btn sm kind="danger" onClick={() => setDb((d) => ({ ...d, books: d.books.filter((x) => x.id !== b.id) }))}>✕</Btn>}</span>
+                  <span style={{ display: "flex", gap: 8, alignItems: "center" }}><a href={b.link} style={{ fontSize: 12.5, fontWeight: 700, color: C.emerald, textDecoration: "none" }}>⬇ ডাউনলোড</a>{isDir(user) && <Btn sm kind="danger" onClick={() => setBooks((prev) => prev.filter((x) => x.id !== b.id))}>✕</Btn>}</span>
                 </div>
               </div>
             ))}
@@ -1501,7 +1604,7 @@ function BooksView({ db, setDb, user }) {
           <label style={S.label}>শ্রেণি / কোর্স</label><input style={S.input} value={f.cls} onChange={(e) => setF({ ...f, cls: e.target.value })} placeholder="যেমন: তাজবীদ" />
           <div style={{ marginTop: 10 }}><label style={S.label}>বইয়ের নাম</label><input style={S.input} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
           <div style={{ marginTop: 10 }}><label style={S.label}>লেখক</label><input style={S.input} value={f.author} onChange={(e) => setF({ ...f, author: e.target.value })} /></div>
-          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={() => { setDb((d) => ({ ...d, books: [...d.books, { id: uid(), ...f }] })); setShow(false); }}>যোগ করুন</Btn>
+          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={() => { setBooks((prev) => [...prev, { id: uid(), ...f }]); setShow(false); }}>যোগ করুন</Btn>
         </Modal>
       )}
     </Section>
@@ -2415,11 +2518,24 @@ function LeaveView({ db, setDb, user }) {
 
 /* ═══════════════ ভাউচার/রিসিট — পাঠানো রিসিট প্রাপকের পোর্টালে ═══════════════ */
 function MyReceiptsView({ db, user }) {
-  const list = (db.sentReceipts || []).filter((x) => x.toUserId === user.id);
+  const [receipts, setReceipts] = useState((db.sentReceipts || []).filter((x) => String(x.toUserId) === String(user.id)));
+
+  useEffect(() => {
+    api.myReceipts().then((data) => {
+      setReceipts(data.map((r) => ({
+        id: r.id, toUserId: r.to_user || r.toUserId,
+        kind: r.kind, month: r.month_label || r.month,
+        amount: r.amount, method: r.method,
+        date: r.sent_at ? fmtDate(r.sent_at) : (r.date || todayISO()),
+        sentBy: r.sent_by_name || r.sentBy || "—",
+      })));
+    }).catch(() => { /* keep mock */ });
+  }, [user.id]);
+
   return (
     <Section title="ভাউচার / রিসিট" sub="একাডেমি থেকে আপনার জন্য পাঠানো রিসিট ও ভাউচার — দেখুন, প্রিন্ট বা PDF সেভ করুন">
       <Table head={["ধরন", "মাস/বিবরণ", "পরিমাণ", "তারিখ", "পাঠিয়েছেন", "দেখুন"]}
-        rows={list.map((x) => [x.kind, x.month, `৳${bn(Number(x.amount).toLocaleString("en"))}`, x.date, x.sentBy || "—",
+        rows={receipts.map((x) => [x.kind, x.month, `৳${bn(Number(x.amount).toLocaleString("en"))}`, x.date, x.sentBy || "—",
           <Btn key="v" sm kind="soft" onClick={() => printReceipt({ ...x, noSend: true }, user, x.kind)}>👁 দেখুন / ডাউনলোড</Btn>])}
         empty="এখনো কোনো রিসিট পাঠানো হয়নি" />
     </Section>
@@ -2574,19 +2690,41 @@ function AllStudentsView({ db, setDb, user, refresh }) {
 
 /* ═══════════════ উস্তাদ-ভিত্তিক বোর্ড — কার কাছে কে পড়ে, সামনের ক্লাস, স্থগিত করার ক্ষমতা ═══════════════ */
 function TeacherWiseBoard({ db, setDb, user }) {
-  const teachers = USERS.filter((u) => u.role === "teacher");
-  const [sel, setSel] = useState(user.role === "teacher" ? user.id : teachers[0]?.id);
+  const [allTeachers, setAllTeachers] = useState(USERS.filter((u) => u.role === "teacher"));
+  const [sel, setSel] = useState(user.role === "teacher" ? user.id : allTeachers[0]?.id);
+  const [routines, setRoutines] = useState(db.routine || []);
+  const [upcomingAll, setUpcomingAll] = useState([]);
+
+  useEffect(() => {
+    Promise.all([api.allUsers(), api.routines(), api.classes()]).then(([usersData, routData, classData]) => {
+      const ts = usersData.filter((u) => u.role === "teacher");
+      if (ts.length) setAllTeachers(ts.map((u) => ({ id: u.id, name: u.name || u.name_bn, role: "teacher" })));
+      setRoutines(routData.map((r) => ({ ...r, courseId: r.course || r.courseId, teacherId: r.teacher || r.teacherId, studentIds: r.students || r.studentIds || [], days: r.days || [] })));
+      setUpcomingAll(classData.filter((k) => (k.date || "") >= todayISO() && k.status === "upcoming"));
+    }).catch(() => {
+      setRoutines(db.routine || []);
+      setUpcomingAll(db.classes.filter((k) => k.date >= todayISO() && k.status === "upcoming"));
+    });
+  }, []);
+
   const tid = user.role === "teacher" ? user.id : sel;
-  const t = userById(tid);
-  const routines = (db.routine || []).filter((r) => (r.teacherId || courseById(COURSES, r.courseId).teacherId) === tid);
-  const upcoming = db.classes.filter((k) => (k.teacherId || courseById(COURSES, k.courseId).teacherId) === tid && k.date >= todayISO() && k.status === "upcoming").sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 6);
-  const postpone = (k) => askConfirm("ক্লাসটি স্থগিত করবেন? উস্তাদ, স্টুডেন্ট সবার পোর্টালে সাথে সাথে আপডেট হবে এবং অভিভাবকের WhatsApp মেসেজ তৈরি হবে।", () => {
-    const c = courseById(COURSES, k.courseId);
-    const studs = (k.studentIds && k.studentIds.length ? k.studentIds : c.studentIds) || [];
-    setDb((d) => ({ ...d,
-      classes: d.classes.map((x) => x.id === k.id ? { ...x, status: "postponed" } : x),
-      waOutbox: [...waGuardianMsgs(k, c, "postpone"), ...(d.waOutbox || [])], // অভিভাবকের WhatsApp মেসেজ
-      notifications: [{ id: uid(), for: [tid, ...studs, "admin1", "dir1"], text: `⛔ ${c.name} ক্লাসটি (${fmtDate(k.date)}, ${k.time}) অনিবার্য কারণে / উস্তাদ-উস্তাদা অসুস্থ থাকার দরুন স্থগিত করা হয়েছে। পরবর্তীতে শিডিউল করে মেকআপ করা হবে ইনশাআল্লাহ।`, date: todayISO(), read: false }, ...d.notifications] }));
+  const t = allTeachers.find((x) => String(x.id) === String(tid)) || userById(tid);
+  const myRoutines = routines.filter((r) => String(r.teacherId || courseById(COURSES, r.courseId)?.teacherId) === String(tid));
+  const upcoming = upcomingAll.filter((k) => String(k.teacher || k.teacherId || courseById(COURSES, k.course || k.courseId)?.teacherId) === String(tid)).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 6);
+
+  const postpone = (k) => askConfirm("ক্লাসটি স্থগিত করবেন? উস্তাদ, স্টুডেন্ট সবার পোর্টালে সাথে সাথে আপডেট হবে এবং অভিভাবকের WhatsApp মেসেজ তৈরি হবে।", async () => {
+    try {
+      await api.postponeClass(k.id);
+      setUpcomingAll((prev) => prev.filter((x) => x.id !== k.id));
+    } catch {
+      const c = courseById(COURSES, k.courseId);
+      const studs = (k.studentIds && k.studentIds.length ? k.studentIds : c.studentIds) || [];
+      setDb((d) => ({ ...d,
+        classes: d.classes.map((x) => x.id === k.id ? { ...x, status: "postponed" } : x),
+        waOutbox: [...waGuardianMsgs(k, c, "postpone"), ...(d.waOutbox || [])],
+        notifications: [{ id: uid(), for: [tid, ...studs, "admin1", "dir1"], text: `⛔ ${c.name} ক্লাসটি (${fmtDate(k.date)}, ${k.time}) স্থগিত করা হয়েছে।`, date: todayISO(), read: false }, ...d.notifications] }));
+      setUpcomingAll((prev) => prev.filter((x) => x.id !== k.id));
+    }
   });
   if (user.role === "student") return null;
   return (
@@ -2594,28 +2732,30 @@ function TeacherWiseBoard({ db, setDb, user }) {
       <div style={{ fontWeight: 800, marginBottom: 10 }}>👳 উস্তাদ-ভিত্তিক রুটিন ও ক্লাস</div>
       {user.role !== "teacher" && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-          {teachers.map((x) => <Btn key={x.id} sm kind={tid === x.id ? "primary" : "soft"} onClick={() => setSel(x.id)}>{x.name}</Btn>)}
+          {allTeachers.map((x) => <Btn key={x.id} sm kind={String(tid) === String(x.id) ? "primary" : "soft"} onClick={() => setSel(x.id)}>{x.name}</Btn>)}
         </div>
       )}
       <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, color: C.emerald }}>📚 {t.name}-এর কাছে যারা পড়ে:</div>
-      {routines.length === 0 && <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8 }}>এখনো রুটিন নেই</div>}
-      {routines.map((r) => {
-        const c = courseById(COURSES, r.courseId);
-        const studs = (r.studentIds && r.studentIds.length ? r.studentIds : c.studentIds) || [];
+      {myRoutines.length === 0 && <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8 }}>এখনো রুটিন নেই</div>}
+      {myRoutines.map((r) => {
+        const c = courseById(COURSES, r.courseId || r.course);
+        const studs = r.studentIds || r.students || c.studentIds || [];
+        const studentNames = studs.map((s) => userById(s)?.name || ("স্টুডেন্ট " + s)).join(", ");
         return (
           <div key={r.id} style={{ padding: "8px 12px", borderRadius: 10, background: C.cream, marginBottom: 6, fontSize: 12.5 }}>
-            👥 <b>{studs.map((s) => userById(s).name).join(", ") || "—"}</b> — {c.name} · {r.days.map((i) => DAY_BN[i]).join(", ")} · 🕐 {r.time}
+            👥 <b>{studentNames || "—"}</b> — {c.name || r.course_name || "—"} · {(r.days || []).map((i) => DAY_BN[i]).join(", ")} · 🕐 {r.time}
           </div>
         );
       })}
       <div style={{ fontSize: 13, fontWeight: 700, margin: "10px 0 6px", color: C.emerald }}>📅 সামনের ক্লাস:</div>
       {upcoming.length === 0 && <div style={{ fontSize: 12.5, color: C.muted }}>আসন্ন কোনো ক্লাস নেই</div>}
       {upcoming.map((k) => {
-        const c = courseById(COURSES, k.courseId);
-        const studs = (k.studentIds && k.studentIds.length ? k.studentIds : c.studentIds) || [];
+        const c = courseById(COURSES, k.courseId || k.course);
+        const studs = k.studentIds || k.students || c.studentIds || [];
+        const studentNames = studs.map((s) => (userById(s)?.name || ("ছাত্র " + s)).split(" ")[0]).join(", ");
         return (
           <div key={k.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 10, background: C.greenBg, marginBottom: 6, fontSize: 12.5, flexWrap: "wrap" }}>
-            <span style={{ flex: 1, minWidth: 200 }}><b>{c.name}</b> · {fmtDate(k.date)} · 🕐 {k.time} · 👥 {studs.map((s) => userById(s).name.split(" ")[0]).join(", ")}</span>
+            <span style={{ flex: 1, minWidth: 200 }}><b>{k.course_name || c.name || "—"}</b> · {fmtDate(k.date)} · 🕐 {k.time} · 👥 {studentNames}</span>
             {isAdm(user) && <Btn sm kind="danger" onClick={() => postpone(k)}>⛔ স্থগিত করুন</Btn>}
           </div>
         );

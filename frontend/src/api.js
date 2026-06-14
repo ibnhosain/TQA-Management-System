@@ -141,6 +141,7 @@ export const api = {
   forwardAdmission: (id) => request(`/admissions/${id}/forward/`, { method: "POST" }),
   acceptAdmission: (id, opts) => request(`/admissions/${id}/accept/`, { method: "POST", body: opts }),
   rejectAdmission: (id) => request(`/admissions/${id}/reject/`, { method: "POST" }),
+  replyAdmission: (id, replied) => request(`/admissions/${id}/`, { method: "PATCH", body: { replied } }),
   leaves: () => request("/leaves/"),
   applyLeave: (d) => request("/leaves/", { method: "POST", body: d }),
   forwardLeave: (id) => request(`/leaves/${id}/forward/`, { method: "POST" }),
