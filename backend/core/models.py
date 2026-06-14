@@ -32,7 +32,7 @@ class User(AbstractUser):
 # ─────────────────────────── একাডেমিক বই ও কোর্স ───────────────────────────
 class AcademicBook(models.Model):
     name = models.CharField(max_length=200)
-    file = models.FileField(upload_to="books/")  # প্রোডাকশনে S3/Cloud bucket
+    file = models.CharField(max_length=500, blank=True)  # Cloudinary URL বা local path
     created_at = models.DateField(auto_now_add=True)
 
     def __str__(self):

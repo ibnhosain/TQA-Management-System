@@ -63,12 +63,35 @@ class AcademicBookViewSet(viewsets.ModelViewSet):
         return AcademicBook.objects.all()
 
     def create(self, request, *args, **kwargs):
-        import traceback as tb
-        try:
-            return super().create(request, *args, **kwargs)
-        except Exception as e:
-            tb.print_exc()
-            return Response({"error": str(e), "type": type(e).__name__}, status=500)
+        import os, traceback as tb
+        name = request.data.get("name", "").strip()
+        if not name:
+            return Response({"error": "নাম দিন"}, status=400)
+        file_url = ""
+        uploaded = request.FILES.get("file")
+        if uploaded:
+            cloudinary_url = os.environ.get("CLOUDINARY_URL", "")
+            if cloudinary_url:
+                try:
+                    import cloudinary.uploader
+                    res = cloudinary.uploader.upload(
+                        uploaded,
+                        folder="tqa-books",
+                        resource_type="raw",
+                        use_filename=True,
+                        unique_filename=True,
+                    )
+                    file_url = res["secure_url"]
+                except Exception as e:
+                    tb.print_exc()
+                    return Response({"error": f"Cloudinary: {e}"}, status=500)
+            else:
+                # Local fallback (development)
+                from django.core.files.storage import default_storage
+                saved = default_storage.save(f"books/{uploaded.name}", uploaded)
+                file_url = request.build_absolute_uri(f"/media/{saved}")
+        book = AcademicBook.objects.create(name=name, file=file_url)
+        return Response(AcademicBookSerializer(book).data, status=201)
 
 
 class CourseViewSet(viewsets.ModelViewSet):

@@ -20,6 +20,5 @@ redis>=5.0
 django-celery-beat>=2.6
 requests>=2.31              # Twilio/Meta WhatsApp API কল
 
-# Cloud file storage (Cloudinary) — Render এ uploaded files স্থায়ী রাখার জন্য
+# Cloudinary — সরাসরি uploader হিসেবে (storage backend ছাড়া)
 cloudinary>=1.36
-django-cloudinary-storage>=0.3.0
