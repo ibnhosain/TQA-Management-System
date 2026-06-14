@@ -1574,11 +1574,31 @@ function FormsView({ db, setDb }) {
 }
 
 /* ═══════════════ বই লাইব্রেরি (ফিচার ১০) ═══════════════ */
-function BooksView({ db, setDb, user }) {
+function BooksView({ db, user }) {
   const [show, setShow] = useState(false);
-  const [f, setF] = useState({ cls: "", title: "", author: "", link: "#", type: "PDF" });
+  const [f, setF] = useState({ cls: "", title: "", author: "", link: "", file_type: "PDF" });
   const [books, setBooks] = useState(db.books || []);
+  useEffect(() => {
+    api.libraryBooks().then((data) => setBooks(data.map((b) => ({
+      id: b.id, cls: b.cls, title: b.title, author: b.author,
+      link: b.link || "#", type: b.file_type || "PDF",
+    })))).catch(() => {});
+  }, []);
   const groups = [...new Set(books.map((b) => b.cls))];
+  const add = async () => {
+    try {
+      const res = await api.addLibraryBook({ cls: f.cls, title: f.title, author: f.author, link: f.link || "#", file_type: f.file_type });
+      setBooks((prev) => [...prev, { id: res.id, cls: res.cls, title: res.title, author: res.author, link: res.link || "#", type: res.file_type || "PDF" }]);
+    } catch {
+      setBooks((prev) => [...prev, { id: uid(), ...f, type: f.file_type }]);
+    }
+    setShow(false);
+    setF({ cls: "", title: "", author: "", link: "", file_type: "PDF" });
+  };
+  const del = async (b) => {
+    try { await api.deleteLibraryBook(b.id); } catch {}
+    setBooks((prev) => prev.filter((x) => x.id !== b.id));
+  };
   return (
     <Section title="বই লাইব্রেরি" sub="সকল শ্রেণির পাঠ্যবই ও সহায়ক বই — ডাউনলোডযোগ্য"
       action={isAdm(user) && <Btn onClick={() => setShow(true)}>+ বই যোগ করুন</Btn>}>
@@ -1592,7 +1612,7 @@ function BooksView({ db, setDb, user }) {
                 <div style={{ fontSize: 12, color: C.muted, margin: "3px 0 8px" }}>{b.author}</div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <Tag color={C.blue} bg={C.blueBg}>{b.type}</Tag>
-                  <span style={{ display: "flex", gap: 8, alignItems: "center" }}><a href={b.link} style={{ fontSize: 12.5, fontWeight: 700, color: C.emerald, textDecoration: "none" }}>⬇ ডাউনলোড</a>{isDir(user) && <Btn sm kind="danger" onClick={() => setBooks((prev) => prev.filter((x) => x.id !== b.id))}>✕</Btn>}</span>
+                  <span style={{ display: "flex", gap: 8, alignItems: "center" }}><a href={b.link} style={{ fontSize: 12.5, fontWeight: 700, color: C.emerald, textDecoration: "none" }}>⬇ ডাউনলোড</a>{isDir(user) && <Btn sm kind="danger" onClick={() => del(b)}>✕</Btn>}</span>
                 </div>
               </div>
             ))}
@@ -1604,7 +1624,8 @@ function BooksView({ db, setDb, user }) {
           <label style={S.label}>শ্রেণি / কোর্স</label><input style={S.input} value={f.cls} onChange={(e) => setF({ ...f, cls: e.target.value })} placeholder="যেমন: তাজবীদ" />
           <div style={{ marginTop: 10 }}><label style={S.label}>বইয়ের নাম</label><input style={S.input} value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></div>
           <div style={{ marginTop: 10 }}><label style={S.label}>লেখক</label><input style={S.input} value={f.author} onChange={(e) => setF({ ...f, author: e.target.value })} /></div>
-          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={() => { setBooks((prev) => [...prev, { id: uid(), ...f }]); setShow(false); }}>যোগ করুন</Btn>
+          <div style={{ marginTop: 10 }}><label style={S.label}>ডাউনলোড লিংক</label><input style={S.input} value={f.link} onChange={(e) => setF({ ...f, link: e.target.value })} placeholder="https://..." /></div>
+          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={add}>যোগ করুন</Btn>
         </Modal>
       )}
     </Section>
@@ -3382,6 +3403,12 @@ export default function App() {
     setLivePopup(k || null);
   }, [user]);
 
+  const [apiNotifs, setApiNotifs] = useState(null);
+  const loadNotifs = async () => {
+    try { setApiNotifs(await api.notifications()); } catch { setApiNotifs(null); }
+  };
+  useEffect(() => { if (user) { loadNotifs(); const iv = setInterval(loadNotifs, 60000); return () => clearInterval(iv); } }, [user?.id]);
+
   if (!user) return (
     <div style={{ fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');`}</style>
@@ -3391,11 +3418,6 @@ export default function App() {
   );
 
   const courses = myCourses(COURSES, user);
-  const [apiNotifs, setApiNotifs] = useState(null);
-  const loadNotifs = async () => {
-    try { setApiNotifs(await api.notifications()); } catch { setApiNotifs(null); }
-  };
-  useEffect(() => { if (user) { loadNotifs(); const iv = setInterval(loadNotifs, 60000); return () => clearInterval(iv); } }, [user?.id]);
   const myNotifs = apiNotifs
     ? apiNotifs.map((n) => ({ id: n.id, text: n.text, date: n.created_at, read: n.is_read }))
     : db.notifications.filter((n) => n.for.includes(user.id));

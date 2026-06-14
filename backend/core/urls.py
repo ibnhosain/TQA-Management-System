@@ -28,6 +28,7 @@ router.register("ratings", views.RatingViewSet, basename="ratings")
 router.register("notices", views.NoticeViewSet)
 router.register("notifications", views.NotificationViewSet, basename="notifications")
 router.register("wa-messages", views.WaMessageViewSet)
+router.register("library-books", views.LibraryBookViewSet)
 
 urlpatterns = [
     path("auth/login", FlexTokenObtainPairView.as_view()),  # আইডি/ইমেইল/ফোন — যেকোনোটা দিয়ে

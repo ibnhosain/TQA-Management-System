@@ -11,7 +11,8 @@ from rest_framework.response import Response
 from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
                      Routine, ClassSession, Attendance, Assignment, Exam, Submission,
                      ExamResult, FeePayment, DueMonth, TeacherPayment, SentReceipt,
-                     Admission, LeaveRequest, Rating, Notice, Notification, WaMessage)
+                     Admission, LeaveRequest, Rating, Notice, Notification, WaMessage,
+                     LibraryBook)
 from .serializers import *
 from .permissions import (IsDirector, IsAdminLevel, IsTeacherOrAdminLevel,
                           ReadAllWriteAdmin, ReadAllWriteDirector)
@@ -533,3 +534,10 @@ class WaMessageViewSet(viewsets.ModelViewSet):
         from .tasks import send_whatsapp  # Celery task
         send_whatsapp.delay(pk)
         return Response({"queued": True})
+
+
+# ─────────────────────────── লাইব্রেরি বই (বাহ্যিক লিংক) ───────────────────────────
+class LibraryBookViewSet(viewsets.ModelViewSet):
+    queryset = LibraryBook.objects.all()
+    serializer_class = LibraryBookSerializer
+    permission_classes = [ReadAllWriteAdmin]  # সবাই দেখতে পারে, যোগ/মুছা এডমিন+

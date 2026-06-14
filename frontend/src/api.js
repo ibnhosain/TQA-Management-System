@@ -157,6 +157,11 @@ export const api = {
   waOutbox: () => request("/wa-messages/"),
   waSendNow: (id) => request(`/wa-messages/${id}/send_now/`, { method: "POST" }),
 
+  // লাইব্রেরি বই (বাহ্যিক লিংক)
+  libraryBooks: () => request("/library-books/"),
+  addLibraryBook: (d) => request("/library-books/", { method: "POST", body: d }),
+  deleteLibraryBook: (id) => request(`/library-books/${id}/`, { method: "DELETE" }),
+
   // ব্যবহারকারী (পরিচালক)
   allUsers: () => request("/users/"),
   allStudents: () => request("/users/students/"),

@@ -355,3 +355,20 @@ class WaMessage(models.Model):
     status = models.CharField(max_length=8, choices=STATUS, default="queued")
     provider_ref = models.CharField(max_length=120, blank=True)  # Twilio SID / Meta msg id
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+# ─────────────────────────── লাইব্রেরি বই (বাহ্যিক লিংক) ───────────────────────────
+class LibraryBook(models.Model):
+    """ওয়েবসাইট লাইব্রেরি — ডাউনলোড লিংকসহ পাঠ্যপুস্তক ও সহায়ক বই"""
+    cls = models.CharField("শ্রেণি / ক্যাটাগরি", max_length=100)
+    title = models.CharField("বইয়ের নাম", max_length=200)
+    author = models.CharField("লেখক", max_length=150, blank=True)
+    link = models.URLField("ডাউনলোড লিংক", blank=True, default="#")
+    file_type = models.CharField("ফরম্যাট", max_length=20, default="PDF")
+    created_at = models.DateField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["cls", "title"]
+
+    def __str__(self):
+        return f"{self.cls} — {self.title}"

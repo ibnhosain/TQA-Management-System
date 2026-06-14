@@ -3,7 +3,8 @@ from rest_framework import serializers
 from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
                      Routine, ClassSession, Attendance, Question, Assignment, Exam,
                      Submission, ExamResult, FeePayment, DueMonth, TeacherPayment,
-                     SentReceipt, Admission, LeaveRequest, Rating, Notice, Notification, WaMessage)
+                     SentReceipt, Admission, LeaveRequest, Rating, Notice, Notification,
+                     WaMessage, LibraryBook)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -266,3 +267,9 @@ class WaMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = WaMessage
         fields = "__all__"
+
+
+class LibraryBookSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LibraryBook
+        fields = ["id", "cls", "title", "author", "link", "file_type", "created_at"]
