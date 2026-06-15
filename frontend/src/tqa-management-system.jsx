@@ -317,7 +317,23 @@ const dataUrlToBlobUrl = (dataUrl) => {
 };
 const bookExt = (n) => (n || "").split(".").pop().toUpperCase().slice(0, 5);
 
-const sylLabel = (e) => `${e.book && e.book !== "অন্যান্য" ? e.book + " — " : ""}${e.lesson}${e.pages ? `, পৃষ্ঠা: ${e.pages}` : ""}${e.lines ? `, লাইন: ${e.lines}` : ""}`;
+const sylLabel = (e) => {
+  const prefix = e.book && e.book !== "অন্যান্য" ? e.book + " — " : "";
+  if (e.category === "qirat" || !e.category) {
+    return `${prefix}${e.lesson}${e.pages ? `, পৃষ্ঠা: ${e.pages}` : ""}${e.lines ? `, লাইন: ${e.lines}` : ""}`;
+  }
+  return `${prefix}${e.lesson}`;
+};
+
+/* দৈনিক পাঠ পরিকল্পনা / সিলেবাসের ৫টি বিভাগ — ব্যাকএন্ডের SyllabusItem.Category এর সাথে ১:১ */
+const SYL_CATEGORIES = [
+  { key: "memorized_surah",  label: "মুখস্থ সূরা",                 icon: "📖", book: false, placeholder: "যেমন: সূরা ইখলাস" },
+  { key: "memorized_hadith", label: "মুখস্থ হাদিস",                icon: "📜", book: false, placeholder: "যেমন: ১ম হাদিস — নিয়ত" },
+  { key: "qirat",            label: "কিরাত",                       icon: "🕋", book: true,  placeholder: "যেমন: কায়দা — লেসন ৪" },
+  { key: "dua_masala",       label: "দুআ/মাসআলা",                  icon: "🤲", book: true,  placeholder: "যেমন: খাবারের দুআ" },
+  { key: "moral_story",      label: "নৈতিক শিক্ষা/হাদিসের গল্প",   icon: "🌟", book: true,  placeholder: "যেমন: সততার গল্প" },
+];
+const catInfo = (k) => SYL_CATEGORIES.find((c) => c.key === k) || SYL_CATEGORIES[2];
 
 const CLASS_KINDS = ["মেকআপ ক্লাস", "সাপোর্ট ক্লাস", "রিকভারি ক্লাস", "ট্রায়াল ক্লাস", "নিয়মিত ক্লাস", "অন্যান্য"];
 /* ক্লাস/রুটিন কার পোর্টালে দেখাবে — নির্দিষ্ট উস্তাদ/স্টুডেন্ট দেওয়া থাকলে নাম অনুযায়ী, নইলে কোর্স অনুযায়ী */
@@ -622,7 +638,7 @@ function LecturePlan({ db, courses, user, refresh }) {
       text: t.text, covered: t.covered,
     })),
   });
-  const adaptSyl = (s) => ({ id: s.id, courseId: s.course || s.courseId, book: s.book_name || s.book, lesson: s.lesson, pages: s.pages, lines: s.lines, note: s.note });
+  const adaptSyl = (s) => ({ id: s.id, courseId: s.course || s.courseId, category: s.category || "qirat", book: s.book_name || s.book, lesson: s.lesson, pages: s.pages, lines: s.lines, note: s.note });
 
   const loadData = async () => {
     if (!sel) return;
@@ -638,26 +654,27 @@ function LecturePlan({ db, courses, user, refresh }) {
   };
   useEffect(() => { loadData(); }, [sel]);
 
-  const openNew = () => setForm({ mode: "new", title: "", selIds: [] });
-  const openEdit = (lec) => setForm({ mode: "edit", lecId: lec.id, title: lec.title, selIds: lec.topics.map((t) => t.syllabusId).filter(Boolean) });
+  const openNew = () => setForm({ mode: "new", no: String(lectures.length + 1), title: "", selIds: [] });
+  const openEdit = (lec) => setForm({ mode: "edit", lecId: lec.id, no: String(lec.no), title: lec.title, selIds: lec.topics.map((t) => t.syllabusId).filter(Boolean) });
   const toggleSyl = (id) => setForm({ ...form, selIds: form.selIds.includes(id) ? form.selIds.filter((x) => x !== id) : [...form.selIds, id] });
   const saveForm = async () => {
-    if (!form.title.trim()) return notice("লেকচারের শিরোনাম দিন।");
-    if (!form.selIds.length) return notice("সিলেবাস থেকে অন্তত একটি টপিক বাছাই করুন।");
+    if (!form.title.trim()) return notice("দারসের শিরোনাম দিন।");
+    if (!form.selIds.length) return notice("সিলেবাস থেকে অন্তত একটি বিষয় বাছাই করুন।");
+    const noVal = parseInt(form.no, 10);
     try {
       if (form.mode === "new") {
-        await api.createLecture(sel, form.title.trim(), form.selIds);
+        await api.createLecture(sel, form.title.trim(), form.selIds, noVal ? { no: noVal } : {});
       } else {
-        await api.editLecture(form.lecId, { title: form.title.trim(), syllabus_item_ids: form.selIds });
+        await api.editLecture(form.lecId, { title: form.title.trim(), syllabus_item_ids: form.selIds, ...(noVal ? { no: noVal } : {}) });
       }
       await loadData();
     } catch {
       const picked = sylList.filter((s) => form.selIds.includes(s.id));
       if (form.mode === "new") {
         const topics = picked.map((s) => ({ id: uid(), syllabusId: s.id, text: sylLabel(s), covered: null }));
-        setLectures((prev) => [...prev, { id: uid(), no: prev.length + 1, title: form.title.trim(), topics, date: null }]);
+        setLectures((prev) => [...prev, { id: uid(), no: noVal || prev.length + 1, title: form.title.trim(), topics, date: null }]);
       } else {
-        setLectures((prev) => prev.map((l) => l.id === form.lecId ? { ...l, title: form.title.trim(), topics: picked.map((s) => { const old = l.topics.find((t) => t.syllabusId === s.id); return old ? { ...old, text: sylLabel(s) } : { id: uid(), syllabusId: s.id, text: sylLabel(s), covered: null }; }) } : l));
+        setLectures((prev) => prev.map((l) => l.id === form.lecId ? { ...l, no: noVal || l.no, title: form.title.trim(), topics: picked.map((s) => { const old = l.topics.find((t) => t.syllabusId === s.id); return old ? { ...old, text: sylLabel(s) } : { id: uid(), syllabusId: s.id, text: sylLabel(s), covered: null }; }) } : l));
       }
     }
     setForm(null);
@@ -690,15 +707,15 @@ function LecturePlan({ db, courses, user, refresh }) {
   };
   const cov = covFromLectures();
   return (
-    <Section title="লেকচার প্ল্যান ও টপিক কভারেজ" sub="পরিচালক লেকচার প্ল্যান তৈরি করবেন · কভার করা টপিক ✔ সবুজ · বাদ পড়া ✘ লাল — লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করবেন"
-      action={isDir(user) && <Btn onClick={openNew}>+ লেকচার যোগ করুন</Btn>}>
+    <Section title="দৈনিক পাঠ পরিকল্পনা ও টপিক কভারেজ" sub="পরিচালক দারস তৈরি করবেন · কভার করা বিষয় ✔ সবুজ · বাদ পড়া ✘ লাল — লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করবেন"
+      action={isDir(user) && <Btn onClick={openNew}>+ দারস যোগ করুন</Btn>}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         {courses.map((c) => <Btn key={c.id} sm kind={sel === c.id ? "primary" : "soft"} onClick={() => setSel(c.id)}>{c.name}</Btn>)}
       </div>
       <div style={{ ...S.card, marginBottom: 12, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 180 }}>
           <div style={{ fontWeight: 800 }}>{course.name}</div>
-          <div style={S.sub}>উস্তাদ: {userById(course.teacherId || course.teacher)?.name || "—"} · মোট লেকচার: {bn(lectures.length)}</div>
+          <div style={S.sub}>উস্তাদ: {userById(course.teacherId || course.teacher)?.name || "—"} · মোট দারস: {bn(lectures.length)}</div>
         </div>
         <div style={{ minWidth: 200, flex: 1 }}>
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>সিলেবাস অগ্রগতি — {bn(cov.pct)}% ({bn(cov.done)}/{bn(cov.total)} টপিক)</div>
@@ -708,7 +725,7 @@ function LecturePlan({ db, courses, user, refresh }) {
       {(canMark || isAdmin) && <div style={{ padding: "10px 14px", borderRadius: 12, background: C.amberBg, border: `1px solid ${C.goldL}`, fontSize: 12.5, marginBottom: 10 }}>💡 প্রতিটি টপিকের পাশের <b style={{ color: C.green }}>"✔ কভার হয়েছে"</b> বা <b style={{ color: C.red }}>"✘ বাদ পড়েছে"</b> বাটনে ক্লিক করে মার্ক করুন — অথবা এক ক্লিকে "পুরো লেকচার কভার" করুন। মার্ক করলেই স্টুডেন্ট ও এডমিন ড্যাশবোর্ডে সবুজ/লাল হয়ে দেখাবে।</div>}
       {lectures.length === 0 && (
         <div style={{ ...S.card, textAlign: "center", color: C.muted, padding: 28 }}>
-          📋 এই কোর্সের লেকচার প্ল্যান এখনো তৈরি হয়নি।{isDir(user) ? " ওপরের \"+ লেকচার যোগ করুন\" বাটন দিয়ে শুরু করুন।" : " পরিচালক তৈরি করলে এখানে দেখা যাবে ইনশাআল্লাহ।"}
+          📋 এই কোর্সের দৈনিক পাঠ পরিকল্পনা এখনো তৈরি হয়নি।{isDir(user) ? " ওপরের \"+ দারস যোগ করুন\" বাটন দিয়ে শুরু করুন।" : " পরিচালক তৈরি করলে এখানে দেখা যাবে ইনশাআল্লাহ।"}
         </div>
       )}
       <div style={{ display: "grid", gap: 10 }}>
@@ -747,27 +764,46 @@ function LecturePlan({ db, courses, user, refresh }) {
         })}
       </div>
       {form && (
-        <Modal title={form.mode === "new" ? `+ নতুন লেকচার — ${course.name}` : `✏️ লেকচার এডিট (টিক/ক্রস অক্ষত থাকবে)`} onClose={() => setForm(null)} wide>
-          <label style={S.label}>লেকচারের শিরোনাম</label>
-          <input style={S.input} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="যেমন: হরকত — যবর, যের, পেশ" />
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>সিলেবাস থেকে টপিক বাছাই করুন — {bn(form.selIds.length)}টি নির্বাচিত (আলাদা লেখার দরকার নেই)</label>
+        <Modal title={form.mode === "new" ? `+ নতুন দারস — ${course.name}` : `✏️ দারস এডিট (টিক/ক্রস অক্ষত থাকবে)`} onClose={() => setForm(null)} wide>
+          <div style={{ display: "grid", gridTemplateColumns: "120px 1fr", gap: 10 }}>
+            <div><label style={S.label}>দারস-নং</label>
+              <input type="number" min="1" style={S.input} value={form.no} onChange={(e) => setForm({ ...form, no: e.target.value })} placeholder="যেমন: ৫" /></div>
+            <div><label style={S.label}>দারসের শিরোনাম</label>
+              <input style={S.input} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="যেমন: হরকত — যবর, যের, পেশ" /></div>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>সিলেবাস থেকে বিষয় বাছাই করুন — {bn(form.selIds.length)}টি নির্বাচিত (বিভাগ অনুযায়ী সাজানো)</label>
             {sylList.length === 0 ? (
               <div style={{ padding: "14px 12px", borderRadius: 10, background: C.amberBg, fontSize: 12.5, color: "#a16207" }}>
-                ⚠️ "{course.name}" কোর্সের সিলেবাস এখনো তৈরি হয়নি — আগে 📜 সিলেবাস মেনুতে গিয়ে বই/লেসন/পৃষ্ঠা/লাইন যোগ করুন, তারপর এখানে বাছাই করতে পারবেন।
+                ⚠️ "{course.name}" কোর্সের সিলেবাস এখনো তৈরি হয়নি — আগে 📜 সিলেবাস মেনুতে গিয়ে প্রতিটি বিভাগে বিষয় যোগ করুন, তারপর এখানে বাছাই করতে পারবেন।
               </div>
             ) : (
-              <div style={{ maxHeight: 220, overflowY: "auto", border: `1.5px solid ${C.line}`, borderRadius: 10, padding: 6, background: "#fff" }}>
-                {sylList.map((s) => (
-                  <label key={s.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "7px 8px", fontSize: 13, cursor: "pointer", borderRadius: 8, background: form.selIds.includes(s.id) ? C.greenBg : "transparent" }}>
-                    <input type="checkbox" checked={form.selIds.includes(s.id)} onChange={() => toggleSyl(s.id)} style={{ marginTop: 3 }} />
-                    <span><b>{s.book && s.book !== "অন্যান্য" ? s.book + " — " : ""}{s.lesson}</b>{s.pages && <span style={{ color: C.muted }}> · পৃষ্ঠা: {s.pages}</span>}{s.lines && <span style={{ color: C.muted }}> · লাইন: {s.lines}</span>}{s.note && <div style={{ fontSize: 11.5, color: C.muted }}>💬 {s.note}</div>}</span>
-                  </label>
-                ))}
+              <div style={{ display: "grid", gap: 10 }}>
+                {SYL_CATEGORIES.map((cat) => {
+                  const items = sylList.filter((s) => (s.category || "qirat") === cat.key);
+                  if (items.length === 0) return null;
+                  return (
+                    <div key={cat.key} style={{ border: `1.5px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: C.cream, borderBottom: `1px solid ${C.line}` }}>
+                        <span style={{ fontSize: 15 }}>{cat.icon}</span>
+                        <b style={{ flex: 1, fontSize: 13, color: C.emerald }}>{cat.label}</b>
+                        <span style={{ fontSize: 11.5, color: C.muted }}>{bn(items.filter((s) => form.selIds.includes(s.id)).length)}/{bn(items.length)}</span>
+                      </div>
+                      <div style={{ padding: 6 }}>
+                        {items.map((s) => (
+                          <label key={s.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "7px 8px", fontSize: 13, cursor: "pointer", borderRadius: 8, background: form.selIds.includes(s.id) ? C.greenBg : "transparent" }}>
+                            <input type="checkbox" checked={form.selIds.includes(s.id)} onChange={() => toggleSyl(s.id)} style={{ marginTop: 3 }} />
+                            <span><b>{s.book && s.book !== "অন্যান্য" ? s.book + " — " : ""}{s.lesson}</b>{s.pages && <span style={{ color: C.muted }}> · পৃষ্ঠা: {s.pages}</span>}{s.lines && <span style={{ color: C.muted }}> · লাইন: {s.lines}</span>}{s.note && <div style={{ fontSize: 11.5, color: C.muted }}>💬 {s.note}</div>}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
-          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={saveForm}>{form.mode === "new" ? "+ লেকচার যোগ করুন" : "✏️ সংরক্ষণ করুন"}</Btn>
+          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={saveForm}>{form.mode === "new" ? "+ দারস যোগ করুন" : "✏️ সংরক্ষণ করুন"}</Btn>
         </Modal>
       )}
     </Section>
@@ -2981,15 +3017,15 @@ function CourseManagerView({ db, setDb, refresh }) {
   );
 }
 
-/* ═══════════════ সিলেবাস — কোর্স→বই→লেসন→পৃষ্ঠা→লাইন→মন্তব্য; কেবল পরিচালক তৈরি করবেন ═══════════════ */
+/* ═══════════════ কোর্স সিলেবাস — ৫ বিভাগ (মুখস্থ সূরা/হাদিস · কিরাত · দুআ-মাসআলা · নৈতিক শিক্ষা); কেবল পরিচালক তৈরি করবেন ═══════════════ */
 function SyllabusView({ db, setDb, courses, user }) {
   const [sel, setSel] = useState(courses[0]?.id);
-  const [form, setForm] = useState(null); // {id?, courseId, book, lesson, pages, lines, note}
+  const [form, setForm] = useState(null); // {id?, courseId, category, book, lesson, pages, lines, note}
   const [syllabus, setSyllabus] = useState(db.syllabus || []);
   const [allBooks, setAllBooks] = useState(db.academicBooks || []);
 
   const adaptSyl = (s) => ({
-    id: s.id, courseId: s.course || s.courseId,
+    id: s.id, courseId: s.course || s.courseId, category: s.category || "qirat",
     book: s.book_name || s.book, lesson: s.lesson, pages: s.pages, lines: s.lines, note: s.note,
   });
   const loadData = async () => {
@@ -3002,7 +3038,7 @@ function SyllabusView({ db, setDb, courses, user }) {
       });
       setAllBooks(bkData);
     } catch {
-      setSyllabus(db.syllabus || []);
+      setSyllabus((db.syllabus || []).map(adaptSyl));
       setAllBooks(db.academicBooks || []);
     }
   };
@@ -3010,13 +3046,30 @@ function SyllabusView({ db, setDb, courses, user }) {
 
   const course = courseById(courses, sel);
   const list = syllabus.filter((s) => String(s.courseId) === String(sel));
-  const openNew = () => setForm({ courseId: sel, book: (course.books || [])[0] || "অন্যান্য", lesson: "", pages: "", lines: "", note: "" });
+  const bookNameOf = (id) => (allBooks.find((b) => b.id === id) || {}).name;
+  const fBooks = (courseById(courses, form?.courseId || sel).books || []).map(bookNameOf).filter(Boolean);
+
+  const openNew = (category) => {
+    const needsBook = catInfo(category).book;
+    setForm({ courseId: sel, category, book: needsBook ? ((course.books || []).map(bookNameOf).filter(Boolean)[0] || "অন্যান্য") : "অন্যান্য", lesson: "", pages: "", lines: "", note: "" });
+  };
+  const openEdit = (s) => setForm({ id: s.id, courseId: s.courseId, category: s.category || "qirat", book: s.book || "অন্যান্য", lesson: s.lesson, pages: s.pages || "", lines: s.lines || "", note: s.note || "" });
+
   const save = async () => {
-    if (!form.lesson.trim()) return notice("লেসন লিখে দিন।");
-    const entry = { courseId: form.courseId, book: form.book, lesson: form.lesson.trim(), pages: form.pages.trim(), lines: form.lines.trim(), note: form.note.trim() };
+    if (!form.lesson.trim()) return notice("বিষয়বস্তু লিখে দিন।");
+    const isQirat = form.category === "qirat";
+    const payload = {
+      course: form.courseId, category: form.category,
+      book_name: catInfo(form.category).book ? form.book : "অন্যান্য",
+      lesson: form.lesson.trim(),
+      pages: isQirat ? form.pages.trim() : "",
+      lines: isQirat ? form.lines.trim() : "",
+      note: form.note.trim(),
+    };
+    const entry = { courseId: form.courseId, category: form.category, book: payload.book_name, lesson: payload.lesson, pages: payload.pages, lines: payload.lines, note: payload.note };
     try {
-      if (form.id) { await api.editSyllabus(form.id, { course: form.courseId, book_name: form.book, lesson: form.lesson.trim(), pages: form.pages.trim(), lines: form.lines.trim(), note: form.note.trim() }); }
-      else { await api.addSyllabus({ course: form.courseId, book_name: form.book, lesson: form.lesson.trim(), pages: form.pages.trim(), lines: form.lines.trim(), note: form.note.trim() }); }
+      if (form.id) await api.editSyllabus(form.id, payload);
+      else await api.addSyllabus(payload);
       await loadData();
     } catch {
       if (form.id) setSyllabus((prev) => prev.map((s) => s.id === form.id ? { ...s, ...entry } : s));
@@ -3028,55 +3081,94 @@ function SyllabusView({ db, setDb, courses, user }) {
     try { await api.deleteSyllabus(s.id); await loadData(); }
     catch { setSyllabus((prev) => prev.filter((x) => x.id !== s.id)); }
   });
-  const bookNameOf = (id) => (allBooks.find((b) => b.id === id) || {}).name;
-  const fBooks = (courseById(courses, form?.courseId || sel).books || []).map(bookNameOf).filter(Boolean);
+
+  const courseBooks = (course.books || []).map(bookNameOf).filter(Boolean);
   return (
-    <Section title="সিলেবাস" sub={isDir(user) ? "কোর্স → বই → লেসন → পৃষ্ঠা → লাইন → মন্তব্য — কেবল পরিচালক তৈরি করবেন; লেকচার প্ল্যান এখান থেকেই টপিক বাছাই করে" : "কোর্সভিত্তিক পূর্ণাঙ্গ সিলেবাস — পরিচালক কর্তৃক নির্ধারিত"}
-      action={isDir(user) && <Btn onClick={openNew}>+ সিলেবাস যোগ করুন</Btn>}>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+    <Section title="কোর্স সিলেবাস" sub={isDir(user) ? "মুখস্থ সূরা · মুখস্থ হাদিস · কিরাত · দুআ-মাসআলা · নৈতিক শিক্ষা — প্রতিটি বিভাগে এক এক করে যোগ করুন; লেকচার প্ল্যান এখান থেকেই টপিক বাছাই করে" : "কোর্সভিত্তিক পূর্ণাঙ্গ সিলেবাস — পরিচালক কর্তৃক নির্ধারিত"}>
+      {/* কোর্স সিলেকশন */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
         {courses.map((c) => <Btn key={c.id} sm kind={sel === c.id ? "primary" : "soft"} onClick={() => setSel(c.id)}>{c.name}</Btn>)}
       </div>
-      {list.length === 0 && (
-        <div style={{ ...S.card, textAlign: "center", color: C.muted, padding: 28 }}>
-          📜 "{course.name}" কোর্সের সিলেবাস এখনো তৈরি হয়নি।{isDir(user) ? " ওপরের \"+ সিলেবাস যোগ করুন\" বাটন দিয়ে শুরু করুন।" : " পরিচালক তৈরি করলে এখানে দেখা যাবে ইনশাআল্লাহ।"}
+      {/* বই সিলেকশন তথ্য (কোর্সের অন্তর্ভুক্ত বই) */}
+      <div style={{ ...S.card, padding: "12px 16px", marginBottom: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <b style={{ fontSize: 13.5 }}>📚 {course.name} — বই:</b>
+        {courseBooks.length === 0
+          ? <span style={{ fontSize: 12.5, color: C.red }}>এ কোর্সে বই নেই · "কোর্স" মেনুতে ✏️ এডিট করে যোগ করুন</span>
+          : courseBooks.map((b) => <Tag key={b} color={C.emerald} bg={C.cream}>{b}</Tag>)}
+      </div>
+
+      {/* ৫টি বিভাগের কার্ড */}
+      <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(248px, 1fr))" }}>
+        {SYL_CATEGORIES.map((cat) => {
+          const items = list.filter((s) => (s.category || "qirat") === cat.key);
+          return (
+            <div key={cat.key} style={{ ...S.card, padding: 0, overflow: "hidden", borderTop: `3px solid ${C.gold}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", background: C.cream, borderBottom: `1px solid ${C.line}` }}>
+                <span style={{ fontSize: 17 }}>{cat.icon}</span>
+                <b style={{ flex: 1, fontSize: 13.5, color: C.emerald }}>{cat.label}</b>
+                <Tag>{bn(items.length)}</Tag>
+              </div>
+              <div style={{ padding: 12, display: "grid", gap: 8 }}>
+                {items.length === 0 && <div style={{ fontSize: 12.5, color: C.muted, textAlign: "center", padding: "6px 0" }}>—</div>}
+                {items.map((s) => (
+                  <div key={s.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", background: C.greenBg, borderRadius: 10, padding: "8px 10px" }}>
+                    <span style={{ flex: 1, fontSize: 13, lineHeight: 1.5 }}>
+                      <b>{s.book && s.book !== "অন্যান্য" ? <span style={{ color: C.emerald }}>{s.book} — </span> : null}{s.lesson}</b>
+                      {(s.pages || s.lines) && <span style={{ color: C.muted, fontSize: 11.5 }}>{s.pages ? ` · পৃষ্ঠা: ${s.pages}` : ""}{s.lines ? ` · লাইন: ${s.lines}` : ""}</span>}
+                      {s.note && <div style={{ fontSize: 11.5, color: C.muted }}>💬 {s.note}</div>}
+                    </span>
+                    {isDir(user) && (
+                      <span style={{ display: "flex", gap: 4 }}>
+                        <button title="এডিট" onClick={() => openEdit(s)} style={{ border: "none", background: "#fff", borderRadius: 7, width: 26, height: 26, cursor: "pointer", fontSize: 12 }}>✏️</button>
+                        <button title="মুছুন" onClick={() => del(s)} style={{ border: "none", background: C.redBg, color: C.red, borderRadius: 7, width: 26, height: 26, cursor: "pointer", fontSize: 12 }}>🗑</button>
+                      </span>
+                    )}
+                  </div>
+                ))}
+                {isDir(user) && <Btn sm kind="ghost" style={{ justifyContent: "center" }} onClick={() => openNew(cat.key)}>+ যোগ করুন</Btn>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {!isDir(user) && list.length === 0 && (
+        <div style={{ ...S.card, textAlign: "center", color: C.muted, padding: 24, marginTop: 12 }}>
+          📜 "{course.name}" কোর্সের সিলেবাস এখনো তৈরি হয়নি। পরিচালক তৈরি করলে এখানে দেখা যাবে ইনশাআল্লাহ।
         </div>
       )}
-      {list.length > 0 && (
-        <Table head={["ক্রম", "বই", "লেসন", "পৃষ্ঠা", "লাইন", "মন্তব্য", ...(isDir(user) ? ["অ্যাকশন"] : [])]}
-          rows={list.map((s, i) => [
-            bn(i + 1),
-            <b key="b">{s.book || "—"}</b>,
-            s.lesson,
-            s.pages || "—",
-            s.lines || "—",
-            <span key="n" style={{ color: C.muted, fontSize: 12.5 }}>{s.note || "—"}</span>,
-            ...(isDir(user) ? [<span key="a" style={{ display: "flex", gap: 5 }}>
-              <Btn sm kind="soft" onClick={() => setForm({ id: s.id, courseId: s.courseId, book: s.book, lesson: s.lesson, pages: s.pages, lines: s.lines, note: s.note })}>✏️</Btn>
-              <Btn sm kind="danger" onClick={() => del(s)}>🗑</Btn>
-            </span>] : []),
-          ])} />
-      )}
+
       {form && (
-        <Modal title={form.id ? "✏️ সিলেবাস এডিট" : "+ সিলেবাস যোগ করুন"} onClose={() => setForm(null)} wide>
-          <label style={S.label}>১. কোর্স সিলেকশন</label>
-          <select style={S.input} value={form.courseId} onChange={(e) => { const c2 = courseById(courses, e.target.value); setForm({ ...form, courseId: e.target.value, book: (c2.books || [])[0] || "অন্যান্য" }); }}>
+        <Modal title={form.id ? "✏️ সিলেবাস এডিট" : `+ ${catInfo(form.category).label} — যোগ করুন`} onClose={() => setForm(null)}>
+          <label style={S.label}>কোর্স সিলেকশন</label>
+          <select style={S.input} value={form.courseId} onChange={(e) => { const c2 = courseById(courses, e.target.value); const bks = (c2.books || []).map(bookNameOf).filter(Boolean); setForm({ ...form, courseId: e.target.value, book: catInfo(form.category).book ? (bks[0] || "অন্যান্য") : "অন্যান্য" }); }}>
             {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-          <div style={{ marginTop: 10 }}><label style={S.label}>২. বই সিলেকশন {fBooks.length === 0 && <span style={{ color: C.red }}>(এ কোর্সে বই নেই — "কোর্স" মেনুতে ✏️ এডিট করে বই যোগ করুন)</span>}</label>
-            <select style={S.input} value={form.book} onChange={(e) => setForm({ ...form, book: e.target.value })}>
-              {fBooks.map((b) => <option key={b} value={b}>{b}</option>)}
-              <option value="অন্যান্য">অন্যান্য / বই নির্ধারিত নয়</option>
-            </select></div>
-          <div style={{ marginTop: 10 }}><label style={S.label}>৩. লেসন</label>
-            <input style={S.input} value={form.lesson} onChange={(e) => setForm({ ...form, lesson: e.target.value })} placeholder="যেমন: লেসন ৪ — হরকত পরিচিতি" /></div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
-            <div><label style={S.label}>৪. পৃষ্ঠা</label>
-              <input style={S.input} value={form.pages} onChange={(e) => setForm({ ...form, pages: e.target.value })} placeholder="যেমন: ১২–১৫" /></div>
-            <div><label style={S.label}>৫. লাইন</label>
-              <input style={S.input} value={form.lines} onChange={(e) => setForm({ ...form, lines: e.target.value })} placeholder="যেমন: ১–৮" /></div>
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>বিভাগ</label>
+            <select style={S.input} value={form.category} onChange={(e) => { const cat = e.target.value; setForm({ ...form, category: cat, book: catInfo(cat).book ? (form.book && form.book !== "অন্যান্য" ? form.book : (fBooks[0] || "অন্যান্য")) : "অন্যান্য", pages: cat === "qirat" ? form.pages : "", lines: cat === "qirat" ? form.lines : "" }); }}>
+              {SYL_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            </select>
           </div>
-          <div style={{ marginTop: 10 }}><label style={S.label}>৬. মন্তব্য</label>
-            <textarea rows={2} style={{ ...S.input, resize: "vertical" }} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="যেমন: মশকসহ পড়াতে হবে, আগের পৃষ্ঠার দাওরসহ..." /></div>
+          {catInfo(form.category).book && (
+            <div style={{ marginTop: 10 }}><label style={S.label}>একাডেমিক বই সিলেকশন {fBooks.length === 0 && <span style={{ color: C.red }}>(এ কোর্সে বই নেই)</span>}</label>
+              <select style={S.input} value={form.book} onChange={(e) => setForm({ ...form, book: e.target.value })}>
+                {fBooks.map((b) => <option key={b} value={b}>{b}</option>)}
+                <option value="অন্যান্য">অন্যান্য / বই নির্ধারিত নয়</option>
+              </select></div>
+          )}
+          <div style={{ marginTop: 10 }}><label style={S.label}>{form.category === "qirat" ? "লেসন / বিষয়বস্তু" : "বিষয়বস্তু"}</label>
+            <input style={S.input} value={form.lesson} onChange={(e) => setForm({ ...form, lesson: e.target.value })} placeholder={catInfo(form.category).placeholder} /></div>
+          {form.category === "qirat" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
+              <div><label style={S.label}>পৃষ্ঠা</label>
+                <input style={S.input} value={form.pages} onChange={(e) => setForm({ ...form, pages: e.target.value })} placeholder="যেমন: ১২–১৫" /></div>
+              <div><label style={S.label}>লাইন</label>
+                <input style={S.input} value={form.lines} onChange={(e) => setForm({ ...form, lines: e.target.value })} placeholder="যেমন: ১–৮" /></div>
+            </div>
+          )}
+          <div style={{ marginTop: 10 }}><label style={S.label}>মন্তব্য (ঐচ্ছিক)</label>
+            <textarea rows={2} style={{ ...S.input, resize: "vertical" }} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="যেমন: মশকসহ পড়াতে হবে..." /></div>
           <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={save}>{form.id ? "✏️ সংরক্ষণ করুন" : "+ যোগ করুন"}</Btn>
         </Modal>
       )}

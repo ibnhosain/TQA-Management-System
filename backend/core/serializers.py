@@ -70,11 +70,26 @@ class CourseSerializer(serializers.ModelSerializer):
 
 class SyllabusItemSerializer(serializers.ModelSerializer):
     label = serializers.CharField(read_only=True)
-    book_name = serializers.CharField(source="book.name", read_only=True)
+    book_name = serializers.SerializerMethodField()  # রিড: বইয়ের নাম
 
     class Meta:
         model = SyllabusItem
         fields = "__all__"
+
+    def get_book_name(self, obj):
+        return obj.book.name if obj.book_id else ""
+
+    def to_internal_value(self, data):
+        # ফ্রন্টএন্ড book_name (স্ট্রিং) পাঠায় → AcademicBook FK-তে রূপান্তর (বই সেভ নিশ্চিত)
+        ret = super().to_internal_value(data)
+        if hasattr(data, "keys") and "book_name" in data:
+            name = (data.get("book_name") or "").strip()
+            if name and name != "অন্যান্য":
+                book, _ = AcademicBook.objects.get_or_create(name=name)
+                ret["book"] = book
+            else:
+                ret["book"] = None
+        return ret
 
 
 class LectureTopicSerializer(serializers.ModelSerializer):
@@ -91,15 +106,41 @@ class LectureSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lecture
         fields = ["id", "course", "no", "title", "date", "topics", "syllabus_item_ids"]
+        extra_kwargs = {"no": {"required": False}}
 
     def create(self, validated):
         ids = validated.pop("syllabus_item_ids", [])
-        validated["no"] = Lecture.objects.filter(course=validated["course"]).count() + 1
+        # দারস-নং দেওয়া না থাকলে স্বয়ংক্রিয়; দেওয়া থাকলে তা-ই ব্যবহার
+        if not validated.get("no"):
+            validated["no"] = Lecture.objects.filter(course=validated["course"]).count() + 1
         lec = Lecture.objects.create(**validated)
         for sid in ids:  # সিলেবাস থেকে টপিক সিলেকশন
             si = SyllabusItem.objects.get(pk=sid, course=lec.course)
             LectureTopic.objects.create(lecture=lec, syllabus_item=si, text=si.label)
         return lec
+
+    def update(self, instance, validated):
+        ids = validated.pop("syllabus_item_ids", None)
+        for k, v in validated.items():
+            setattr(instance, k, v)
+        instance.save()
+        if ids is not None:  # টপিক তালিকা হালনাগাদ — কভার-স্ট্যাটাস যথাসম্ভব অক্ষত
+            keep = set(ids)
+            existing = {t.syllabus_item_id: t for t in instance.topics.all()}
+            for sid, t in existing.items():
+                if sid not in keep:
+                    t.delete()
+            for sid in ids:
+                if sid in existing:
+                    si = SyllabusItem.objects.filter(pk=sid, course=instance.course).first()
+                    if si:
+                        existing[sid].text = si.label
+                        existing[sid].save(update_fields=["text"])
+                else:
+                    si = SyllabusItem.objects.filter(pk=sid, course=instance.course).first()
+                    if si:
+                        LectureTopic.objects.create(lecture=instance, syllabus_item=si, text=si.label)
+        return instance
 
 
 class RoutineSerializer(serializers.ModelSerializer):

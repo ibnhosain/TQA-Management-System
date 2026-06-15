@@ -104,8 +104,8 @@ export const api = {
   editSyllabus: (id, d) => request(`/syllabus/${id}/`, { method: "PATCH", body: d }),
   deleteSyllabus: (id) => request(`/syllabus/${id}/`, { method: "DELETE" }),
   lectures: (courseId) => request(`/lectures/?course=${courseId}`),
-  createLecture: (course, title, syllabus_item_ids) =>            // সিলেবাস থেকে টপিক সিলেকশন
-    request("/lectures/", { method: "POST", body: { course, title, syllabus_item_ids } }),
+  createLecture: (course, title, syllabus_item_ids, extra = {}) =>            // সিলেবাস থেকে টপিক সিলেকশন (+ ঐচ্ছিক দারস-নং/তারিখ)
+    request("/lectures/", { method: "POST", body: { course, title, syllabus_item_ids, ...extra } }),
   editLecture: (id, d) => request(`/lectures/${id}/`, { method: "PATCH", body: d }),
   deleteLecture: (id) => request(`/lectures/${id}/`, { method: "DELETE" }),
   markTopic: (topic_id, covered) =>                               // ✔/✘ — সবুজ/লাল

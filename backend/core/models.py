@@ -55,23 +55,35 @@ class Course(models.Model):
 
 # ─────────────────── সিলেবাস (কোর্স→বই→লেসন→পৃষ্ঠা→লাইন→মন্তব্য) ───────────────────
 class SyllabusItem(models.Model):
+    # দৈনিক পাঠ পরিকল্পনা / সিলেবাসের ৫টি বিভাগ
+    class Category(models.TextChoices):
+        SURAH  = "memorized_surah",  "মুখস্থ সূরা"
+        HADITH = "memorized_hadith", "মুখস্থ হাদিস"
+        QIRAT  = "qirat",            "কিরাত"
+        DUA    = "dua_masala",       "দুআ/মাসআলা"
+        MORAL  = "moral_story",      "নৈতিক শিক্ষা/হাদিসের গল্প"
+
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="syllabus")
+    category = models.CharField(max_length=20, choices=Category.choices, default=Category.QIRAT)
     book = models.ForeignKey(AcademicBook, on_delete=models.SET_NULL, null=True, blank=True)
-    lesson = models.CharField(max_length=200)
+    lesson = models.CharField(max_length=300)  # মূল বিষয়বস্তু (যেমন: সূরা ইখলাস / কায়দা — লেসন ৪)
     pages = models.CharField(max_length=50, blank=True)
     lines = models.CharField(max_length=50, blank=True)
     note = models.TextField(blank=True)
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
-        ordering = ["order", "id"]
+        ordering = ["category", "order", "id"]
 
     @property
     def label(self):  # ফ্রন্টএন্ডের sylLabel() এর সমতুল্য
-        parts = [f"{self.book.name} — " if self.book else "", self.lesson]
-        if self.pages: parts.append(f", পৃষ্ঠা: {self.pages}")
-        if self.lines: parts.append(f", লাইন: {self.lines}")
-        return "".join(parts)
+        prefix = f"{self.book.name} — " if self.book else ""
+        if self.category == self.Category.QIRAT:
+            parts = [prefix, self.lesson]
+            if self.pages: parts.append(f", পৃষ্ঠা: {self.pages}")
+            if self.lines: parts.append(f", লাইন: {self.lines}")
+            return "".join(parts)
+        return f"{prefix}{self.lesson}"
 
 
 # ─────────────────────────── লেকচার প্ল্যান ও টপিক কভারেজ ───────────────────────────
