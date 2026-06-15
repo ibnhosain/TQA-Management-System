@@ -67,6 +67,76 @@ body{font-family:'Hind Siliguri',sans-serif;margin:0;padding:28px;background:#f4
 <button class="pr" onclick="window.print()">🖨️ প্রিন্ট / PDF সেভ করুন</button>
 </body></html>`;
 
+/* 📜 কোর্স সিলেবাস — প্রিন্টযোগ্য ডকুমেন্ট (PDF-এর মতো পাশাপাশি ৫ কলাম, যে কেউ প্রিন্ট/PDF করতে পারবে) */
+const SYL_CATS_PRINT = [
+  { key: "memorized_surah", label: "মুখস্থ সূরা" },
+  { key: "memorized_hadith", label: "মুখস্থ হাদিস" },
+  { key: "qirat", label: "কিরাত" },
+  { key: "dua_masala", label: "দুআ/মাসআলা" },
+  { key: "moral_story", label: "নৈতিক শিক্ষা/হাদিসের গল্প" },
+];
+const syllabusHTML = (courseName, booksLine, itemsByCat) => {
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  const col = (cat) => {
+    const items = itemsByCat[cat.key] || [];
+    const lis = items.length
+      ? items.map((it) => {
+          const bk = it.book && it.book !== "অন্যান্য" ? `<span class="bk">${esc(it.book)} — </span>` : "";
+          const pl = (it.pages ? ` · পৃষ্ঠা: ${esc(it.pages)}` : "") + (it.lines ? ` · লাইন: ${esc(it.lines)}` : "");
+          const note = it.note ? `<div class="nt">💬 ${esc(it.note)}</div>` : "";
+          return `<li>${bk}${esc(it.lesson)}${pl ? `<span class="pl">${pl}</span>` : ""}${note}</li>`;
+        }).join("")
+      : `<li class="em">—</li>`;
+    return `<td><div class="ch">${cat.label}</div><ol>${lis}</ol></td>`;
+  };
+  return `<!DOCTYPE html><html lang="bn"><head><meta charset="utf-8"><title>কোর্স সিলেবাস — ${esc(courseName)}</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700;800&display=swap');
+*{box-sizing:border-box}
+body{font-family:'Hind Siliguri',sans-serif;margin:0;padding:26px;background:#f4f6f4;color:#1a1f2e}
+.v{max-width:1000px;margin:0 auto;background:#fff;border:2px solid #1a5c3a;border-radius:14px;overflow:hidden}
+.h{background:linear-gradient(135deg,#123f28,#1a5c3a);color:#fff;padding:18px 24px;text-align:center}
+.h .ar{color:#f0c355;font-size:13px;letter-spacing:3px}.h h1{margin:4px 0 2px;font-size:21px}.h .s{font-size:11.5px;color:#cfe6d8}
+.k{background:#c9962a;color:#fff;text-align:center;font-weight:800;padding:8px;font-size:16px;letter-spacing:1px}
+.meta{display:flex;gap:18px;flex-wrap:wrap;padding:12px 24px;border-bottom:1.5px solid #e5e9e5;font-size:13.5px}
+.meta b{color:#1a5c3a}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+td{border:1px solid #e5e9e5;vertical-align:top;padding:0;width:20%}
+.ch{background:#eafaf1;color:#1a5c3a;font-weight:800;font-size:13px;text-align:center;padding:9px 6px;border-bottom:1.5px solid #1a7a44}
+ol{margin:0;padding:10px 10px 12px 26px}
+li{font-size:12.5px;margin-bottom:7px;line-height:1.5}
+li.em{list-style:none;margin-left:-16px;text-align:center;color:#9ca3af}
+.bk{color:#1a5c3a;font-weight:700}.pl{color:#6b7280;font-size:11px}.nt{color:#6b7280;font-size:11px}
+.f{text-align:center;font-size:11px;color:#9ca3af;padding:10px;border-top:1px solid #eef0ee}
+.pr{display:block;margin:18px auto 0;background:#1a5c3a;color:#fff;border:none;padding:11px 26px;border-radius:10px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}
+@media print{.pr{display:none}body{background:#fff;padding:0}.v{border:none;border-radius:0;max-width:100%}}
+</style></head><body>
+<div class="v">
+<div class="h"><div class="ar">تربية القرآن</div><h1>তারবিয়াতুল কুরআন একাডেমী</h1><div class="s">tarbiyatulquran.org · WhatsApp: +880 140 249 9027</div></div>
+<div class="k">কোর্স সিলেবাস</div>
+<div class="meta"><div><b>কোর্স:</b> ${esc(courseName)}</div>${booksLine ? `<div><b>বই:</b> ${esc(booksLine)}</div>` : ""}<div><b>তারিখ:</b> ${fmtDate(todayISO())}</div></div>
+<table><tr>${SYL_CATS_PRINT.map(col).join("")}</tr></table>
+<div class="f">এটি কম্পিউটারে তৈরি কোর্স সিলেবাস — তারবিয়াতুল কুরআন একাডেমী</div>
+</div>
+<button class="pr" onclick="window.print()">🖨️ প্রিন্ট / PDF সেভ করুন</button>
+</body></html>`;
+};
+
+/* প্রিন্ট ডকুমেন্ট খোলা — নতুন ট্যাবে; পপআপ ব্লক হলে HTML ফাইল ডাউনলোড (fallback) */
+const openPrintDoc = (html, filename) => {
+  try {
+    const w = window.open("", "_blank");
+    if (w && w.document) { w.document.open(); w.document.write(html); w.document.close(); return; }
+  } catch (e) { /* ignore → fallback */ }
+  try {
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch (e) { notice("প্রিন্ট খুলতে সমস্যা হয়েছে।"); }
+};
+
 /* স্যান্ডবক্সে window.confirm/alert ব্লক থাকে — তাই নিজস্ব কনফার্ম-মডাল ও টোস্ট */
 let confirmHandler = null;
 const askConfirm = (message, onYes) => { confirmHandler ? confirmHandler({ message, onYes }) : onYes(); };
@@ -3017,12 +3087,13 @@ function CourseManagerView({ db, setDb, refresh }) {
   );
 }
 
-/* ═══════════════ কোর্স সিলেবাস — ৫ বিভাগ (মুখস্থ সূরা/হাদিস · কিরাত · দুআ-মাসআলা · নৈতিক শিক্ষা); কেবল পরিচালক তৈরি করবেন ═══════════════ */
+/* ═══════════════ কোর্স সিলেবাস — PDF-কাঠামো (পাশাপাশি ৫ কলাম) · দ্রুত যোগ · প্রিন্ট/PDF ═══════════════ */
 function SyllabusView({ db, setDb, courses, user }) {
   const [sel, setSel] = useState(courses[0]?.id);
-  const [form, setForm] = useState(null); // {id?, courseId, category, book, lesson, pages, lines, note}
   const [syllabus, setSyllabus] = useState(db.syllabus || []);
   const [allBooks, setAllBooks] = useState(db.academicBooks || []);
+  const [edit, setEdit] = useState(null);       // বিদ্যমান আইটেম এডিট মডাল
+  const [draft, setDraft] = useState({});        // প্রতি বিভাগের দ্রুত-যোগ খসড়া
 
   const adaptSyl = (s) => ({
     id: s.id, courseId: s.course || s.courseId, category: s.category || "qirat",
@@ -3032,10 +3103,7 @@ function SyllabusView({ db, setDb, courses, user }) {
     if (!sel) return;
     try {
       const [sylData, bkData] = await Promise.all([api.syllabus(sel), api.books()]);
-      setSyllabus((prev) => {
-        const filtered = prev.filter((s) => String(s.courseId) !== String(sel));
-        return [...filtered, ...sylData.map(adaptSyl)];
-      });
+      setSyllabus((prev) => [...prev.filter((s) => String(s.courseId) !== String(sel)), ...sylData.map(adaptSyl)]);
       setAllBooks(bkData);
     } catch {
       setSyllabus((db.syllabus || []).map(adaptSyl));
@@ -3047,129 +3115,165 @@ function SyllabusView({ db, setDb, courses, user }) {
   const course = courseById(courses, sel);
   const list = syllabus.filter((s) => String(s.courseId) === String(sel));
   const bookNameOf = (id) => (allBooks.find((b) => b.id === id) || {}).name;
-  const fBooks = (courseById(courses, form?.courseId || sel).books || []).map(bookNameOf).filter(Boolean);
+  const courseBooks = (course.books || []).map(bookNameOf).filter(Boolean);
+  const fBooks = (courseById(courses, edit?.courseId || sel).books || []).map(bookNameOf).filter(Boolean);
 
-  const openNew = (category) => {
-    const needsBook = catInfo(category).book;
-    setForm({ courseId: sel, category, book: needsBook ? ((course.books || []).map(bookNameOf).filter(Boolean)[0] || "অন্যান্য") : "অন্যান্য", lesson: "", pages: "", lines: "", note: "" });
-  };
-  const openEdit = (s) => setForm({ id: s.id, courseId: s.courseId, category: s.category || "qirat", book: s.book || "অন্যান্য", lesson: s.lesson, pages: s.pages || "", lines: s.lines || "", note: s.note || "" });
+  // কোর্স বদলালে খসড়ার বই রিসেট
+  useEffect(() => {
+    const def = courseBooks[0] || "অন্যান্য";
+    const d = {};
+    SYL_CATEGORIES.forEach((c) => { d[c.key] = { book: c.book ? def : "অন্যান্য", lesson: "", pages: "", lines: "" }; });
+    setDraft(d);
+  }, [sel, allBooks.length]); // eslint-disable-line
 
-  const save = async () => {
-    if (!form.lesson.trim()) return notice("বিষয়বস্তু লিখে দিন।");
-    const isQirat = form.category === "qirat";
+  const setD = (k, patch) => setDraft((p) => ({ ...p, [k]: { ...(p[k] || {}), ...patch } }));
+
+  // ── দ্রুত যোগ (ইনলাইন) ──
+  const addQuick = async (cat) => {
+    const dr = draft[cat.key] || {};
+    if (!(dr.lesson || "").trim()) return;
+    const isQ = cat.key === "qirat";
     const payload = {
-      course: form.courseId, category: form.category,
-      book_name: catInfo(form.category).book ? form.book : "অন্যান্য",
-      lesson: form.lesson.trim(),
-      pages: isQirat ? form.pages.trim() : "",
-      lines: isQirat ? form.lines.trim() : "",
-      note: form.note.trim(),
+      course: sel, category: cat.key,
+      book_name: cat.book ? (dr.book || "অন্যান্য") : "অন্যান্য",
+      lesson: dr.lesson.trim(), pages: isQ ? (dr.pages || "").trim() : "", lines: isQ ? (dr.lines || "").trim() : "", note: "",
     };
-    const entry = { courseId: form.courseId, category: form.category, book: payload.book_name, lesson: payload.lesson, pages: payload.pages, lines: payload.lines, note: payload.note };
-    try {
-      if (form.id) await api.editSyllabus(form.id, payload);
-      else await api.addSyllabus(payload);
-      await loadData();
-    } catch {
-      if (form.id) setSyllabus((prev) => prev.map((s) => s.id === form.id ? { ...s, ...entry } : s));
-      else setSyllabus((prev) => [...prev, { id: uid(), ...entry }]);
-    }
-    setForm(null);
+    const optimistic = { id: uid(), courseId: sel, category: cat.key, book: payload.book_name, lesson: payload.lesson, pages: payload.pages, lines: payload.lines, note: "" };
+    try { await api.addSyllabus(payload); await loadData(); }
+    catch { setSyllabus((prev) => [...prev, optimistic]); }
+    setD(cat.key, { lesson: "", pages: "", lines: "" }); // বই অপরিবর্তিত — পরপর দ্রুত যোগ
+  };
+
+  // ── এডিট সেভ ──
+  const saveEdit = async () => {
+    if (!edit.lesson.trim()) return notice("বিষয়বস্তু লিখে দিন।");
+    const isQ = edit.category === "qirat";
+    const payload = {
+      course: edit.courseId, category: edit.category,
+      book_name: catInfo(edit.category).book ? edit.book : "অন্যান্য",
+      lesson: edit.lesson.trim(), pages: isQ ? edit.pages.trim() : "", lines: isQ ? edit.lines.trim() : "", note: edit.note.trim(),
+    };
+    const entry = { courseId: edit.courseId, category: edit.category, book: payload.book_name, lesson: payload.lesson, pages: payload.pages, lines: payload.lines, note: payload.note };
+    try { await api.editSyllabus(edit.id, payload); await loadData(); }
+    catch { setSyllabus((prev) => prev.map((s) => s.id === edit.id ? { ...s, ...entry } : s)); }
+    setEdit(null);
   };
   const del = (s) => askConfirm("সিলেবাসের এই অংশটি মুছে ফেলবেন?", async () => {
     try { await api.deleteSyllabus(s.id); await loadData(); }
     catch { setSyllabus((prev) => prev.filter((x) => x.id !== s.id)); }
   });
 
-  const courseBooks = (course.books || []).map(bookNameOf).filter(Boolean);
+  // ── প্রিন্ট ──
+  const doPrint = () => {
+    const byCat = {};
+    SYL_CATEGORIES.forEach((c) => { byCat[c.key] = list.filter((s) => (s.category || "qirat") === c.key); });
+    openPrintDoc(syllabusHTML(course.name, courseBooks.join(", "), byCat), `TQA-syllabus-${(course.name || "course")}.html`);
+  };
+
   return (
-    <Section title="কোর্স সিলেবাস" sub={isDir(user) ? "মুখস্থ সূরা · মুখস্থ হাদিস · কিরাত · দুআ-মাসআলা · নৈতিক শিক্ষা — প্রতিটি বিভাগে এক এক করে যোগ করুন; লেকচার প্ল্যান এখান থেকেই টপিক বাছাই করে" : "কোর্সভিত্তিক পূর্ণাঙ্গ সিলেবাস — পরিচালক কর্তৃক নির্ধারিত"}>
+    <Section title="কোর্স সিলেবাস" sub={isDir(user) ? "প্রতিটি বিভাগের নিচে দ্রুত যোগ করুন — যেকোনো বইয়ের সিলেবাস চটজলদি তৈরি হবে · যে কেউ প্রিন্ট/PDF করতে পারবে" : "কোর্সভিত্তিক পূর্ণাঙ্গ সিলেবাস — যে কেউ প্রিন্ট/PDF করতে পারবে"}
+      action={<Btn kind="gold" onClick={doPrint}>🖨️ প্রিন্ট / PDF</Btn>}>
       {/* কোর্স সিলেকশন */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
         {courses.map((c) => <Btn key={c.id} sm kind={sel === c.id ? "primary" : "soft"} onClick={() => setSel(c.id)}>{c.name}</Btn>)}
       </div>
-      {/* বই সিলেকশন তথ্য (কোর্সের অন্তর্ভুক্ত বই) */}
-      <div style={{ ...S.card, padding: "12px 16px", marginBottom: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <b style={{ fontSize: 13.5 }}>📚 {course.name} — বই:</b>
-        {courseBooks.length === 0
-          ? <span style={{ fontSize: 12.5, color: C.red }}>এ কোর্সে বই নেই · "কোর্স" মেনুতে ✏️ এডিট করে যোগ করুন</span>
-          : courseBooks.map((b) => <Tag key={b} color={C.emerald} bg={C.cream}>{b}</Tag>)}
-      </div>
-
-      {/* ৫টি বিভাগের কার্ড */}
-      <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(248px, 1fr))" }}>
-        {SYL_CATEGORIES.map((cat) => {
-          const items = list.filter((s) => (s.category || "qirat") === cat.key);
-          return (
-            <div key={cat.key} style={{ ...S.card, padding: 0, overflow: "hidden", borderTop: `3px solid ${C.gold}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 14px", background: C.cream, borderBottom: `1px solid ${C.line}` }}>
-                <span style={{ fontSize: 17 }}>{cat.icon}</span>
-                <b style={{ flex: 1, fontSize: 13.5, color: C.emerald }}>{cat.label}</b>
-                <Tag>{bn(items.length)}</Tag>
-              </div>
-              <div style={{ padding: 12, display: "grid", gap: 8 }}>
-                {items.length === 0 && <div style={{ fontSize: 12.5, color: C.muted, textAlign: "center", padding: "6px 0" }}>—</div>}
-                {items.map((s) => (
-                  <div key={s.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", background: C.greenBg, borderRadius: 10, padding: "8px 10px" }}>
-                    <span style={{ flex: 1, fontSize: 13, lineHeight: 1.5 }}>
-                      <b>{s.book && s.book !== "অন্যান্য" ? <span style={{ color: C.emerald }}>{s.book} — </span> : null}{s.lesson}</b>
-                      {(s.pages || s.lines) && <span style={{ color: C.muted, fontSize: 11.5 }}>{s.pages ? ` · পৃষ্ঠা: ${s.pages}` : ""}{s.lines ? ` · লাইন: ${s.lines}` : ""}</span>}
-                      {s.note && <div style={{ fontSize: 11.5, color: C.muted }}>💬 {s.note}</div>}
-                    </span>
-                    {isDir(user) && (
-                      <span style={{ display: "flex", gap: 4 }}>
-                        <button title="এডিট" onClick={() => openEdit(s)} style={{ border: "none", background: "#fff", borderRadius: 7, width: 26, height: 26, cursor: "pointer", fontSize: 12 }}>✏️</button>
-                        <button title="মুছুন" onClick={() => del(s)} style={{ border: "none", background: C.redBg, color: C.red, borderRadius: 7, width: 26, height: 26, cursor: "pointer", fontSize: 12 }}>🗑</button>
-                      </span>
-                    )}
-                  </div>
-                ))}
-                {isDir(user) && <Btn sm kind="ghost" style={{ justifyContent: "center" }} onClick={() => openNew(cat.key)}>+ যোগ করুন</Btn>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {!isDir(user) && list.length === 0 && (
-        <div style={{ ...S.card, textAlign: "center", color: C.muted, padding: 24, marginTop: 12 }}>
-          📜 "{course.name}" কোর্সের সিলেবাস এখনো তৈরি হয়নি। পরিচালক তৈরি করলে এখানে দেখা যাবে ইনশাআল্লাহ।
+      {/* কোর্স ও বই তথ্য (PDF হেডারের সমতুল্য) */}
+      <div style={{ borderRadius: 14, overflow: "hidden", border: `2px solid ${C.emerald}`, marginBottom: 14 }}>
+        <div style={{ background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`, color: "#fff", textAlign: "center", padding: "12px 16px" }}>
+          <div style={{ color: C.goldL, fontSize: 11, letterSpacing: 3 }}>تربية القرآن</div>
+          <div style={{ fontWeight: 800, fontSize: 17 }}>তারবিয়াতুল কুরআন একাডেমী</div>
         </div>
-      )}
+        <div style={{ background: C.gold, color: "#fff", textAlign: "center", fontWeight: 800, padding: "6px", fontSize: 14, letterSpacing: 1 }}>কোর্স সিলেবাস</div>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "10px 16px", background: "#fff", fontSize: 13 }}>
+          <div><b style={{ color: C.emerald }}>কোর্স:</b> {course.name}</div>
+          <div><b style={{ color: C.emerald }}>বই:</b> {courseBooks.length ? courseBooks.join(", ") : <span style={{ color: C.red }}>নেই — "কোর্স" মেনুতে যোগ করুন</span>}</div>
+        </div>
+      </div>
 
-      {form && (
-        <Modal title={form.id ? "✏️ সিলেবাস এডিট" : `+ ${catInfo(form.category).label} — যোগ করুন`} onClose={() => setForm(null)}>
-          <label style={S.label}>কোর্স সিলেকশন</label>
-          <select style={S.input} value={form.courseId} onChange={(e) => { const c2 = courseById(courses, e.target.value); const bks = (c2.books || []).map(bookNameOf).filter(Boolean); setForm({ ...form, courseId: e.target.value, book: catInfo(form.category).book ? (bks[0] || "অন্যান্য") : "অন্যান্য" }); }}>
-            {courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      {/* পাশাপাশি ৫ কলাম (মোবাইলে সাইড-স্ক্রল) */}
+      <div style={{ overflowX: "auto", borderRadius: 12, border: `1px solid ${C.line}` }}>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${SYL_CATEGORIES.length}, minmax(196px, 1fr))`, minWidth: 980 }}>
+          {SYL_CATEGORIES.map((cat, ci) => {
+            const items = list.filter((s) => (s.category || "qirat") === cat.key);
+            const dr = draft[cat.key] || {};
+            return (
+              <div key={cat.key} style={{ borderLeft: ci ? `1px solid ${C.line}` : "none", display: "flex", flexDirection: "column" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 10px", background: C.greenBg, borderBottom: `2px solid ${C.green}`, position: "sticky", top: 0 }}>
+                  <span style={{ fontSize: 15 }}>{cat.icon}</span>
+                  <b style={{ flex: 1, fontSize: 12.5, color: C.emerald, lineHeight: 1.3 }}>{cat.label}</b>
+                  <Tag>{bn(items.length)}</Tag>
+                </div>
+                <ol style={{ margin: 0, padding: "8px 8px 8px 26px", flex: 1, minHeight: 60 }}>
+                  {items.length === 0 && <div style={{ listStyle: "none", marginLeft: -16, textAlign: "center", color: C.muted, fontSize: 12.5, padding: "10px 0" }}>—</div>}
+                  {items.map((s) => (
+                    <li key={s.id} style={{ fontSize: 12.5, marginBottom: 8, lineHeight: 1.5 }}>
+                      <span>
+                        {s.book && s.book !== "অন্যান্য" ? <b style={{ color: C.emerald }}>{s.book} — </b> : null}
+                        <span style={{ fontWeight: 600 }}>{s.lesson}</span>
+                        {(s.pages || s.lines) && <span style={{ color: C.muted, fontSize: 11 }}>{s.pages ? ` · পৃ: ${s.pages}` : ""}{s.lines ? ` · লা: ${s.lines}` : ""}</span>}
+                        {s.note && <span style={{ color: C.muted, fontSize: 11 }}> · 💬 {s.note}</span>}
+                      </span>
+                      {isDir(user) && (
+                        <span style={{ display: "inline-flex", gap: 4, marginLeft: 4, verticalAlign: "middle" }}>
+                          <button title="এডিট" onClick={() => setEdit({ id: s.id, courseId: s.courseId, category: s.category || "qirat", book: s.book || "অন্যান্য", lesson: s.lesson, pages: s.pages || "", lines: s.lines || "", note: s.note || "" })} style={{ border: "none", background: C.cream, borderRadius: 6, width: 22, height: 22, cursor: "pointer", fontSize: 10 }}>✏️</button>
+                          <button title="মুছুন" onClick={() => del(s)} style={{ border: "none", background: C.redBg, color: C.red, borderRadius: 6, width: 22, height: 22, cursor: "pointer", fontSize: 10 }}>🗑</button>
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+                {isDir(user) && (
+                  <div style={{ padding: 8, borderTop: `1px dashed ${C.line}`, background: C.cream, display: "grid", gap: 6 }}>
+                    {cat.book && (
+                      <select value={dr.book || "অন্যান্য"} onChange={(e) => setD(cat.key, { book: e.target.value })} style={{ ...S.input, padding: "6px 8px", fontSize: 12 }}>
+                        {fBooks.map((b) => <option key={b} value={b}>{b}</option>)}
+                        <option value="অন্যান্য">অন্যান্য / বই ছাড়া</option>
+                      </select>
+                    )}
+                    <input value={dr.lesson || ""} onChange={(e) => setD(cat.key, { lesson: e.target.value })}
+                      onKeyDown={(e) => { if (e.key === "Enter") addQuick(cat); }}
+                      placeholder={cat.placeholder} style={{ ...S.input, padding: "7px 9px", fontSize: 12.5 }} />
+                    {cat.key === "qirat" && (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                        <input value={dr.pages || ""} onChange={(e) => setD(cat.key, { pages: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") addQuick(cat); }} placeholder="পৃষ্ঠা" style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
+                        <input value={dr.lines || ""} onChange={(e) => setD(cat.key, { lines: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") addQuick(cat); }} placeholder="লাইন" style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
+                      </div>
+                    )}
+                    <Btn sm style={{ justifyContent: "center" }} onClick={() => addQuick(cat)}>+ যোগ</Btn>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {isDir(user) && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 8 }}>💡 প্রতিটি কলামের ইনপুটে লিখে <b>Enter</b> চাপলেই দ্রুত যোগ হবে · বই একবার বেছে নিলে পরপর অনেকগুলো লেসন দ্রুত যোগ করা যায়।</div>}
+
+      {/* এডিট মডাল */}
+      {edit && (
+        <Modal title={`✏️ ${catInfo(edit.category).label} — এডিট`} onClose={() => setEdit(null)}>
+          <label style={S.label}>বিভাগ</label>
+          <select style={S.input} value={edit.category} onChange={(e) => { const cat = e.target.value; setEdit({ ...edit, category: cat, book: catInfo(cat).book ? (edit.book && edit.book !== "অন্যান্য" ? edit.book : (fBooks[0] || "অন্যান্য")) : "অন্যান্য", pages: cat === "qirat" ? edit.pages : "", lines: cat === "qirat" ? edit.lines : "" }); }}>
+            {SYL_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
           </select>
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>বিভাগ</label>
-            <select style={S.input} value={form.category} onChange={(e) => { const cat = e.target.value; setForm({ ...form, category: cat, book: catInfo(cat).book ? (form.book && form.book !== "অন্যান্য" ? form.book : (fBooks[0] || "অন্যান্য")) : "অন্যান্য", pages: cat === "qirat" ? form.pages : "", lines: cat === "qirat" ? form.lines : "" }); }}>
-              {SYL_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
-            </select>
-          </div>
-          {catInfo(form.category).book && (
-            <div style={{ marginTop: 10 }}><label style={S.label}>একাডেমিক বই সিলেকশন {fBooks.length === 0 && <span style={{ color: C.red }}>(এ কোর্সে বই নেই)</span>}</label>
-              <select style={S.input} value={form.book} onChange={(e) => setForm({ ...form, book: e.target.value })}>
+          {catInfo(edit.category).book && (
+            <div style={{ marginTop: 10 }}><label style={S.label}>একাডেমিক বই</label>
+              <select style={S.input} value={edit.book} onChange={(e) => setEdit({ ...edit, book: e.target.value })}>
                 {fBooks.map((b) => <option key={b} value={b}>{b}</option>)}
                 <option value="অন্যান্য">অন্যান্য / বই নির্ধারিত নয়</option>
               </select></div>
           )}
-          <div style={{ marginTop: 10 }}><label style={S.label}>{form.category === "qirat" ? "লেসন / বিষয়বস্তু" : "বিষয়বস্তু"}</label>
-            <input style={S.input} value={form.lesson} onChange={(e) => setForm({ ...form, lesson: e.target.value })} placeholder={catInfo(form.category).placeholder} /></div>
-          {form.category === "qirat" && (
+          <div style={{ marginTop: 10 }}><label style={S.label}>{edit.category === "qirat" ? "লেসন / বিষয়বস্তু" : "বিষয়বস্তু"}</label>
+            <input style={S.input} value={edit.lesson} onChange={(e) => setEdit({ ...edit, lesson: e.target.value })} placeholder={catInfo(edit.category).placeholder} /></div>
+          {edit.category === "qirat" && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
-              <div><label style={S.label}>পৃষ্ঠা</label>
-                <input style={S.input} value={form.pages} onChange={(e) => setForm({ ...form, pages: e.target.value })} placeholder="যেমন: ১২–১৫" /></div>
-              <div><label style={S.label}>লাইন</label>
-                <input style={S.input} value={form.lines} onChange={(e) => setForm({ ...form, lines: e.target.value })} placeholder="যেমন: ১–৮" /></div>
+              <div><label style={S.label}>পৃষ্ঠা</label><input style={S.input} value={edit.pages} onChange={(e) => setEdit({ ...edit, pages: e.target.value })} placeholder="যেমন: ১২–১৫" /></div>
+              <div><label style={S.label}>লাইন</label><input style={S.input} value={edit.lines} onChange={(e) => setEdit({ ...edit, lines: e.target.value })} placeholder="যেমন: ১–৮" /></div>
             </div>
           )}
           <div style={{ marginTop: 10 }}><label style={S.label}>মন্তব্য (ঐচ্ছিক)</label>
-            <textarea rows={2} style={{ ...S.input, resize: "vertical" }} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="যেমন: মশকসহ পড়াতে হবে..." /></div>
-          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={save}>{form.id ? "✏️ সংরক্ষণ করুন" : "+ যোগ করুন"}</Btn>
+            <textarea rows={2} style={{ ...S.input, resize: "vertical" }} value={edit.note} onChange={(e) => setEdit({ ...edit, note: e.target.value })} /></div>
+          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={saveEdit}>✏️ সংরক্ষণ করুন</Btn>
         </Modal>
       )}
     </Section>
