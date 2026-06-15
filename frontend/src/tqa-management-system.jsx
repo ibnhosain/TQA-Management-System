@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+gimport React, { useState, useEffect, useMemo, useRef } from "react";
 import { api, login, logout, getMe, hasToken, downloadBackup } from "./api";
 
 /* ═══════════════════════════════════════════════════════════
@@ -113,8 +113,8 @@ li.em{list-style:none;margin-left:-16px;text-align:center;color:#9ca3af}
 </style></head><body>
 <div class="v">
 <div class="h"><div class="ar">تربية القرآن</div><h1>তারবিয়াতুল কুরআন একাডেমী</h1><div class="s">tarbiyatulquran.org · WhatsApp: +880 140 249 9027</div></div>
-<div class="k">কোর্স সিলেবাস</div>
-<div class="meta"><div><b>কোর্স:</b> ${esc(courseName)}</div>${booksLine ? `<div><b>বই:</b> ${esc(booksLine)}</div>` : ""}<div><b>তারিখ:</b> ${fmtDate(todayISO())}</div></div>
+<div class="k">${esc(courseName)}</div>
+<div class="meta">${booksLine ? `<div><b>বই:</b> ${esc(booksLine)}</div>` : ""}<div><b>তারিখ:</b> ${fmtDate(todayISO())}</div></div>
 <table><tr>${SYL_CATS_PRINT.map(col).join("")}</tr></table>
 <div class="f">এটি কম্পিউটারে তৈরি কোর্স সিলেবাস — তারবিয়াতুল কুরআন একাডেমী</div>
 </div>
@@ -3096,6 +3096,7 @@ function SyllabusView({ db, user }) {
   const [loadedCids, setLoadedCids] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [edit, setEdit] = useState(null);
+  const [selectedCourseId, setSelectedCourseId] = useState(null); // ✅ কোর্স সিলেক্টর
   // draft: { courseId: { catKey: { book, lesson, pages, lines } } }
   const [draft, setDraft] = useState({});
 
@@ -3117,9 +3118,12 @@ function SyllabusView({ db, user }) {
         }));
         setAllCourses(mapped);
         setAllBooks(bks);
+        if (mapped.length > 0) setSelectedCourseId((prev) => prev || String(mapped[0].id)); // ✅ প্রথম কোর্স অটো সিলেক্ট
       } catch {
-        setAllCourses(COURSES.map((c) => ({ ...c, id: String(c.id) })));
+        const fb = COURSES.map((c) => ({ ...c, id: String(c.id) }));
+        setAllCourses(fb);
         setAllBooks(db.academicBooks || []);
+        if (fb.length > 0) setSelectedCourseId((prev) => prev || String(fb[0].id)); // ✅
       } finally { setLoading(false); }
     })();
   }, []);
@@ -3241,17 +3245,34 @@ function SyllabusView({ db, user }) {
 
     return (
       <div style={{ borderRadius: 14, overflow: "hidden", border: `2px solid ${C.emerald}`, marginBottom: 28 }}>
-        {/* হেডার */}
-        <div style={{ background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`, color: "#fff", textAlign: "center", padding: "10px 16px" }}>
-          <div style={{ color: C.goldL, fontSize: 10, letterSpacing: 3 }}>تربية القرآن</div>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>তারবিয়াতুল কুরআন একাডেমী</div>
+        {/* হেডার — কোর্স নাম বড় করে, বই সাবটাইটেলে */}
+        <div style={{ background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`, color: "#fff", textAlign: "center", padding: "14px 16px" }}>
+          <div style={{ color: C.goldL, fontSize: 10, letterSpacing: 3, marginBottom: 2 }}>تربية القرآن</div>
+          <div style={{ fontWeight: 800, fontSize: 13, color: "#cfe6d8", marginBottom: 4 }}>তারবিয়াতুল কুরআন একাডেমী — কোর্স সিলেবাস</div>
+          {/* ✅ কোর্স নাম বড় করে */}
+          <div style={{ fontWeight: 900, fontSize: 22, color: C.goldL, letterSpacing: 0.5 }}>{course.name}</div>
+          {books.length > 0 && (
+            <div style={{ fontSize: 12, color: "#cfe6d8", marginTop: 3 }}>
+              📚 বই: {books.join(", ")}
+            </div>
+          )}
+          {!books.length && (
+            <div style={{ fontSize: 12, color: "#fca5a5", marginTop: 3 }}>⚠️ বই নেই — "কোর্স" মেনুতে যোগ করুন</div>
+          )}
         </div>
-        <div style={{ background: C.gold, color: "#fff", textAlign: "center", fontWeight: 800, padding: "5px", fontSize: 13, letterSpacing: 1 }}>কোর্স সিলেবাস</div>
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", padding: "8px 16px", background: "#fff", fontSize: 13, borderBottom: `1px solid ${C.line}`, justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-            <div><b style={{ color: C.emerald }}>কোর্স:</b> {course.name}</div>
-            <div><b style={{ color: C.emerald }}>বই:</b> {books.length ? books.join(", ") : <span style={{ color: C.red }}>নেই — "কোর্স" মেনুতে যোগ করুন</span>}</div>
-          </div>
+        {/* প্রিন্ট + সেভ বাটন */}
+        <div style={{ display: "flex", gap: 10, padding: "8px 16px", background: "#fff", borderBottom: `1px solid ${C.line}`, justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap" }}>
+          {canEdit && (
+            <Btn kind="soft" sm onClick={async () => {
+              const list = syllabus[course.id] || [];
+              if (!list.length) return notice("সিলেবাসে কিছু যোগ করুন আগে।");
+              try {
+                // সব আইটেম একে একে পুনরায় সেভ করে নিশ্চিত করা হচ্ছে
+                await reloadCourse(course.id);
+                notice("✅ সিলেবাস পোর্টালে সেভ হয়েছে!");
+              } catch { notice("❌ সেভ করা যায়নি।"); }
+            }}>💾 সিলেবাস সেভ করুন</Btn>
+          )}
           <Btn kind="gold" sm onClick={() => doPrint(course)}>🖨️ প্রিন্ট</Btn>
         </div>
 
@@ -3361,15 +3382,26 @@ function SyllabusView({ db, user }) {
   if (loading) return <Section title="কোর্স সিলেবাস"><div style={{ textAlign: "center", padding: 40, color: C.muted }}>⏳ লোড হচ্ছে...</div></Section>;
   if (!allCourses.length) return <Section title="কোর্স সিলেবাস"><div style={{ textAlign: "center", padding: 40, color: C.muted }}>কোনো কোর্স পাওয়া যায়নি।</div></Section>;
 
-  const subText = isDir(user)
-    ? "সব কোর্সের সিলেবাস — যোগ করুন, এডিট করুন, প্রিন্ট করুন"
-    : user.role === "admin"
-    ? "সব কোর্সের সিলেবাস — দেখুন ও প্রিন্ট করুন"
-    : "আপনার কোর্সভিত্তিক সিলেবাস — দেখুন ও প্রিন্ট করুন";
+  const activeCourse = allCourses.find((c) => c.id === selectedCourseId) || allCourses[0];
 
   return (
-    <Section title="কোর্স সিলেবাস" sub={subText}>
-      {allCourses.map((c) => <CourseSyllabusBlock key={c.id} course={c} />)}
+    <Section title="কোর্স সিলেবাস" sub="কোর্স বেছে নিন — সিলেবাস যোগ করুন, এডিট করুন, প্রিন্ট করুন">
+      {/* ✅ কোর্স সিলেক্টর */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <label style={{ fontWeight: 700, fontSize: 14, color: C.emerald, whiteSpace: "nowrap" }}>📚 কোর্স নির্বাচন করুন:</label>
+        <select
+          value={selectedCourseId || ""}
+          onChange={(e) => setSelectedCourseId(e.target.value)}
+          style={{ ...S.input, minWidth: 220, fontSize: 14, fontWeight: 600, padding: "8px 12px", border: `2px solid ${C.emerald}`, borderRadius: 10, color: C.emerald, cursor: "pointer" }}
+        >
+          {allCourses.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <span style={{ fontSize: 12, color: C.muted }}>মোট {bn(allCourses.length)}টি কোর্স</span>
+      </div>
+      {/* ✅ শুধুমাত্র সিলেক্ট করা কোর্সের সিলেবাস */}
+      {activeCourse && <CourseSyllabusBlock key={activeCourse.id} course={activeCourse} />}
     </Section>
   );
 }
