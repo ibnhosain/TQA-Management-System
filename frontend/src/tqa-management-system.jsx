@@ -1832,7 +1832,7 @@ function BackupCard() {
 function ManageView({ db, setDb, refresh }) {
   const [show, setShow] = useState(false);
   const [report, setReport] = useState(null); // কার বিস্তারিত রিপোর্ট দেখা হচ্ছে
-  const [f, setF] = useState({ role: "student", name: "", user: "", pass: genPass(), fee: 4500, salary: 10000, sub: "", courseId: COURSES[0].id });
+  const [f, setF] = useState({ role: "student", name: "", user: "", pass: genPass(), fee: 4500, salary: 10000, sub: "", courseId: COURSES[0]?.id || "" });
   const [allUsers, setAllUsers] = useState(USERS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2612,7 +2612,7 @@ function AllStudentsView({ db, setDb, user, refresh }) {
   };
   return (
     <Section title="সকল স্টুডেন্ট" sub={isDir(user) ? "সম্পূর্ণ তালিকা — এডিট, যোগ ও মুছে ফেলার নিয়ন্ত্রণ কেবল পরিচালকের" : "সম্পূর্ণ তালিকা — আপনি (এডমিন) কেবল দেখতে পারবেন"}
-      action={isDir(user) && <Btn onClick={() => setEdit({ name: "", country: "", phone: "", email: "", guardian: "", fee: 4500, user: "", pass: genPass(), courseId: COURSES[0].id })}>+ নতুন স্টুডেন্ট</Btn>}>
+      action={isDir(user) && <Btn onClick={() => setEdit({ name: "", country: "", phone: "", email: "", guardian: "", fee: 4500, user: "", pass: genPass(), courseId: COURSES[0]?.id || "" })}>+ নতুন স্টুডেন্ট</Btn>}>
       {loading && <div style={{ padding: "10px 0", fontSize: 13, color: C.muted }}>⏳ তালিকা লোড হচ্ছে…</div>}
       <Table head={["স্টুডেন্ট নাম", "দেশ", "আইডি", "পাসওয়ার্ড", "WhatsApp নম্বর", "বিস্তারিত", ...(isDir(user) ? ["অ্যাকশন"] : [])]}
         rows={students.map((s) => [
