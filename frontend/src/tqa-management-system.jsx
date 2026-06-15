@@ -1735,7 +1735,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
     <Section title="টিচার রিপোর্ট ও পেমেন্ট" sub="উপস্থিতি · ক্লাসের মান (স্টুডেন্ট মূল্যায়ন) · বেতন — চিহ্নিত করে দেখানো হয়েছে">
       {isAdm(user) && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
-          {teachers.map((x) => <Btn key={x.id} sm kind={tid === x.id ? "primary" : "soft"} onClick={() => setSel(x.id)}>{x.name}</Btn>)}
+          {allTeachers.map((x) => <Btn key={x.id} sm kind={tid === x.id ? "primary" : "soft"} onClick={() => setSel(x.id)}>{x.name}</Btn>)}
         </div>
       )}
       <div style={{ ...S.card, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", marginBottom: 14, borderLeft: `4px solid ${quality[1]}` }}>
