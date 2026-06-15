@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { api, login, downloadBackup } from "./api";
+import { api, login, logout, getMe, hasToken, downloadBackup } from "./api";
 
 /* ═══════════════════════════════════════════════════════════
    তারবিয়াতুল কুরআন একাডেমি — ম্যানেজমেন্ট সিস্টেম (TQA-MS)
@@ -3351,12 +3351,26 @@ const NAV = [
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [restoring, setRestoring] = useState(hasToken());
   const [db, setDb] = useState(seedDB);
   const [view, setView] = useState("overview");
   const [menu, setMenu] = useState(false);
   const [bell, setBell] = useState(false);
   const [, force] = useState(0);
   const refresh = () => force((x) => x + 1);
+  // পেজ রিফ্রেশের পর সংরক্ষিত টোকেন থাকলে সেশন ফিরিয়ে আনি — শুধু রিফ্রেশ দিলে আর লগআউট হবে না
+  useEffect(() => {
+    if (!hasToken()) { setRestoring(false); return; }
+    let alive = true;
+    getMe().then((me) => {
+      if (!alive) return;
+      setUser({ ...me, id: me.id, name: me.name || me.name_bn, sub: me.sub || me.sub_title || "", user: me.username, pass: "", fee: me.monthly_fee, salary: me.monthly_salary });
+    }).catch((e) => {
+      // টোকেন সত্যিই অবৈধ (401) হলেই লগআউট; সাময়িক সার্ভার-সমস্যায় টোকেন রেখে দিই
+      if (e?.status === 401) logout();
+    }).finally(() => { if (alive) setRestoring(false); });
+    return () => { alive = false; };
+  }, []);
   const [livePopup, setLivePopup] = useState(null);
   const [autoJoinId, setAutoJoinId] = useState(null);
   const [receipt, setReceipt] = useState(null);
@@ -3456,6 +3470,16 @@ export default function App() {
   };
   useEffect(() => { if (user) { loadNotifs(); const iv = setInterval(loadNotifs, 60000); return () => clearInterval(iv); } }, [user?.id]);
 
+  if (restoring) return (
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", fontFamily: "'Hind Siliguri', sans-serif", background: "#f6faf7", color: "#1a5c3a" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 40 }}>🕌</div>
+        <div style={{ marginTop: 10, fontWeight: 700 }}>সংযোগ করা হচ্ছে…</div>
+        <div style={{ marginTop: 4, fontSize: 12.5, color: "#6b7280" }}>সার্ভার জেগে উঠছে, একটু অপেক্ষা করুন</div>
+      </div>
+    </div>
+  );
+
   if (!user) return (
     <div style={{ fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');`}</style>
@@ -3516,7 +3540,7 @@ export default function App() {
             <div style={{ fontSize: 12.5, fontWeight: 700, maxWidth: 140, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user.name}</div>
             <span style={{ fontSize: 10.5, fontWeight: 800, color: roleColor }}>{roleLabel}</span>
           </div>
-          <Btn sm kind="soft" onClick={() => setUser(null)}>লগ আউট</Btn>
+          <Btn sm kind="soft" onClick={() => { logout(); setUser(null); }}>লগ আউট</Btn>
         </div>
       </div>
 

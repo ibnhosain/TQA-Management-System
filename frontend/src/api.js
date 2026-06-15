@@ -32,7 +32,22 @@ async function request(path, { method = "GET", body, isForm } = {}) {
       body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
     });
 
-  let res = await doFetch();
+  // কোল্ড-স্টার্ট/সাময়িক সার্ভার সমস্যায় কয়েকবার চেষ্টা (Render ফ্রি প্ল্যান ঘুম থেকে জাগতে সময় নেয়)
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const isGet = method === "GET";
+  let res;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      res = await doFetch();
+    } catch (e) {
+      // নেটওয়ার্ক এরর — শুধু নিরাপদ (GET) রিকোয়েস্ট আবার চেষ্টা করি (POST দুবার হয়ে যাওয়া এড়াতে)
+      if (isGet && attempt < 3) { await sleep(1500 * (attempt + 1)); continue; }
+      throw e;
+    }
+    // 502/503/504 = সার্ভার এখনো জাগছে, রিকোয়েস্ট প্রসেসই হয়নি → সব মেথডেই আবার চেষ্টা নিরাপদ
+    if ([502, 503, 504].includes(res.status) && attempt < 3) { await sleep(1500 * (attempt + 1)); continue; }
+    break;
+  }
   if (res.status === 401 && refresh) {           // টোকেন মেয়াদোত্তীর্ণ → রিফ্রেশ
     const r = await fetch(`${BASE}/auth/refresh`, {
       method: "POST",
@@ -54,6 +69,10 @@ export async function login(username, password) {
   saveTokens(t.access, t.refresh);
   return request("/users/me/");  // {id, role, name_bn, ...} → setUser()
 }
+
+/* পেজ রিফ্রেশের পর সংরক্ষিত টোকেন দিয়ে সেশন ফিরিয়ে আনতে */
+export const hasToken = () => !!access;
+export const getMe = () => request("/users/me/");
 
 /* ── রিসোর্স অনুযায়ী ফাংশন — প্রতিটি ফিচারের mock setDb এর প্রতিস্থাপন ── */
 export const api = {
