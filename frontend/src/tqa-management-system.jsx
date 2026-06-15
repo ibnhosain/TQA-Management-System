@@ -189,115 +189,31 @@ const USERS = [
 ];
 
 
-const COURSES = [
-  { id: "c1", name: "নুরানী কায়দা", teacherId: "t2", studentIds: ["s1", "s4"], color: C.emerald,
-    lectures: [] },
-  { id: "c2", name: "তাজবীদসহ কুরআন", teacherId: "t1", studentIds: ["s2"], color: C.gold,
-    lectures: [] },
-  { id: "c3", name: "হিফজ সহায়তা", teacherId: "t1", studentIds: ["s3"], color: C.blue,
-    lectures: [] },
-  { id: "c4", name: "দ্বীন, আদব ও চরিত্র গঠন", teacherId: "t2", studentIds: ["s4", "s1"], color: C.red,
-    lectures: [] },
-];
+const COURSES = [];
 
-const seedDB = () => {
-  const t = todayISO();
-  const nw = new Date(Date.now() - 5 * 60000); // 5 min ago - running class for popup demo
-  const nowHM = `${String(nw.getHours()).padStart(2, "0")}:${String(nw.getMinutes()).padStart(2, "0")}`;
-  return {
-    classes: [
-      { id: "know", courseId: "c1", date: t, time: nowHM, dur: 60, zoom: "https://zoom.us/j/8801402499027", status: "upcoming", lectureNo: 4 },
-      { id: "k1", courseId: "c1", date: t, time: "17:00", dur: 60, zoom: "https://zoom.us/j/8801402499027", status: "upcoming", lectureNo: 3 },
-      { id: "k2", courseId: "c2", date: t, time: "19:00", dur: 60, zoom: "https://zoom.us/j/8801402499028", status: "upcoming", lectureNo: 2 },
-      { id: "k3", courseId: "c3", date: addDays(1), time: "18:00", dur: 60, zoom: "https://zoom.us/j/8801402499029", status: "upcoming", lectureNo: 1 },
-      { id: "k0", courseId: "c1", date: addDays(-2), time: "17:00", dur: 60, zoom: "https://zoom.us/j/8801402499027", status: "done", lectureNo: 2 },
-      { id: "k01", courseId: "c2", date: addDays(-1), time: "19:00", dur: 60, zoom: "https://zoom.us/j/8801402499028", status: "done", lectureNo: 1 },
-    ],
-    attendance: [
-      { id: uid(), classId: "k0", userId: "s1", minutes: 55 },
-      { id: uid(), classId: "k0", userId: "s4", minutes: 25 },
-      { id: uid(), classId: "k0", userId: "t2", minutes: 60 },
-      { id: uid(), classId: "k01", userId: "s2", minutes: 58 },
-      { id: uid(), classId: "k01", userId: "t1", minutes: 60 },
-    ],
-    assignments: [
-      { id: "a1", courseId: "c1", teacherId: "t2", title: "হরফ লিখে ছবি জমা দাও", desc: "আলিফ থেকে খা পর্যন্ত প্রতিটি হরফ ৫ বার করে লিখে খাতার ছবি তুলে জমা দেবে।", due: addDays(3), mode: "photo", total: 10, questions: [],
-        subs: [{ id: uid(), studentId: "s1", date: t, answers: null, image: null, note: "খাতার ছবি জমা দিয়েছি, উস্তাদা। (ডেমো)", mark: 8 }] },
-      { id: "a2", courseId: "c2", teacherId: "t1", title: "নুন সাকিন ও তানভীনের নিয়ম", desc: "নিচের প্রশ্নগুলোর উত্তর ফরমে লিখে জমা দাও।", due: addDays(2), mode: "form", total: 10,
-        questions: [
-          { id: "q1", q: "ইযহারের হরফ কয়টি ও কী কী?", type: "text" },
-          { id: "q2", q: "ইকলাব কাকে বলে? একটি উদাহরণ দাও।", type: "text" },
-        ], subs: [] },
-    ],
-    exams: [
-      { id: "e1", type: "mcq", title: "মাসিক MCQ — মে ২০২৬", courseId: "c1", total: 30, date: addDays(-12), marks: { s1: 26, s4: 22 }, mode: "photo", questions: [], subs: [] },
-      { id: "e2", type: "live", title: "লাইভ তিলাওয়াত টেস্ট — মে", courseId: "c2", total: 50, date: addDays(-10), marks: { s2: 44 }, mode: "photo", questions: [], subs: [] },
-      { id: "e3", type: "mcq", title: "মাসিক MCQ — জুন ২০২৬", courseId: "c1", total: 30, date: addDays(5), marks: {}, mode: "form",
-        questions: [
-          { id: "x1", q: "মাদের মূল হরফ কয়টি?", type: "mcq", options: ["২টি", "৩টি", "৪টি", "৫টি"], correct: 1 },
-          { id: "x2", q: "'যবর'-এর আরবি নাম কী?", type: "mcq", options: ["কাসরা", "দাম্মা", "ফাতহা", "সুকুন"], correct: 2 },
-          { id: "x3", q: "নুরানী কায়দা শেখা কেন জরুরি — নিজের ভাষায় লেখো।", type: "text" },
-        ], subs: [] },
-    ],
-    feePayments: [
-      { id: uid(), studentId: "s1", amount: 4500, month: "এপ্রিল ২০২৬", date: addDays(-40), method: "bKash", status: "verified" },
-      { id: uid(), studentId: "s1", amount: 4500, month: "মে ২০২৬", date: addDays(-10), method: "bKash", status: "verified" },
-      { id: uid(), studentId: "s2", amount: 5000, month: "মে ২০২৬", date: addDays(-8), method: "Wise", status: "verified" },
-      { id: uid(), studentId: "s2", amount: 5000, month: "জুন ২০২৬", date: t, method: "বিকাশ (Trx: 9HX2K7QM)", status: "pending" },
-      { id: uid(), studentId: "s3", amount: 6000, month: "এপ্রিল ২০২৬", date: addDays(-35), method: "PayPal", status: "verified" },
-    ],
-    teacherPayments: [
-      { id: uid(), teacherId: "t1", amount: 12000, month: "মে ২০২৬", date: addDays(-5), method: "ব্যাংক" },
-      { id: uid(), teacherId: "t2", amount: 10000, month: "এপ্রিল ২০২৬", date: addDays(-32), method: "bKash", status: "verified" },
-    ],
-    dueMonths: { s1: ["জুন ২০২৬"], s2: [], s3: ["মে ২০২৬", "জুন ২০২৬"], s4: ["মে ২০২৬", "জুন ২০২৬"], t1: ["জুন ২০২৬"], t2: ["মে ২০২৬", "জুন ২০২৬"] },
-    admissions: [
-      { id: uid(), name: "হামজা ইবনে উমর", age: 9, guardian: "জনাব উমর ফারুক", country: "অস্ট্রেলিয়া", contact: "+61 4 1234 5678", course: "নুরানী কায়দা", msg: "সিডনি সময় সকালে ক্লাস চাই।", date: addDays(-1), status: "pending" },
-      { id: uid(), name: "সুমাইয়া বিনতে রশিদ", age: 11, guardian: "জনাব রশিদ", country: "জার্মানি", contact: "+49 151 2345678", course: "তাজবীদসহ কুরআন", msg: "আগে ১ বছর কায়দা পড়েছে।", date: addDays(-3), status: "pending" },
-    ],
-    permissions: { fixCross: { t1: false, t2: false } },
-    ratings: [
-      { id: uid(), classId: "k0", courseId: "c1", teacherId: "t2", studentId: "s1", stars: 5, comment: "উস্তাদা খুব সুন্দর করে বুঝিয়েছেন, আলহামদুলিল্লাহ।", date: addDays(-2) },
-      { id: uid(), classId: "k01", courseId: "c2", teacherId: "t1", studentId: "s2", stars: 4, comment: "", date: addDays(-1) },
-    ],
-    forms: [
-      { id: uid(), type: "ফ্রি ট্রায়াল", name: "উম্মে হাবিবা", contact: "+44 7911 123456", msg: "আমার ৭ বছরের মেয়ের জন্য নুরানী কায়দা ট্রায়াল চাই, লন্ডন সময় বিকেল।", date: addDays(-1), status: "new" },
-      { id: uid(), type: "যোগাযোগ", name: "আবু বকর সিদ্দিক", contact: "abubakr@mail.com", msg: "হিফজ সহায়তা কোর্সের ফি ও সময়সূচি জানতে চাই।", date: addDays(-3), status: "replied" },
-      { id: uid(), type: "ফ্রি ট্রায়াল", name: "মুহাম্মাদ আলী", contact: "+1 416 555 0182", msg: "টরন্টো থেকে, দুই ভাইয়ের জন্য তাজবীদ কোর্স।", date: t, status: "new" },
-    ],
-    books: [
-      { id: uid(), cls: "নুরানী কায়দা", title: "নুরানী কায়দা (সংশোধিত)", author: "তারবিয়াতুল কুরআন একাডেমি", link: "#", type: "PDF" },
-      { id: uid(), cls: "তাজবীদ", title: "আত-তাজবীদুল মুসাওয়ার", author: "ড. আইমান সুওয়াইদ", link: "#", type: "PDF" },
-      { id: uid(), cls: "তাজবীদ", title: "তাজবীদ শিক্ষা (বাংলা)", author: "একাডেমি সংকলন", link: "#", type: "PDF" },
-      { id: uid(), cls: "হিফজ", title: "১৫ লাইনের হাফেজি মুসহাফ", author: "—", link: "#", type: "PDF" },
-      { id: uid(), cls: "দ্বীন ও আদব", title: "ইয়াহুল মুসলিম (নির্বাচিত অংশ)", author: "একাডেমি সংকলন", link: "#", type: "DOCX" },
-      { id: uid(), cls: "দ্বীন ও আদব", title: "দৈনন্দিন দুআ সংকলন", author: "একাডেমি", link: "#", type: "PDF" },
-    ],
-    notices: [
-      { id: uid(), title: "জুন মাসের MCQ পরীক্ষা", body: "আগামী সপ্তাহে সকল কোর্সের মাসিক MCQ অনুষ্ঠিত হবে ইনশাআল্লাহ। সিলেবাস: চলতি মাসের কভার করা টপিক।", date: t },
-      { id: uid(), title: "ঈদুল আজহার ছুটি", body: "ঈদ উপলক্ষে ৩ দিন ক্লাস বন্ধ থাকবে। মেকআপ ক্লাসের সময়সূচি পরে জানানো হবে।", date: addDays(-4) },
-    ],
-    makeups: [
-      { id: uid(), courseId: "c1", studentId: "s4", reason: "গত ক্লাসে ২৫ মিনিট উপস্থিতি (অনুপস্থিত গণ্য)", date: addDays(2), time: "16:00", status: "scheduled" },
-    ],
-    syllabus: [], // পরিচালক নিজে তৈরি করবেন
-    academicBooks: [], // পরিচালক ডিভাইস থেকে আপলোড করবেন
+const seedDB = () => ({
+    classes: [],
+    attendance: [],
+    assignments: [],
+    exams: [],
+    feePayments: [],
+    teacherPayments: [],
+    dueMonths: {},
+    admissions: [],
+    permissions: { fixCross: {} },
+    ratings: [],
+    forms: [],
+    books: [],
+    notices: [],
+    makeups: [],
+    syllabus: [],
+    academicBooks: [],
     waOutbox: [],
-    waConfig: { backendUrl: "", autoSend: false }, // WhatsApp Business API (Twilio/Meta) ব্যাকএন্ড
-    sentReceipts: [
-      { id: uid(), toUserId: "s1", kind: "ফি পরিশোধ রিসিট", month: "মে ২০২৬", amount: 4500, method: "bKash", date: fmtDate(addDays(-9)), status: "verified", sentBy: "উস্তাদ ফরিদুর রহমান (পরিচালক)", sentDate: addDays(-9) },
-    ],
-    routine: [
-      { id: uid(), courseId: "c1", days: [0, 2], time: "17:00", dur: 60, zoom: "https://zoom.us/j/8801402499027", kind: "নিয়মিত ক্লাস", teacherId: "t2", studentIds: ["s1", "s4"] },
-    ],
-    leaves: [
-      { id: uid(), userId: "s3", type: "সফর", from: addDays(4), to: addDays(6), reason: "পারিবারিক প্রয়োজনে দেশের বাইরে সফরে থাকব, তাই উক্ত দিনগুলোতে ক্লাসে উপস্থিত হতে পারব না।", date: todayISO(), status: "pending_admin" },
-      { id: uid(), userId: "t2", type: "অসুস্থতা", from: addDays(-3), to: addDays(-2), reason: "জ্বরের কারণে বিশ্রামে ছিলাম।", date: addDays(-4), status: "approved" },
-    ],
-    notifications: [
-      { id: uid(), for: ["s1", "s4", "t2", "admin1", "dir1"], text: "আজ বিকেল ৫টায় নুরানী কায়দা ক্লাস — লেকচার ৩", date: t, read: false },
-      { id: uid(), for: ["s2", "t1", "admin1", "dir1"], text: "আজ সন্ধ্যা ৭টায় তাজবীদ ক্লাস — লেকচার ২", date: t, read: false },
-    ],
+    waConfig: { backendUrl: "", autoSend: false },
+    sentReceipts: [],
+    routine: [],
+    leaves: [],
+    notifications: [],
   };
 };
 
