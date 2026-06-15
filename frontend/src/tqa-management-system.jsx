@@ -188,9 +188,6 @@ const USERS = [
   { id: "s4", role: "student", name: "যায়নাব (দুবাই)", sub: "দ্বীন ও আদব", user: "student4", pass: "1234", fee: 4000, guardian: "জনাব হামযা", country: "আমিরাত", phone: "971501234567", email: "hamza.dubai@gmail.com" },
 ];
 
-
-const COURSES = [];
-
 const seedDB = () => ({
     classes: [],
     attendance: [],
@@ -214,10 +211,7 @@ const seedDB = () => ({
     routine: [],
     leaves: [],
     notifications: [],
-  };
-};
-
-
+});
 /* ─────────────── UI primitives ─────────────── */
 const S = {
   card: { background: "#fff", border: `1px solid ${C.line}`, borderRadius: 16, padding: 20, boxShadow: "0 2px 8px rgba(26,92,58,.06)" },
