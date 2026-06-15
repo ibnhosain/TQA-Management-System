@@ -2807,12 +2807,21 @@ function CourseManagerView({ db, setDb, refresh }) {
   const [teachers, setTeachers] = useState(USERS.filter((u) => u.role === "teacher"));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [academicBooks, setAcademicBooks] = useState([]); // API থেকে লোড
+  const [bookForm, setBookForm] = useState(null); // {name, fileObj, file} — ইনলাইন বই যোগ
 
-  // ব্যাকএন্ড থেকে কোর্স + উস্তাদ তালিকা লোড — ব্যর্থ হলে mock
+  const BASE_MEDIA = (import.meta.env?.VITE_API_URL || "http://localhost:8000/api").replace(/\/api$/, "");
+  const adaptBook = (b) => {
+    const fileUrl = b.file ? (b.file.startsWith("http") ? b.file : BASE_MEDIA + b.file) : null;
+    const fname = fileUrl ? fileUrl.split("/").pop() : (b.name + ".pdf");
+    return { id: b.id, name: b.name, file: { name: fname } };
+  };
+
+  // ব্যাকএন্ড থেকে কোর্স + উস্তাদ + বই তালিকা লোড
   const loadCourses = async () => {
     setLoading(true);
     try {
-      const [cs, us] = await Promise.all([api.courses(), api.allUsers()]);
+      const [cs, us, bks] = await Promise.all([api.courses(), api.allUsers(), api.books()]);
       setCourses(cs.map((c) => ({
         id: c.id, name: c.name, teacherId: c.teacher, teacherName: c.teacher_name,
         color: c.color, books: c.books || [], studentIds: c.students || [],
@@ -2821,16 +2830,18 @@ function CourseManagerView({ db, setDb, refresh }) {
       setTeachers(us.filter((u) => u.role === "teacher").map((t) => ({
         id: t.id, name: t.name || t.name_bn, sub: t.sub || t.sub_title || "",
       })));
+      setAcademicBooks(bks.map(adaptBook));
     } catch {
       setCourses(COURSES);
       setTeachers(USERS.filter((u) => u.role === "teacher"));
+      setAcademicBooks([]);
     } finally { setLoading(false); }
   };
   useEffect(() => { loadCourses(); }, []);
 
   const save = async () => {
     if (!edit.name?.trim()) return notice("কোর্সের নাম দিন।");
-    const books = edit.books || []; // একাডেমিক বই তালিকার আইডি
+    const books = edit.books || [];
     setSaving(true);
     try {
       const payload = { name: edit.name, teacher: edit.teacherId, color: edit.color, books };
@@ -2838,7 +2849,6 @@ function CourseManagerView({ db, setDb, refresh }) {
       await loadCourses();
       setEdit(null);
     } catch {
-      // ব্যাকএন্ড না থাকলে — mock এ সংরক্ষণ
       if (edit.id) {
         const c = COURSES.find((x) => x.id === edit.id);
         if (c) Object.assign(c, { name: edit.name, teacherId: edit.teacherId, color: edit.color, books });
@@ -2848,6 +2858,29 @@ function CourseManagerView({ db, setDb, refresh }) {
       setCourses([...COURSES]);
       setEdit(null); refresh();
     } finally { setSaving(false); }
+  };
+
+  // ইনলাইন বই আপলোড → তালিকা রিলোড → নতুন বই অটো-নির্বাচন
+  const saveNewBook = async () => {
+    if (!bookForm.name.trim()) return notice("বইয়ের নাম লিখুন।");
+    if (!(bookForm.fileObj instanceof File)) return notice("ডিভাইস থেকে বইয়ের ফাইল যুক্ত করুন।");
+    try {
+      await api.uploadBook(bookForm.name.trim(), bookForm.fileObj);
+      const bks = (await api.books()).map(adaptBook);
+      setAcademicBooks(bks);
+      const found = bks.find((b) => b.name === bookForm.name.trim());
+      if (found && edit) {
+        setEdit((prev) => {
+          const cur = prev.books || [];
+          if (cur.includes(found.id) || cur.length >= 6) return prev;
+          return { ...prev, books: [...cur, found.id] };
+        });
+      }
+      setBookForm(null);
+      notice("বই যোগ হয়েছে এবং স্বয়ংক্রিয়ভাবে নির্বাচিত হয়েছে।");
+    } catch (e) {
+      notice("বই যোগ ব্যর্থ: " + (e?.data?.error || e?.message || "অজানা সমস্যা"));
+    }
   };
 
   const del = (c) => askConfirm(`"${c.name}" কোর্সটি মুছে ফেলবেন? এর ক্লাস ও রুটিনও সরে যাবে এবং কোথাও আর দেখা যাবে না।`, async () => {
@@ -2881,7 +2914,7 @@ function CourseManagerView({ db, setDb, refresh }) {
         ))}
       </div>
       {edit && (
-        <Modal title={edit.id ? `✏️ কোর্স এডিট — ${edit.name}` : "+ নতুন কোর্স যোগ করুন"} onClose={() => setEdit(null)} wide>
+        <Modal title={edit.id ? `✏️ কোর্স এডিট — ${edit.name}` : "+ নতুন কোর্স যোগ করুন"} onClose={() => { setEdit(null); setBookForm(null); }} wide>
           <label style={S.label}>কোর্সের নাম</label>
           <input style={S.input} value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="যেমন: সহীহ মাসনুন দুআ কোর্স" />
           <div style={{ marginTop: 10 }}><label style={S.label}>দায়িত্বপ্রাপ্ত উস্তাদ/উস্তাদা</label>
@@ -2890,26 +2923,55 @@ function CourseManagerView({ db, setDb, refresh }) {
             <div style={{ display: "flex", gap: 8 }}>
               {PALETTE.map((p) => <button key={p} onClick={() => setEdit({ ...edit, color: p })} style={{ width: 34, height: 34, borderRadius: 10, cursor: "pointer", background: p, border: edit.color === p ? "3px solid #1a1f2e" : "2px solid #fff", boxShadow: "0 1px 4px rgba(0,0,0,.2)" }} />)}
             </div></div>
-          <div style={{ marginTop: 10 }}><label style={S.label}>📚 কোর্সের বই — একাডেমিক বইসমূহ থেকে সিলেক্ট করুন (সর্বোচ্চ ৬টি · {bn((edit.books || []).length)}টি নির্বাচিত)</label>
-            {(db.academicBooks || []).length === 0 ? (
-              <div style={{ padding: "14px 12px", borderRadius: 10, background: C.amberBg, fontSize: 12.5, color: "#a16207" }}>
-                ⚠️ একাডেমিক বইয়ের তালিকা খালি — আগে সাইডবারের "📚 একাডেমিক বইসমূহ" মেনুতে গিয়ে বই যোগ করুন, তারপর এখানে সিলেক্ট করতে পারবেন।
+
+          {/* ── একাডেমিক বই সিলেকশন + ইনলাইন আপলোড ── */}
+          <div style={{ marginTop: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <label style={{ ...S.label, marginBottom: 0 }}>📚 কোর্সের বই (সর্বোচ্চ ৬টি · {bn((edit.books || []).length)}টি নির্বাচিত)</label>
+              {!bookForm && (
+                <Btn sm kind="ghost" onClick={() => setBookForm({ name: "", fileObj: null, file: null })}>+ নতুন বই যোগ</Btn>
+              )}
+            </div>
+
+            {/* ইনলাইন বই আপলোড ফর্ম */}
+            {bookForm && (
+              <div style={{ background: C.amberBg, border: `1.5px solid ${C.goldL}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: "#92400e" }}>📤 নতুন বই আপলোড করুন</div>
+                <input style={S.input} value={bookForm.name} onChange={(e) => setBookForm({ ...bookForm, name: e.target.value })} placeholder="বইয়ের নাম (যেমন: নুরানী কায়দা সংশোধিত)" />
+                <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8, padding: "9px 12px", border: `1.5px dashed ${bookForm.file ? C.emerald : C.line}`, borderRadius: 10, cursor: "pointer", background: "#fff", fontSize: 13 }}>
+                  <span style={{ fontSize: 20 }}>{bookForm.file ? "✅" : "📁"}</span>
+                  <span>{bookForm.file ? bookForm.file.name : "ডিভাইস থেকে ফাইল বেছে নিন (PDF, DOC, JPG…)"}</span>
+                  <input type="file" style={{ display: "none" }} onChange={(e) => { const f = e.target.files[0]; if (f) setBookForm({ ...bookForm, fileObj: f, file: { name: f.name } }); }} />
+                </label>
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <Btn sm style={{ flex: 1, justifyContent: "center" }} onClick={saveNewBook}>আপলোড ও নির্বাচন করুন</Btn>
+                  <Btn sm kind="soft" onClick={() => setBookForm(null)}>বাতিল</Btn>
+                </div>
+              </div>
+            )}
+
+            {/* বই তালিকা চেকবক্স */}
+            {academicBooks.length === 0 ? (
+              <div style={{ padding: "12px 14px", borderRadius: 10, background: C.cream, fontSize: 12.5, color: C.muted, border: `1px dashed ${C.line}` }}>
+                📭 কোনো একাডেমিক বই নেই — উপরের "+ নতুন বই যোগ" বাটনে ক্লিক করে সরাসরি এখানেই বই আপলোড ও নির্বাচন করুন।
               </div>
             ) : (
-              <div style={{ maxHeight: 180, overflowY: "auto", border: `1.5px solid ${C.line}`, borderRadius: 10, padding: 6, background: "#fff" }}>
-                {(db.academicBooks || []).map((b) => {
+              <div style={{ maxHeight: 190, overflowY: "auto", border: `1.5px solid ${C.line}`, borderRadius: 10, padding: 6, background: "#fff" }}>
+                {academicBooks.map((b) => {
                   const on = (edit.books || []).includes(b.id);
                   const full = (edit.books || []).length >= 6 && !on;
                   return (
-                    <label key={b.id} style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 8px", fontSize: 13, cursor: full ? "not-allowed" : "pointer", borderRadius: 8, background: on ? C.greenBg : "transparent", opacity: full ? 0.45 : 1 }}>
+                    <label key={b.id} style={{ display: "flex", gap: 8, alignItems: "center", padding: "7px 8px", fontSize: 13, cursor: full ? "not-allowed" : "pointer", borderRadius: 8, background: on ? C.greenBg : "transparent", opacity: full ? 0.45 : 1, transition: "background .12s" }}>
                       <input type="checkbox" checked={on} disabled={full}
                         onChange={() => setEdit({ ...edit, books: on ? edit.books.filter((x) => x !== b.id) : [...edit.books, b.id] })} />
-                      📖 <b>{b.name}</b> <Tag color={C.blue} bg={C.blueBg}>{bookExt(b.file?.name)}</Tag>
+                      📖 <b>{b.name}</b>&nbsp;<Tag color={C.blue} bg={C.blueBg}>{bookExt(b.file?.name)}</Tag>
                     </label>
                   );
                 })}
               </div>
-            )}</div>
+            )}
+          </div>
+
           <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: saving ? 0.7 : 1 }} onClick={save}>{saving ? "সংরক্ষণ হচ্ছে…" : edit.id ? "✏️ সংরক্ষণ করুন" : "+ কোর্স যোগ করুন — সর্বত্র দেখা যাবে"}</Btn>
         </Modal>
       )}
@@ -3022,8 +3084,9 @@ function SyllabusView({ db, setDb, courses, user }) {
 
 /* ═══════════════ একাডেমিক বইসমূহ — পরিচালক আপলোড করেন; যে যার কোর্সের বই দেখে ═══════════════ */
 function AcademicBooksView({ db, setDb, user, courses }) {
-  const [form, setForm] = useState(null); // {name, file, fileObj}
+  const [form, setForm] = useState(null); // {name, file, fileObj, courseIds:[]}
   const [books, setBooks] = useState(db.academicBooks || []);
+  const [allCourses, setAllCourses] = useState(courses || []);
 
   const BASE_MEDIA = (import.meta.env?.VITE_API_URL || "http://localhost:8000/api").replace(/\/api$/, "");
   const adaptBook = (b) => {
@@ -3036,26 +3099,52 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     };
   };
   const loadData = async () => {
-    try { setBooks((await api.books()).map(adaptBook)); }
-    catch { setBooks(db.academicBooks || []); }
+    try {
+      const [bks, cs] = await Promise.all([api.books(), api.courses()]);
+      setBooks(bks.map(adaptBook));
+      setAllCourses(cs.map((c) => ({ id: c.id, name: c.name, color: c.color, books: c.books || [] })));
+    } catch {
+      setBooks(db.academicBooks || []);
+      setAllCourses(courses || []);
+    }
   };
   useEffect(() => { loadData(); }, []);
 
   const all = books;
-  const bookCourses = (bid) => courses.filter((c) => (c.books || []).includes(bid));
-  const myIds = new Set(courses.flatMap((c) => c.books || []));
+  const bookCourses = (bid) => allCourses.filter((c) => (c.books || []).includes(bid));
+  const myIds = new Set(allCourses.flatMap((c) => c.books || []));
   const visible = isAdm(user) ? all : all.filter((b) => myIds.has(b.id));
   const pickFile = (e) => {
     const f = e.target.files[0];
     if (!f) return;
-    // বড় বই data-URL এ পড়লে ব্রাউজার দীর্ঘক্ষণ আটকে যায় — শুধু আসল ফাইল রাখি, নামটুকু দেখাই
     setForm((x) => ({ ...x, fileObj: f, file: { name: f.name, type: f.type } }));
+  };
+  const toggleCourse = (cid) => {
+    setForm((x) => {
+      const ids = x.courseIds || [];
+      return { ...x, courseIds: ids.includes(cid) ? ids.filter((i) => i !== cid) : [...ids, cid] };
+    });
   };
   const save = async () => {
     if (!form.name.trim()) return notice("বইয়ের নাম লিখুন।");
     if (!(form.fileObj instanceof File)) return notice("ডিভাইস থেকে বইয়ের ফাইল যুক্ত করুন।");
     try {
       await api.uploadBook(form.name.trim(), form.fileObj);
+      // নির্বাচিত কোর্সগুলোতে নতুন বই যুক্ত করো
+      if ((form.courseIds || []).length > 0) {
+        const freshBooks = await api.books();
+        const newBook = freshBooks.find((b) => b.name === form.name.trim());
+        if (newBook) {
+          await Promise.all(
+            (form.courseIds || []).map((cid) => {
+              const c = allCourses.find((x) => String(x.id) === String(cid));
+              const existing = c?.books || [];
+              if (existing.includes(newBook.id) || existing.length >= 6) return Promise.resolve();
+              return api.saveCourse({ books: [...existing, newBook.id] }, cid);
+            })
+          );
+        }
+      }
       await loadData();
       setForm(null);
     } catch (e) {
@@ -3137,7 +3226,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
   );
   return (
     <Section title="একাডেমিক বইসমূহ" sub={isAdm(user) ? "একাডেমির সকল বইয়ের কেন্দ্রীয় তালিকা — কোর্স তৈরির সময় এখান থেকেই বই সিলেক্ট হয়" : "আপনার কোর্সের নির্ধারিত বইসমূহ — নামে ক্লিক করলেই খুলবে"}
-      action={isDir(user) && <Btn onClick={() => setForm({ name: "", file: null })}>+ বই যোগ করুন</Btn>}>
+      action={isDir(user) && <Btn onClick={() => setForm({ name: "", file: null, fileObj: null, courseIds: [] })}>+ বই যোগ করুন</Btn>}>
       {/* viewer state সরানো হয়েছে — BookLink সরাসরি ডিভাইসে খোলে */}
       {visible.length === 0 && (
         <div style={{ ...S.card, textAlign: "center", color: C.muted, padding: 28 }}>
@@ -3171,6 +3260,31 @@ function AcademicBooksView({ db, setDb, user, courses }) {
               <input type="file" style={{ display: "none" }} onChange={pickFile} />
             </label>
           </div>
+
+          {/* কোর্স অ্যাসাইনমেন্ট — ঐচ্ছিক */}
+          {allCourses.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <label style={S.label}>📖 কোন কোর্সে যোগ করবেন? (ঐচ্ছিক — পরেও কোর্স এডিট থেকে যোগ করা যাবে)</label>
+              <div style={{ border: `1.5px solid ${C.line}`, borderRadius: 10, padding: 6, background: "#fff", maxHeight: 160, overflowY: "auto" }}>
+                {allCourses.map((c) => {
+                  const sel = (form.courseIds || []).includes(c.id);
+                  const full = (c.books || []).length >= 6 && !sel;
+                  return (
+                    <label key={c.id} style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 8px", fontSize: 13, cursor: full ? "not-allowed" : "pointer", borderRadius: 8, background: sel ? C.greenBg : "transparent", opacity: full ? 0.45 : 1 }}>
+                      <input type="checkbox" checked={sel} disabled={full} onChange={() => toggleCourse(c.id)} />
+                      <span style={{ width: 10, height: 10, borderRadius: 3, background: c.color || C.emerald, flexShrink: 0, display: "inline-block" }} />
+                      <b>{c.name}</b>
+                      {full && <span style={{ fontSize: 11, color: C.red }}>(৬টি পূর্ণ)</span>}
+                    </label>
+                  );
+                })}
+              </div>
+              {(form.courseIds || []).length > 0 && (
+                <div style={{ fontSize: 11.5, color: C.emerald, marginTop: 4 }}>✔ {bn((form.courseIds || []).length)}টি কোর্সে যোগ হবে</div>
+              )}
+            </div>
+          )}
+
           <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={save}>+ তালিকায় যোগ করুন</Btn>
         </Modal>
       )}
