@@ -2026,11 +2026,11 @@ function ManageView({ db, setDb, refresh }) {
         )}
         {u.role === "teacher" && (
           <><div style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}>💰 বেতন পরিশোধ</div>
-          <Table head={["মাস", "পরিমাণ", "তারিখ"]} rows={tPaid.map((p) => [p.month, `৳${bn(p.amount.toLocaleString("en"))}`, fmtDate(p.date)])} empty="এখনো পেমেন্ট হয়নি" /></>
+          <Table head={["মাস", "পরিমাণ", "তারিখ"]} rows={tPaid.map((p) => [p.month, `৳${bn((p.amount || 0).toLocaleString("en"))}`, fmtDate(p.date)])} empty="এখনো পেমেন্ট হয়নি" /></>
         )}
         {u.role === "student" && (
           <><div style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}>💳 ফি পরিশোধ</div>
-          <Table head={["মাস", "পরিমাণ", "মাধ্যম", "অবস্থা"]} rows={paid.map((p) => [p.month, `৳${bn(p.amount.toLocaleString("en"))}`, p.method, p.status === "pending" ? "যাচাই বাকি" : "যাচাইকৃত ✔"])} empty="এখনো পেমেন্ট নেই" /></>
+          <Table head={["মাস", "পরিমাণ", "মাধ্যম", "অবস্থা"]} rows={paid.map((p) => [p.month, `৳${bn((p.amount || 0).toLocaleString("en"))}`, p.method, p.status === "pending" ? "যাচাই বাকি" : "যাচাইকৃত ✔"])} empty="এখনো পেমেন্ট নেই" /></>
         )}
         {(u.role === "admin" || u.role === "director") && <div style={{ padding: "10px 12px", background: C.cream, borderRadius: 10, fontSize: 12.5, color: C.muted }}>{u.role === "admin" ? "একাডেমিক এডমিন — ক্লাস, লেকচার, ভর্তি, পরীক্ষা, ফি যাচাই ও ফর্ম নিয়ন্ত্রণ করেন। হিসাব-নিকাশ ও ম্যানেজ সেটিংসে প্রবেশাধিকার নেই।" : "পরিচালক — সফটওয়্যারের পূর্ণ নিয়ন্ত্রণ।"}</div>}
       </Modal>
