@@ -82,6 +82,12 @@ class SyllabusItemSerializer(serializers.ModelSerializer):
     def to_internal_value(self, data):
         # ফ্রন্টএন্ড book_name (স্ট্রিং) পাঠায় → AcademicBook FK-তে রূপান্তর (বই সেভ নিশ্চিত)
         ret = super().to_internal_value(data)
+        # category সরাসরি request থেকে রাখি — super() বাদ দিলে model default (qirat) ব্যবহার হয়ে যায়
+        if hasattr(data, "keys") and "category" in data:
+            cat = data.get("category", "")
+            valid = [c[0] for c in SyllabusItem.Category.choices]
+            if cat in valid:
+                ret["category"] = cat
         if hasattr(data, "keys") and "book_name" in data:
             name = (data.get("book_name") or "").strip()
             if name and name != "অন্যান্য":

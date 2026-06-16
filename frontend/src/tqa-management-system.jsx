@@ -3251,23 +3251,36 @@ function SyllabusView({ db, setDb, courses, user }) {
               </div>
             )}
 
-            {/* আউটপুট — প্রিন্টের হুবহু টেবিল ফরম্যাট: প্রতিটি <td>-তে হেডার + সেই category-র সব আইটেম */}
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", minWidth: 980 }}>
-                <tbody>
-                  <tr>
+            {/* আউটপুট — প্রিন্টের হুবহু লেআউট: হেডার + ব্যানার + মেটা + ৫-কলাম টেবিল */}
+            <div style={{ margin: 14, border: `2px solid ${C.emerald}`, borderRadius: 12, overflow: "hidden" }}>
+              {/* একাডেমি হেডার */}
+              <div style={{ background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`, color: "#fff", padding: "16px 22px", textAlign: "center" }}>
+                <div style={{ color: C.goldL, fontSize: 13, letterSpacing: 3, fontFamily: "serif", fontWeight: 700 }}>تربية القرآن</div>
+                <div style={{ fontWeight: 800, fontSize: 21, margin: "4px 0 2px" }}>তারবিয়াতুল কুরআন একাডেমী</div>
+                <div style={{ fontSize: 11.5, color: "#cfe6d8" }}>tarbiyatulquran.org · WhatsApp: +880 140 249 9027</div>
+              </div>
+              {/* কোর্স সিলেবাস ব্যানার */}
+              <div style={{ background: C.gold, color: "#fff", textAlign: "center", fontWeight: 800, padding: 8, fontSize: 16, letterSpacing: 1 }}>কোর্স সিলেবাস</div>
+              {/* মেটা তথ্য */}
+              <div style={{ display: "flex", gap: 18, flexWrap: "wrap", padding: "12px 22px", borderBottom: `1.5px solid ${C.line}`, fontSize: 13.5 }}>
+                <div><b style={{ color: C.emerald }}>কোর্স:</b> {course.name}</div>
+                {courseBooksOf(course.id).length > 0 && <div><b style={{ color: C.emerald }}>বই:</b> {courseBooksOf(course.id).join(", ")}</div>}
+                <div><b style={{ color: C.emerald }}>তারিখ:</b> {fmtDate(todayISO())}</div>
+              </div>
+              {/* ৫-কলাম টেবিল */}
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", minWidth: 980 }}>
+                  <tbody><tr>
                     {SYL_CATEGORIES.map((cat) => {
                       const catItems = items
                         .filter((s) => (s.category || "qirat") === cat.key)
                         .sort((a, b) => (a.order || 0) - (b.order || 0));
                       return (
                         <td key={cat.key} style={{ border: `1px solid ${C.line}`, verticalAlign: "top", width: "20%" }}>
-                          {/* Column header — প্রিন্টের .ch মতো */}
                           <div style={{ background: C.greenBg, color: C.emerald, fontWeight: 800, fontSize: 12.5, textAlign: "center", padding: "9px 6px", borderBottom: `1.5px solid ${C.green}` }}>
                             {cat.icon} {cat.label}
                             <span style={{ marginLeft: 6, background: C.emerald, color: "#fff", borderRadius: 99, fontSize: 10, fontWeight: 800, padding: "1px 7px" }}>{bn(catItems.length)}</span>
                           </div>
-                          {/* Items list */}
                           <div style={{ padding: "10px 10px" }}>
                             {catItems.length === 0 ? (
                               <div style={{ textAlign: "center", color: C.muted, fontSize: 13 }}>—</div>
@@ -3319,9 +3332,11 @@ function SyllabusView({ db, setDb, courses, user }) {
                         </td>
                       );
                     })}
-                  </tr>
-                </tbody>
-              </table>
+                  </tr></tbody>
+                </table>
+              </div>
+              {/* ফুটার */}
+              <div style={{ textAlign: "center", fontSize: 11, color: C.muted, padding: 10, borderTop: `1px solid ${C.line}` }}>এটি কম্পিউটারে তৈরি কোর্স সিলেবাস — তারবিয়াতুল কুরআন একাডেমী</div>
             </div>
           </div>
         );

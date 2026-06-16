@@ -116,6 +116,11 @@ class SyllabusViewSet(viewsets.ModelViewSet):
     permission_classes = [ReadAllWriteDirector]
     filterset_fields = ["course"]
 
+    def perform_create(self, serializer):
+        cat = self.request.data.get("category", "qirat")
+        valid = [c[0] for c in SyllabusItem.Category.choices]
+        serializer.save(category=cat if cat in valid else "qirat")
+
 
 class LectureViewSet(viewsets.ModelViewSet):
     queryset = Lecture.objects.all()
