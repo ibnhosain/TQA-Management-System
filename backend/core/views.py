@@ -121,6 +121,14 @@ class SyllabusViewSet(viewsets.ModelViewSet):
         valid = [c[0] for c in SyllabusItem.Category.choices]
         serializer.save(category=cat if cat in valid else "qirat")
 
+    def perform_update(self, serializer):
+        valid = [c[0] for c in SyllabusItem.Category.choices]
+        cat = self.request.data.get("category")
+        if cat in valid:
+            serializer.save(category=cat)
+        else:
+            serializer.save()
+
 
 class LectureViewSet(viewsets.ModelViewSet):
     queryset = Lecture.objects.all()

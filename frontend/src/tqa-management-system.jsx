@@ -3164,7 +3164,7 @@ function SyllabusView({ db, setDb, courses, user }) {
       book_name: catInfo(editVals.category).book ? editVals.book : "অন্যান্য",
       lesson: editVals.lesson.trim(), pages: isQ ? editVals.pages.trim() : "", lines: isQ ? editVals.lines.trim() : "", note: (editVals.note || "").trim() };
     try { await api.editSyllabus(editId, payload); await loadData(); }
-    catch { setSyllabus((prev) => prev.map((s) => s.id === editId ? { ...s, book: payload.book_name, lesson: payload.lesson, pages: payload.pages, lines: payload.lines, note: payload.note } : s)); }
+    catch { setSyllabus((prev) => prev.map((s) => s.id === editId ? { ...s, category: payload.category, book: payload.book_name, lesson: payload.lesson, pages: payload.pages, lines: payload.lines, note: payload.note } : s)); }
     setEditId(null);
   };
   const del = (s) => askConfirm("এই অংশটি মুছে ফেলবেন?", async () => {
@@ -3306,14 +3306,17 @@ function SyllabusView({ db, setDb, courses, user }) {
                                     </div>
                                   ) : (
                                     <div style={{ display: "grid", gap: 5 }}>
-                                      {catInfo(s.category).book && (
+                                      <select value={editVals.category} onChange={(e) => setEditVals({ ...editVals, category: e.target.value, book: catInfo(e.target.value).book ? (editVals.book || defaultBook(course.id, e.target.value)) : "অন্যান্য" })} style={{ ...S.input, padding: "5px 7px", fontSize: 11.5, fontWeight: 700 }}>
+                                        {SYL_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.icon} {c.label}</option>)}
+                                      </select>
+                                      {catInfo(editVals.category).book && (
                                         <select value={editVals.book} onChange={(e) => setEditVals({ ...editVals, book: e.target.value })} style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }}>
                                           {bookOptionsFor(course.id).map((b) => <option key={b} value={b}>{b}</option>)}
                                           <option value="অন্যান্য">অন্যান্য / বই ছাড়া</option>
                                         </select>
                                       )}
                                       <input value={editVals.lesson} onChange={(e) => setEditVals({ ...editVals, lesson: e.target.value })} style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
-                                      {s.category === "qirat" && (
+                                      {editVals.category === "qirat" && (
                                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
                                           <input value={editVals.pages} onChange={(e) => setEditVals({ ...editVals, pages: e.target.value })} placeholder="পৃষ্ঠা" style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }} />
                                           <input value={editVals.lines} onChange={(e) => setEditVals({ ...editVals, lines: e.target.value })} placeholder="লাইন" style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }} />
