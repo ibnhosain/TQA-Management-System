@@ -3203,7 +3203,7 @@ function SyllabusView({ db, setDb, courses, user }) {
 
         return (
           <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-            {/* হেডার — কোর্স নাম লেবেল + ড্রপডাউন সিলেক্টর + বাটন */}
+            {/* হেডার — কোর্স সিলেক্টর + বাটন */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`, color: "#fff", flexWrap: "wrap" }}>
               <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(255,255,255,.15)", display: "grid", placeItems: "center", fontSize: 17 }}>📜</div>
               <div style={{ flex: 1, minWidth: 200 }}>
@@ -3223,100 +3223,105 @@ function SyllabusView({ db, setDb, courses, user }) {
               <Btn sm kind="soft" onClick={() => doPrint(course)}>🖨️ প্রিন্ট / PDF</Btn>
             </div>
 
-            {/* টেবিল: হেডার সারি → ইনপুট সারি (পরিচালক) → আউটপুট সারিগুলো */}
+            {/* ইনপুট সারি — শুধু পরিচালক (input grid আলাদা, output table-এর উপরে) */}
+            {isDir(user) && (
+              <div style={{ overflowX: "auto", borderBottom: `2px solid ${C.line}` }}>
+                <div style={GRID}>
+                  {SYL_CATEGORIES.map((cat, ci) => {
+                    const d = dval(course.id, cat.key);
+                    return (
+                      <div key={"i" + cat.key} style={{ ...cellBase(ci), padding: 8, background: C.cream, display: "grid", gap: 6 }}>
+                        {cat.book && (
+                          <select value={d.book ?? defaultBook(course.id, cat.key)} onChange={(e) => setDval(course.id, cat.key, { book: e.target.value })} style={{ ...S.input, padding: "6px 8px", fontSize: 12 }}>
+                            {bookOptionsFor(course.id).map((b) => <option key={b} value={b}>{b}</option>)}
+                            <option value="অন্যান্য">অন্যান্য / বই ছাড়া</option>
+                          </select>
+                        )}
+                        <input value={d.lesson || ""} onChange={(e) => setDval(course.id, cat.key, { lesson: e.target.value })} placeholder={cat.placeholder} style={{ ...S.input, padding: "7px 9px", fontSize: 12.5 }} />
+                        {cat.key === "qirat" && (
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                            <input value={d.pages || ""} onChange={(e) => setDval(course.id, cat.key, { pages: e.target.value })} placeholder="পৃষ্ঠা" style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
+                            <input value={d.lines || ""} onChange={(e) => setDval(course.id, cat.key, { lines: e.target.value })} placeholder="লাইন" style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* আউটপুট — প্রিন্টের হুবহু টেবিল ফরম্যাট: প্রতিটি <td>-তে হেডার + সেই category-র সব আইটেম */}
             <div style={{ overflowX: "auto" }}>
-              <div style={GRID}>
-                {/* হেডার সারি */}
-                {SYL_CATEGORIES.map((cat, ci) => (
-                  <div key={"h" + cat.key} style={{ ...cellBase(ci), display: "flex", alignItems: "center", gap: 6, padding: "9px 10px", background: C.greenBg, borderBottom: `2px solid ${C.green}` }}>
-                    <span style={{ fontSize: 15 }}>{cat.icon}</span>
-                    <b style={{ flex: 1, fontSize: 12.5, color: C.emerald, lineHeight: 1.3 }}>{cat.label}</b>
-                    <Tag>{bn(items.filter((s) => (s.category || "qirat") === cat.key).length)}</Tag>
-                  </div>
-                ))}
-
-                {/* ইনপুট সারি (শুধু পরিচালক) */}
-                {isDir(user) && SYL_CATEGORIES.map((cat, ci) => {
-                  const d = dval(course.id, cat.key);
-                  return (
-                    <div key={"i" + cat.key} style={{ ...cellBase(ci), padding: 8, background: C.cream, borderBottom: `1px solid ${C.line}`, display: "grid", gap: 6 }}>
-                      {cat.book && (
-                        <select value={d.book ?? defaultBook(course.id, cat.key)} onChange={(e) => setDval(course.id, cat.key, { book: e.target.value })} style={{ ...S.input, padding: "6px 8px", fontSize: 12 }}>
-                          {bookOptionsFor(course.id).map((b) => <option key={b} value={b}>{b}</option>)}
-                          <option value="অন্যান্য">অন্যান্য / বই ছাড়া</option>
-                        </select>
-                      )}
-                      <input value={d.lesson || ""} onChange={(e) => setDval(course.id, cat.key, { lesson: e.target.value })} placeholder={cat.placeholder} style={{ ...S.input, padding: "7px 9px", fontSize: 12.5 }} />
-                      {cat.key === "qirat" && (
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                          <input value={d.pages || ""} onChange={(e) => setDval(course.id, cat.key, { pages: e.target.value })} placeholder="পৃষ্ঠা" style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
-                          <input value={d.lines || ""} onChange={(e) => setDval(course.id, cat.key, { lines: e.target.value })} placeholder="লাইন" style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* আউটপুট — PDF-এর মতো column-centric: প্রতিটি column-এ সেই category-র সব item নিচে নিচে */}
-                {SYL_CATEGORIES.map((cat, ci) => {
-                  const catItems = items
-                    .filter((s) => (s.category || "qirat") === cat.key)
-                    .sort((a, b) => (a.order || 0) - (b.order || 0));
-                  return (
-                    <div key={"col" + cat.key} style={{ ...cellBase(ci), padding: "10px 10px", minHeight: 56, verticalAlign: "top" }}>
-                      {catItems.length === 0 ? (
-                        <div style={{ color: C.muted, textAlign: "center", fontSize: 13, padding: "10px 0" }}>—</div>
-                      ) : (
-                        catItems.map((s, i) => {
-                          const editing = editId === s.id;
-                          return (
-                            <div key={s.id} style={{ paddingBottom: i < catItems.length - 1 ? 10 : 0, marginBottom: i < catItems.length - 1 ? 10 : 0, borderBottom: i < catItems.length - 1 ? `1px dashed ${C.line}` : "none" }}>
-                              {!editing && (
-                                <div style={{ display: "flex", gap: 4, alignItems: "flex-start" }}>
-                                  <span style={{ flex: 1, fontSize: 12.5, lineHeight: 1.6 }}>
-                                    <b style={{ color: C.muted, marginRight: 3 }}>{bn(i + 1)}.</b>
-                                    {s.book && s.book !== "অন্যান্য" ? <b style={{ color: C.emerald }}>{s.book} — </b> : null}
-                                    <span style={{ fontWeight: 600 }}>{s.lesson}</span>
-                                    {(s.pages || s.lines) && <span style={{ color: C.muted, fontSize: 11 }}>{s.pages ? ` · পৃ: ${s.pages}` : ""}{s.lines ? ` · লা: ${s.lines}` : ""}</span>}
-                                    {s.note && <span style={{ color: C.muted, fontSize: 11 }}> · 💬 {s.note}</span>}
-                                  </span>
-                                  {isDir(user) && (
-                                    <span style={{ display: "inline-flex", gap: 3, flexShrink: 0 }}>
-                                      <button title="এডিট" onClick={() => startEdit(s)} style={{ border: "none", background: C.cream, borderRadius: 6, width: 22, height: 22, cursor: "pointer", fontSize: 10 }}>✏️</button>
-                                      <button title="মুছুন" onClick={() => del(s)} style={{ border: "none", background: C.redBg, color: C.red, borderRadius: 6, width: 22, height: 22, cursor: "pointer", fontSize: 10 }}>🗑</button>
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                              {editing && (
-                                <div style={{ display: "grid", gap: 5 }}>
-                                  {catInfo(s.category).book && (
-                                    <select value={editVals.book} onChange={(e) => setEditVals({ ...editVals, book: e.target.value })} style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }}>
-                                      {bookOptionsFor(course.id).map((b) => <option key={b} value={b}>{b}</option>)}
-                                      <option value="অন্যান্য">অন্যান্য / বই ছাড়া</option>
-                                    </select>
-                                  )}
-                                  <input value={editVals.lesson} onChange={(e) => setEditVals({ ...editVals, lesson: e.target.value })} style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
-                                  {s.category === "qirat" && (
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
-                                      <input value={editVals.pages} onChange={(e) => setEditVals({ ...editVals, pages: e.target.value })} placeholder="পৃষ্ঠা" style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }} />
-                                      <input value={editVals.lines} onChange={(e) => setEditVals({ ...editVals, lines: e.target.value })} placeholder="লাইন" style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }} />
+              <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", minWidth: 980 }}>
+                <tbody>
+                  <tr>
+                    {SYL_CATEGORIES.map((cat) => {
+                      const catItems = items
+                        .filter((s) => (s.category || "qirat") === cat.key)
+                        .sort((a, b) => (a.order || 0) - (b.order || 0));
+                      return (
+                        <td key={cat.key} style={{ border: `1px solid ${C.line}`, verticalAlign: "top", width: "20%" }}>
+                          {/* Column header — প্রিন্টের .ch মতো */}
+                          <div style={{ background: C.greenBg, color: C.emerald, fontWeight: 800, fontSize: 12.5, textAlign: "center", padding: "9px 6px", borderBottom: `1.5px solid ${C.green}` }}>
+                            {cat.icon} {cat.label}
+                            <span style={{ marginLeft: 6, background: C.emerald, color: "#fff", borderRadius: 99, fontSize: 10, fontWeight: 800, padding: "1px 7px" }}>{bn(catItems.length)}</span>
+                          </div>
+                          {/* Items list */}
+                          <div style={{ padding: "10px 10px" }}>
+                            {catItems.length === 0 ? (
+                              <div style={{ textAlign: "center", color: C.muted, fontSize: 13 }}>—</div>
+                            ) : catItems.map((s, i) => {
+                              const editing = editId === s.id;
+                              return (
+                                <div key={s.id} style={{ fontSize: 12.5, lineHeight: 1.6, paddingBottom: i < catItems.length - 1 ? 9 : 0, marginBottom: i < catItems.length - 1 ? 9 : 0, borderBottom: i < catItems.length - 1 ? `1px dashed ${C.line}` : "none" }}>
+                                  {!editing ? (
+                                    <div style={{ display: "flex", gap: 4, alignItems: "flex-start" }}>
+                                      <span style={{ flex: 1 }}>
+                                        <b style={{ color: C.muted }}>{bn(i + 1)}.</b>{" "}
+                                        {s.book && s.book !== "অন্যান্য" ? <b style={{ color: C.emerald }}>{s.book} — </b> : null}
+                                        <span style={{ fontWeight: 600 }}>{s.lesson}</span>
+                                        {(s.pages || s.lines) && <span style={{ color: C.muted, fontSize: 11 }}>{s.pages ? ` · পৃ: ${s.pages}` : ""}{s.lines ? ` · লা: ${s.lines}` : ""}</span>}
+                                        {s.note && <span style={{ color: C.muted, fontSize: 11 }}> · 💬 {s.note}</span>}
+                                      </span>
+                                      {isDir(user) && (
+                                        <span style={{ display: "inline-flex", gap: 3, flexShrink: 0 }}>
+                                          <button title="এডিট" onClick={() => startEdit(s)} style={{ border: "none", background: C.cream, borderRadius: 6, width: 22, height: 22, cursor: "pointer", fontSize: 10 }}>✏️</button>
+                                          <button title="মুছুন" onClick={() => del(s)} style={{ border: "none", background: C.redBg, color: C.red, borderRadius: 6, width: 22, height: 22, cursor: "pointer", fontSize: 10 }}>🗑</button>
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div style={{ display: "grid", gap: 5 }}>
+                                      {catInfo(s.category).book && (
+                                        <select value={editVals.book} onChange={(e) => setEditVals({ ...editVals, book: e.target.value })} style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }}>
+                                          {bookOptionsFor(course.id).map((b) => <option key={b} value={b}>{b}</option>)}
+                                          <option value="অন্যান্য">অন্যান্য / বই ছাড়া</option>
+                                        </select>
+                                      )}
+                                      <input value={editVals.lesson} onChange={(e) => setEditVals({ ...editVals, lesson: e.target.value })} style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
+                                      {s.category === "qirat" && (
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+                                          <input value={editVals.pages} onChange={(e) => setEditVals({ ...editVals, pages: e.target.value })} placeholder="পৃষ্ঠা" style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }} />
+                                          <input value={editVals.lines} onChange={(e) => setEditVals({ ...editVals, lines: e.target.value })} placeholder="লাইন" style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }} />
+                                        </div>
+                                      )}
+                                      <div style={{ display: "flex", gap: 5 }}>
+                                        <Btn sm style={{ flex: 1, justifyContent: "center" }} onClick={saveEdit}>✓ সংরক্ষণ</Btn>
+                                        <Btn sm kind="soft" onClick={() => setEditId(null)}>✗</Btn>
+                                      </div>
                                     </div>
                                   )}
-                                  <div style={{ display: "flex", gap: 5 }}>
-                                    <Btn sm style={{ flex: 1, justifyContent: "center" }} onClick={saveEdit}>✓ সংরক্ষণ</Btn>
-                                    <Btn sm kind="soft" onClick={() => setEditId(null)}>✗</Btn>
-                                  </div>
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                              );
+                            })}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         );
