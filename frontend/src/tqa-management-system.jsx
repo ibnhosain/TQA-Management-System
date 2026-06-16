@@ -536,7 +536,7 @@ function Login({ onLogin, onAdmission }) {
                   style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 17, padding: 2, lineHeight: 1 }}>{showPass ? "🙈" : "👁️"}</button>
               </div>
               {err && <div style={{ color: C.red, fontSize: 12.5, marginTop: 8 }}>{err}</div>}
-              <Btn style={{ width: "100%", justifyContent: "center", marginTop: 16, opacity: busy ? 0.7 : 1 }} onClick={go}>{busy ? "যাচাই হচ্ছে…" : "লগ ইন করুন"}</Btn>
+              <Btn style={{ width: "100%", justifyContent: "center", marginTop: 16, opacity: (busy || !u.trim() || !p) ? 0.55 : 1 }} disabled={busy || !u.trim() || !p} onClick={go}>{busy ? "যাচাই হচ্ছে…" : "লগ ইন করুন"}</Btn>
             </>
           )}
         </div>
@@ -551,9 +551,7 @@ function Login({ onLogin, onAdmission }) {
           </div>
           <div style={{ marginTop: 10 }}><label style={S.label}>যোগাযোগ (WhatsApp/ইমেইল) *</label><input style={S.input} value={af.contact} onChange={(e) => setAf({ ...af, contact: e.target.value })} /></div>
           <div style={{ marginTop: 10 }}><label style={S.label}>কাঙ্ক্ষিত কোর্স</label>
-            <select style={S.input} value={af.course} onChange={(e) => setAf({ ...af, course: e.target.value })}>
-              {COURSES.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-            </select></div>
+            <input type="text" style={S.input} value={af.course} onChange={(e) => setAf({ ...af, course: e.target.value })} placeholder="যে কোর্সে ভর্তি হতে চান লিখুন" /></div>
           <div style={{ marginTop: 10 }}><label style={S.label}>বার্তা (ঐচ্ছিক)</label><textarea rows={2} style={{ ...S.input, resize: "vertical" }} value={af.msg} onChange={(e) => setAf({ ...af, msg: e.target.value })} /></div>
           <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={sendApply}>আবেদন জমা দিন</Btn>
         </Modal>
@@ -3097,6 +3095,7 @@ function SyllabusView({ db, setDb, courses, user }) {
   const [draft, setDraft] = useState({});       // { [courseId]: { [catKey]: {book, lesson, pages, lines} } } — ইনপুট সারি
   const [editId, setEditId] = useState(null);    // ইনলাইন সেল এডিট
   const [editVals, setEditVals] = useState({});
+  const [selCourse, setSelCourse] = useState(null); // সিলেক্টেড কোর্স ID
 
   const adaptSyl = (s) => ({
     id: s.id, courseId: s.course || s.courseId, category: s.category || "qirat",
@@ -3113,6 +3112,7 @@ function SyllabusView({ db, setDb, courses, user }) {
       const [cs, bks] = await Promise.all([api.courses(), api.books()]);
       const adapted = cs.map((c) => ({ id: c.id, name: c.name, books: c.books || [], color: c.color }));
       setCourseList(adapted);
+      setSelCourse((prev) => prev || adapted[0]?.id || null);
       setAllBooks(bks);
       const results = await Promise.all(adapted.map((c) =>
         api.syllabus(c.id).then((d) => ({ cid: c.id, d })).catch(() => ({ cid: c.id, d: null }))));
@@ -3187,6 +3187,8 @@ function SyllabusView({ db, setDb, courses, user }) {
   const GRID = { display: "grid", gridTemplateColumns: `repeat(${SYL_CATEGORIES.length}, minmax(190px, 1fr))`, minWidth: 980 };
   const cellBase = (ci) => ({ borderLeft: ci ? `1px solid ${C.line}` : "none" });
 
+  const activeCourse = courseList.find((c) => String(c.id) === String(selCourse)) || courseList[0] || null;
+
   return (
     <Section title="কোর্স সিলেবাস" sub={roleNote}>
       {courseList.length === 0 && (
@@ -3195,118 +3197,124 @@ function SyllabusView({ db, setDb, courses, user }) {
         </div>
       )}
 
-      <div style={{ display: "grid", gap: 18 }}>
-        {courseList.map((course) => {
-          const items = syllabus.filter((s) => String(s.courseId) === String(course.id));
-          const cBooks = courseBooksOf(course.id);
-          // সারি গ্রুপিং (order অনুযায়ী)
-          const rowMap = {};
-          items.forEach((s) => { const o = s.order || 0; (rowMap[o] = rowMap[o] || {})[s.category || "qirat"] = s; });
-          const rowKeys = Object.keys(rowMap).map(Number).sort((a, b) => a - b);
+      {activeCourse && (() => {
+        const course = activeCourse;
+        const items = syllabus.filter((s) => String(s.courseId) === String(course.id));
+        const rowMap = {};
+        items.forEach((s) => { const o = s.order || 0; (rowMap[o] = rowMap[o] || {})[s.category || "qirat"] = s; });
+        const rowKeys = Object.keys(rowMap).map(Number).sort((a, b) => a - b);
 
-          return (
-            <div key={course.id} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-              {/* হেডার + ডান কনারে বাটন */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`, color: "#fff", flexWrap: "wrap" }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(255,255,255,.15)", display: "grid", placeItems: "center", fontSize: 17 }}>📜</div>
-                <div style={{ flex: 1, minWidth: 140 }}>
-                  <div style={{ fontWeight: 800, fontSize: 16 }}>{course.name}</div>
-                  <div style={{ fontSize: 11.5, color: "#cfe6d8" }}>বই: {cBooks.length ? cBooks.join(", ") : "—"} · মোট {bn(rowKeys.length)} সারি</div>
-                </div>
-                {isDir(user) && <Btn sm kind="gold" onClick={() => commit(course)}>+ সিলেবাস যোগ করুন</Btn>}
-                <Btn sm kind="soft" onClick={() => doPrint(course)}>🖨️ প্রিন্ট / PDF</Btn>
-              </div>
-
-              {/* টেবিল: হেডার সারি → ইনপুট সারি (পরিচালক) → আউটপুট সারিগুলো */}
-              <div style={{ overflowX: "auto" }}>
-                <div style={GRID}>
-                  {/* হেডার সারি */}
-                  {SYL_CATEGORIES.map((cat, ci) => (
-                    <div key={"h" + cat.key} style={{ ...cellBase(ci), display: "flex", alignItems: "center", gap: 6, padding: "9px 10px", background: C.greenBg, borderBottom: `2px solid ${C.green}` }}>
-                      <span style={{ fontSize: 15 }}>{cat.icon}</span>
-                      <b style={{ flex: 1, fontSize: 12.5, color: C.emerald, lineHeight: 1.3 }}>{cat.label}</b>
-                      <Tag>{bn(items.filter((s) => (s.category || "qirat") === cat.key).length)}</Tag>
-                    </div>
-                  ))}
-
-                  {/* ইনপুট সারি (শুধু পরিচালক) — ফরমের মতো */}
-                  {isDir(user) && SYL_CATEGORIES.map((cat, ci) => {
-                    const d = dval(course.id, cat.key);
-                    return (
-                      <div key={"i" + cat.key} style={{ ...cellBase(ci), padding: 8, background: C.cream, borderBottom: `1px solid ${C.line}`, display: "grid", gap: 6 }}>
-                        {cat.book && (
-                          <select value={d.book ?? defaultBook(course.id, cat.key)} onChange={(e) => setDval(course.id, cat.key, { book: e.target.value })} style={{ ...S.input, padding: "6px 8px", fontSize: 12 }}>
-                            {bookOptionsFor(course.id).map((b) => <option key={b} value={b}>{b}</option>)}
-                            <option value="অন্যান্য">অন্যান্য / বই ছাড়া</option>
-                          </select>
-                        )}
-                        <input value={d.lesson || ""} onChange={(e) => setDval(course.id, cat.key, { lesson: e.target.value })} placeholder={cat.placeholder} style={{ ...S.input, padding: "7px 9px", fontSize: 12.5 }} />
-                        {cat.key === "qirat" && (
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                            <input value={d.pages || ""} onChange={(e) => setDval(course.id, cat.key, { pages: e.target.value })} placeholder="পৃষ্ঠা" style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
-                            <input value={d.lines || ""} onChange={(e) => setDval(course.id, cat.key, { lines: e.target.value })} placeholder="লাইন" style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {/* আউটপুট সারিগুলো */}
-                  {rowKeys.length === 0 && (
-                    <div style={{ gridColumn: "1 / -1", textAlign: "center", color: C.muted, fontSize: 12.5, padding: "16px 0" }}>— এখনো কিছু যোগ করা হয়নি —</div>
+        return (
+          <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+            {/* হেডার — কোর্স নাম লেবেল + ড্রপডাউন সিলেক্টর + বাটন */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`, color: "#fff", flexWrap: "wrap" }}>
+              <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(255,255,255,.15)", display: "grid", placeItems: "center", fontSize: 17 }}>📜</div>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontWeight: 800, fontSize: 16 }}>কোর্সের নাম:</span>
+                  {courseList.length === 1 ? (
+                    <span style={{ fontWeight: 800, fontSize: 16, color: C.goldL }}>{course.name}</span>
+                  ) : (
+                    <select value={selCourse || course.id} onChange={(e) => setSelCourse(e.target.value)}
+                      style={{ background: "rgba(0,0,0,.25)", border: "1.5px solid rgba(255,255,255,.35)", borderRadius: 8, color: "#fff", padding: "4px 10px", fontSize: 14, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" }}>
+                      {courseList.map((c) => <option key={c.id} value={c.id} style={{ background: "#123f28" }}>{c.name}</option>)}
+                    </select>
                   )}
-                  {rowKeys.map((rk, ri) => SYL_CATEGORIES.map((cat, ci) => {
-                    const s = rowMap[rk][cat.key];
-                    const editing = s && editId === s.id;
-                    return (
-                      <div key={"r" + rk + cat.key} style={{ ...cellBase(ci), borderTop: ri ? `1px solid ${C.line}` : "none", padding: "8px 10px", minHeight: 40, fontSize: 12.5, lineHeight: 1.5 }}>
-                        {!s && <span style={{ color: "#cbd5cb" }}>·</span>}
-                        {s && !editing && (
-                          <span style={{ display: "flex", gap: 4, alignItems: "flex-start" }}>
-                            <span style={{ flex: 1 }}>
-                              {s.book && s.book !== "অন্যান্য" ? <b style={{ color: C.emerald }}>{s.book} — </b> : null}
-                              <span style={{ fontWeight: 600 }}>{s.lesson}</span>
-                              {(s.pages || s.lines) && <span style={{ color: C.muted, fontSize: 11 }}>{s.pages ? ` · পৃ: ${s.pages}` : ""}{s.lines ? ` · লা: ${s.lines}` : ""}</span>}
-                              {s.note && <span style={{ color: C.muted, fontSize: 11 }}> · 💬 {s.note}</span>}
-                            </span>
-                            {isDir(user) && (
-                              <span style={{ display: "inline-flex", gap: 3 }}>
-                                <button title="এডিট" onClick={() => startEdit(s)} style={{ border: "none", background: C.cream, borderRadius: 6, width: 22, height: 22, cursor: "pointer", fontSize: 10 }}>✏️</button>
-                                <button title="মুছুন" onClick={() => del(s)} style={{ border: "none", background: C.redBg, color: C.red, borderRadius: 6, width: 22, height: 22, cursor: "pointer", fontSize: 10 }}>🗑</button>
-                              </span>
-                            )}
-                          </span>
-                        )}
-                        {editing && (
-                          <div style={{ display: "grid", gap: 5 }}>
-                            {catInfo(s.category).book && (
-                              <select value={editVals.book} onChange={(e) => setEditVals({ ...editVals, book: e.target.value })} style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }}>
-                                {bookOptionsFor(course.id).map((b) => <option key={b} value={b}>{b}</option>)}
-                                <option value="অন্যান্য">অন্যান্য / বই ছাড়া</option>
-                              </select>
-                            )}
-                            <input value={editVals.lesson} onChange={(e) => setEditVals({ ...editVals, lesson: e.target.value })} style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
-                            {s.category === "qirat" && (
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
-                                <input value={editVals.pages} onChange={(e) => setEditVals({ ...editVals, pages: e.target.value })} placeholder="পৃষ্ঠা" style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }} />
-                                <input value={editVals.lines} onChange={(e) => setEditVals({ ...editVals, lines: e.target.value })} placeholder="লাইন" style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }} />
-                              </div>
-                            )}
-                            <div style={{ display: "flex", gap: 5 }}>
-                              <Btn sm style={{ flex: 1, justifyContent: "center" }} onClick={saveEdit}>✓ সংরক্ষণ</Btn>
-                              <Btn sm kind="soft" onClick={() => setEditId(null)}>✗</Btn>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }))}
                 </div>
+              </div>
+              {isDir(user) && <Btn sm kind="gold" onClick={() => commit(course)}>+ সিলেবাস যোগ করুন</Btn>}
+              <Btn sm kind="soft" onClick={() => doPrint(course)}>🖨️ প্রিন্ট / PDF</Btn>
+            </div>
+
+            {/* টেবিল: হেডার সারি → ইনপুট সারি (পরিচালক) → আউটপুট সারিগুলো */}
+            <div style={{ overflowX: "auto" }}>
+              <div style={GRID}>
+                {/* হেডার সারি */}
+                {SYL_CATEGORIES.map((cat, ci) => (
+                  <div key={"h" + cat.key} style={{ ...cellBase(ci), display: "flex", alignItems: "center", gap: 6, padding: "9px 10px", background: C.greenBg, borderBottom: `2px solid ${C.green}` }}>
+                    <span style={{ fontSize: 15 }}>{cat.icon}</span>
+                    <b style={{ flex: 1, fontSize: 12.5, color: C.emerald, lineHeight: 1.3 }}>{cat.label}</b>
+                    <Tag>{bn(items.filter((s) => (s.category || "qirat") === cat.key).length)}</Tag>
+                  </div>
+                ))}
+
+                {/* ইনপুট সারি (শুধু পরিচালক) */}
+                {isDir(user) && SYL_CATEGORIES.map((cat, ci) => {
+                  const d = dval(course.id, cat.key);
+                  return (
+                    <div key={"i" + cat.key} style={{ ...cellBase(ci), padding: 8, background: C.cream, borderBottom: `1px solid ${C.line}`, display: "grid", gap: 6 }}>
+                      {cat.book && (
+                        <select value={d.book ?? defaultBook(course.id, cat.key)} onChange={(e) => setDval(course.id, cat.key, { book: e.target.value })} style={{ ...S.input, padding: "6px 8px", fontSize: 12 }}>
+                          {bookOptionsFor(course.id).map((b) => <option key={b} value={b}>{b}</option>)}
+                          <option value="অন্যান্য">অন্যান্য / বই ছাড়া</option>
+                        </select>
+                      )}
+                      <input value={d.lesson || ""} onChange={(e) => setDval(course.id, cat.key, { lesson: e.target.value })} placeholder={cat.placeholder} style={{ ...S.input, padding: "7px 9px", fontSize: 12.5 }} />
+                      {cat.key === "qirat" && (
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                          <input value={d.pages || ""} onChange={(e) => setDval(course.id, cat.key, { pages: e.target.value })} placeholder="পৃষ্ঠা" style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
+                          <input value={d.lines || ""} onChange={(e) => setDval(course.id, cat.key, { lines: e.target.value })} placeholder="লাইন" style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* আউটপুট সারিগুলো */}
+                {rowKeys.length === 0 && (
+                  <div style={{ gridColumn: "1 / -1", textAlign: "center", color: C.muted, fontSize: 12.5, padding: "16px 0" }}>— এখনো কিছু যোগ করা হয়নি —</div>
+                )}
+                {rowKeys.map((rk, ri) => SYL_CATEGORIES.map((cat, ci) => {
+                  const s = rowMap[rk][cat.key];
+                  const editing = s && editId === s.id;
+                  return (
+                    <div key={"r" + rk + cat.key} style={{ ...cellBase(ci), borderTop: ri ? `1px solid ${C.line}` : "none", padding: "8px 10px", minHeight: 40, fontSize: 12.5, lineHeight: 1.5 }}>
+                      {!s && <span style={{ color: "#cbd5cb" }}>·</span>}
+                      {s && !editing && (
+                        <span style={{ display: "flex", gap: 4, alignItems: "flex-start" }}>
+                          <span style={{ flex: 1 }}>
+                            {s.book && s.book !== "অন্যান্য" ? <b style={{ color: C.emerald }}>{s.book} — </b> : null}
+                            <span style={{ fontWeight: 600 }}>{s.lesson}</span>
+                            {(s.pages || s.lines) && <span style={{ color: C.muted, fontSize: 11 }}>{s.pages ? ` · পৃ: ${s.pages}` : ""}{s.lines ? ` · লা: ${s.lines}` : ""}</span>}
+                            {s.note && <span style={{ color: C.muted, fontSize: 11 }}> · 💬 {s.note}</span>}
+                          </span>
+                          {isDir(user) && (
+                            <span style={{ display: "inline-flex", gap: 3 }}>
+                              <button title="এডিট" onClick={() => startEdit(s)} style={{ border: "none", background: C.cream, borderRadius: 6, width: 22, height: 22, cursor: "pointer", fontSize: 10 }}>✏️</button>
+                              <button title="মুছুন" onClick={() => del(s)} style={{ border: "none", background: C.redBg, color: C.red, borderRadius: 6, width: 22, height: 22, cursor: "pointer", fontSize: 10 }}>🗑</button>
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {editing && (
+                        <div style={{ display: "grid", gap: 5 }}>
+                          {catInfo(s.category).book && (
+                            <select value={editVals.book} onChange={(e) => setEditVals({ ...editVals, book: e.target.value })} style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }}>
+                              {bookOptionsFor(course.id).map((b) => <option key={b} value={b}>{b}</option>)}
+                              <option value="অন্যান্য">অন্যান্য / বই ছাড়া</option>
+                            </select>
+                          )}
+                          <input value={editVals.lesson} onChange={(e) => setEditVals({ ...editVals, lesson: e.target.value })} style={{ ...S.input, padding: "6px 8px", fontSize: 12 }} />
+                          {s.category === "qirat" && (
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+                              <input value={editVals.pages} onChange={(e) => setEditVals({ ...editVals, pages: e.target.value })} placeholder="পৃষ্ঠা" style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }} />
+                              <input value={editVals.lines} onChange={(e) => setEditVals({ ...editVals, lines: e.target.value })} placeholder="লাইন" style={{ ...S.input, padding: "5px 7px", fontSize: 11.5 }} />
+                            </div>
+                          )}
+                          <div style={{ display: "flex", gap: 5 }}>
+                            <Btn sm style={{ flex: 1, justifyContent: "center" }} onClick={saveEdit}>✓ সংরক্ষণ</Btn>
+                            <Btn sm kind="soft" onClick={() => setEditId(null)}>✗</Btn>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }))}
               </div>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })()}
     </Section>
   );
 }
@@ -3611,6 +3619,9 @@ export default function App() {
   const [bell, setBell] = useState(false);
   const [, force] = useState(0);
   const refresh = () => force((x) => x + 1);
+  const [apiCourses, setApiCourses] = useState([]);
+  const apiCoursesRef = useRef([]);
+  useEffect(() => { apiCoursesRef.current = apiCourses; }, [apiCourses]);
   // পেজ রিফ্রেশের পর সংরক্ষিত টোকেন থাকলে সেশন ফিরিয়ে আনি — শুধু রিফ্রেশ দিলে আর লগআউট হবে না
   useEffect(() => {
     if (!hasToken()) { setRestoring(false); return; }
@@ -3624,6 +3635,19 @@ export default function App() {
     }).finally(() => { if (alive) setRestoring(false); });
     return () => { alive = false; };
   }, []);
+  // কোর্স তালিকা API থেকে লোড — সব ভিউতে পাস করা হয়
+  useEffect(() => {
+    if (!user) { setApiCourses([]); return; }
+    api.courses().then((cs) => {
+      const adapted = cs.map((c) => ({
+        id: c.id, name: c.name, teacherId: c.teacher,
+        color: c.color, books: c.books || [], studentIds: c.students || [], lectures: [],
+      }));
+      setApiCourses(adapted);
+      apiCoursesRef.current = adapted;
+    }).catch(() => {});
+  }, [user?.id]);
+
   const [livePopup, setLivePopup] = useState(null);
   const [autoJoinId, setAutoJoinId] = useState(null);
   const [receipt, setReceipt] = useState(null);
@@ -3661,7 +3685,7 @@ export default function App() {
           const st = h * 60 + m;
           if (cur < st - 5 || cur > st + 5) return k;
           changed = true;
-          const c = courseById(COURSES, k.courseId);
+          const c = courseById(apiCoursesRef.current, k.courseId);
           const studs = (k.studentIds && k.studentIds.length ? k.studentIds : c.studentIds) || [];
           outbox = [...waGuardianMsgs(k, c, "reminder"), ...outbox];
           notifs = [{ id: uid(), for: [k.teacherId || c.teacherId, ...studs, "admin1", "dir1"], text: `⏰ ${c.name} ক্লাস ${k.time}-এ শুরু হচ্ছে (৫ মিনিটের মধ্যে)! অভিভাবকের WhatsApp মেসেজ প্রস্তুত হয়ে আউটবক্সে গেছে।`, date: todayISO(), read: false }, ...notifs];
@@ -3741,7 +3765,7 @@ export default function App() {
     </div>
   );
 
-  const courses = myCourses(COURSES, user);
+  const courses = myCourses(apiCourses, user);
   const myNotifs = apiNotifs
     ? apiNotifs.map((n) => ({ id: n.id, text: n.text, date: n.created_at, read: n.is_read }))
     : db.notifications.filter((n) => n.for.includes(user.id));
@@ -3764,7 +3788,7 @@ export default function App() {
     <div style={{ fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif", background: C.cream, minHeight: "100vh", color: C.text }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Amiri:wght@400;700&display=swap');
         *{box-sizing:border-box} button:hover{filter:brightness(1.06)} ::selection{background:${C.goldL}}
-        @media(max-width:900px){.tqa-side{position:fixed;left:0;top:0;bottom:0;z-index:80;transform:translateX(${menu ? "0" : "-105%"});transition:transform .25s}}`}</style>
+        @media(max-width:900px){.tqa-side{position:fixed;left:0;top:0;bottom:0;z-index:80;transform:translateX(${menu ? "0" : "-105%"});transition:transform .25s;overflow-y:auto}}`}</style>
 
       {/* টপবার */}
       <div style={{ position: "sticky", top: 0, zIndex: 70, background: "#fff", borderBottom: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 12, padding: "10px 16px" }}>
@@ -3799,11 +3823,11 @@ export default function App() {
 
       {overlays}
       {receipt && <ReceiptModal r={receipt} onClose={() => setReceipt(null)} db={db} setDb={setDb} sender={user} />}
-      {livePopup && (() => { const c = courseById(COURSES, livePopup.courseId); return c.id ? <LiveClassPopup k={livePopup} course={c} onJoin={joinFromPopup} onLater={() => setLivePopup(null)} /> : null; })()}
+      {livePopup && (() => { const c = courseById(apiCourses, livePopup.courseId); return c.id ? <LiveClassPopup k={livePopup} course={c} onJoin={joinFromPopup} onLater={() => setLivePopup(null)} /> : null; })()}
 
       <div style={{ display: "flex", maxWidth: 1280, margin: "0 auto" }}>
         {/* সাইডবার */}
-        <aside className="tqa-side" style={{ width: 232, flexShrink: 0, background: `linear-gradient(180deg, ${C.emeraldD}, ${C.emerald})`, minHeight: "calc(100vh - 57px)", padding: "16px 10px" }}>
+        <aside className="tqa-side" style={{ width: 232, flexShrink: 0, background: `linear-gradient(180deg, ${C.emeraldD}, ${C.emerald})`, minHeight: "calc(100vh - 57px)", padding: "16px 10px", overflowY: "auto" }}>
           {nav.map((n) => (
             <button key={n.id} onClick={() => { setView(n.id); setMenu(false); }}
               style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit", fontSize: 13.5, fontWeight: 600, padding: "10px 14px", borderRadius: 12, marginBottom: 4,
