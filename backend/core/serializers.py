@@ -31,9 +31,10 @@ class UserAdminSerializer(UserSerializer):
         return list(obj.due_months.values_list("month_label", flat=True))
 
     def create(self, validated):
+        from .utils import make_password_str
         pwd = validated.pop("password", None)
         user = User(**validated)
-        user.set_password(pwd or User.objects.make_random_password(8))
+        user.set_password(pwd or make_password_str(8))
         user.save()
         return user
 
@@ -147,10 +148,15 @@ class LectureSerializer(serializers.ModelSerializer):
 
 class RoutineSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source="teacher.name_bn", read_only=True)
+    course_name = serializers.CharField(source="course.name", read_only=True)
+    student_names = serializers.SerializerMethodField()
 
     class Meta:
         model = Routine
         fields = "__all__"
+
+    def get_student_names(self, obj):
+        return list(obj.students.values_list("name_bn", flat=True))
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
@@ -165,11 +171,15 @@ class AttendanceSerializer(serializers.ModelSerializer):
 class ClassSessionSerializer(serializers.ModelSerializer):
     course_name = serializers.CharField(source="course.name", read_only=True)
     teacher_name = serializers.CharField(source="teacher.name_bn", read_only=True)
+    student_names = serializers.SerializerMethodField()
     attendance = AttendanceSerializer(many=True, read_only=True)
 
     class Meta:
         model = ClassSession
         fields = "__all__"
+
+    def get_student_names(self, obj):
+        return list(obj.students.values_list("name_bn", flat=True))
 
 
 class QuestionSerializer(serializers.ModelSerializer):

@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes as pc
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.response import Response
@@ -45,6 +46,11 @@ class UserViewSet(viewsets.ModelViewSet):
         qs = User.objects.filter(role="student")
         ser = UserAdminSerializer if request.user.role == "director" else UserSerializer
         return Response(ser(qs, many=True).data)
+
+    @action(detail=False, permission_classes=[IsAdminLevel])
+    def teachers(self, request):  # ক্লাস/রুটিনে উস্তাদ assign করতে — এডমিনও দরকার (পাসওয়ার্ড ছাড়া)
+        qs = User.objects.filter(role="teacher")
+        return Response(UserSerializer(qs, many=True).data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])
     def toggle_fix_cross(self, request, pk=None):  # লাল-ক্রস ঠিক করার অনুমতি
@@ -237,7 +243,7 @@ class AssignmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         if self.request.user.role == "student":
-            raise PermissionError("স্টুডেন্ট অ্যাসাইনমেন্ট বানাতে পারে না")
+            raise PermissionDenied("স্টুডেন্ট অ্যাসাইনমেন্ট বানাতে পারে না")
         serializer.save(teacher=self.request.user)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
@@ -441,7 +447,8 @@ class AdmissionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def accept(self, request, pk=None):  # গ্রহণ → স্টুডেন্ট অটো তৈরি, কোর্সে যুক্ত
         a = self.get_object()
-        pwd = User.objects.make_random_password(8)
+        from .utils import make_password_str
+        pwd = make_password_str(8)
         username = request.data.get("username") or f"student{User.objects.filter(role='student').count() + 1}"
         student = User.objects.create_user(
             username=username, password=pwd, role="student",

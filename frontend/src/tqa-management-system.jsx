@@ -406,6 +406,37 @@ const SYL_CATEGORIES = [
 const catInfo = (k) => SYL_CATEGORIES.find((c) => c.key === k) || SYL_CATEGORIES[2];
 
 const CLASS_KINDS = ["মেকআপ ক্লাস", "সাপোর্ট ক্লাস", "রিকভারি ক্লাস", "ট্রায়াল ক্লাস", "নিয়মিত ক্লাস", "অন্যান্য"];
+/* ব্যাকএন্ড ClassSession.KINDS (ইংরেজি key) ↔ ফ্রন্টএন্ড বাংলা লেবেল */
+const KIND_TO_KEY = { "মেকআপ ক্লাস": "makeup", "সাপোর্ট ক্লাস": "support", "রিকভারি ক্লাস": "recovery", "ট্রায়াল ক্লাস": "trial", "নিয়মিত ক্লাস": "regular", "অন্যান্য": "other" };
+const KEY_TO_KIND = { makeup: "মেকআপ ক্লাস", support: "সাপোর্ট ক্লাস", recovery: "রিকভারি ক্লাস", trial: "ট্রায়াল ক্লাস", regular: "নিয়মিত ক্লাস", other: "অন্যান্য" };
+/* API ClassSession → ফ্রন্টএন্ড shape */
+const adaptClass = (k) => ({
+  id: k.id, courseId: k.course, date: k.date, time: (k.time || "").slice(0, 5),
+  dur: k.duration_min, lectureNo: k.lecture_no, zoom: k.zoom_link,
+  kind: KEY_TO_KIND[k.kind] || "নিয়মিত ক্লাস", teacherId: k.teacher,
+  studentIds: k.students || [], studentNames: k.student_names || [],
+  teacherName: k.teacher_name, courseName: k.course_name,
+  status: k.status, req: k.guardian_requirement || "", routineId: k.routine,
+});
+/* ফ্রন্টএন্ড ফরম → API ClassSession payload */
+const classPayload = (ff, students) => ({
+  course: ff.courseId, teacher: ff.teacherId, students,
+  date: ff.date, time: ff.time, duration_min: +ff.dur, zoom_link: ff.zoom,
+  lecture_no: +ff.lectureNo, kind: KIND_TO_KEY[ff.kind] || "regular",
+  guardian_requirement: ff.req || "",
+});
+const adaptPerson = (u) => ({ id: u.id, name: u.name || u.name_bn, sub: u.sub || u.sub_title || "" });
+/* API Routine → ফ্রন্টএন্ড shape */
+const adaptRoutine = (r) => ({
+  id: r.id, courseId: r.course, teacherId: r.teacher, studentIds: r.students || [],
+  studentNames: r.student_names || [], teacherName: r.teacher_name, courseName: r.course_name,
+  days: r.days || [], time: (r.time || "").slice(0, 5), dur: r.duration_min,
+  zoom: r.zoom_link, kind: "নিয়মিত ক্লাস",
+});
+const routinePayload = (ff, students) => ({
+  course: ff.courseId, teacher: ff.teacherId, students, days: ff.days,
+  time: ff.time, duration_min: +ff.dur, zoom_link: ff.zoom,
+});
 /* ক্লাস/রুটিন কার পোর্টালে দেখাবে — নির্দিষ্ট উস্তাদ/স্টুডেন্ট দেওয়া থাকলে নাম অনুযায়ী, নইলে কোর্স অনুযায়ী */
 const itemVisible = (it, user) => {
   if (isAdm(user)) return true;
@@ -415,10 +446,11 @@ const itemVisible = (it, user) => {
   return false;
 };
 /* সব স্টুডেন্টের নামের তালিকা — চেকবক্সে এক এক করে বাছাই */
-function StudentPicker({ selected, onToggle }) {
+function StudentPicker({ selected, onToggle, people }) {
+  const list = (people && people.length) ? people : USERS.filter((u) => u.role === "student");
   return (
     <div style={{ maxHeight: 150, overflowY: "auto", border: `1.5px solid ${C.line}`, borderRadius: 10, padding: 6, background: "#fff" }}>
-      {USERS.filter((u) => u.role === "student").map((s) => (
+      {list.map((s) => (
         <label key={s.id} style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 8px", fontSize: 13, cursor: "pointer", borderRadius: 8, background: selected.includes(s.id) ? C.greenBg : "transparent" }}>
           <input type="checkbox" checked={selected.includes(s.id)} onChange={() => onToggle(s.id)} />
           <b>{s.name}</b> <span style={{ color: C.muted, fontSize: 11.5 }}>({s.sub})</span>
@@ -477,10 +509,19 @@ function Login({ onLogin, onAdmission }) {
   };
   const [apply, setApply] = useState(false);
   const [ok, setOk] = useState(false);
-  const [af, setAf] = useState({ name: "", age: "", guardian: "", country: "", contact: "", course: "নুরানী কায়দা", msg: "" });
-  const sendApply = () => {
+  const [sending, setSending] = useState(false);
+  const blankAf = { name: "", age: "", guardian: "", country: "", contact: "", course: "নুরানী কায়দা", msg: "" };
+  const [af, setAf] = useState(blankAf);
+  const sendApply = async () => {
     if (!af.name || !af.guardian || !af.contact) return;
-    onAdmission(af); setApply(false); setOk(true); setTimeout(() => setOk(false), 5000);
+    setSending(true);
+    try {
+      await onAdmission(af);            // ব্যাকএন্ডে সত্যিকারের জমা — সফল হলেই "জমা হয়েছে"
+      setApply(false); setOk(true); setTimeout(() => setOk(false), 5000);
+      setAf(blankAf);
+    } catch {
+      notice("আবেদন পাঠানো যায়নি — ইন্টারনেট সংযোগ যাচাই করে আবার চেষ্টা করুন।");
+    } finally { setSending(false); }
   };
   return (
     <div style={{ minHeight: "100vh", background: `linear-gradient(160deg, ${C.emeraldD}, ${C.emerald} 60%, ${C.emeraldL})`, display: "grid", placeItems: "center", padding: 16 }}>
@@ -553,7 +594,7 @@ function Login({ onLogin, onAdmission }) {
           <div style={{ marginTop: 10 }}><label style={S.label}>কাঙ্ক্ষিত কোর্স</label>
             <input type="text" style={S.input} value={af.course} onChange={(e) => setAf({ ...af, course: e.target.value })} placeholder="যে কোর্সে ভর্তি হতে চান লিখুন" /></div>
           <div style={{ marginTop: 10 }}><label style={S.label}>বার্তা (ঐচ্ছিক)</label><textarea rows={2} style={{ ...S.input, resize: "vertical" }} value={af.msg} onChange={(e) => setAf({ ...af, msg: e.target.value })} /></div>
-          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={sendApply}>আবেদন জমা দিন</Btn>
+          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: sending ? 0.6 : 1 }} disabled={sending} onClick={sendApply}>{sending ? "পাঠানো হচ্ছে…" : "আবেদন জমা দিন"}</Btn>
         </Modal>
       )}
     </div>
@@ -570,41 +611,79 @@ function LiveTimer({ start, demoFast }) {
 
 function ClassesView({ db, setDb, user, courses, autoJoinId, onAutoJoinConsumed }) {
   const [show, setShow] = useState(false);
-  const blankSched = () => ({ courseId: courses[0]?.id, date: todayISO(), time: "17:00", dur: 60, lectureNo: 1, zoom: "https://zoom.us/j/", kind: "মেকআপ ক্লাস", teacherId: USERS.find((u) => u.role === "teacher")?.id, studentIds: [], req: "" });
+  const blankSched = () => ({ courseId: courses[0]?.id, date: todayISO(), time: "17:00", dur: 60, lectureNo: 1, zoom: "https://zoom.us/j/", kind: "মেকআপ ক্লাস", teacherId: courses[0]?.teacherId, studentIds: [], req: "" });
   const [f, setF] = useState(blankSched);
   const [editId, setEditId] = useState(null); // এডিট — কেবল এডমিন/পরিচালক
   const [joined, setJoined] = useState(null); // {classId, start}
   const [rate, setRate] = useState(null); // ক্লাস শেষে মূল্যায়ন পপআপ
+  const [apiClasses, setApiClasses] = useState(null); // null হলে mock db.classes ব্যবহার হয়
+  const [teachers, setTeachers] = useState([]);
+  const [students, setStudents] = useState([]);
+  const loadClasses = async () => {
+    try { setApiClasses((await api.classes()).map(adaptClass)); }
+    catch { setApiClasses(null); }
+  };
+  useEffect(() => { loadClasses(); }, [user?.id]);
+  useEffect(() => { // ক্লাস শিডিউলের জন্য আসল উস্তাদ/স্টুডেন্ট তালিকা (এডমিন/পরিচালক)
+    if (!isAdm(user)) return;
+    api.allTeachers().then((d) => setTeachers(d.map(adaptPerson))).catch(() => setTeachers([]));
+    api.allStudents().then((d) => setStudents(d.map(adaptPerson))).catch(() => setStudents([]));
+  }, [user?.id]);
   useEffect(() => { // লাইভ পপআপ থেকে এলে হাজিরা টাইমার অটো চালু
     if (autoJoinId) { setJoined({ classId: autoJoinId, start: Date.now() }); onAutoJoinConsumed && onAutoJoinConsumed(); }
   }, [autoJoinId]);
   const [demoFast, setDemoFast] = useState(true);
-  const mine = db.classes.filter((k) => itemVisible(k, user)).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)); // উস্তাদ ও স্টুডেন্টের নাম অনুযায়ী তার পোর্টালে
+  const usingApi = apiClasses !== null;
+  const teacherList = teachers.length ? teachers : USERS.filter((u) => u.role === "teacher");
+  const nameOf = (id) => (teachers.find((t) => t.id === id) || students.find((s) => s.id === id) || userById(id)).name || "—";
+  // API মোডে ব্যাকএন্ড আগেই রোল অনুযায়ী ফিল্টার করে দেয়; mock মোডে itemVisible দিয়ে ফিল্টার
+  const mine = (usingApi ? apiClasses : db.classes.filter((k) => itemVisible(k, user))).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const today = mine.filter((k) => k.date === todayISO() && k.status !== "done");
   const upcoming = mine.filter((k) => k.date > todayISO());
   const past = mine.filter((k) => k.status === "done" || k.date < todayISO());
 
-  const join = (k) => { // জুম খোলে অ্যাংকর লিংকে (নিচে <a>); এখানে কেবল হাজিরা টাইমার চালু হয়
+  const join = (k) => { // জুম খোলে অ্যাংকর লিংকে (নিচে <a>); হাজিরা টাইমার চালু + সার্ভারে হাজিরা শুরু
+    if (usingApi) api.joinClass(k.id).catch(() => {});
     setJoined({ classId: k.id, start: Date.now() });
   };
-  const leave = () => {
-    const mins = Math.floor((Date.now() - joined.start) / (demoFast ? 1000 : 60000));
-    const k = db.classes.find((x) => x.id === joined.classId);
-    setDb((d) => ({ ...d, attendance: [...d.attendance, { id: uid(), classId: joined.classId, userId: user.id, minutes: mins }] }));
+  const leave = async () => {
+    const k = (usingApi ? apiClasses : db.classes).find((x) => x.id === joined.classId);
+    if (usingApi) { try { await api.leaveClass(joined.classId); } catch { /* সার্ভার ব্যর্থ — উপেক্ষা */ } }
+    else {
+      const mins = Math.floor((Date.now() - joined.start) / (demoFast ? 1000 : 60000));
+      setDb((d) => ({ ...d, attendance: [...d.attendance, { id: uid(), classId: joined.classId, userId: user.id, minutes: mins }] }));
+    }
     setJoined(null);
     if (user.role === "student" && k) {
       const c = courseById(courses, k.courseId);
-      setRate({ classId: k.id, courseId: c.id, teacherId: c.teacherId, courseName: c.name }); // জুমের মতো মূল্যায়ন পপআপ (অপশনাল)
+      setRate({ classId: k.id, courseId: c.id || k.courseId, teacherId: c.teacherId || k.teacherId, courseName: c.name || k.courseName }); // জুমের মতো মূল্যায়ন পপআপ (অপশনাল)
     }
   };
-  const submitRating = (stars, comment) => {
-    setDb((d) => ({ ...d, ratings: [...d.ratings, { id: uid(), ...rate, studentId: user.id, stars, comment, date: todayISO() }] }));
+  const submitRating = async (stars, comment) => {
+    try {
+      await api.rateClass({ session: rate.classId, course: rate.courseId, teacher: rate.teacherId, stars, comment });
+    } catch {
+      setDb((d) => ({ ...d, ratings: [...d.ratings, { id: uid(), ...rate, studentId: user.id, stars, comment, date: todayISO() }] }));
+    }
     setRate(null);
   };
-  const delClass = (id) => setDb((d) => ({ ...d, classes: d.classes.filter((k) => k.id !== id) }));
-  const addClass = () => {
+  const delClass = async (id) => {
+    if (usingApi) { try { await api.deleteClass(id); await loadClasses(); return; } catch { /* fall through */ } }
+    setDb((d) => ({ ...d, classes: d.classes.filter((k) => k.id !== id) }));
+  };
+  const addClass = async () => {
     const c = courseById(courses, f.courseId);
     const students = f.studentIds.length ? f.studentIds : (c.studentIds || []); // কাউকে না বাছলে কোর্সের সবাই
+    if (usingApi) { // আসল persist — দুই ডিভাইসেই দেখা যাবে, রিফ্রেশেও থাকবে
+      try {
+        if (editId) await api.editClass(editId, classPayload(f, students));
+        else await api.scheduleClass(classPayload(f, students));
+        await loadClasses();
+        setShow(false); setEditId(null); setF(blankSched());
+        notice(editId ? "✔ ক্লাস আপডেট হয়েছে" : "✔ ক্লাস শিডিউল হয়েছে — সময় হলে পোর্টালে জয়েন অপশন আসবে");
+        return;
+      } catch { /* ব্যাকএন্ড ব্যর্থ → নিচের mock এ পড়ে */ }
+    }
     if (editId) { // ✏️ এডিট — কেবল এডমিন/পরিচালক; তারিখ-সময় বদলালে পোর্টালের জয়েন অপশনও অটো বদলায়
       setDb((d) => ({ ...d, classes: d.classes.map((x) => x.id === editId ? { ...x, ...f, studentIds: students, dur: +f.dur, lectureNo: +f.lectureNo } : x),
         notifications: [{ id: uid(), for: [f.teacherId, ...students, "admin1", "dir1"], text: `✏️ [${f.kind}] ক্লাসটি আপডেট হয়েছে: ${c.name} — ${fmtDate(f.date)} ${f.time}।`, date: todayISO(), read: false }, ...d.notifications] }));
@@ -616,20 +695,20 @@ function ClassesView({ db, setDb, user, courses, autoJoinId, onAutoJoinConsumed 
     setShow(false); setEditId(null); setF(blankSched());
   };
   const startEdit = (k) => { // ক্লাস এডিট — মডাল প্রি-ফিল
-    setF({ courseId: k.courseId, date: k.date, time: k.time, dur: k.dur, lectureNo: k.lectureNo, zoom: k.zoom, kind: k.kind || "নিয়মিত ক্লাস", teacherId: k.teacherId || courseById(COURSES, k.courseId).teacherId, studentIds: k.studentIds || [], req: k.req || "" });
+    setF({ courseId: k.courseId, date: k.date, time: k.time, dur: k.dur, lectureNo: k.lectureNo, zoom: k.zoom, kind: k.kind || "নিয়মিত ক্লাস", teacherId: k.teacherId || courseById(courses, k.courseId).teacherId, studentIds: k.studentIds || [], req: k.req || "" });
     setEditId(k.id); setShow(true);
   };
   const Row = (k, joinable) => {
-    const c = courseById(COURSES, k.courseId);
+    const c = courseById(courses, k.courseId);
     const lec = c.lectures?.[k.lectureNo - 1];
     const kStudents = (k.studentIds && k.studentIds.length) ? k.studentIds : c.studentIds || [];
     const isJoined = joined?.classId === k.id;
     return (
       <div key={k.id} style={{ ...S.card, padding: 16, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", borderLeft: `4px solid ${c.color || C.emerald}` }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ fontWeight: 800, fontSize: 15 }}>{c.name} <span style={{ color: C.muted, fontWeight: 600, fontSize: 12.5 }}>· লেকচার {bn(k.lectureNo)}</span> {k.kind && k.kind !== "নিয়মিত ক্লাস" && <Tag color={C.red} bg={C.redBg}>{k.kind}</Tag>}</div>
-          <div style={{ fontSize: 12.5, color: C.muted }}>{lec?.title} · উস্তাদ: {userById(k.teacherId || c.teacherId).name}</div>
-          {user.role !== "student" && <div style={{ fontSize: 12, color: C.muted }}>👥 শিক্ষার্থী: {kStudents.map((s) => userById(s).name).join(", ") || "—"}</div>}
+          <div style={{ fontWeight: 800, fontSize: 15 }}>{c.name || k.courseName} <span style={{ color: C.muted, fontWeight: 600, fontSize: 12.5 }}>· লেকচার {bn(k.lectureNo)}</span> {k.kind && k.kind !== "নিয়মিত ক্লাস" && <Tag color={C.red} bg={C.redBg}>{k.kind}</Tag>}</div>
+          <div style={{ fontSize: 12.5, color: C.muted }}>{lec?.title} · উস্তাদ: {k.teacherName || nameOf(k.teacherId || c.teacherId)}</div>
+          {user.role !== "student" && <div style={{ fontSize: 12, color: C.muted }}>👥 শিক্ষার্থী: {((k.studentNames && k.studentNames.length) ? k.studentNames : kStudents.map((s) => nameOf(s))).join(", ") || "—"}</div>}
           {k.req && user.role !== "student" && <div style={{ fontSize: 12, color: "#a16207", marginTop: 2 }}>📌 অভিভাবকের রিকোয়ারমেন্ট: {k.req}</div>}
           {k.status === "postponed" && <div style={{ fontSize: 12.5, color: C.red, marginTop: 4, background: C.redBg, padding: "6px 10px", borderRadius: 8 }}>⛔ ক্লাসটি অনিবার্য কারণে / উস্তাদ-উস্তাদা অসুস্থ থাকার দরুন স্থগিত করা হয়েছে। পরবর্তীতে শিডিউল করে মেকআপ করা হবে ইনশাআল্লাহ।</div>}
           <div style={{ fontSize: 12.5, color: C.text, marginTop: 2 }}>📅 {fmtDate(k.date)} · 🕐 {k.time} · {bn(k.dur)} মিনিট</div>
@@ -673,9 +752,9 @@ function ClassesView({ db, setDb, user, courses, autoJoinId, onAutoJoinConsumed 
               <select style={S.input} value={f.courseId} onChange={(e) => { const c = courseById(courses, e.target.value); setF({ ...f, courseId: e.target.value, teacherId: c.teacherId || f.teacherId }); }}>{courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
           </div>
           <div style={{ marginTop: 10 }}><label style={S.label}>উস্তাদ/উস্তাদা — কার কাছে পড়বে</label>
-            <select style={S.input} value={f.teacherId} onChange={(e) => setF({ ...f, teacherId: e.target.value })}>{USERS.filter((u) => u.role === "teacher").map((t) => <option key={t.id} value={t.id}>{t.name} ({t.sub})</option>)}</select></div>
+            <select style={S.input} value={f.teacherId || ""} onChange={(e) => setF({ ...f, teacherId: e.target.value })}>{teacherList.map((t) => <option key={t.id} value={t.id}>{t.name} {t.sub ? `(${t.sub})` : ""}</option>)}</select></div>
           <div style={{ marginTop: 10 }}><label style={S.label}>শিক্ষার্থী বাছাই করুন — এক এক করে ({bn(f.studentIds.length)} জন নির্বাচিত; কাউকে না বাছলে কোর্সের সবাই)</label>
-            <StudentPicker selected={f.studentIds} onToggle={(id) => setF({ ...f, studentIds: f.studentIds.includes(id) ? f.studentIds.filter((x) => x !== id) : [...f.studentIds, id] })} /></div>
+            <StudentPicker selected={f.studentIds} people={students} onToggle={(id) => setF({ ...f, studentIds: f.studentIds.includes(id) ? f.studentIds.filter((x) => x !== id) : [...f.studentIds, id] })} /></div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
             <div><label style={S.label}>তারিখ</label><input type="date" style={S.input} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></div>
             <div><label style={S.label}>সময়</label><input type="time" style={S.input} value={f.time} onChange={(e) => setF({ ...f, time: e.target.value })} /></div>
@@ -753,7 +832,7 @@ function LecturePlan({ db, courses, user, refresh }) {
   });
   const course = courseById(courses, sel);
   const canMark = user.role === "teacher" && (String(course.teacherId) === String(user.id) || String(course.teacher) === String(user.id));
-  const hasGrant = user.role === "teacher" && db.permissions?.fixCross?.[user.id];
+  const hasGrant = user.role === "teacher" && (user.can_fix_cross ?? db.permissions?.fixCross?.[user.id]);
   const isAdmin = isAdm(user) || hasGrant;
   const mark = async (lec, topic, val) => {
     if (!canMark && !isAdmin) return;
@@ -1952,6 +2031,7 @@ function ManageView({ db, setDb, refresh }) {
         id: u.id, role: u.role, name: u.name || u.name_bn, sub: u.sub || u.sub_title || "",
         user: u.username, pass: u.password || "••••", fee: u.monthly_fee, salary: u.monthly_salary,
         guardian: u.guardian, country: u.country, phone: u.phone, email: u.email,
+        can_fix_cross: u.can_fix_cross,
       })));
     } catch {
       setAllUsers(USERS);
@@ -1996,7 +2076,15 @@ function ManageView({ db, setDb, refresh }) {
       refresh();
     }
   });
-  const togglePerm = (tid) => setDb((d) => ({ ...d, permissions: { ...d.permissions, fixCross: { ...d.permissions.fixCross, [tid]: !d.permissions.fixCross[tid] } } }));
+  const togglePerm = async (tid) => {
+    try {
+      await api.toggleFixCross(tid);
+      await loadUsers();
+    } catch {
+      setDb((d) => ({ ...d, permissions: { ...d.permissions, fixCross: { ...d.permissions.fixCross, [tid]: !d.permissions.fixCross[tid] } } }));
+    }
+  };
+  const permOn = (t) => t.can_fix_cross ?? db.permissions.fixCross[t.id];
   const roleBn = { director: "পরিচালক", admin: "এডমিন", teacher: "উস্তাদ/উস্তাদা", student: "স্টুডেন্ট" };
 
   /* এক ব্যবহারকারীর বিস্তারিত রিপোর্ট — পরিচালক সব দেখেন */
@@ -2073,8 +2161,8 @@ function ManageView({ db, setDb, refresh }) {
         {allUsers.filter((u) => u.role === "teacher").map((t) => (
           <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, background: C.cream, marginBottom: 6, flexWrap: "wrap" }}>
             <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, minWidth: 140 }}>{t.name}</span>
-            {db.permissions.fixCross[t.id] ? <Tag>অনুমতি চালু ✔</Tag> : <Tag color={C.muted} bg={"#fff"}>বন্ধ</Tag>}
-            <Btn sm kind={db.permissions.fixCross[t.id] ? "danger" : "ghost"} onClick={() => togglePerm(t.id)}>{db.permissions.fixCross[t.id] ? "বন্ধ করুন" : "অনুমতি দিন"}</Btn>
+            {permOn(t) ? <Tag>অনুমতি চালু ✔</Tag> : <Tag color={C.muted} bg={"#fff"}>বন্ধ</Tag>}
+            <Btn sm kind={permOn(t) ? "danger" : "ghost"} onClick={() => togglePerm(t.id)}>{permOn(t) ? "বন্ধ করুন" : "অনুমতি দিন"}</Btn>
           </div>
         ))}
       </div>
@@ -2398,18 +2486,44 @@ const WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5]; // শনি → শুক্র
 function RoutineView({ db, setDb, courses, user }) {
   const canEdit = isAdm(user);
   const [show, setShow] = useState(false);
-  const blankR = () => ({ courseId: courses[0]?.id, days: [], time: "17:00", dur: 60, zoom: "https://zoom.us/j/8801402499027", kind: "নিয়মিত ক্লাস", teacherId: USERS.find((u) => u.role === "teacher")?.id, studentIds: [] });
+  const blankR = () => ({ courseId: courses[0]?.id, days: [], time: "17:00", dur: 60, zoom: "https://zoom.us/j/8801402499027", kind: "নিয়মিত ক্লাস", teacherId: courses[0]?.teacherId, studentIds: [] });
   const [f, setF] = useState(blankR);
   const [editId, setEditId] = useState(null);
+  const [apiRoutines, setApiRoutines] = useState(null); // null হলে mock db.routine
+  const [teachers, setTeachers] = useState([]);
+  const [students, setStudents] = useState([]);
+  const loadRoutines = async () => {
+    try { setApiRoutines((await api.routines()).map(adaptRoutine)); }
+    catch { setApiRoutines(null); }
+  };
+  useEffect(() => { loadRoutines(); }, [user?.id]);
+  useEffect(() => {
+    if (!canEdit) return;
+    api.allTeachers().then((d) => setTeachers(d.map(adaptPerson))).catch(() => setTeachers([]));
+    api.allStudents().then((d) => setStudents(d.map(adaptPerson))).catch(() => setStudents([]));
+  }, [user?.id]);
+  const usingApi = apiRoutines !== null;
+  const teacherList = teachers.length ? teachers : USERS.filter((u) => u.role === "teacher");
+  const nameOf = (id) => (teachers.find((t) => t.id === id) || students.find((s) => s.id === id) || userById(id)).name || "—";
   const plusDays = (iso, n) => { const d = new Date(iso + "T00:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
   const toggleDay = (i) => setF({ ...f, days: f.days.includes(i) ? f.days.filter((d) => d !== i) : [...f.days, i] });
   const nextDate = (wd) => { const d = new Date(); const diff = (wd - d.getDay() + 7) % 7; d.setDate(d.getDate() + diff); return d.toISOString().slice(0, 10); };
   const genClasses = (rid, ff, students) => ff.days.flatMap((wd) => [0, 7].map((off) => ({ // এ সপ্তাহ + পরের সপ্তাহ — স্থায়ী রুটিনের ক্লাস
     id: uid(), routineId: rid, courseId: ff.courseId, date: plusDays(nextDate(wd), off), time: ff.time, dur: +ff.dur, zoom: ff.zoom, status: "upcoming", lectureNo: 1, fromRoutine: true, kind: "নিয়মিত ক্লাস", teacherId: ff.teacherId, studentIds: students })));
-  const add = () => {
+  const add = async () => {
     if (!f.days.length) return notice("সপ্তাহের অন্তত একটি দিন বাছাই করুন।");
     const c = courseById(courses, f.courseId);
     const students = f.studentIds.length ? f.studentIds : (c.studentIds || []); // কাউকে না বাছলে কোর্সের সবাই
+    if (usingApi) { // আসল persist — সার্ভারে রুটিন, দৈনিক ক্রন থেকে ক্লাস তৈরি হবে
+      try {
+        if (editId) await api.updateRoutine(editId, routinePayload(f, students));
+        else await api.createRoutine(routinePayload(f, students));
+        await loadRoutines();
+        setShow(false); setEditId(null); setF(blankR());
+        notice(editId ? "✔ রুটিন আপডেট হয়েছে" : "✔ স্থায়ী রুটিন তৈরি হয়েছে");
+        return;
+      } catch { /* ব্যাকএন্ড ব্যর্থ → নিচের mock এ পড়ে */ }
+    }
     if (editId) { // ✏️ এডিট — আসন্ন ক্লাস নতুন বার-সময়ে আবার তৈরি, পোর্টাল অটো আপডেট
       const newClasses = genClasses(editId, f, students);
       setDb((d) => ({ ...d,
@@ -2426,8 +2540,12 @@ function RoutineView({ db, setDb, courses, user }) {
     }
     setShow(false); setEditId(null); setF(blankR());
   };
-  const del = (id) => setDb((d) => ({ ...d, routine: d.routine.filter((r) => r.id !== id), classes: d.classes.filter((k) => !(k.routineId === id && k.date >= todayISO())) }));
-  const visible = (db.routine || []).filter((r) => itemVisible(r, user)); // নাম অনুযায়ী যার যার পোর্টালে
+  const del = async (id) => {
+    if (usingApi) { try { await api.deleteRoutine(id); await loadRoutines(); return; } catch { /* fall through */ } }
+    setDb((d) => ({ ...d, routine: d.routine.filter((r) => r.id !== id), classes: d.classes.filter((k) => !(k.routineId === id && k.date >= todayISO())) }));
+  };
+  // API মোডে ব্যাকএন্ড আগেই রোল অনুযায়ী ফিল্টার করে; mock মোডে itemVisible
+  const visible = usingApi ? apiRoutines : (db.routine || []).filter((r) => itemVisible(r, user));
   return (
     <Section title="ক্লাস রুটিন (স্থায়ী সাপ্তাহিক)" sub={canEdit ? "কোন স্টুডেন্ট কোন উস্তাদের কাছে কোন বারে কোন সময়ে কোন কোর্সে পড়বে — সব সময়ের জন্য; এডিট কেবল এডমিনের হাতে" : "আপনার স্থায়ী সাপ্তাহিক ক্লাসের সময়সূচি — তারিখ-সময় অনুযায়ী জয়েন অপশন অটো আসবে"}
       action={canEdit && <Btn onClick={() => setShow(true)}>+ রুটিন তৈরি করুন</Btn>}>
@@ -2442,10 +2560,11 @@ function RoutineView({ db, setDb, courses, user }) {
                 <div style={{ flex: 1, display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {items.length === 0 && <span style={{ fontSize: 12.5, color: C.muted }}>— ক্লাস নেই —</span>}
                   {items.map((r) => {
-                    const c = courseById(COURSES, r.courseId);
+                    const c = courseById(courses, r.courseId);
+                    const studNames = (r.studentNames && r.studentNames.length) ? r.studentNames : (r.studentIds || []).map((s) => nameOf(s));
                     return (
                       <span key={r.id} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: C.greenBg, border: `1px solid ${C.line}`, borderRadius: 10, padding: "7px 12px", fontSize: 12.5 }}>
-                        <b style={{ color: c.color || C.emerald }}>{c.name}</b> {r.kind && r.kind !== "নিয়মিত ক্লাস" && <Tag color={C.red} bg={C.redBg}>{r.kind}</Tag>} 🕐 {r.time} · {bn(r.dur)} মি · {userById(r.teacherId || c.teacherId).name}{canEdit && (r.studentIds || []).length > 0 && <span style={{ color: C.muted }}> · 👥 {r.studentIds.map((s) => userById(s).name.split(" ")[0]).join(", ")}</span>}
+                        <b style={{ color: c.color || C.emerald }}>{c.name || r.courseName}</b> {r.kind && r.kind !== "নিয়মিত ক্লাস" && <Tag color={C.red} bg={C.redBg}>{r.kind}</Tag>} 🕐 {r.time} · {bn(r.dur)} মি · {r.teacherName || nameOf(r.teacherId || c.teacherId)}{canEdit && studNames.length > 0 && <span style={{ color: C.muted }}> · 👥 {studNames.map((n) => n.split(" ")[0]).join(", ")}</span>}
                         {canEdit && <button title="এডিট — কেবল এডমিন" onClick={() => { setF({ courseId: r.courseId, days: [...r.days], time: r.time, dur: r.dur, zoom: r.zoom, kind: "নিয়মিত ক্লাস", teacherId: r.teacherId, studentIds: r.studentIds || [] }); setEditId(r.id); setShow(true); }} style={{ border: "none", background: "transparent", cursor: "pointer" }}>✏️</button>}{canEdit && <button onClick={() => del(r.id)} style={{ border: "none", background: "transparent", color: C.red, cursor: "pointer", fontWeight: 800 }}>✕</button>}
                       </span>
                     );
@@ -2462,9 +2581,9 @@ function RoutineView({ db, setDb, courses, user }) {
           <div><label style={S.label}>কোর্স</label>
             <select style={S.input} value={f.courseId} onChange={(e) => { const c = courseById(courses, e.target.value); setF({ ...f, courseId: e.target.value, teacherId: c.teacherId || f.teacherId }); }}>{courses.map((c) => <option key={c.id} value={c.id}>{c.name} — {c.studentIds.length}জন শিক্ষার্থী</option>)}</select></div>
           <div style={{ marginTop: 10 }}><label style={S.label}>উস্তাদ/উস্তাদা — কার কাছে পড়বে</label>
-            <select style={S.input} value={f.teacherId} onChange={(e) => setF({ ...f, teacherId: e.target.value })}>{USERS.filter((u) => u.role === "teacher").map((t) => <option key={t.id} value={t.id}>{t.name} ({t.sub})</option>)}</select></div>
+            <select style={S.input} value={f.teacherId || ""} onChange={(e) => setF({ ...f, teacherId: e.target.value })}>{teacherList.map((t) => <option key={t.id} value={t.id}>{t.name} {t.sub ? `(${t.sub})` : ""}</option>)}</select></div>
           <div style={{ marginTop: 10 }}><label style={S.label}>শিক্ষার্থী বাছাই করুন — এক এক করে ({bn(f.studentIds.length)} জন নির্বাচিত; কাউকে না বাছলে কোর্সের সবাই)</label>
-            <StudentPicker selected={f.studentIds} onToggle={(id) => setF({ ...f, studentIds: f.studentIds.includes(id) ? f.studentIds.filter((x) => x !== id) : [...f.studentIds, id] })} /></div>
+            <StudentPicker selected={f.studentIds} people={students} onToggle={(id) => setF({ ...f, studentIds: f.studentIds.includes(id) ? f.studentIds.filter((x) => x !== id) : [...f.studentIds, id] })} /></div>
           <div style={{ marginTop: 10 }}><label style={S.label}>সপ্তাহের কোন কোন দিন</label>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {WEEK_ORDER.map((wd) => (
@@ -2765,10 +2884,11 @@ function TeacherWiseBoard({ db, setDb, user }) {
   const [upcomingAll, setUpcomingAll] = useState([]);
 
   useEffect(() => {
-    Promise.all([api.allUsers(), api.routines(), api.classes()]).then(([usersData, routData, classData]) => {
-      const ts = usersData.filter((u) => u.role === "teacher");
-      if (ts.length) setAllTeachers(ts.map((u) => ({ id: u.id, name: u.name || u.name_bn, role: "teacher" })));
-      setRoutines(routData.map((r) => ({ ...r, courseId: r.course || r.courseId, teacherId: r.teacher || r.teacherId, studentIds: r.students || r.studentIds || [], days: r.days || [] })));
+    // উস্তাদ-তালিকা (এডমিন/পরিচালক) — ব্যর্থ হলেও routines/classes লোড থামবে না
+    if (user.role !== "teacher")
+      api.allTeachers().then((d) => { if (d.length) setAllTeachers(d.map((u) => ({ id: u.id, name: u.name || u.name_bn, role: "teacher" }))); }).catch(() => {});
+    Promise.all([api.routines(), api.classes()]).then(([routData, classData]) => {
+      setRoutines(routData.map((r) => ({ ...r, courseId: r.course ?? r.courseId, teacherId: r.teacher ?? r.teacherId, studentIds: r.students || r.studentIds || [], studentNames: r.student_names || [], days: r.days || [] })));
       setUpcomingAll(classData.filter((k) => (k.date || "") >= todayISO() && k.status === "upcoming"));
     }).catch(() => {
       setRoutines(db.routine || []);
@@ -2809,7 +2929,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
       {myRoutines.map((r) => {
         const c = courseById(COURSES, r.courseId || r.course);
         const studs = r.studentIds || r.students || c.studentIds || [];
-        const studentNames = studs.map((s) => userById(s)?.name || ("স্টুডেন্ট " + s)).join(", ");
+        const studentNames = (r.studentNames && r.studentNames.length) ? r.studentNames.join(", ") : studs.map((s) => userById(s)?.name || ("স্টুডেন্ট " + s)).join(", ");
         return (
           <div key={r.id} style={{ padding: "8px 12px", borderRadius: 10, background: C.cream, marginBottom: 6, fontSize: 12.5 }}>
             👥 <b>{studentNames || "—"}</b> — {c.name || r.course_name || "—"} · {(r.days || []).map((i) => DAY_BN[i]).join(", ")} · 🕐 {r.time}
@@ -2821,7 +2941,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
       {upcoming.map((k) => {
         const c = courseById(COURSES, k.courseId || k.course);
         const studs = k.studentIds || k.students || c.studentIds || [];
-        const studentNames = studs.map((s) => (userById(s)?.name || ("ছাত্র " + s)).split(" ")[0]).join(", ");
+        const studentNames = (k.student_names && k.student_names.length) ? k.student_names.map((n) => n.split(" ")[0]).join(", ") : studs.map((s) => (userById(s)?.name || ("ছাত্র " + s)).split(" ")[0]).join(", ");
         return (
           <div key={k.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 10, background: C.greenBg, marginBottom: 6, fontSize: 12.5, flexWrap: "wrap" }}>
             <span style={{ flex: 1, minWidth: 200 }}><b>{k.course_name || c.name || "—"}</b> · {fmtDate(k.date)} · 🕐 {k.time} · 👥 {studentNames}</span>
@@ -3790,7 +3910,10 @@ export default function App() {
     <div style={{ fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');`}</style>
       {overlays}
-      <Login onLogin={(u) => { setUser(u); setView("overview"); }} onAdmission={(a) => setDb((d) => ({ ...d, admissions: [{ id: uid(), ...a, age: +a.age || 0, date: todayISO(), status: "pending" }, ...d.admissions] }))} />
+      <Login onLogin={(u) => { setUser(u); setView("overview"); }} onAdmission={(a) => api.applyAdmission({
+        kind: "admission", name: a.name, age: +a.age || null, guardian: a.guardian,
+        country: a.country, contact: a.contact, course_name: a.course, message: a.msg,
+      })} />
     </div>
   );
 

@@ -84,10 +84,13 @@ export const api = {
   joinClass: (id) => request(`/classes/${id}/join/`, { method: "POST" }),       // হাজিরা শুরু
   leaveClass: (id) => request(`/classes/${id}/leave/`, { method: "POST" }),     // ৪০-মিনিট হিসাব সার্ভারে
   postponeClass: (id) => request(`/classes/${id}/postpone/`, { method: "POST" }), // ⛔ স্থগিত
+  deleteClass: (id) => request(`/classes/${id}/`, { method: "DELETE" }),
 
   // রুটিন
   routines: () => request("/routines/"),
   createRoutine: (d) => request("/routines/", { method: "POST", body: d }),
+  updateRoutine: (id, d) => request(`/routines/${id}/`, { method: "PATCH", body: d }),
+  deleteRoutine: (id) => request(`/routines/${id}/`, { method: "DELETE" }),
 
   // কোর্স · বই · সিলেবাস · লেকচার
   courses: () => request("/courses/"),
@@ -184,6 +187,7 @@ export const api = {
   // ব্যবহারকারী (পরিচালক)
   allUsers: () => request("/users/"),
   allStudents: () => request("/users/students/"),
+  allTeachers: () => request("/users/teachers/"),
   saveUser: (d, id) => request(id ? `/users/${id}/` : "/users/", { method: id ? "PATCH" : "POST", body: d }),
   deleteUser: (id) => request(`/users/${id}/`, { method: "DELETE" }),
   toggleFixCross: (id) => request(`/users/${id}/toggle_fix_cross/`, { method: "POST" }),
