@@ -146,7 +146,10 @@ class LectureViewSet(viewsets.ModelViewSet):
     def mark_topic(self, request):
         """টপিক ✔/✘ — উস্তাদ নিজের কোর্সে; লাল-ক্রস ঠিক করা কেবল এডমিন-লেভেল বা অনুমতিপ্রাপ্ত"""
         topic = LectureTopic.objects.get(pk=request.data["topic_id"])
-        new = request.data["covered"]  # covered | missed | pending
+        new = request.data.get("covered")  # covered | missed | pending
+        valid = [c[0] for c in LectureTopic.Covered.choices]
+        if new not in valid:  # boolean/অবৈধ মান CharField-এ সেভ হয়ে ডেটা নষ্ট হওয়া ঠেকাতে
+            return Response({"detail": "covered মান অবৈধ — covered/missed/pending হতে হবে।"}, status=400)
         u = request.user
         is_admin = u.role in ("director", "admin") or u.can_fix_cross
         is_course_teacher = topic.lecture.course.teacher_id == u.id

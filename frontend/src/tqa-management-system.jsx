@@ -395,6 +395,11 @@ const sylLabel = (e) => {
   return `${prefix}${e.lesson}`;
 };
 
+/* টপিক কভারেজ — ব্যাকএন্ড LectureTopic.Covered স্ট্রিং enum ("covered"/"missed"/"pending")
+   ↔ ফ্রন্টএন্ডের অভ্যন্তরীণ boolean (true=কভার / false=বাদ / null=বাকি) রূপান্তর */
+const coveredToBool = (v) =>
+  (v === "covered" || v === true) ? true : (v === "missed" || v === false) ? false : null;
+
 /* দৈনিক পাঠ পরিকল্পনা / সিলেবাসের ৫টি বিভাগ — ব্যাকএন্ডের SyllabusItem.Category এর সাথে ১:১ */
 const SYL_CATEGORIES = [
   { key: "memorized_surah",  label: "মুখস্থ সূরা",                 icon: "📖", book: false, placeholder: "যেমন: সূরা ইখলাস" },
@@ -461,7 +466,7 @@ function StudentPicker({ selected, onToggle, people }) {
 }
 
 const coverageOf = (course) => {
-  const all = course.lectures.flatMap((l) => l.topics);
+  const all = (course.lectures || []).flatMap((l) => l.topics || []);
   const done = all.filter((t) => t.covered === true).length;
   return { done, total: all.length, pct: all.length ? Math.round((done / all.length) * 100) : 0 };
 };
@@ -782,7 +787,7 @@ function LecturePlan({ db, courses, user, refresh }) {
     id: l.id, no: l.no, title: l.title, date: l.date,
     topics: (l.topics || []).map((t) => ({
       id: t.id, syllabusId: t.syllabus_item || t.syllabusId,
-      text: t.text, covered: t.covered,
+      text: t.text, covered: coveredToBool(t.covered),
     })),
   });
   const adaptSyl = (s) => ({ id: s.id, courseId: s.course || s.courseId, category: s.category || "qirat", book: s.book_name || s.book, lesson: s.lesson, pages: s.pages, lines: s.lines, note: s.note });
@@ -3683,7 +3688,7 @@ function Overview({ db, courses, user, goTo }) {
   const todayClasses = db.classes.filter((k) => k.date === todayISO() && k.status !== "done" && courseById(courses, k.courseId).id);
   const income = db.feePayments.reduce((s, p) => s + p.amount, 0);
   const newForms = db.forms.filter((f) => f.status === "new").length;
-  const missedTopics = courses.flatMap((c) => c.lectures.flatMap((l) => l.topics)).filter((t) => t.covered === false).length;
+  const missedTopics = courses.flatMap((c) => (c.lectures || []).flatMap((l) => l.topics || [])).filter((t) => t.covered === false).length;
   const greet = user.role === "director" ? "আসসালামু আলাইকুম, পরিচালক সাহেব" : user.role === "admin" ? `আসসালামু আলাইকুম, ${user.name} (এডমিন)` : user.role === "teacher" ? `আসসালামু আলাইকুম, ${user.name}` : `আসসালামু আলাইকুম, ${user.name.split(" ")[0]}`;
   return (
     <>

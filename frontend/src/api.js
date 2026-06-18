@@ -111,8 +111,11 @@ export const api = {
     request("/lectures/", { method: "POST", body: { course, title, syllabus_item_ids, ...extra } }),
   editLecture: (id, d) => request(`/lectures/${id}/`, { method: "PATCH", body: d }),
   deleteLecture: (id) => request(`/lectures/${id}/`, { method: "DELETE" }),
-  markTopic: (topic_id, covered) =>                               // ✔/✘ — সবুজ/লাল
-    request("/lectures/mark_topic/", { method: "POST", body: { topic_id, covered } }),
+  markTopic: (topic_id, covered) => {                             // ✔/✘ — সবুজ/লাল
+    // ফ্রন্টএন্ড boolean (true/false/null) → ব্যাকএন্ড LectureTopic.Covered স্ট্রিং enum
+    const v = covered === true ? "covered" : covered === false ? "missed" : "pending";
+    return request("/lectures/mark_topic/", { method: "POST", body: { topic_id, covered: v } });
+  },
 
   // অ্যাসাইনমেন্ট ও পরীক্ষা
   assignments: () => request("/assignments/"),
