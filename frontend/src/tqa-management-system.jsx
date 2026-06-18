@@ -400,6 +400,16 @@ const sylLabel = (e) => {
 const coveredToBool = (v) =>
   (v === "covered" || v === true) ? true : (v === "missed" || v === false) ? false : null;
 
+/* API লেকচার → ফ্রন্টএন্ড shape (covered স্ট্রিং→boolean সহ)। মডিউল-লেভেল — কোর্স
+   লোডার ও LecturePlan দুই জায়গায় পুনর্ব্যবহৃত, যাতে course.lectures সর্বত্র পূর্ণ থাকে */
+const adaptLecture = (l) => ({
+  id: l.id, no: l.no, title: l.title, date: l.date,
+  topics: (l.topics || []).map((t) => ({
+    id: t.id, syllabusId: t.syllabus_item || t.syllabusId,
+    text: t.text, covered: coveredToBool(t.covered),
+  })),
+});
+
 /* দৈনিক পাঠ পরিকল্পনা / সিলেবাসের ৫টি বিভাগ — ব্যাকএন্ডের SyllabusItem.Category এর সাথে ১:১ */
 const SYL_CATEGORIES = [
   { key: "memorized_surah",  label: "মুখস্থ সূরা",                 icon: "📖", book: false, placeholder: "যেমন: সূরা ইখলাস" },
@@ -783,13 +793,6 @@ function LecturePlan({ db, courses, user, refresh }) {
   const [lectures, setLectures] = useState([]);
   const [sylList, setSylList] = useState([]);
 
-  const adaptLecture = (l) => ({
-    id: l.id, no: l.no, title: l.title, date: l.date,
-    topics: (l.topics || []).map((t) => ({
-      id: t.id, syllabusId: t.syllabus_item || t.syllabusId,
-      text: t.text, covered: coveredToBool(t.covered),
-    })),
-  });
   const adaptSyl = (s) => ({ id: s.id, courseId: s.course || s.courseId, category: s.category || "qirat", book: s.book_name || s.book, lesson: s.lesson, pages: s.pages, lines: s.lines, note: s.note });
 
   const loadData = async () => {
@@ -3053,10 +3056,12 @@ function CourseManagerView({ db, setDb, refresh }) {
     setLoading(true);
     try {
       const [cs, us, bks] = await Promise.all([api.courses(), api.allUsers(), api.books()]);
-      setCourses(cs.map((c) => ({
+      const lecLists = await Promise.all(cs.map((c) =>
+        api.lectures(c.id).then((d) => (d || []).map(adaptLecture)).catch(() => [])));
+      setCourses(cs.map((c, i) => ({
         id: c.id, name: c.name, teacherId: c.teacher, teacherName: c.teacher_name,
         color: c.color, books: c.books || [], studentIds: c.students || [],
-        studentCount: c.student_count, lectures: [],
+        studentCount: c.student_count, lectures: lecLists[i],
       })));
       setTeachers(us.filter((u) => u.role === "teacher").map((t) => ({
         id: t.id, name: t.name || t.name_bn, sub: t.sub || t.sub_title || "",
@@ -3792,14 +3797,20 @@ export default function App() {
   // কোর্স তালিকা API থেকে লোড — সব ভিউতে পাস করা হয়
   useEffect(() => {
     if (!user) { setApiCourses([]); return; }
-    api.courses().then((cs) => {
-      const adapted = cs.map((c) => ({
+    let alive = true;
+    api.courses().then(async (cs) => {
+      const base = cs.map((c) => ({
         id: c.id, name: c.name, teacherId: c.teacher,
         color: c.color, books: c.books || [], studentIds: c.students || [], lectures: [],
       }));
-      setApiCourses(adapted);
-      apiCoursesRef.current = adapted;
+      if (alive) { setApiCourses(base); apiCoursesRef.current = base; }  // আগে কোর্স দেখাই, তারপর লেকচার যুক্ত হয়
+      // প্রতি কোর্সের লেকচার+টপিক এনে যুক্ত করি — অগ্রগতি বার, "বাদ পড়া টপিক" ও "আজকের দারস" সঠিক দেখাতে
+      const lecLists = await Promise.all(base.map((c) =>
+        api.lectures(c.id).then((d) => (d || []).map(adaptLecture)).catch(() => [])));
+      const adapted = base.map((c, i) => ({ ...c, lectures: lecLists[i] }));
+      if (alive) { setApiCourses(adapted); apiCoursesRef.current = adapted; }
     }).catch(() => {});
+    return () => { alive = false; };
   }, [user?.id]);
 
   const [livePopup, setLivePopup] = useState(null);
