@@ -65,6 +65,9 @@ async function request(path, { method = "GET", body, isForm } = {}) {
 
 /* ── লগইন: ফ্রন্টএন্ডের Login কম্পোনেন্টের go() এর বদলে ── */
 export async function login(username, password) {
+  // পুরোনো সেশন/টোকেন আগে মুছে ফেলি — নতুন লগইন সবসময় পরিষ্কার থেকে শুরু হয়;
+  // ফলে ভুল পাসওয়ার্ডে আগের refresh-টোকেন দিয়ে অনিচ্ছাকৃতভাবে লগইন হয়ে যাওয়া অসম্ভব।
+  logout();
   const t = await request("/auth/login", { method: "POST", body: { username, password } });
   saveTokens(t.access, t.refresh);
   return request("/users/me/");  // {id, role, name_bn, ...} → setUser()
