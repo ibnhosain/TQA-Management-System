@@ -1,0 +1,60 @@
+{% extends "admin/base_site.html" %}
+{% block title %}কোর্স সিলেবাস — ৫ বিভাগ{% endblock %}
+
+{% block content %}
+<style>
+  .syl-wrap { margin-bottom: 30px; }
+  .syl-head { background: linear-gradient(135deg,#123f28,#1a5c3a); color:#fff; padding:12px 18px;
+              border-radius:12px 12px 0 0; font-weight:800; font-size:16px; display:flex;
+              align-items:center; gap:10px; flex-wrap:wrap; }
+  .syl-head .badge { background:#c9962a; color:#fff; border-radius:99px; font-size:12px; padding:2px 10px; }
+  .syl-scroll { overflow-x:auto; border:1.5px solid #1a5c3a; border-top:none; border-radius:0 0 12px 12px; }
+  table.syl { width:100%; border-collapse:collapse; table-layout:fixed; min-width:980px; background:#fff; }
+  table.syl th { background:#eafaf1; color:#1a5c3a; font-weight:800; font-size:13px; text-align:center;
+                 padding:9px 6px; border:1px solid #cfe6d8; width:20%; }
+  table.syl td { border:1px solid #e5e9e5; vertical-align:top; padding:10px; width:20%; }
+  table.syl ol { margin:0; padding-left:20px; }
+  table.syl li { font-size:12.5px; line-height:1.6; margin-bottom:8px; color:#1a1f2e; }
+  table.syl li.em { list-style:none; margin-left:-16px; text-align:center; color:#9ca3af; }
+  table.syl .bk { color:#1a5c3a; font-weight:700; }
+  table.syl .meta { color:#6b7280; font-size:11px; }
+  table.syl .edit { font-size:10px; text-decoration:none; margin-left:4px; }
+  .syl-note { color:#6b7280; font-size:12.5px; margin:6px 0 18px; }
+  .syl-empty { padding:18px; text-align:center; color:#9ca3af; }
+</style>
+
+<p class="syl-note">📜 ফ্রন্টএন্ডের মতো প্রতিটি কোর্সের সিলেবাস ৫টি বিভাগে আলাদা কলামে।
+   কোনো ঘরে যোগ/এডিট করতে
+   <a href="{% url 'admin:core_syllabusitem_add' %}">+ নতুন আইটেম</a> বা নিচের ✏️ চাপুন।</p>
+
+{% for row in courses %}
+  <div class="syl-wrap">
+    <div class="syl-head">📚 {{ row.course.name }}
+      <span class="badge">মোট {{ row.total }}</span></div>
+    <div class="syl-scroll">
+      <table class="syl">
+        <thead><tr>
+          {% for col in row.cols %}<th>{{ col.label }} ({{ col.items|length }})</th>{% endfor %}
+        </tr></thead>
+        <tbody><tr>
+          {% for col in row.cols %}
+          <td>
+            <ol>
+              {% for it in col.items %}
+                <li>
+                  {% if it.book %}<span class="bk">{{ it.book.name }} — </span>{% endif %}{{ it.lesson }}{% if it.pages %}<span class="meta"> · পৃ: {{ it.pages }}</span>{% endif %}{% if it.lines %}<span class="meta"> · লা: {{ it.lines }}</span>{% endif %}{% if it.note %}<span class="meta"> · 💬 {{ it.note }}</span>{% endif %}<a class="edit" href="{% url 'admin:core_syllabusitem_change' it.id %}" title="এডিট">✏️</a>
+                </li>
+              {% empty %}
+                <li class="em">—</li>
+              {% endfor %}
+            </ol>
+          </td>
+          {% endfor %}
+        </tr></tbody>
+      </table>
+    </div>
+  </div>
+{% empty %}
+  <div class="syl-empty">কোনো কোর্স নেই — আগে একটি কোর্স তৈরি করুন।</div>
+{% endfor %}
+{% endblock %}
