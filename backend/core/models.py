@@ -85,6 +85,9 @@ class SyllabusItem(models.Model):
             return "".join(parts)
         return f"{prefix}{self.lesson}"
 
+    def __str__(self):
+        return f"[{self.get_category_display()}] {self.label}"
+
 
 # ─────────────────────────── লেকচার প্ল্যান ও টপিক কভারেজ ───────────────────────────
 class Lecture(models.Model):
