@@ -5,19 +5,25 @@
  */
 const BASE = import.meta.env?.VITE_API_URL || "http://localhost:8000/api";
 
-let access = localStorage.getItem("tqa_access") || null;
-let refresh = localStorage.getItem("tqa_refresh") || null;
+/* নিরাপত্তা: টোকেন sessionStorage-এ রাখি (localStorage নয়)।
+   ফলে ব্রাউজার/ট্যাব বন্ধ করলেই সেশন মুছে যায় — পরেরবার পোর্টাল খুললে
+   আবার পাসওয়ার্ড দিতে হবে। (localStorage হলে টোকেন স্থায়ী থেকে যেত ও
+   পাসওয়ার্ড ছাড়াই auto-login হতো।) পেজ রিফ্রেশে সেশন টেকে, তাই বিরক্তিকর নয়। */
+const store = window.sessionStorage;
+
+let access = store.getItem("tqa_access") || null;
+let refresh = store.getItem("tqa_refresh") || null;
 
 const saveTokens = (a, r) => {
   access = a; refresh = r;
-  localStorage.setItem("tqa_access", a);
-  if (r) localStorage.setItem("tqa_refresh", r);
+  store.setItem("tqa_access", a);
+  if (r) store.setItem("tqa_refresh", r);
 };
 
 export const logout = () => {
   access = refresh = null;
-  localStorage.removeItem("tqa_access");
-  localStorage.removeItem("tqa_refresh");
+  store.removeItem("tqa_access");
+  store.removeItem("tqa_refresh");
 };
 
 /* মূল রিকোয়েস্ট র‍্যাপার — JWT সংযুক্তি + মেয়াদ শেষে অটো-রিফ্রেশ */

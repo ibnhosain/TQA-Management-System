@@ -11762,6 +11762,19 @@ export default function App() {
   }, [apiCourses]);
   // পেজ রিফ্রেশের পর সংরক্ষিত টোকেন থাকলে সেশন ফিরিয়ে আনি — শুধু রিফ্রেশ দিলে আর লগআউট হবে না
   useEffect(() => {
+    // ওয়েবসাইটের "Login" (?role=...) থেকে এলে সবসময় পাসওয়ার্ড ফর্ম দেখাই —
+    // আগের সেশন থাকলেও মুছে দিই, যাতে পাসওয়ার্ড ছাড়া কেউ কোনোভাবেই না ঢোকে।
+    let cameFromLogin = false;
+    try {
+      cameFromLogin = new URLSearchParams(window.location.search).has("role");
+    } catch {
+      cameFromLogin = false;
+    }
+    if (cameFromLogin) {
+      logout();
+      setRestoring(false);
+      return;
+    }
     if (!hasToken()) {
       setRestoring(false);
       return;
@@ -11792,6 +11805,29 @@ export default function App() {
       alive = false;
     };
   }, []);
+  // নিষ্ক্রিয়তায় অটো-লগআউট — ৩০ মিনিট কোনো কার্যকলাপ না থাকলে নিরাপত্তার জন্য
+  // নিজে থেকেই লগআউট হয়ে যায় (শেয়ার্ড/খোলা রেখে যাওয়া কম্পিউটারের জন্য)।
+  useEffect(() => {
+    if (!user) return;
+    const IDLE_MS = 30 * 60 * 1000; // ৩০ মিনিট
+    let timer;
+    const doLogout = () => {
+      logout();
+      setUser(null);
+      setView("overview");
+    };
+    const reset = () => {
+      clearTimeout(timer);
+      timer = setTimeout(doLogout, IDLE_MS);
+    };
+    const events = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"];
+    events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, reset));
+    };
+  }, [user]);
   // কোর্স তালিকা API থেকে লোড — সব ভিউতে পাস করা হয়
   useEffect(() => {
     if (!user) {
