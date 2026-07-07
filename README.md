@@ -153,11 +153,10 @@ Deploy শেষ হলে:
 2. এখানে গিয়ে শিক্ষক/ছাত্রদের User account বানান (role সহ)
 3. **মূল অ্যাপ:** `https://app.tarbiyatulquran.org`
    → admin এ বানানো username/password দিয়ে সবাই লগইন করবে
-
 ---
 
 ## 💰 পরে টাকা দিতে চাইলে
 
 Render Starter ($7/মাস) নিলে sleep নেই + Celery worker চালানো যায়।
 তখন `USE_CELERY=True` করে worker service add করলেই Celery মোডে চলবে —
-কোড বদলাতে হবে না।
+কোড বদলাতে হবে না।   
