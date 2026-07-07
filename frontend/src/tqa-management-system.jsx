@@ -11035,9 +11035,14 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     allCourses.filter((c) => (c.books || []).includes(bid));
   const myIds = new Set(allCourses.flatMap((c) => c.books || []));
   const visible = isAdm(user) ? all : all.filter((b) => myIds.has(b.id));
+  const MAX_UPLOAD = 10 * 1024 * 1024; // Cloudinary ফ্রি সীমা: ১০ MB
   const pickFile = (e) => {
     const f = e.target.files[0];
     if (!f) return;
+    if (f.size > MAX_UPLOAD)
+      notice(
+        `⚠️ ফাইলটি ${(f.size / 1048576).toFixed(1)} MB — ফ্রি সীমা ১০ MB। PDF ছোট করুন অথবা উপরের "🔗 লিংক দিয়ে যোগ" ব্যবহার করুন।`,
+      );
     setForm((x) => ({
       ...x,
       fileObj: f,
@@ -11057,10 +11062,21 @@ function AcademicBooksView({ db, setDb, user, courses }) {
   };
   const save = async () => {
     if (!form.name.trim()) return notice("বইয়ের নাম লিখুন।");
-    if (!(form.fileObj instanceof File))
-      return notice("ডিভাইস থেকে বইয়ের ফাইল যুক্ত করুন।");
+    const isLink = form.mode === "link";
+    if (isLink) {
+      if (!(form.link || "").trim())
+        return notice("বইয়ের ডাউনলোড/দেখার লিংকটি বসান।");
+    } else {
+      if (!(form.fileObj instanceof File))
+        return notice("ডিভাইস থেকে বইয়ের ফাইল যুক্ত করুন।");
+      if (form.fileObj.size > MAX_UPLOAD)
+        return notice(
+          'ফাইলটি ১০ MB-র বেশি — "🔗 লিংক দিয়ে যোগ" ব্যবহার করুন অথবা PDF ছোট করুন।',
+        );
+    }
     try {
-      await api.uploadBook(form.name.trim(), form.fileObj);
+      if (isLink) await api.addBookLink(form.name.trim(), form.link.trim());
+      else await api.uploadBook(form.name.trim(), form.fileObj);
       // নির্বাচিত কোর্সগুলোতে নতুন বই যুক্ত করো
       if ((form.courseIds || []).length > 0) {
         const freshBooks = await api.books();
@@ -11242,7 +11258,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
         isDir(user) && (
           <Btn
             onClick={() =>
-              setForm({ name: "", file: null, fileObj: null, courseIds: [] })
+              setForm({ name: "", file: null, fileObj: null, courseIds: [], mode: "file", link: "" })
             }
           >
             + বই যোগ করুন
@@ -11299,34 +11315,75 @@ function AcademicBooksView({ db, setDb, user, courses }) {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="যেমন: নুরানী কায়দা (সংশোধিত)"
           />
-          <div style={{ marginTop: 12 }}>
-            <label style={S.label}>
-              ফাইল যুক্ত করুন — যেকোনো ফরমেট (PDF, DOC, PNG, JPG...)
-            </label>
-            <label
-              style={{
-                display: "grid",
-                placeItems: "center",
-                gap: 6,
-                padding: "24px 14px",
-                border: `2px dashed ${form.file ? C.emerald : C.line}`,
-                borderRadius: 14,
-                cursor: "pointer",
-                background: form.file ? C.greenBg : C.cream,
-                textAlign: "center",
-              }}
+          {/* ফাইল আপলোড / লিংক — টগল */}
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <Btn
+              sm
+              kind={form.mode !== "link" ? "primary" : "soft"}
+              style={{ flex: 1, justifyContent: "center" }}
+              onClick={() => setForm((x) => ({ ...x, mode: "file" }))}
             >
-              <span style={{ fontSize: 30 }}>{form.file ? "✅" : "📁"}</span>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>
-                {form.file ? form.file.name : "ডিভাইস থেকে ফাইল বেছে নিন"}
-              </span>
-              <input
-                type="file"
-                style={{ display: "none" }}
-                onChange={pickFile}
-              />
-            </label>
+              📁 ফাইল আপলোড
+            </Btn>
+            <Btn
+              sm
+              kind={form.mode === "link" ? "primary" : "soft"}
+              style={{ flex: 1, justifyContent: "center" }}
+              onClick={() => setForm((x) => ({ ...x, mode: "link" }))}
+            >
+              🔗 লিংক দিয়ে যোগ
+            </Btn>
           </div>
+          {form.mode === "link" ? (
+            <div style={{ marginTop: 12 }}>
+              <label style={S.label}>
+                বইয়ের লিংক (Google Drive / Dropbox / যেকোনো URL) — সাইজ সীমা নেই
+              </label>
+              <input
+                style={S.input}
+                value={form.link || ""}
+                onChange={(e) =>
+                  setForm((x) => ({ ...x, link: e.target.value }))
+                }
+                placeholder="https://drive.google.com/..."
+              />
+              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 5 }}>
+                💡 Google Drive-এ বইটি রেখে "Anyone with the link" শেয়ার করে
+                লিংকটি এখানে বসান — বড় বইও কোনো সীমা ছাড়া যোগ হবে।
+              </div>
+            </div>
+          ) : (
+            <div style={{ marginTop: 12 }}>
+              <label style={S.label}>
+                ফাইল যুক্ত করুন — যেকোনো ফরমেট (PDF, DOC, PNG, JPG...) · সর্বোচ্চ ১০ MB
+              </label>
+              <label
+                style={{
+                  display: "grid",
+                  placeItems: "center",
+                  gap: 6,
+                  padding: "24px 14px",
+                  border: `2px dashed ${form.file ? C.emerald : C.line}`,
+                  borderRadius: 14,
+                  cursor: "pointer",
+                  background: form.file ? C.greenBg : C.cream,
+                  textAlign: "center",
+                }}
+              >
+                <span style={{ fontSize: 30 }}>{form.file ? "✅" : "📁"}</span>
+                <span style={{ fontSize: 13, fontWeight: 700 }}>
+                  {form.file
+                    ? form.file.name
+                    : "ডিভাইস থেকে ফাইল বেছে নিন (≤ ১০ MB)"}
+                </span>
+                <input
+                  type="file"
+                  style={{ display: "none" }}
+                  onChange={pickFile}
+                />
+              </label>
+            </div>
+          )}
 
           {/* কোর্স অ্যাসাইনমেন্ট — ঐচ্ছিক */}
           {allCourses.length > 0 && (

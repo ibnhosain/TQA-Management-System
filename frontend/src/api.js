@@ -110,6 +110,7 @@ export const api = {
     const f = new FormData(); f.append("name", name); f.append("file", file);
     return request("/books/", { method: "POST", body: f, isForm: true });
   },
+  addBookLink: (name, link) => request("/books/", { method: "POST", body: { name, link } }),  // Google Drive/লিংক — সাইজ সীমা নেই
   deleteBook: (id) => request(`/books/${id}/`, { method: "DELETE" }),
   syllabus: (courseId) => request(`/syllabus/?course=${courseId}`),
   addSyllabus: (d) => request("/syllabus/", { method: "POST", body: d }),

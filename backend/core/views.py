@@ -73,10 +73,12 @@ class AcademicBookViewSet(viewsets.ModelViewSet):
         name = request.data.get("name", "").strip()
         if not name:
             return Response({"error": "নাম দিন"}, status=400)
+        link = (request.data.get("link") or "").strip()
         uploaded = request.FILES.get("file")
-        if not uploaded:
-            return Response({"error": "বইয়ের ফাইল যুক্ত করুন"}, status=400)
-        file_url = ""
+        if not uploaded and not link:
+            return Response({"error": "বইয়ের ফাইল যুক্ত করুন অথবা একটি লিংক দিন"}, status=400)
+        # লিংক দিলে সরাসরি সেটাই সংরক্ষণ — Cloudinary-র সাইজ সীমা লাগে না, ফাইল রিস্টার্টে হারায় না
+        file_url = link
         if uploaded:
             cloudinary_url = os.environ.get("CLOUDINARY_URL", "")
             if cloudinary_url:
