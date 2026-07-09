@@ -163,14 +163,20 @@ class Attendance(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     joined_at = models.DateTimeField(auto_now_add=True)
     left_at = models.DateTimeField(null=True, blank=True)
-    minutes = models.PositiveIntegerField(default=0)
+    minutes = models.PositiveIntegerField(default=0)      # সব সেগমেন্ট মিলিয়ে মোট মিনিট
+    segment_start = models.DateTimeField(null=True, blank=True)  # চলমান সেগমেন্টের শুরু (জয়েন থাকলে সেট)
+    marked_present = models.BooleanField(default=False)   # পরিচালকের ম্যানুয়াল হাজিরা
 
     class Meta:
         unique_together = [("session", "user")]
 
     @property
-    def present(self):  # ৪০-মিনিট নিয়ম
-        return self.minutes >= 40
+    def active(self):     # এই মুহূর্তে মিটিংয়ে আছে কিনা
+        return self.segment_start is not None
+
+    @property
+    def present(self):    # ৪৫-মিনিট নিয়ম, অথবা পরিচালকের ম্যানুয়াল হাজিরা
+        return self.marked_present or self.minutes >= 45
 
 
 # ─────────────────────────── অ্যাসাইনমেন্ট ও পরীক্ষা ───────────────────────────

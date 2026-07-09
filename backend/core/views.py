@@ -203,16 +203,44 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(qs, many=True).data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
-    def join(self, request, pk=None):  # জুমে জয়েন → হাজিরা শুরু
+    def join(self, request, pk=None):  # জুমে জয়েন → নতুন সেগমেন্ট শুরু
         att, _ = Attendance.objects.get_or_create(session=self.get_object(), user=request.user)
+        if att.segment_start is None:  # আগের সেগমেন্ট বন্ধ থাকলেই নতুন শুরু
+            att.segment_start = timezone.now()
+            att.save(update_fields=["segment_start"])
         return Response(AttendanceSerializer(att).data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
-    def leave(self, request, pk=None):  # ক্লাস ত্যাগ → মিনিট হিসাব (৪০-মিনিট নিয়ম)
+    def leave(self, request, pk=None):  # সেগমেন্ট শেষ → মিনিট যোগ (সব মিলিয়ে ৪৫-মিনিট নিয়ম)
         att = Attendance.objects.get(session=self.get_object(), user=request.user)
+        add = request.data.get("minutes")  # ক্লায়েন্টের হিসাব করা "দুজন-উপস্থিত" মিনিট (দিলে সেটাই যোগ)
+        if add is not None:
+            try: att.minutes += max(0, int(add))
+            except (TypeError, ValueError): pass
+        elif att.segment_start:
+            att.minutes += max(0, int((timezone.now() - att.segment_start).total_seconds() // 60))
+        att.segment_start = None
         att.left_at = timezone.now()
-        att.minutes = max(att.minutes, int((att.left_at - att.joined_at).total_seconds() // 60))
-        att.save()
+        att.save(update_fields=["minutes", "segment_start", "left_at"])
+        return Response(AttendanceSerializer(att).data)
+
+    @action(detail=True, permission_classes=[IsAuthenticated])
+    def presence(self, request, pk=None):  # কে এখন মিটিংয়ে আছে — দুজন-জয়েন গেটিং এর জন্য
+        s = self.get_object()
+        teacher_id = s.teacher_id or (s.course.teacher_id if s.course_id else None)
+        rows = Attendance.objects.filter(session=s).select_related("user")
+        return Response({
+            "attendance": AttendanceSerializer(rows, many=True).data,
+            "teacher_active": rows.filter(user_id=teacher_id, segment_start__isnull=False).exists() if teacher_id else False,
+            "any_student_active": rows.filter(segment_start__isnull=False).exclude(user_id=teacher_id).exists(),
+        })
+
+    @action(detail=True, methods=["post"], permission_classes=[IsDirector])
+    def mark_attendance(self, request, pk=None):  # পরিচালকের ম্যানুয়াল হাজিরা (৪৫ মিনিটের কম হলেও)
+        s = self.get_object()
+        att, _ = Attendance.objects.get_or_create(session=s, user_id=request.data["student_id"])
+        att.marked_present = bool(request.data.get("present", True))
+        att.save(update_fields=["marked_present"])
         return Response(AttendanceSerializer(att).data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdminLevel])

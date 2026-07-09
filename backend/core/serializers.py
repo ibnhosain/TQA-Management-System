@@ -157,11 +157,13 @@ class RoutineSerializer(serializers.ModelSerializer):
 
 class AttendanceSerializer(serializers.ModelSerializer):
     present = serializers.BooleanField(read_only=True)
+    active = serializers.BooleanField(read_only=True)
     user_name = serializers.CharField(source="user.name_bn", read_only=True)
 
     class Meta:
         model = Attendance
-        fields = ["id", "session", "user", "user_name", "minutes", "present", "joined_at", "left_at"]
+        fields = ["id", "session", "user", "user_name", "minutes", "present",
+                  "active", "marked_present", "joined_at", "left_at"]
 
 
 class ClassSessionSerializer(serializers.ModelSerializer):

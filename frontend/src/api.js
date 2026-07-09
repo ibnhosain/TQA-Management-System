@@ -90,8 +90,10 @@ export const api = {
   classes: () => request("/classes/"),
   scheduleClass: (d) => request("/classes/", { method: "POST", body: d }),
   editClass: (id, d) => request(`/classes/${id}/`, { method: "PATCH", body: d }),
-  joinClass: (id) => request(`/classes/${id}/join/`, { method: "POST" }),       // হাজিরা শুরু
-  leaveClass: (id) => request(`/classes/${id}/leave/`, { method: "POST" }),     // ৪০-মিনিট হিসাব সার্ভারে
+  joinClass: (id) => request(`/classes/${id}/join/`, { method: "POST" }),       // নতুন সেগমেন্ট শুরু
+  leaveClass: (id, minutes) => request(`/classes/${id}/leave/`, { method: "POST", body: minutes != null ? { minutes } : {} }), // সেগমেন্টের মিনিট যোগ
+  classPresence: (id) => request(`/classes/${id}/presence/`),                   // কে এখন মিটিংয়ে (দুজন-জয়েন গেটিং)
+  markAttendance: (id, student_id, present = true) => request(`/classes/${id}/mark_attendance/`, { method: "POST", body: { student_id, present } }), // পরিচালকের ম্যানুয়াল হাজিরা
   postponeClass: (id) => request(`/classes/${id}/postpone/`, { method: "POST" }), // ⛔ স্থগিত
   deleteClass: (id) => request(`/classes/${id}/`, { method: "DELETE" }),
 

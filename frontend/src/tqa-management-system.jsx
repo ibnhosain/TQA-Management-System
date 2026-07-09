@@ -1673,20 +1673,295 @@ function Login({ onLogin, onAdmission }) {
 }
 
 /* ═══════════════ ক্লাস ও জুম জয়েন (ফিচার ২ ও ৪) ═══════════════ */
-function LiveTimer({ start, demoFast }) {
-  const [, tick] = useState(0);
+/* অ্যালার্মের মতো বিপ (Web Audio — বাহ্যিক ফাইল ছাড়া, CSP-নিরাপদ) */
+function playAlarm() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    let t = ctx.currentTime;
+    for (let i = 0; i < 4; i++) {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.type = "square";
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      o.start(t);
+      o.stop(t + 0.42);
+      t += 0.55;
+    }
+  } catch {
+    /* সাউন্ড ব্লক হলে উপেক্ষা */
+  }
+}
+
+/* ইন-ক্লাস প্যানেল — দুজন-জয়েন গেটিং, ২৭-মিনিট অটো সেগমেন্ট (অ্যালার্ম+রিজয়েন), সব মিলিয়ে ৪৫-মিনিট হাজিরা */
+function LiveClassPanel({ k, user, demoFast, usingApi, onExit }) {
+  const [segSec, setSegSec] = useState(0);
+  const [presence, setPresence] = useState(null);
+  const [inMeeting, setInMeeting] = useState(true);
+  const [rejoin, setRejoin] = useState(false);
+  const SEG = demoFast ? 27 : 27 * 60; // এক সেগমেন্ট = ২৭ মিনিট (ডেমোতে ২৭ সেকেন্ড)
+  const NEED = 45; // মোট মিনিট → হাজিরা
+
+  const refreshPresence = async () => {
+    if (!usingApi) {
+      setPresence((p) => ({ ta: true, sa: true, myMin: p?.myMin || 0 }));
+      return;
+    }
+    try {
+      const p = await api.classPresence(k.id);
+      const me = (p.attendance || []).find(
+        (a) => String(a.user) === String(user.id),
+      );
+      setPresence({
+        ta: p.teacher_active,
+        sa: p.any_student_active,
+        myMin: me?.minutes || 0,
+      });
+    } catch {
+      /* উপেক্ষা */
+    }
+  };
+
+  // সেগমেন্ট শুরু (মাউন্টে ও প্রতি রিজয়েনে)
   useEffect(() => {
-    const t = setInterval(() => tick((x) => x + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const mins = Math.floor((Date.now() - start) / (demoFast ? 1000 : 60000));
+    if (usingApi && inMeeting) api.joinClass(k.id).catch(() => {});
+  }, [inMeeting]);
+
+  // presence poll — কে এখন মিটিংয়ে আছে
+  useEffect(() => {
+    refreshPresence();
+    const iv = setInterval(refreshPresence, demoFast ? 3000 : 12000);
+    return () => clearInterval(iv);
+  }, [k.id, demoFast]);
+
+  const bothIn = user.role === "teacher" ? !!presence?.sa : !!presence?.ta;
+
+  // টিক — শুধু দুজন উপস্থিত থাকলেই সময় গোনে (একজন অপেক্ষা করলে নয়)
+  useEffect(() => {
+    const iv = setInterval(() => {
+      if (inMeeting && bothIn) setSegSec((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [inMeeting, bothIn]);
+
+  const segMin = Math.round(segSec / (demoFast ? 1 : 60));
+  const total = (presence?.myMin || 0) + segMin;
+  const done = total >= NEED;
+
+  const endSegment = async (auto) => {
+    setInMeeting(false);
+    const m = segMin;
+    setSegSec(0);
+    if (usingApi) {
+      try {
+        await api.leaveClass(k.id, m);
+      } catch {
+        /* উপেক্ষা */
+      }
+      await refreshPresence();
+    }
+    if (auto) {
+      playAlarm();
+      setRejoin(true);
+    } else onExit(true);
+  };
+
+  // ২৭-মিনিট সেগমেন্ট শেষ → অটো লিভ + অ্যালার্ম
+  useEffect(() => {
+    if (inMeeting && segSec >= SEG) endSegment(true);
+  }, [segSec]);
+
+  const doRejoin = () => {
+    setRejoin(false);
+    try {
+      window.open(k.zoom, "_blank", "noopener");
+    } catch {
+      /* উপেক্ষা */
+    }
+    setInMeeting(true);
+  };
+
+  if (rejoin)
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 250,
+          background: "rgba(18,63,40,.6)",
+          display: "grid",
+          placeItems: "center",
+          padding: 16,
+        }}
+      >
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 18,
+            maxWidth: 380,
+            width: "100%",
+            padding: 26,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 42 }}>⏰</div>
+          <div
+            style={{
+              fontWeight: 800,
+              fontSize: 18,
+              color: C.emerald,
+              marginTop: 6,
+            }}
+          >
+            27 minutes are over!
+          </div>
+          <div
+            style={{
+              fontSize: 13.5,
+              color: C.text,
+              margin: "8px 0 6px",
+              lineHeight: 1.6,
+            }}
+          >
+            Please leave the Zoom meeting, then tap "Join Again" to continue the
+            class.
+          </div>
+          <div
+            style={{
+              fontSize: 12.5,
+              color: done ? C.green : C.muted,
+              marginBottom: 16,
+              fontWeight: 700,
+            }}
+          >
+            {done
+              ? "✓ Attendance is complete (45+ minutes)."
+              : `Total ${total}/45 minutes so far — join again to complete.`}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Btn
+              kind="gold"
+              style={{ flex: 1, justifyContent: "center" }}
+              onClick={doRejoin}
+            >
+              🔁 Join Again
+            </Btn>
+            <Btn
+              kind="soft"
+              style={{ flex: 1, justifyContent: "center" }}
+              onClick={() => {
+                setRejoin(false);
+                onExit(true);
+              }}
+            >
+              End Class
+            </Btn>
+          </div>
+        </div>
+      </div>
+    );
+
   return (
-    <span style={{ fontWeight: 800, color: mins >= 40 ? C.green : C.gold }}>
-      {bn(mins)} মিনিট{" "}
-      {mins >= 40
-        ? "✓ হাজিরা নিশ্চিত"
-        : `(হাজিরার জন্য ${bn(40 - mins)} মিনিট বাকি)`}
-    </span>
+    <div style={{ marginTop: 6, fontSize: 13 }}>
+      {!bothIn ? (
+        <span style={{ fontWeight: 700, color: C.gold }}>
+          ⏳ Waiting for {user.role === "teacher" ? "student" : "teacher"} to
+          join…
+        </span>
+      ) : (
+        <span style={{ fontWeight: 800, color: done ? C.green : C.gold }}>
+          ⏱️ {bn(demoFast ? segSec : Math.floor(segSec / 60))}/
+          {bn(demoFast ? SEG : 27)} {demoFast ? "সেকেন্ড" : "মিনিট"} · মোট{" "}
+          {bn(total)}/{bn(NEED)} মিনিট {done ? "✓ হাজিরা নিশ্চিত" : ""}
+        </span>
+      )}
+      <div style={{ marginTop: 6 }}>
+        <Btn sm kind="danger" onClick={() => endSegment(false)}>
+          Leave &amp; Save
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+/* পরিচালকের ম্যানুয়াল হাজিরা — ক্লাসের স্টুডেন্টদের হাজিরা দিন/সরান */
+function AttnMarkModal({ k, nameOf, onClose }) {
+  const [rows, setRows] = useState([]);
+  const load = () =>
+    api
+      .classPresence(k.id)
+      .then((p) => setRows(p.attendance || []))
+      .catch(() => setRows([]));
+  useEffect(() => {
+    load();
+  }, []);
+  const ids = k.studentIds && k.studentIds.length ? k.studentIds : [];
+  const list = ids.length ? ids : rows.map((r) => r.user);
+  const rowFor = (sid) => rows.find((r) => String(r.user) === String(sid));
+  const toggle = async (sid, present) => {
+    try {
+      await api.markAttendance(k.id, sid, present);
+      await load();
+    } catch {
+      /* উপেক্ষা */
+    }
+  };
+  return (
+    <Modal
+      title={`✋ ম্যানুয়াল হাজিরা — ${k.courseName || ""}`}
+      onClose={onClose}
+    >
+      <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
+        ৪৫ মিনিটের কম হলেও পরিচালক এখানে হাজিরা দিতে/সরাতে পারবেন।
+      </div>
+      {list.length === 0 && (
+        <div style={{ color: C.muted }}>এই ক্লাসে কোনো স্টুডেন্ট নেই।</div>
+      )}
+      {list.map((sid, i) => {
+        const r = rowFor(sid);
+        const present = r?.present;
+        return (
+          <div
+            key={sid}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 10px",
+              borderRadius: 10,
+              background: C.cream,
+              marginBottom: 6,
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={{ flex: 1, fontWeight: 600, fontSize: 13.5, minWidth: 120 }}>
+              {(k.studentNames && k.studentNames[i]) || nameOf(sid)}
+            </span>
+            <span style={{ fontSize: 12, color: C.muted }}>
+              {bn(r?.minutes || 0)} মি
+            </span>
+            {present ? (
+              <Tag>হাজির ✔</Tag>
+            ) : (
+              <Tag color={C.muted} bg="#fff">
+                অনুপস্থিত
+              </Tag>
+            )}
+            <Btn
+              sm
+              kind={present ? "danger" : "primary"}
+              onClick={() => toggle(sid, !present)}
+            >
+              {present ? "সরান" : "হাজিরা দিন"}
+            </Btn>
+          </div>
+        );
+      })}
+    </Modal>
   );
 }
 
@@ -1713,8 +1988,9 @@ function ClassesView({
   });
   const [f, setF] = useState(blankSched);
   const [editId, setEditId] = useState(null); // এডিট — কেবল এডমিন/পরিচালক
-  const [joined, setJoined] = useState(null); // {classId, start}
+  const [joined, setJoined] = useState(null); // {classId}
   const [rate, setRate] = useState(null); // ক্লাস শেষে মূল্যায়ন পপআপ
+  const [attnMark, setAttnMark] = useState(null); // পরিচালকের ম্যানুয়াল হাজিরা মডাল (কোন ক্লাস)
   const [apiClasses, setApiClasses] = useState(null); // null হলে mock db.classes ব্যবহার হয়
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
@@ -1743,7 +2019,7 @@ function ClassesView({
   useEffect(() => {
     // লাইভ পপআপ থেকে এলে হাজিরা টাইমার অটো চালু
     if (autoJoinId) {
-      setJoined({ classId: autoJoinId, start: Date.now() });
+      setJoined({ classId: autoJoinId });
       onAutoJoinConsumed && onAutoJoinConsumed();
     }
   }, [autoJoinId]);
@@ -1769,46 +2045,22 @@ function ClassesView({
   const past = mine.filter((k) => k.status === "done" || k.date < todayISO());
 
   const join = (k) => {
-    // জুম খোলে অ্যাংকর লিংকে (নিচে <a>); হাজিরা টাইমার চালু + সার্ভারে হাজিরা শুরু
-    if (usingApi) api.joinClass(k.id).catch(() => {});
-    setJoined({ classId: k.id, start: Date.now() });
+    // জুম খোলে অ্যাংকর লিংকে (নিচে <a>); বাকি সব (presence/২৭-মিনিট/হাজিরা) LiveClassPanel সামলায়
+    setJoined({ classId: k.id });
   };
-  const leave = async () => {
-    const k = (usingApi ? apiClasses : db.classes).find(
-      (x) => x.id === joined.classId,
-    );
-    if (usingApi) {
-      try {
-        await api.leaveClass(joined.classId);
-      } catch {
-        /* সার্ভার ব্যর্থ — উপেক্ষা */
-      }
-    } else {
-      const mins = Math.floor(
-        (Date.now() - joined.start) / (demoFast ? 1000 : 60000),
-      );
-      setDb((d) => ({
-        ...d,
-        attendance: [
-          ...d.attendance,
-          {
-            id: uid(),
-            classId: joined.classId,
-            userId: user.id,
-            minutes: mins,
-          },
-        ],
-      }));
-    }
+  // প্যানেল থেকে বেরোলে (Leave & Save / End Class) — স্টুডেন্ট হলে রেটিং পপআপ
+  const onPanelExit = (finished) => {
+    const cls = joined?.classId;
+    const k = (usingApi ? apiClasses : db.classes).find((x) => x.id === cls);
     setJoined(null);
-    if (user.role === "student" && k) {
+    if (finished && user.role === "student" && k) {
       const c = courseById(courses, k.courseId);
       setRate({
         classId: k.id,
         courseId: c.id || k.courseId,
         teacherId: c.teacherId || k.teacherId,
         courseName: c.name || k.courseName,
-      }); // জুমের মতো মূল্যায়ন পপআপ (অপশনাল)
+      });
     }
   };
   const submitRating = async (stars, comment) => {
@@ -2011,10 +2263,13 @@ function ClassesView({
             📅 {fmtDate(k.date)} · 🕐 {k.time} · {bn(k.dur)} মিনিট
           </div>
           {isJoined && (
-            <div style={{ fontSize: 13, marginTop: 6 }}>
-              ⏱️ ক্লাসে আছেন:{" "}
-              <LiveTimer start={joined.start} demoFast={demoFast} />
-            </div>
+            <LiveClassPanel
+              k={k}
+              user={user}
+              demoFast={demoFast}
+              usingApi={usingApi}
+              onExit={onPanelExit}
+            />
           )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -2029,9 +2284,9 @@ function ClassesView({
               <Btn kind="gold">🎥 জুমে জয়েন করুন</Btn>
             </a>
           )}
-          {isJoined && (
-            <Btn kind="danger" onClick={leave}>
-              ক্লাস ত্যাগ ও হাজিরা জমা
+          {isDir(user) && !isJoined && (
+            <Btn sm kind="soft" onClick={() => setAttnMark(k)}>
+              ✋ হাজিরা
             </Btn>
           )}
           {isAdm(user) && (
@@ -2065,7 +2320,7 @@ function ClassesView({
     <>
       <Section
         title="আজকের ক্লাস"
-        sub="সময় হলে এক ক্লিকে জুম মিটিং খুলে যাবে — ৪০ মিনিটের কম থাকলে হাজিরা গণ্য হবে না"
+        sub="সময় হলে এক ক্লিকে জুম মিটিং খুলে যাবে — ৪৫ মিনিটের কম থাকলে হাজিরা গণ্য হবে না"
         action={
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <label
@@ -2121,6 +2376,13 @@ function ClassesView({
           courseName={rate.courseName}
           onSubmit={submitRating}
           onSkip={() => setRate(null)}
+        />
+      )}
+      {attnMark && (
+        <AttnMarkModal
+          k={attnMark}
+          nameOf={nameOf}
+          onClose={() => setAttnMark(null)}
         />
       )}
       {show && (
@@ -2941,7 +3203,7 @@ function AttendanceView({ db, courses, user }) {
         user.role === "student" ? String(r.userId) === String(user.id) : true,
       )
       .map((r) => {
-        const ok = r.minutes >= 40;
+        const ok = r.present ?? r.minutes >= 45;
         return [
           r.name,
           r.courseName,
@@ -2951,7 +3213,7 @@ function AttendanceView({ db, courses, user }) {
             <Tag key="t">উপস্থিত ✔</Tag>
           ) : (
             <Tag key="t" color={C.red} bg={C.redBg}>
-              অনুপস্থিত (৪০ মিনিটের কম)
+              অনুপস্থিত (৪৫ মিনিটের কম)
             </Tag>
           ),
         ];
@@ -2965,7 +3227,7 @@ function AttendanceView({ db, courses, user }) {
       )
       .map(({ a, k }) => {
         const c = courseById(courses, k.courseId);
-        const ok = a.minutes >= 40;
+        const ok = a.present ?? a.minutes >= 45;
         return [
           userById(a.userId).name,
           c.name,
@@ -2975,7 +3237,7 @@ function AttendanceView({ db, courses, user }) {
             <Tag key="t">উপস্থিত ✔</Tag>
           ) : (
             <Tag key="t" color={C.red} bg={C.redBg}>
-              অনুপস্থিত (৪০ মিনিটের কম)
+              অনুপস্থিত (৪৫ মিনিটের কম)
             </Tag>
           ),
         ];
@@ -2984,7 +3246,7 @@ function AttendanceView({ db, courses, user }) {
   return (
     <Section
       title="হাজিরা রিপোর্ট"
-      sub="ন্যূনতম ৪০ মিনিট ক্লাসে থাকলে তবেই হাজিরা গণ্য হয়"
+      sub="ন্যূনতম ৪৫ মিনিট ক্লাসে থাকলে তবেই হাজিরা গণ্য হয়"
     >
       <Table
         head={["নাম", "কোর্স", "তারিখ", "উপস্থিতি", "অবস্থা"]}
@@ -4449,8 +4711,8 @@ function ProgressView({ db, setDb, courses, user }) {
           .map((a) => ({ minutes: a.minutes || 0 })),
       )
     : db.attendance.filter((a) => String(a.userId) === selId);
-  const present = att.filter((a) => a.minutes >= 40).length;
-  const missed = att.filter((a) => a.minutes < 40).length;
+  const present = att.filter((a) => (a.present ?? a.minutes >= 45)).length;
+  const missed = att.filter((a) => !(a.present ?? a.minutes >= 45)).length;
   const myFees = fees.filter((p) => String(p.studentId) === selId);
   const paid = myFees.reduce((s, p) => s + (+p.amount || 0), 0);
   const dueMonths = duesMap[selId] || db.dueMonths?.[sel] || [];
@@ -4578,7 +4840,7 @@ function ProgressView({ db, setDb, courses, user }) {
           label="মিসিং ক্লাস"
           value={bn(missed)}
           accent={C.red}
-          note="৪০ মিনিটের কম উপস্থিতিসহ"
+          note="৪৫ মিনিটের কম উপস্থিতিসহ"
         />
         <Stat
           icon="💰"
@@ -5527,8 +5789,8 @@ function TeacherReportView({ db, setDb, courses, user }) {
     (c) => String(c.teacherId || c.teacher) === String(tid),
   );
   const att = db.attendance.filter((a) => String(a.userId) === String(tid));
-  const present = att.filter((a) => a.minutes >= 40).length;
-  const short = att.filter((a) => a.minutes < 40).length;
+  const present = att.filter((a) => (a.present ?? a.minutes >= 45)).length;
+  const short = att.filter((a) => !(a.present ?? a.minutes >= 45)).length;
   const taken = db.classes.filter(
     (k) =>
       tCourses.some((c) => String(c.id) === String(k.courseId)) &&
@@ -5688,7 +5950,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
           label="অসম্পূর্ণ উপস্থিতি"
           value={bn(short)}
           accent={C.red}
-          note="৪০ মিনিটের কম"
+          note="৪৫ মিনিটের কম"
         />
         <Stat
           icon="🌟"
@@ -5793,7 +6055,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
                 c.name || "—",
                 k ? fmtDate(k.date) : "—",
                 `${bn(a.minutes)} মিনিট`,
-                a.minutes >= 40 ? (
+                (a.present ?? a.minutes >= 45) ? (
                   <Tag key="t">উপস্থিত ✔</Tag>
                 ) : (
                   <Tag key="t" color={C.red} bg={C.redBg}>
@@ -6307,7 +6569,7 @@ function ManageView({ db, setDb, refresh }) {
   /* এক ব্যবহারকারীর বিস্তারিত রিপোর্ট — পরিচালক সব দেখেন */
   const UserReport = ({ u }) => {
     const att = db.attendance.filter((a) => a.userId === u.id);
-    const present = att.filter((a) => a.minutes >= 40).length,
+    const present = att.filter((a) => (a.present ?? a.minutes >= 45)).length,
       missed = att.length - present;
     const ratingsGiven = db.ratings.filter((r) => r.studentId === u.id);
     const ratingsGot = db.ratings.filter((r) => r.teacherId === u.id);
