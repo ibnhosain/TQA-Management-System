@@ -8784,6 +8784,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           country: s.country,
           phone: s.phone,
           email: s.email,
+          days: s.class_days || [],
         })),
       );
     } catch {
@@ -8824,6 +8825,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         email: edit.email,
         guardian: edit.guardian,
         monthly_fee: +edit.fee || 4500,
+        class_days: edit.days || [],
         ...(edit.pass ? { password: edit.pass } : {}),
       };
       const saved = await api.saveUser(payload, edit.id || undefined);
@@ -8853,6 +8855,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             email: edit.email,
             guardian: edit.guardian,
             fee: +edit.fee,
+            days: edit.days || [],
             user: edit.user,
             pass: edit.pass,
           });
@@ -8870,6 +8873,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           country: edit.country,
           phone: joinPhone(edit.dial, edit.phone),
           email: edit.email,
+          days: edit.days || [],
         });
         COURSES.find((c) => c.id === edit.courseId)?.studentIds.push(id);
       }
@@ -9030,6 +9034,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 email: "",
                 guardian: "",
                 fee: 4500,
+                days: [],
                 user: "",
                 pass: genPass(),
                 courseId: courseList[0]?.id || "",
@@ -9123,6 +9128,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                         email: s.email || "",
                         guardian: s.guardian || "",
                         fee: s.fee,
+                        days: s.days || [],
                         user: s.user,
                         pass: s.pass,
                       });
@@ -9256,6 +9262,47 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                   🎲
                 </Btn>
               </div>
+            </div>
+          </div>
+          {/* সপ্তাহে কোন কোন বার পড়বে — দিন-সংখ্যা ফি ও রুটিনে ব্যবহৃত */}
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>
+              সপ্তাহে কোন কোন বার পড়বে ({bn((edit.days || []).length)} দিন)
+            </label>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {WEEK_ORDER.map((wd) => {
+                const on = (edit.days || []).includes(wd);
+                return (
+                  <button
+                    key={wd}
+                    type="button"
+                    onClick={() =>
+                      setEdit({
+                        ...edit,
+                        days: on
+                          ? (edit.days || []).filter((d) => d !== wd)
+                          : [...(edit.days || []), wd],
+                      })
+                    }
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 99,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      fontWeight: 700,
+                      fontSize: 12.5,
+                      border: `2px solid ${on ? C.emerald : C.line}`,
+                      background: on ? C.greenBg : "#fff",
+                      color: on ? C.emerald : C.text,
+                    }}
+                  >
+                    {DAY_BN[wd]}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 11.5, color: C.muted, marginTop: 5 }}>
+              💡 দিনের সংখ্যা অনুযায়ী ফি নির্ধারণ ও রুটিন তৈরিতে কাজে লাগবে।
             </div>
           </div>
           {!edit.id && (

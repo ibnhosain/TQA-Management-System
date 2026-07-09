@@ -23,6 +23,8 @@ class User(AbstractUser):
     guardian = models.CharField("অভিভাবকের নাম", max_length=120, blank=True)
     monthly_fee = models.PositiveIntegerField(default=0)      # স্টুডেন্ট হলে
     monthly_salary = models.PositiveIntegerField(default=0)   # টিচার হলে
+    # স্টুডেন্ট সপ্তাহে কোন কোন বার পড়বে — [0..6] JS getDay() ক্রম (০=রবিবার); ফি ও রুটিনে ব্যবহৃত
+    class_days = models.JSONField(default=list, blank=True)
     can_fix_cross = models.BooleanField(default=False)  # পরিচালকের দেওয়া লাল-ক্রস ঠিক করার অনুমতি
 
     def __str__(self):
