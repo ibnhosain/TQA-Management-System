@@ -9034,6 +9034,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [courseList, setCourseList] = useState(courses || []); // আসল কোর্স তালিকা (ড্রপডাউনে)
+  const [teachers, setTeachers] = useState([]); // উস্তাদ তালিকা (কার কাছে পড়ে)
 
   // ব্যাকএন্ড থেকে স্টুডেন্ট তালিকা লোড — ব্যর্থ হলে mock USERS
   const loadStudents = async () => {
@@ -9072,12 +9073,21 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           cs.map((c) => ({
             id: c.id,
             name: c.name,
+            color: c.color,
+            teacherId: c.teacher,
+            teacherName: c.teacher_name,
             studentIds: c.students || [],
           })),
         ),
       )
       .catch(() => {});
+    api
+      .allTeachers()
+      .then((d) => setTeachers(d.map(adaptPerson)))
+      .catch(() => {});
   }, []);
+  const teacherNameOf = (id) =>
+    teachers.find((t) => String(t.id) === String(id))?.name || "";
 
   const waHi = (s) =>
     `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম ${s.guardian || "অভিভাবক"}, তারবিয়াতুল কুরআন একাডেমির পক্ষ থেকে ${s.name}-এর বিষয়ে যোগাযোগ করছি।`;
@@ -9104,11 +9114,11 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         const c = courseList.find(
           (x) => String(x.id) === String(edit.courseId),
         );
+        const patch = { students: [...((c && c.studentIds) || []), saved.id] };
+        // কোর্সে উস্তাদ না থাকলে নির্বাচিত উস্তাদকে সেট করি (কার কাছে পড়ে দেখাতে)
+        if (edit.teacherId && !(c && c.teacherId)) patch.teacher = edit.teacherId;
         try {
-          await api.saveCourse(
-            { students: [...((c && c.studentIds) || []), saved.id] },
-            edit.courseId,
-          );
+          await api.saveCourse(patch, edit.courseId);
         } catch {}
       }
       await loadStudents(); // ব্যাকএন্ড থেকে নতুন তালিকা
@@ -9172,7 +9182,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
     });
   /* এক স্টুডেন্টের পূর্ণ চিত্র */
   const Detail = ({ s }) => {
-    const cs = COURSES.filter((c) => c.studentIds.includes(s.id));
+    const cs = courseList.filter((c) => (c.studentIds || []).includes(s.id));
     const routines = (db.routine || []).filter((r) =>
       r.studentIds && r.studentIds.length
         ? r.studentIds.includes(s.id)
@@ -9250,7 +9260,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             }}
           >
             <b style={{ color: c.color || C.emerald }}>{c.name}</b> · উস্তাদ:{" "}
-            <b>{userById(c.teacherId).name}</b>
+            <b>{c.teacherName || teacherNameOf(c.teacherId) || "—"}</b>
           </div>
         ))}
         <div style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}>
@@ -9308,6 +9318,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 user: "",
                 pass: genPass(),
                 courseId: courseList[0]?.id || "",
+                teacherId: courseList[0]?.teacherId || "",
               })
             }
           >
@@ -9577,20 +9588,58 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             </div>
           </div>
           {!edit.id && (
-            <div style={{ marginTop: 10 }}>
-              <label style={S.label}>কোর্স</label>
-              <select
-                style={S.input}
-                value={edit.courseId || ""}
-                onChange={(e) => setEdit({ ...edit, courseId: e.target.value })}
-              >
-                <option value="">— কোর্স নির্বাচন করুন —</option>
-                {courseList.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+            <div
+              style={{
+                marginTop: 10,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+              }}
+            >
+              <div>
+                <label style={S.label}>📚 কী পড়ে (কোর্স)</label>
+                <select
+                  style={S.input}
+                  value={edit.courseId || ""}
+                  onChange={(e) => {
+                    const cid = e.target.value;
+                    const c = courseList.find(
+                      (x) => String(x.id) === String(cid),
+                    );
+                    // কোর্স বাছলেই তার উস্তাদ অটো বসে (কার কাছে পড়ে)
+                    setEdit({
+                      ...edit,
+                      courseId: cid,
+                      teacherId: c?.teacherId ?? edit.teacherId,
+                    });
+                  }}
+                >
+                  <option value="">— কোর্স নির্বাচন করুন —</option>
+                  {courseList.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={S.label}>👳 কার কাছে পড়ে (উস্তাদ/উস্তাদা)</label>
+                <select
+                  style={S.input}
+                  value={edit.teacherId || ""}
+                  onChange={(e) =>
+                    setEdit({ ...edit, teacherId: e.target.value })
+                  }
+                >
+                  <option value="">— উস্তাদ/উস্তাদা নির্বাচন করুন —</option>
+                  {teachers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                      {t.sub ? ` (${t.sub})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
           <Btn
