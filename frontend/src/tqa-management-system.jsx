@@ -6474,6 +6474,7 @@ function BackupCard() {
 /* ═══════════════ ম্যানেজ সেটিংস — কেবল পরিচালক (পূর্ণ নিয়ন্ত্রণ, কিছুই আড়াল নয়) ═══════════════ */
 function ManageView({ db, setDb, refresh }) {
   const [show, setShow] = useState(false);
+  const [editId, setEditId] = useState(null); // এডিট মোড — কোন ইউজার (null = নতুন)
   const [report, setReport] = useState(null); // কার বিস্তারিত রিপোর্ট দেখা হচ্ছে
   const [f, setF] = useState({
     role: "student",
@@ -6521,16 +6522,44 @@ function ManageView({ db, setDb, refresh }) {
     loadUsers();
   }, []);
 
-  const addUser = async () => {
-    if (!f.name || !f.user || !f.pass)
-      return notice("নাম, লগইন আইডি (জিমেইল/নম্বর) ও পাসওয়ার্ড দিন।");
+  const openEdit = (u) => {
+    // পরিচালক যেকোনো ইউজারের আইডি/পাসওয়ার্ড/নাম/ফি এডিট করতে পারবেন
+    setEditId(u.id);
+    setF({
+      role: u.role,
+      name: u.name || "",
+      user: u.user || "",
+      pass: u.pass && u.pass !== "••••" ? u.pass : "", // খালি = অপরিবর্তিত
+      fee: u.fee || 4500,
+      salary: u.salary || 10000,
+      sub: u.sub || "",
+      courseId: COURSES[0]?.id || "",
+    });
+    setShow(true);
+  };
+  const closeForm = () => {
+    setShow(false);
+    setEditId(null);
+    setF({
+      role: "student",
+      name: "",
+      user: "",
+      pass: genPass(),
+      fee: 4500,
+      salary: 10000,
+      sub: "",
+      courseId: COURSES[0]?.id || "",
+    });
+  };
+  const saveUser = async () => {
+    if (!f.name || !f.user) return notice("নাম ও লগইন আইডি দিন।");
+    if (!editId && !f.pass) return notice("পাসওয়ার্ড দিন।");
     setSaving(true);
     try {
       const payload = {
         username: f.user,
         name_bn: f.name,
         role: f.role,
-        password: f.pass,
         sub_title:
           f.sub ||
           (f.role === "student"
@@ -6540,12 +6569,19 @@ function ManageView({ db, setDb, refresh }) {
               : "একাডেমিক এডমিন"),
         ...(f.role === "student" ? { monthly_fee: +f.fee } : {}),
         ...(f.role === "teacher" ? { monthly_salary: +f.salary } : {}),
+        // পাসওয়ার্ড খালি রাখলে অপরিবর্তিত; নতুন দিলে বদলে যায়
+        ...(f.pass && f.pass !== "••••" ? { password: f.pass } : {}),
       };
-      await api.saveUser(payload);
+      await api.saveUser(payload, editId || undefined);
       await loadUsers();
-      setShow(false);
-      setF({ ...f, name: "", user: "", pass: genPass() });
+      const wasEdit = !!editId;
+      closeForm();
+      notice(wasEdit ? "✔ আপডেট হয়েছে" : "✔ নতুন ব্যবহারকারী যোগ হয়েছে");
     } catch (err) {
+      if (editId) {
+        setSaving(false);
+        return notice("আপডেট ব্যর্থ — সার্ভার সংযোগ যাচাই করুন।");
+      }
       // ব্যাকএন্ড না থাকলে / আইডি ডুপ্লিকেট — mock এ যোগ
       if (USERS.some((x) => x.user === f.user)) {
         setSaving(false);
@@ -6858,7 +6894,26 @@ function ManageView({ db, setDb, refresh }) {
     <Section
       title="ম্যানেজ সেটিংস"
       sub="পরিচালকের পূর্ণ নিয়ন্ত্রণ — সবার আইডি-পাসওয়ার্ড, বিস্তারিত রিপোর্ট; কোনো কিছুই আড়াল নয়"
-      action={<Btn onClick={() => setShow(true)}>+ নতুন ব্যবহারকারী</Btn>}
+      action={
+        <Btn
+          onClick={() => {
+            setEditId(null);
+            setF({
+              role: "student",
+              name: "",
+              user: "",
+              pass: genPass(),
+              fee: 4500,
+              salary: 10000,
+              sub: "",
+              courseId: COURSES[0]?.id || "",
+            });
+            setShow(true);
+          }}
+        >
+          + নতুন ব্যবহারকারী
+        </Btn>
+      }
     >
       {loading && <Loader text="ব্যবহারকারী তালিকা আসছে" />}
       <div style={{ ...S.card, marginBottom: 14 }}>
@@ -6906,13 +6961,16 @@ function ManageView({ db, setDb, refresh }) {
             <Btn key="rep" sm kind="ghost" onClick={() => setReport(u)}>
               📊 বিস্তারিত
             </Btn>,
-            u.role === "director" ? (
-              "—"
-            ) : (
-              <Btn key="d" sm kind="danger" onClick={() => delUser(u)}>
-                মুছুন
+            <span key="a" style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              <Btn sm kind="soft" onClick={() => openEdit(u)}>
+                ✏️ এডিট
               </Btn>
-            ),
+              {u.role !== "director" && (
+                <Btn sm kind="danger" onClick={() => delUser(u)}>
+                  মুছুন
+                </Btn>
+              )}
+            </span>,
           ])}
         />
       </div>
@@ -6990,7 +7048,12 @@ function ManageView({ db, setDb, refresh }) {
       </div>
       {report && <UserReport u={report} />}
       {show && (
-        <Modal title="নতুন ব্যবহারকারী যোগ করুন" onClose={() => setShow(false)}>
+        <Modal
+          title={
+            editId ? "✏️ ব্যবহারকারী এডিট করুন" : "নতুন ব্যবহারকারী যোগ করুন"
+          }
+          onClose={closeForm}
+        >
           <label style={S.label}>ভূমিকা</label>
           <select
             style={S.input}
@@ -7019,12 +7082,16 @@ function ManageView({ db, setDb, refresh }) {
             />
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>পাসওয়ার্ড — অক্ষর ও সংখ্যা মিশ্রিত</label>
+            <label style={S.label}>
+              পাসওয়ার্ড — অক্ষর ও সংখ্যা মিশ্রিত
+              {editId ? " (খালি রাখলে অপরিবর্তিত থাকবে)" : ""}
+            </label>
             <div style={{ display: "flex", gap: 8 }}>
               <input
                 style={{ ...S.input, flex: 1 }}
                 value={f.pass}
                 onChange={(e) => setF({ ...f, pass: e.target.value })}
+                placeholder={editId ? "নতুন পাসওয়ার্ড দিলে বদলে যাবে" : ""}
               />
               <Btn kind="soft" onClick={() => setF({ ...f, pass: genPass() })}>
                 🎲 বানিয়ে দিন
@@ -7083,9 +7150,13 @@ function ManageView({ db, setDb, refresh }) {
               justifyContent: "center",
               opacity: saving ? 0.7 : 1,
             }}
-            onClick={addUser}
+            onClick={saveUser}
           >
-            {saving ? "তৈরি হচ্ছে…" : "যোগ করুন — আইডি ও পাসওয়ার্ড তৈরি হবে"}
+            {saving
+              ? "সংরক্ষণ হচ্ছে…"
+              : editId
+                ? "✏️ সংরক্ষণ করুন"
+                : "যোগ করুন — আইডি ও পাসওয়ার্ড তৈরি হবে"}
           </Btn>
         </Modal>
       )}
