@@ -9003,19 +9003,27 @@ const COUNTRIES = [
   ["Vietnam", "VN", "84"], ["Yemen", "YE", "967"], ["Zambia", "ZM", "260"],
   ["Zimbabwe", "ZW", "263"],
 ].map(([name, iso, dial]) => ({ name, iso, dial: "+" + dial, flag: flagOf(iso) }));
-// স্টোর করা পূর্ণ নম্বর → {কোড, বাকি অংশ} এবং উল্টোটা (কোনো ডেটা হারায় না — lossless)
+// কোড ও নম্বর আলাদা রাখা হয় দেশ (unique ISO) দিয়ে — তাই একই ডায়াল কোডের (যেমন +1)
+// একাধিক দেশ থাকলেও একটার সাথে আরেকটা মিশে যায় না। lossless।
 const DIAL_CODES = [...new Set(COUNTRIES.map((c) => c.dial.replace(/\D/g, "")))].sort(
   (a, b) => b.length - a.length,
 );
+const dialDigits = (iso) => {
+  const c = COUNTRIES.find((x) => x.iso === iso);
+  return c ? c.dial.replace(/\D/g, "") : "";
+};
 const splitPhone = (full) => {
   const d = String(full || "").replace(/\D/g, "");
-  if (!d) return { dial: "+880", local: "" };
+  if (!d) return { iso: "BD", local: "" };
   for (const code of DIAL_CODES)
-    if (d.startsWith(code)) return { dial: "+" + code, local: d.slice(code.length) };
-  return { dial: "", local: d };
+    if (d.startsWith(code)) {
+      const c = COUNTRIES.find((x) => x.dial.replace(/\D/g, "") === code);
+      return { iso: c ? c.iso : "", local: d.slice(code.length) };
+    }
+  return { iso: "", local: d };
 };
-const joinPhone = (dial, local) =>
-  String(dial || "").replace(/\D/g, "") + String(local || "").replace(/\D/g, "");
+const joinPhone = (iso, local) =>
+  dialDigits(iso) + String(local || "").replace(/\D/g, "");
 
 function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   const [detail, setDetail] = useState(null);
@@ -9083,7 +9091,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         name_bn: edit.name,
         role: "student",
         country: edit.country,
-        phone: joinPhone(edit.dial, edit.phone),
+        phone: joinPhone(edit.phoneIso, edit.phone),
         email: edit.email,
         guardian: edit.guardian,
         monthly_fee: +edit.fee || 4500,
@@ -9113,7 +9121,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           Object.assign(u, {
             name: edit.name,
             country: edit.country,
-            phone: joinPhone(edit.dial, edit.phone),
+            phone: joinPhone(edit.phoneIso, edit.phone),
             email: edit.email,
             guardian: edit.guardian,
             fee: +edit.fee,
@@ -9133,7 +9141,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           fee: +edit.fee || 4500,
           guardian: edit.guardian,
           country: edit.country,
-          phone: joinPhone(edit.dial, edit.phone),
+          phone: joinPhone(edit.phoneIso, edit.phone),
           email: edit.email,
           days: edit.days || [],
         });
@@ -9291,7 +9299,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               setEdit({
                 name: "",
                 country: "",
-                dial: "+880",
+                phoneIso: "BD",
                 phone: "",
                 email: "",
                 guardian: "",
@@ -9385,7 +9393,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                         id: s.id,
                         name: s.name,
                         country: s.country || "",
-                        dial: p.dial,
+                        phoneIso: p.iso,
                         phone: p.local,
                         email: s.email || "",
                         guardian: s.guardian || "",
@@ -9457,30 +9465,31 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             </div>
             <div>
               <label style={S.label}>WhatsApp নম্বর</label>
-              <div style={{ display: "flex", gap: 6 }}>
-                <select
-                  style={{
-                    ...S.input,
-                    width: 108,
-                    flexShrink: 0,
-                    padding: "10px 4px",
-                  }}
-                  value={edit.dial || ""}
-                  onChange={(e) => setEdit({ ...edit, dial: e.target.value })}
-                >
-                  <option value="">কোড নেই</option>
-                  {COUNTRIES.map((c) => (
-                    <option key={c.iso} value={c.dial}>
-                      {c.flag} {c.dial}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  style={{ ...S.input, flex: 1 }}
-                  value={edit.phone}
-                  onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
-                  placeholder="নম্বর (কোড ছাড়া)"
-                />
+              {/* দেশ বেছে নিলে কোড বসে; পাশে শুধু নম্বর — দুটো আলাদা, মিশে যায় না */}
+              <select
+                style={S.input}
+                value={edit.phoneIso || ""}
+                onChange={(e) => setEdit({ ...edit, phoneIso: e.target.value })}
+              >
+                <option value="">— কোড / দেশ বাছুন —</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c.iso} value={c.iso}>
+                    {c.flag} {c.name} ({c.dial})
+                  </option>
+                ))}
+              </select>
+              <input
+                style={{ ...S.input, marginTop: 6 }}
+                type="tel"
+                value={edit.phone}
+                onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
+                placeholder="নম্বর (কোড ছাড়া, যেমন 1712345678)"
+              />
+              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 4 }}>
+                পূর্ণ নম্বর:{" "}
+                <b style={{ color: C.emerald }}>
+                  +{joinPhone(edit.phoneIso, edit.phone) || "—"}
+                </b>
               </div>
             </div>
             <div>
