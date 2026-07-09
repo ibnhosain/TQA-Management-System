@@ -947,6 +947,65 @@ const Section = ({ title, sub, action, children }) => (
   </div>
 );
 
+/* ইসলামিক টোনে লোডার — আরবি দুআসহ, মৃদু ভাসমান অ্যানিমেশন */
+const Loader = ({ text = "একটু অপেক্ষা করুন…" }) => (
+  <div
+    style={{
+      display: "grid",
+      placeItems: "center",
+      padding: "44px 16px",
+      textAlign: "center",
+    }}
+  >
+    <style>{`
+      @keyframes tqaFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+      @keyframes tqaGlow{0%,100%{opacity:.4;transform:scale(.85)}50%{opacity:1;transform:scale(1)}}
+    `}</style>
+    <div style={{ fontSize: 46, animation: "tqaFloat 2.2s ease-in-out infinite" }}>
+      🕌
+    </div>
+    <div
+      style={{
+        fontFamily: "'Amiri', serif",
+        fontSize: 26,
+        fontWeight: 700,
+        color: C.emerald,
+        marginTop: 10,
+        direction: "rtl",
+        letterSpacing: 1,
+      }}
+    >
+      رَبِّ زِدْنِي عِلْمًا
+    </div>
+    <div style={{ fontSize: 12.5, color: C.muted, marginTop: 6, lineHeight: 1.6 }}>
+      “হে আমার রব, আমার জ্ঞান বাড়িয়ে দিন”
+      <br />
+      {text}
+    </div>
+    <div
+      style={{
+        marginTop: 14,
+        display: "flex",
+        gap: 7,
+        justifyContent: "center",
+      }}
+    >
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          style={{
+            width: 9,
+            height: 9,
+            borderRadius: 99,
+            background: C.gold,
+            animation: `tqaGlow 1.2s ease-in-out ${i * 0.2}s infinite`,
+          }}
+        />
+      ))}
+    </div>
+  </div>
+);
+
 /* ─────────────── helper selectors ─────────────── */
 const userById = (id) => USERS.find((u) => u.id === id) || {};
 const isDir = (u) => u.role === "director";
@@ -4636,12 +4695,21 @@ function ProgressView({ db, setDb, courses, user }) {
   const [allStudents, setAllStudents] = useState(
     user.role === "student"
       ? [user]
-      : USERS.filter((u) => u.role === "student"),
+      : [],
   );
   const [pay, setPay] = useState(false);
   const [maker, setMaker] = useState(false);
   const [pf, setPf] = useState({ method: "বিকাশ", trx: "" });
   const [sel, setSel] = useState(allStudents[0]?.id || user.id);
+  // তালিকা লোড হলে সিলেকশন প্রথম স্টুডেন্টে বসাই (আগে খালি থাকলে)
+  useEffect(() => {
+    if (
+      user.role !== "student" &&
+      allStudents.length &&
+      !allStudents.some((s) => String(s.id) === String(sel))
+    )
+      setSel(allStudents[0].id);
+  }, [allStudents]);
   const [fees, setFees] = useState(db.feePayments || []);
   const [duesMap, setDuesMap] = useState(db.dueMonths || {});
   const [sessions, setSessions] = useState(null);
@@ -5065,9 +5133,7 @@ function AccountsView({ db, setDb, user }) {
   const [maker, setMaker] = useState(false);
   const [fees, setFees] = useState(db.feePayments || []);
   const [salaries, setSalaries] = useState(db.teacherPayments || []);
-  const [teachers, setTeachers] = useState(
-    USERS.filter((u) => u.role === "teacher"),
-  );
+  const [teachers, setTeachers] = useState([]);
   const [duesMap, setDuesMap] = useState(db.dueMonths || {});
 
   const loadData = async () => {
@@ -5772,9 +5838,7 @@ function RatingPopup({ courseName, onSubmit, onSkip }) {
 
 /* ═══════════════ টিচার রিপোর্ট — উপস্থিতি · ক্লাসের মান · পেমেন্ট ═══════════════ */
 function TeacherReportView({ db, setDb, courses, user }) {
-  const [allTeachers, setAllTeachers] = useState(
-    USERS.filter((u) => u.role === "teacher"),
-  );
+  const [allTeachers, setAllTeachers] = useState([]);
   const [sel, setSel] = useState(
     user.role === "teacher" ? user.id : allTeachers[0]?.id,
   );
@@ -5782,7 +5846,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
   const [allRatings, setAllRatings] = useState(db.ratings || []);
   const [salaries, setSalaries] = useState(db.teacherPayments || []);
 
-  const tid = user.role === "teacher" ? user.id : sel;
+  const tid = user.role === "teacher" ? user.id : sel || allTeachers[0]?.id;
   const t =
     allTeachers.find((x) => String(x.id) === String(tid)) || userById(tid);
   const tCourses = courses.filter(
@@ -6421,7 +6485,7 @@ function ManageView({ db, setDb, refresh }) {
     sub: "",
     courseId: COURSES[0]?.id || "",
   });
-  const [allUsers, setAllUsers] = useState(USERS);
+  const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -6796,11 +6860,7 @@ function ManageView({ db, setDb, refresh }) {
       sub="পরিচালকের পূর্ণ নিয়ন্ত্রণ — সবার আইডি-পাসওয়ার্ড, বিস্তারিত রিপোর্ট; কোনো কিছুই আড়াল নয়"
       action={<Btn onClick={() => setShow(true)}>+ নতুন ব্যবহারকারী</Btn>}
     >
-      {loading && (
-        <div style={{ padding: "10px 0", fontSize: 13, color: C.muted }}>
-          ⏳ ব্যবহারকারী তালিকা লোড হচ্ছে…
-        </div>
-      )}
+      {loading && <Loader text="ব্যবহারকারী তালিকা আসছে" />}
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
           👥 সকল ব্যবহারকারী — আইডি, পাসওয়ার্ড ও রিপোর্টসহ
@@ -7765,9 +7825,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
   const [viewShot, setViewShot] = useState(null);
   const [maker, setMaker] = useState(false);
   const [fees, setFees] = useState(db.feePayments);
-  const [students, setStudents] = useState(
-    USERS.filter((u) => u.role === "student"),
-  );
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const loadData = async () => {
@@ -9028,9 +9086,7 @@ const joinPhone = (iso, local) =>
 function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   const [detail, setDetail] = useState(null);
   const [edit, setEdit] = useState(null); // {id?} — null=বন্ধ, {}=নতুন
-  const [students, setStudents] = useState(
-    USERS.filter((u) => u.role === "student"),
-  );
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [courseList, setCourseList] = useState(courses || []); // আসল কোর্স তালিকা (ড্রপডাউনে)
@@ -9327,11 +9383,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         )
       }
     >
-      {loading && (
-        <div style={{ padding: "10px 0", fontSize: 13, color: C.muted }}>
-          ⏳ তালিকা লোড হচ্ছে…
-        </div>
-      )}
+      {loading && <Loader text="স্টুডেন্ট তালিকা আসছে" />}
       <Table
         head={[
           "স্টুডেন্ট নাম",
@@ -9665,9 +9717,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
 
 /* ═══════════════ উস্তাদ-ভিত্তিক বোর্ড — কার কাছে কে পড়ে, সামনের ক্লাস, স্থগিত করার ক্ষমতা ═══════════════ */
 function TeacherWiseBoard({ db, setDb, user }) {
-  const [allTeachers, setAllTeachers] = useState(
-    USERS.filter((u) => u.role === "teacher"),
-  );
+  const [allTeachers, setAllTeachers] = useState([]);
   const [sel, setSel] = useState(
     user.role === "teacher" ? user.id : allTeachers[0]?.id,
   );
@@ -9718,7 +9768,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
       });
   }, []);
 
-  const tid = user.role === "teacher" ? user.id : sel;
+  const tid = user.role === "teacher" ? user.id : sel || allTeachers[0]?.id;
   const t =
     allTeachers.find((x) => String(x.id) === String(tid)) || userById(tid);
   const myRoutines = routines.filter(
@@ -10119,9 +10169,7 @@ function CourseManagerView({ db, setDb, refresh }) {
   const [edit, setEdit] = useState(null); // null=বন্ধ, {}=নতুন, {id}=এডিট
   const PALETTE = [C.emerald, C.gold, C.blue, C.red, "#7c3aed", "#0f766e"];
   const [courses, setCourses] = useState(COURSES);
-  const [teachers, setTeachers] = useState(
-    USERS.filter((u) => u.role === "teacher"),
-  );
+  const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [academicBooks, setAcademicBooks] = useState([]); // API থেকে লোড
@@ -10300,11 +10348,7 @@ function CourseManagerView({ db, setDb, refresh }) {
         </Btn>
       }
     >
-      {loading && (
-        <div style={{ padding: "10px 0", fontSize: 13, color: C.muted }}>
-          ⏳ কোর্স তালিকা লোড হচ্ছে…
-        </div>
-      )}
+      {loading && <Loader text="কোর্স তালিকা আসছে" />}
       <div style={{ display: "grid", gap: 10 }}>
         {courses.map((c) => (
           <div
