@@ -1338,15 +1338,16 @@ function Login({ onLogin, onAdmission }) {
     setBusy(true);
     setErr("");
     const q = u.trim();
+    const pw = p.trim(); // কপি-পেস্টে আসা অদৃশ্য স্পেস/নিউলাইন সরানো (পাসওয়ার্ডে স্পেস থাকে না)
     try {
-      const me = await login(q, p);
+      const me = await login(q, pw);
       onLogin({
         ...me,
         id: me.id,
         name: me.name || me.name_bn,
         sub: me.sub || me.sub_title || "",
         user: me.username,
-        pass: p,
+        pass: pw,
         fee: me.monthly_fee,
         salary: me.monthly_salary,
       });
