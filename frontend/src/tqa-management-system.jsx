@@ -10994,9 +10994,13 @@ function AcademicBooksView({ db, setDb, user, courses }) {
         : BASE_MEDIA + b.file
       : null;
     const fname = fileUrl ? fileUrl.split("/").pop() : b.name + ".pdf";
+    const isLink = fileUrl
+      ? !/cloudinary\.com/.test(fileUrl) && !fileUrl.includes("/media/")
+      : false;
     return {
       id: b.id,
       name: b.name,
+      isLink,
       file: fileUrl
         ? {
             data: fileUrl,
@@ -11120,6 +11124,13 @@ function AcademicBooksView({ db, setDb, user, courses }) {
   const openBook = async (b, setStatus) => {
     const url = b.file?.data;
     if (!url) return notice("এই বইয়ের কোনো ফাইল সংযুক্ত নেই।");
+    // বাহ্যিক লিংক (Google Drive/Dropbox/অন্য সাইট) → ক্লিকের সাথে সাথেই সরাসরি খুলুন।
+    // (ডাউনলোড/cache করলে CORS-এ আটকায়, আর await-এর পর window.open ব্রাউজার popup ব্লক করে দেয়)
+    const isExternal = !/cloudinary\.com/.test(url) && !url.includes("/media/");
+    if (isExternal) {
+      window.open(url, "_blank", "noopener");
+      return;
+    }
     try {
       const cache = await caches.open("tqa-books-v1");
       let resp = await cache.match(url);
@@ -11224,10 +11235,19 @@ function AcademicBooksView({ db, setDb, user, courses }) {
       <div style={{ flex: 1, minWidth: 200 }}>
         <BookLink b={b} />
         <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3 }}>
-          <Tag color={C.blue} bg={C.blueBg}>
-            {bookExt(b.file?.name)}
-          </Tag>{" "}
-          {b.file?.name || "ফাইল সংযুক্ত নেই"} · যোগ: {fmtDate(b.date)}
+          {b.isLink ? (
+            <Tag color={C.blue} bg={C.blueBg}>
+              🔗 লিংক
+            </Tag>
+          ) : (
+            <>
+              <Tag color={C.blue} bg={C.blueBg}>
+                {bookExt(b.file?.name)}
+              </Tag>{" "}
+              {b.file?.name || "ফাইল সংযুক্ত নেই"}
+            </>
+          )}{" "}
+          · যোগ: {fmtDate(b.date)}
           {isAdm(user) && (
             <span>
               {" "}
