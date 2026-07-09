@@ -8668,54 +8668,79 @@ function MyReceiptsView({ db, user }) {
 }
 
 /* ═══════════════ সকল স্টুডেন্ট — তালিকা, WhatsApp, বিস্তারিত; এডিট কেবল পরিচালক ═══════════════ */
-/* দেশ ও কান্ট্রি কোড — দেশ সিলেক্ট ও WhatsApp নম্বরের কোড বাছাইয়ে ব্যবহৃত */
+/* দেশ ও কান্ট্রি কোড — ISO2 কোড থেকে পতাকা অটো-তৈরি; বিশ্বের সব দেশের তালিকা */
+const flagOf = (iso) =>
+  iso.toUpperCase().replace(/./g, (c) => String.fromCodePoint(127397 + c.charCodeAt(0)));
 const COUNTRIES = [
-  { bn: "বাংলাদেশ", en: "Bangladesh", dial: "+880", flag: "🇧🇩" },
-  { bn: "ভারত", en: "India", dial: "+91", flag: "🇮🇳" },
-  { bn: "পাকিস্তান", en: "Pakistan", dial: "+92", flag: "🇵🇰" },
-  { bn: "যুক্তরাজ্য", en: "United Kingdom", dial: "+44", flag: "🇬🇧" },
-  { bn: "যুক্তরাষ্ট্র", en: "United States", dial: "+1", flag: "🇺🇸" },
-  { bn: "কানাডা", en: "Canada", dial: "+1", flag: "🇨🇦" },
-  { bn: "অস্ট্রেলিয়া", en: "Australia", dial: "+61", flag: "🇦🇺" },
-  { bn: "সংযুক্ত আরব আমিরাত", en: "UAE", dial: "+971", flag: "🇦🇪" },
-  { bn: "সৌদি আরব", en: "Saudi Arabia", dial: "+966", flag: "🇸🇦" },
-  { bn: "কাতার", en: "Qatar", dial: "+974", flag: "🇶🇦" },
-  { bn: "কুয়েত", en: "Kuwait", dial: "+965", flag: "🇰🇼" },
-  { bn: "বাহরাইন", en: "Bahrain", dial: "+973", flag: "🇧🇭" },
-  { bn: "ওমান", en: "Oman", dial: "+968", flag: "🇴🇲" },
-  { bn: "মালয়েশিয়া", en: "Malaysia", dial: "+60", flag: "🇲🇾" },
-  { bn: "সিঙ্গাপুর", en: "Singapore", dial: "+65", flag: "🇸🇬" },
-  { bn: "ইন্দোনেশিয়া", en: "Indonesia", dial: "+62", flag: "🇮🇩" },
-  { bn: "তুরস্ক", en: "Turkey", dial: "+90", flag: "🇹🇷" },
-  { bn: "মিশর", en: "Egypt", dial: "+20", flag: "🇪🇬" },
-  { bn: "দক্ষিণ আফ্রিকা", en: "South Africa", dial: "+27", flag: "🇿🇦" },
-  { bn: "জার্মানি", en: "Germany", dial: "+49", flag: "🇩🇪" },
-  { bn: "ফ্রান্স", en: "France", dial: "+33", flag: "🇫🇷" },
-  { bn: "ইতালি", en: "Italy", dial: "+39", flag: "🇮🇹" },
-  { bn: "স্পেন", en: "Spain", dial: "+34", flag: "🇪🇸" },
-  { bn: "নেদারল্যান্ডস", en: "Netherlands", dial: "+31", flag: "🇳🇱" },
-  { bn: "সুইডেন", en: "Sweden", dial: "+46", flag: "🇸🇪" },
-  { bn: "নরওয়ে", en: "Norway", dial: "+47", flag: "🇳🇴" },
-  { bn: "ডেনমার্ক", en: "Denmark", dial: "+45", flag: "🇩🇰" },
-  { bn: "সুইজারল্যান্ড", en: "Switzerland", dial: "+41", flag: "🇨🇭" },
-  { bn: "বেলজিয়াম", en: "Belgium", dial: "+32", flag: "🇧🇪" },
-  { bn: "আয়ারল্যান্ড", en: "Ireland", dial: "+353", flag: "🇮🇪" },
-  { bn: "নিউজিল্যান্ড", en: "New Zealand", dial: "+64", flag: "🇳🇿" },
-  { bn: "জাপান", en: "Japan", dial: "+81", flag: "🇯🇵" },
-  { bn: "দক্ষিণ কোরিয়া", en: "South Korea", dial: "+82", flag: "🇰🇷" },
-  { bn: "চীন", en: "China", dial: "+86", flag: "🇨🇳" },
-  { bn: "নাইজেরিয়া", en: "Nigeria", dial: "+234", flag: "🇳🇬" },
-  { bn: "কেনিয়া", en: "Kenya", dial: "+254", flag: "🇰🇪" },
-  { bn: "মরক্কো", en: "Morocco", dial: "+212", flag: "🇲🇦" },
-  { bn: "জর্ডান", en: "Jordan", dial: "+962", flag: "🇯🇴" },
-  { bn: "লেবানন", en: "Lebanon", dial: "+961", flag: "🇱🇧" },
-  { bn: "ইরাক", en: "Iraq", dial: "+964", flag: "🇮🇶" },
-  { bn: "শ্রীলঙ্কা", en: "Sri Lanka", dial: "+94", flag: "🇱🇰" },
-  { bn: "নেপাল", en: "Nepal", dial: "+977", flag: "🇳🇵" },
-  { bn: "মালদ্বীপ", en: "Maldives", dial: "+960", flag: "🇲🇻" },
-  { bn: "আফগানিস্তান", en: "Afghanistan", dial: "+93", flag: "🇦🇫" },
-  { bn: "থাইল্যান্ড", en: "Thailand", dial: "+66", flag: "🇹🇭" },
-];
+  ["Afghanistan", "AF", "93"], ["Albania", "AL", "355"], ["Algeria", "DZ", "213"],
+  ["Andorra", "AD", "376"], ["Angola", "AO", "244"], ["Antigua and Barbuda", "AG", "1268"],
+  ["Argentina", "AR", "54"], ["Armenia", "AM", "374"], ["Australia", "AU", "61"],
+  ["Austria", "AT", "43"], ["Azerbaijan", "AZ", "994"], ["Bahamas", "BS", "1242"],
+  ["Bahrain", "BH", "973"], ["Bangladesh", "BD", "880"], ["Barbados", "BB", "1246"],
+  ["Belarus", "BY", "375"], ["Belgium", "BE", "32"], ["Belize", "BZ", "501"],
+  ["Benin", "BJ", "229"], ["Bhutan", "BT", "975"], ["Bolivia", "BO", "591"],
+  ["Bosnia and Herzegovina", "BA", "387"], ["Botswana", "BW", "267"], ["Brazil", "BR", "55"],
+  ["Brunei", "BN", "673"], ["Bulgaria", "BG", "359"], ["Burkina Faso", "BF", "226"],
+  ["Burundi", "BI", "257"], ["Cambodia", "KH", "855"], ["Cameroon", "CM", "237"],
+  ["Canada", "CA", "1"], ["Cape Verde", "CV", "238"], ["Central African Republic", "CF", "236"],
+  ["Chad", "TD", "235"], ["Chile", "CL", "56"], ["China", "CN", "86"],
+  ["Colombia", "CO", "57"], ["Comoros", "KM", "269"], ["Congo (DRC)", "CD", "243"],
+  ["Congo (Republic)", "CG", "242"], ["Costa Rica", "CR", "506"], ["Croatia", "HR", "385"],
+  ["Cuba", "CU", "53"], ["Cyprus", "CY", "357"], ["Czechia", "CZ", "420"],
+  ["Denmark", "DK", "45"], ["Djibouti", "DJ", "253"], ["Dominica", "DM", "1767"],
+  ["Dominican Republic", "DO", "1809"], ["Ecuador", "EC", "593"], ["Egypt", "EG", "20"],
+  ["El Salvador", "SV", "503"], ["Equatorial Guinea", "GQ", "240"], ["Eritrea", "ER", "291"],
+  ["Estonia", "EE", "372"], ["Eswatini", "SZ", "268"], ["Ethiopia", "ET", "251"],
+  ["Fiji", "FJ", "679"], ["Finland", "FI", "358"], ["France", "FR", "33"],
+  ["Gabon", "GA", "241"], ["Gambia", "GM", "220"], ["Georgia", "GE", "995"],
+  ["Germany", "DE", "49"], ["Ghana", "GH", "233"], ["Greece", "GR", "30"],
+  ["Grenada", "GD", "1473"], ["Guatemala", "GT", "502"], ["Guinea", "GN", "224"],
+  ["Guinea-Bissau", "GW", "245"], ["Guyana", "GY", "592"], ["Haiti", "HT", "509"],
+  ["Honduras", "HN", "504"], ["Hong Kong", "HK", "852"], ["Hungary", "HU", "36"],
+  ["Iceland", "IS", "354"], ["India", "IN", "91"], ["Indonesia", "ID", "62"],
+  ["Iran", "IR", "98"], ["Iraq", "IQ", "964"], ["Ireland", "IE", "353"],
+  ["Israel", "IL", "972"], ["Italy", "IT", "39"], ["Ivory Coast", "CI", "225"],
+  ["Jamaica", "JM", "1876"], ["Japan", "JP", "81"], ["Jordan", "JO", "962"],
+  ["Kazakhstan", "KZ", "7"], ["Kenya", "KE", "254"], ["Kiribati", "KI", "686"],
+  ["Kosovo", "XK", "383"], ["Kuwait", "KW", "965"], ["Kyrgyzstan", "KG", "996"],
+  ["Laos", "LA", "856"], ["Latvia", "LV", "371"], ["Lebanon", "LB", "961"],
+  ["Lesotho", "LS", "266"], ["Liberia", "LR", "231"], ["Libya", "LY", "218"],
+  ["Liechtenstein", "LI", "423"], ["Lithuania", "LT", "370"], ["Luxembourg", "LU", "352"],
+  ["Macau", "MO", "853"], ["Madagascar", "MG", "261"], ["Malawi", "MW", "265"],
+  ["Malaysia", "MY", "60"], ["Maldives", "MV", "960"], ["Mali", "ML", "223"],
+  ["Malta", "MT", "356"], ["Marshall Islands", "MH", "692"], ["Mauritania", "MR", "222"],
+  ["Mauritius", "MU", "230"], ["Mexico", "MX", "52"], ["Micronesia", "FM", "691"],
+  ["Moldova", "MD", "373"], ["Monaco", "MC", "377"], ["Mongolia", "MN", "976"],
+  ["Montenegro", "ME", "382"], ["Morocco", "MA", "212"], ["Mozambique", "MZ", "258"],
+  ["Myanmar", "MM", "95"], ["Namibia", "NA", "264"], ["Nauru", "NR", "674"],
+  ["Nepal", "NP", "977"], ["Netherlands", "NL", "31"], ["New Zealand", "NZ", "64"],
+  ["Nicaragua", "NI", "505"], ["Niger", "NE", "227"], ["Nigeria", "NG", "234"],
+  ["North Korea", "KP", "850"], ["North Macedonia", "MK", "389"], ["Norway", "NO", "47"],
+  ["Oman", "OM", "968"], ["Pakistan", "PK", "92"], ["Palau", "PW", "680"],
+  ["Palestine", "PS", "970"], ["Panama", "PA", "507"], ["Papua New Guinea", "PG", "675"],
+  ["Paraguay", "PY", "595"], ["Peru", "PE", "51"], ["Philippines", "PH", "63"],
+  ["Poland", "PL", "48"], ["Portugal", "PT", "351"], ["Qatar", "QA", "974"],
+  ["Romania", "RO", "40"], ["Russia", "RU", "7"], ["Rwanda", "RW", "250"],
+  ["Saint Kitts and Nevis", "KN", "1869"], ["Saint Lucia", "LC", "1758"],
+  ["Saint Vincent and the Grenadines", "VC", "1784"], ["Samoa", "WS", "685"],
+  ["San Marino", "SM", "378"], ["Sao Tome and Principe", "ST", "239"],
+  ["Saudi Arabia", "SA", "966"], ["Senegal", "SN", "221"], ["Serbia", "RS", "381"],
+  ["Seychelles", "SC", "248"], ["Sierra Leone", "SL", "232"], ["Singapore", "SG", "65"],
+  ["Slovakia", "SK", "421"], ["Slovenia", "SI", "386"], ["Solomon Islands", "SB", "677"],
+  ["Somalia", "SO", "252"], ["South Africa", "ZA", "27"], ["South Korea", "KR", "82"],
+  ["South Sudan", "SS", "211"], ["Spain", "ES", "34"], ["Sri Lanka", "LK", "94"],
+  ["Sudan", "SD", "249"], ["Suriname", "SR", "597"], ["Sweden", "SE", "46"],
+  ["Switzerland", "CH", "41"], ["Syria", "SY", "963"], ["Taiwan", "TW", "886"],
+  ["Tajikistan", "TJ", "992"], ["Tanzania", "TZ", "255"], ["Thailand", "TH", "66"],
+  ["Timor-Leste", "TL", "670"], ["Togo", "TG", "228"], ["Tonga", "TO", "676"],
+  ["Trinidad and Tobago", "TT", "1868"], ["Tunisia", "TN", "216"], ["Turkey", "TR", "90"],
+  ["Turkmenistan", "TM", "993"], ["Tuvalu", "TV", "688"], ["Uganda", "UG", "256"],
+  ["Ukraine", "UA", "380"], ["United Arab Emirates", "AE", "971"], ["United Kingdom", "GB", "44"],
+  ["United States", "US", "1"], ["Uruguay", "UY", "598"], ["Uzbekistan", "UZ", "998"],
+  ["Vanuatu", "VU", "678"], ["Vatican City", "VA", "379"], ["Venezuela", "VE", "58"],
+  ["Vietnam", "VN", "84"], ["Yemen", "YE", "967"], ["Zambia", "ZM", "260"],
+  ["Zimbabwe", "ZW", "263"],
+].map(([name, iso, dial]) => ({ name, iso, dial: "+" + dial, flag: flagOf(iso) }));
 // স্টোর করা পূর্ণ নম্বর → {কোড, বাকি অংশ} এবং উল্টোটা (কোনো ডেটা হারায় না — lossless)
 const DIAL_CODES = [...new Set(COUNTRIES.map((c) => c.dial.replace(/\D/g, "")))].sort(
   (a, b) => b.length - a.length,
@@ -8738,6 +8763,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [courseList, setCourseList] = useState(courses || []); // আসল কোর্স তালিকা (ড্রপডাউনে)
 
   // ব্যাকএন্ড থেকে স্টুডেন্ট তালিকা লোড — ব্যর্থ হলে mock USERS
   const loadStudents = async () => {
@@ -8768,6 +8794,18 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   };
   useEffect(() => {
     loadStudents();
+    api
+      .courses()
+      .then((cs) =>
+        setCourseList(
+          cs.map((c) => ({
+            id: c.id,
+            name: c.name,
+            studentIds: c.students || [],
+          })),
+        ),
+      )
+      .catch(() => {});
   }, []);
 
   const waHi = (s) =>
@@ -8791,7 +8829,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
       const saved = await api.saveUser(payload, edit.id || undefined);
       // নতুন স্টুডেন্ট হলে নির্বাচিত কোর্সে যুক্ত করি (backend-এ)
       if (!edit.id && edit.courseId && saved?.id) {
-        const c = (courses || []).find(
+        const c = courseList.find(
           (x) => String(x.id) === String(edit.courseId),
         );
         try {
@@ -8994,7 +9032,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 fee: 4500,
                 user: "",
                 pass: genPass(),
-                courseId: courses[0]?.id || "",
+                courseId: courseList[0]?.id || "",
               })
             }
           >
@@ -9139,12 +9177,12 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               >
                 <option value="">— দেশ নির্বাচন করুন —</option>
                 {edit.country &&
-                  !COUNTRIES.some((c) => c.bn === edit.country) && (
+                  !COUNTRIES.some((c) => c.name === edit.country) && (
                     <option value={edit.country}>{edit.country}</option>
                   )}
                 {COUNTRIES.map((c) => (
-                  <option key={c.en} value={c.bn}>
-                    {c.flag} {c.bn}
+                  <option key={c.iso} value={c.name}>
+                    {c.flag} {c.name}
                   </option>
                 ))}
               </select>
@@ -9164,7 +9202,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 >
                   <option value="">কোড নেই</option>
                   {COUNTRIES.map((c) => (
-                    <option key={c.en + c.dial} value={c.dial}>
+                    <option key={c.iso} value={c.dial}>
                       {c.flag} {c.dial}
                     </option>
                   ))}
@@ -9229,7 +9267,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 onChange={(e) => setEdit({ ...edit, courseId: e.target.value })}
               >
                 <option value="">— কোর্স নির্বাচন করুন —</option>
-                {(courses || []).map((c) => (
+                {courseList.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
