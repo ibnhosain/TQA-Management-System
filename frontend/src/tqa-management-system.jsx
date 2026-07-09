@@ -8668,7 +8668,69 @@ function MyReceiptsView({ db, user }) {
 }
 
 /* ═══════════════ সকল স্টুডেন্ট — তালিকা, WhatsApp, বিস্তারিত; এডিট কেবল পরিচালক ═══════════════ */
-function AllStudentsView({ db, setDb, user, refresh }) {
+/* দেশ ও কান্ট্রি কোড — দেশ সিলেক্ট ও WhatsApp নম্বরের কোড বাছাইয়ে ব্যবহৃত */
+const COUNTRIES = [
+  { bn: "বাংলাদেশ", en: "Bangladesh", dial: "+880", flag: "🇧🇩" },
+  { bn: "ভারত", en: "India", dial: "+91", flag: "🇮🇳" },
+  { bn: "পাকিস্তান", en: "Pakistan", dial: "+92", flag: "🇵🇰" },
+  { bn: "যুক্তরাজ্য", en: "United Kingdom", dial: "+44", flag: "🇬🇧" },
+  { bn: "যুক্তরাষ্ট্র", en: "United States", dial: "+1", flag: "🇺🇸" },
+  { bn: "কানাডা", en: "Canada", dial: "+1", flag: "🇨🇦" },
+  { bn: "অস্ট্রেলিয়া", en: "Australia", dial: "+61", flag: "🇦🇺" },
+  { bn: "সংযুক্ত আরব আমিরাত", en: "UAE", dial: "+971", flag: "🇦🇪" },
+  { bn: "সৌদি আরব", en: "Saudi Arabia", dial: "+966", flag: "🇸🇦" },
+  { bn: "কাতার", en: "Qatar", dial: "+974", flag: "🇶🇦" },
+  { bn: "কুয়েত", en: "Kuwait", dial: "+965", flag: "🇰🇼" },
+  { bn: "বাহরাইন", en: "Bahrain", dial: "+973", flag: "🇧🇭" },
+  { bn: "ওমান", en: "Oman", dial: "+968", flag: "🇴🇲" },
+  { bn: "মালয়েশিয়া", en: "Malaysia", dial: "+60", flag: "🇲🇾" },
+  { bn: "সিঙ্গাপুর", en: "Singapore", dial: "+65", flag: "🇸🇬" },
+  { bn: "ইন্দোনেশিয়া", en: "Indonesia", dial: "+62", flag: "🇮🇩" },
+  { bn: "তুরস্ক", en: "Turkey", dial: "+90", flag: "🇹🇷" },
+  { bn: "মিশর", en: "Egypt", dial: "+20", flag: "🇪🇬" },
+  { bn: "দক্ষিণ আফ্রিকা", en: "South Africa", dial: "+27", flag: "🇿🇦" },
+  { bn: "জার্মানি", en: "Germany", dial: "+49", flag: "🇩🇪" },
+  { bn: "ফ্রান্স", en: "France", dial: "+33", flag: "🇫🇷" },
+  { bn: "ইতালি", en: "Italy", dial: "+39", flag: "🇮🇹" },
+  { bn: "স্পেন", en: "Spain", dial: "+34", flag: "🇪🇸" },
+  { bn: "নেদারল্যান্ডস", en: "Netherlands", dial: "+31", flag: "🇳🇱" },
+  { bn: "সুইডেন", en: "Sweden", dial: "+46", flag: "🇸🇪" },
+  { bn: "নরওয়ে", en: "Norway", dial: "+47", flag: "🇳🇴" },
+  { bn: "ডেনমার্ক", en: "Denmark", dial: "+45", flag: "🇩🇰" },
+  { bn: "সুইজারল্যান্ড", en: "Switzerland", dial: "+41", flag: "🇨🇭" },
+  { bn: "বেলজিয়াম", en: "Belgium", dial: "+32", flag: "🇧🇪" },
+  { bn: "আয়ারল্যান্ড", en: "Ireland", dial: "+353", flag: "🇮🇪" },
+  { bn: "নিউজিল্যান্ড", en: "New Zealand", dial: "+64", flag: "🇳🇿" },
+  { bn: "জাপান", en: "Japan", dial: "+81", flag: "🇯🇵" },
+  { bn: "দক্ষিণ কোরিয়া", en: "South Korea", dial: "+82", flag: "🇰🇷" },
+  { bn: "চীন", en: "China", dial: "+86", flag: "🇨🇳" },
+  { bn: "নাইজেরিয়া", en: "Nigeria", dial: "+234", flag: "🇳🇬" },
+  { bn: "কেনিয়া", en: "Kenya", dial: "+254", flag: "🇰🇪" },
+  { bn: "মরক্কো", en: "Morocco", dial: "+212", flag: "🇲🇦" },
+  { bn: "জর্ডান", en: "Jordan", dial: "+962", flag: "🇯🇴" },
+  { bn: "লেবানন", en: "Lebanon", dial: "+961", flag: "🇱🇧" },
+  { bn: "ইরাক", en: "Iraq", dial: "+964", flag: "🇮🇶" },
+  { bn: "শ্রীলঙ্কা", en: "Sri Lanka", dial: "+94", flag: "🇱🇰" },
+  { bn: "নেপাল", en: "Nepal", dial: "+977", flag: "🇳🇵" },
+  { bn: "মালদ্বীপ", en: "Maldives", dial: "+960", flag: "🇲🇻" },
+  { bn: "আফগানিস্তান", en: "Afghanistan", dial: "+93", flag: "🇦🇫" },
+  { bn: "থাইল্যান্ড", en: "Thailand", dial: "+66", flag: "🇹🇭" },
+];
+// স্টোর করা পূর্ণ নম্বর → {কোড, বাকি অংশ} এবং উল্টোটা (কোনো ডেটা হারায় না — lossless)
+const DIAL_CODES = [...new Set(COUNTRIES.map((c) => c.dial.replace(/\D/g, "")))].sort(
+  (a, b) => b.length - a.length,
+);
+const splitPhone = (full) => {
+  const d = String(full || "").replace(/\D/g, "");
+  if (!d) return { dial: "+880", local: "" };
+  for (const code of DIAL_CODES)
+    if (d.startsWith(code)) return { dial: "+" + code, local: d.slice(code.length) };
+  return { dial: "", local: d };
+};
+const joinPhone = (dial, local) =>
+  String(dial || "").replace(/\D/g, "") + String(local || "").replace(/\D/g, "");
+
+function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   const [detail, setDetail] = useState(null);
   const [edit, setEdit] = useState(null); // {id?} — null=বন্ধ, {}=নতুন
   const [students, setStudents] = useState(
@@ -8720,13 +8782,25 @@ function AllStudentsView({ db, setDb, user, refresh }) {
         name_bn: edit.name,
         role: "student",
         country: edit.country,
-        phone: edit.phone,
+        phone: joinPhone(edit.dial, edit.phone),
         email: edit.email,
         guardian: edit.guardian,
         monthly_fee: +edit.fee || 4500,
         ...(edit.pass ? { password: edit.pass } : {}),
       };
-      await api.saveUser(payload, edit.id || undefined);
+      const saved = await api.saveUser(payload, edit.id || undefined);
+      // নতুন স্টুডেন্ট হলে নির্বাচিত কোর্সে যুক্ত করি (backend-এ)
+      if (!edit.id && edit.courseId && saved?.id) {
+        const c = (courses || []).find(
+          (x) => String(x.id) === String(edit.courseId),
+        );
+        try {
+          await api.saveCourse(
+            { students: [...((c && c.studentIds) || []), saved.id] },
+            edit.courseId,
+          );
+        } catch {}
+      }
       await loadStudents(); // ব্যাকএন্ড থেকে নতুন তালিকা
       setEdit(null);
     } catch {
@@ -8737,7 +8811,7 @@ function AllStudentsView({ db, setDb, user, refresh }) {
           Object.assign(u, {
             name: edit.name,
             country: edit.country,
-            phone: edit.phone,
+            phone: joinPhone(edit.dial, edit.phone),
             email: edit.email,
             guardian: edit.guardian,
             fee: +edit.fee,
@@ -8756,7 +8830,7 @@ function AllStudentsView({ db, setDb, user, refresh }) {
           fee: +edit.fee || 4500,
           guardian: edit.guardian,
           country: edit.country,
-          phone: edit.phone,
+          phone: joinPhone(edit.dial, edit.phone),
           email: edit.email,
         });
         COURSES.find((c) => c.id === edit.courseId)?.studentIds.push(id);
@@ -8913,13 +8987,14 @@ function AllStudentsView({ db, setDb, user, refresh }) {
               setEdit({
                 name: "",
                 country: "",
+                dial: "+880",
                 phone: "",
                 email: "",
                 guardian: "",
                 fee: 4500,
                 user: "",
                 pass: genPass(),
-                courseId: COURSES[0]?.id || "",
+                courseId: courses[0]?.id || "",
               })
             }
           >
@@ -8999,19 +9074,21 @@ function AllStudentsView({ db, setDb, user, refresh }) {
                   <Btn
                     sm
                     kind="soft"
-                    onClick={() =>
+                    onClick={() => {
+                      const p = splitPhone(s.phone);
                       setEdit({
                         id: s.id,
                         name: s.name,
                         country: s.country || "",
-                        phone: s.phone || "",
+                        dial: p.dial,
+                        phone: p.local,
                         email: s.email || "",
                         guardian: s.guardian || "",
                         fee: s.fee,
                         user: s.user,
                         pass: s.pass,
-                      })
-                    }
+                      });
+                    }}
                   >
                     ✏️
                   </Btn>
@@ -9055,20 +9132,50 @@ function AllStudentsView({ db, setDb, user, refresh }) {
             </div>
             <div>
               <label style={S.label}>দেশ</label>
-              <input
+              <select
                 style={S.input}
-                value={edit.country}
+                value={edit.country || ""}
                 onChange={(e) => setEdit({ ...edit, country: e.target.value })}
-              />
+              >
+                <option value="">— দেশ নির্বাচন করুন —</option>
+                {edit.country &&
+                  !COUNTRIES.some((c) => c.bn === edit.country) && (
+                    <option value={edit.country}>{edit.country}</option>
+                  )}
+                {COUNTRIES.map((c) => (
+                  <option key={c.en} value={c.bn}>
+                    {c.flag} {c.bn}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
-              <label style={S.label}>WhatsApp নম্বর (কান্ট্রি কোডসহ)</label>
-              <input
-                style={S.input}
-                value={edit.phone}
-                onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
-                placeholder="8801XXXXXXXXX"
-              />
+              <label style={S.label}>WhatsApp নম্বর</label>
+              <div style={{ display: "flex", gap: 6 }}>
+                <select
+                  style={{
+                    ...S.input,
+                    width: 108,
+                    flexShrink: 0,
+                    padding: "10px 4px",
+                  }}
+                  value={edit.dial || ""}
+                  onChange={(e) => setEdit({ ...edit, dial: e.target.value })}
+                >
+                  <option value="">কোড নেই</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.en + c.dial} value={c.dial}>
+                      {c.flag} {c.dial}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  style={{ ...S.input, flex: 1 }}
+                  value={edit.phone}
+                  onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
+                  placeholder="নম্বর (কোড ছাড়া)"
+                />
+              </div>
             </div>
             <div>
               <label style={S.label}>ইমেইল</label>
@@ -9118,10 +9225,11 @@ function AllStudentsView({ db, setDb, user, refresh }) {
               <label style={S.label}>কোর্স</label>
               <select
                 style={S.input}
-                value={edit.courseId}
+                value={edit.courseId || ""}
                 onChange={(e) => setEdit({ ...edit, courseId: e.target.value })}
               >
-                {COURSES.map((c) => (
+                <option value="">— কোর্স নির্বাচন করুন —</option>
+                {(courses || []).map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
