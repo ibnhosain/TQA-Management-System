@@ -9735,7 +9735,7 @@ function CourseManagerView({ db, setDb, refresh }) {
       if (found && edit) {
         setEdit((prev) => {
           const cur = prev.books || [];
-          if (cur.includes(found.id) || cur.length >= 6) return prev;
+          if (cur.includes(found.id)) return prev;
           return { ...prev, books: [...cur, found.id] };
         });
       }
@@ -9910,8 +9910,7 @@ function CourseManagerView({ db, setDb, refresh }) {
               }}
             >
               <label style={{ ...S.label, marginBottom: 0 }}>
-                📚 কোর্সের বই (সর্বোচ্চ ৬টি · {bn((edit.books || []).length)}টি
-                নির্বাচিত)
+                📚 কোর্সের বই ({bn((edit.books || []).length)}টি নির্বাচিত)
               </label>
               {!bookForm && (
                 <Btn
@@ -10034,7 +10033,7 @@ function CourseManagerView({ db, setDb, refresh }) {
               >
                 {academicBooks.map((b) => {
                   const on = (edit.books || []).includes(b.id);
-                  const full = (edit.books || []).length >= 6 && !on;
+                  const full = false; // কোনো সীমা নেই — যত খুশি বই যোগ করা যাবে
                   return (
                     <label
                       key={b.id}
@@ -11090,8 +11089,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
             (form.courseIds || []).map((cid) => {
               const c = allCourses.find((x) => String(x.id) === String(cid));
               const existing = c?.books || [];
-              if (existing.includes(newBook.id) || existing.length >= 6)
-                return Promise.resolve();
+              if (existing.includes(newBook.id)) return Promise.resolve();
               return api.saveCourse({ books: [...existing, newBook.id] }, cid);
             }),
           );
@@ -11424,7 +11422,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
               >
                 {allCourses.map((c) => {
                   const sel = (form.courseIds || []).includes(c.id);
-                  const full = (c.books || []).length >= 6 && !sel;
+                  const full = false; // কোনো সীমা নেই — যত খুশি বই যোগ করা যাবে
                   return (
                     <label
                       key={c.id}

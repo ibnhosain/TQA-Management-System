@@ -45,7 +45,7 @@ class Course(models.Model):
                                 limit_choices_to={"role": "teacher"}, related_name="courses_taught")
     students = models.ManyToManyField(User, blank=True, related_name="courses_enrolled",
                                       limit_choices_to={"role": "student"})
-    books = models.ManyToManyField(AcademicBook, blank=True)  # সর্বোচ্চ ৬টি — serializer-এ যাচাই
+    books = models.ManyToManyField(AcademicBook, blank=True)  # সংখ্যায় কোনো সীমা নেই
     color = models.CharField(max_length=9, default="#1a5c3a")
     is_active = models.BooleanField(default=True)
 

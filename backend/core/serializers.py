@@ -62,11 +62,7 @@ class CourseSerializer(serializers.ModelSerializer):
         model = Course
         fields = ["id", "name", "teacher", "teacher_name", "students", "books",
                   "color", "is_active", "student_count"]
-
-    def validate_books(self, books):
-        if len(books) > 6:
-            raise serializers.ValidationError("সর্বোচ্চ ৬টি বই নির্বাচন করা যাবে।")
-        return books
+    # কোর্সে বই সংখ্যায় কোনো সীমা নেই — যত খুশি যোগ করা যাবে
 
 
 class SyllabusItemSerializer(serializers.ModelSerializer):
