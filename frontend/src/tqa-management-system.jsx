@@ -9217,7 +9217,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
     teachers.find((t) => String(t.id) === String(id))?.name || "";
 
   const waHi = (s) =>
-    `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম ${s.guardian || "অভিভাবক"}, তারবিয়াতুল কুরআন একাডেমির পক্ষ থেকে ${s.name}-এর বিষয়ে যোগাযোগ করছি।`;
+    `Assalamu Alaikum wa Rahmatullah. Respected ${s.guardian || "Guardian"}, we are reaching out to you from Tarbiyatul Quran Academy regarding ${s.name}. JazakAllahu Khairan fid-Darayn.`;
 
   const saveEdit = async () => {
     if (!edit.name || !edit.user) return notice("নাম ও আইডি দিন।");
