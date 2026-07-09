@@ -12285,7 +12285,8 @@ export default function App() {
     >
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Amiri:wght@400;700&display=swap');
         *{box-sizing:border-box} button:hover{filter:brightness(1.06)} ::selection{background:${C.goldL}}
-        @media(max-width:900px){.tqa-side{position:fixed;left:0;top:0;bottom:0;z-index:80;transform:translateX(${menu ? "0" : "-105%"});transition:transform .25s;overflow-y:auto}}`}</style>
+        @media(max-width:900px){.tqa-side{position:fixed;left:0;top:0;bottom:0;z-index:80;transform:translateX(${menu ? "0" : "-105%"});transition:transform .25s;overflow-y:auto}}
+        @media(min-width:901px){.tqa-side{position:sticky;top:57px;height:calc(100vh - 57px)}}`}</style>
 
       {/* টপবার */}
       <div
