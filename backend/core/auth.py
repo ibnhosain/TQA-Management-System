@@ -13,13 +13,18 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 class FlexTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         ident = (attrs.get(self.username_field) or "").strip()
+        pwd = attrs.get("password") or ""
         if ident:
             from .models import User
-            user = User.objects.filter(
+            candidates = list(User.objects.filter(
                 Q(username__iexact=ident) | Q(email__iexact=ident) | Q(phone=ident)
-            ).first()
-            if user:
-                attrs[self.username_field] = user.username
+            ))
+            # একই আইডি/ইমেইল/নম্বর একাধিক অ্যাকাউন্টে থাকলেও —
+            # যার পাসওয়ার্ড মেলে তাকেই বেছে নিই (নইলে ভুল অ্যাকাউন্ট বেছে fail করত)
+            chosen = next((u for u in candidates if u.check_password(pwd)), None) \
+                or (candidates[0] if candidates else None)
+            if chosen:
+                attrs[self.username_field] = chosen.username
         return super().validate(attrs)
 
 
