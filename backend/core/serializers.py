@@ -20,21 +20,23 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserAdminSerializer(UserSerializer):
-    """কেবল পরিচালকের জন্য — পাসওয়ার্ড সেট/রিসেটসহ (কিছুই আড়াল নয়)"""
+    """কেবল পরিচালকের জন্য — পাসওয়ার্ড সেট/রিসেট + দেখা-যায় কপি (কিছুই আড়াল নয়)"""
     password = serializers.CharField(write_only=True, required=False)
+    plain_password = serializers.CharField(read_only=True)  # পরিচালক দেখতে পারবেন
     due_months = serializers.SerializerMethodField()
 
     class Meta(UserSerializer.Meta):
-        fields = UserSerializer.Meta.fields + ["password", "due_months"]
+        fields = UserSerializer.Meta.fields + ["password", "plain_password", "due_months"]
 
     def get_due_months(self, obj):
         return list(obj.due_months.values_list("month_label", flat=True))
 
     def create(self, validated):
         from .utils import make_password_str
-        pwd = validated.pop("password", None)
+        pwd = validated.pop("password", None) or make_password_str(8)
         user = User(**validated)
-        user.set_password(pwd or make_password_str(8))
+        user.set_password(pwd)
+        user.plain_password = pwd  # পরিচালকের দেখার জন্য দেখা-যায় কপি
         user.save()
         return user
 
@@ -44,6 +46,7 @@ class UserAdminSerializer(UserSerializer):
             setattr(instance, k, v)
         if pwd:
             instance.set_password(pwd)
+            instance.plain_password = pwd  # নতুন পাসওয়ার্ড → দেখা-যায় কপিও আপডেট
         instance.save()
         return instance
 

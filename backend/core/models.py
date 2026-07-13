@@ -25,6 +25,8 @@ class User(AbstractUser):
     monthly_salary = models.PositiveIntegerField(default=0)   # টিচার হলে
     # স্টুডেন্ট সপ্তাহে কোন কোন বার পড়বে — [0..6] JS getDay() ক্রম (০=রবিবার); ফি ও রুটিনে ব্যবহৃত
     class_days = models.JSONField(default=list, blank=True)
+    # পরিচালকের জন্য পাসওয়ার্ডের দেখা-যায় কপি (কেবল director সিরিয়ালাইজারে ফেরত যায়)
+    plain_password = models.CharField(max_length=128, blank=True, default="")
     can_fix_cross = models.BooleanField(default=False)  # পরিচালকের দেওয়া লাল-ক্রস ঠিক করার অনুমতি
 
     def __str__(self):

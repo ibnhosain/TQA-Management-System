@@ -487,6 +487,7 @@ class AdmissionViewSet(viewsets.ModelViewSet):
             username=username, password=pwd, role="student",
             name_bn=f"{a.name} ({a.country})" if a.country else a.name,
             guardian=a.guardian, country=a.country, phone=a.contact,
+            plain_password=pwd,  # পরিচালকের দেখার জন্য দেখা-যায় কপি
             monthly_fee=request.data.get("fee", 4500))
         course = Course.objects.filter(name=a.course_name).first()
         if course:

@@ -6503,7 +6503,7 @@ function ManageView({ db, setDb, refresh }) {
           name: u.name || u.name_bn,
           sub: u.sub || u.sub_title || "",
           user: u.username,
-          pass: u.password || "••••",
+          pass: u.plain_password || u.password || "••••",
           fee: u.monthly_fee,
           salary: u.monthly_salary,
           guardian: u.guardian,
@@ -9177,7 +9177,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           name: s.name || s.name_bn,
           sub: s.sub || s.sub_title || "",
           user: s.username,
-          pass: s.password || "••••",
+          pass: s.plain_password || s.password || "••••",
           fee: s.monthly_fee,
           guardian: s.guardian,
           country: s.country,
@@ -9234,7 +9234,8 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         guardian: edit.guardian,
         monthly_fee: +edit.fee || 4500,
         class_days: edit.days || [],
-        ...(edit.pass ? { password: edit.pass } : {}),
+        // "••••" placeholder পাঠাব না (নইলে পাসওয়ার্ড নষ্ট হতো); আসল/নতুন হলে পাঠাই
+        ...(edit.pass && edit.pass !== "••••" ? { password: edit.pass } : {}),
       };
       const saved = await api.saveUser(payload, edit.id || undefined);
       // নতুন স্টুডেন্ট হলে নির্বাচিত কোর্সে যুক্ত করি (backend-এ)
