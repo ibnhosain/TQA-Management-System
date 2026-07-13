@@ -8327,8 +8327,16 @@ function RoutineView({ db, setDb, courses, user }) {
         setF(blankR());
         notice(editId ? "✔ রুটিন আপডেট হয়েছে" : "✔ স্থায়ী রুটিন তৈরি হয়েছে");
         return;
-      } catch {
-        /* ব্যাকএন্ড ব্যর্থ → নিচের mock এ পড়ে */
+      } catch (e) {
+        // ব্যাকএন্ড উঠছে কিন্তু সেভ ব্যর্থ = validation/ডেটা সমস্যা —
+        // mock এ ফেলি না (নইলে রুটিন দেখা যায় কিন্তু রিফ্রেশে "উধাও" হয় ও পোর্টালে আসে না)
+        const detail = e?.data
+          ? Object.entries(e.data)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join(" · ")
+          : e?.message || "যাচাই করুন";
+        notice("রুটিন সংরক্ষণ ব্যর্থ — " + detail);
+        return;
       }
     }
     if (editId) {

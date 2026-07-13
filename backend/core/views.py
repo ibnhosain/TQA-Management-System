@@ -183,6 +183,23 @@ class RoutineViewSet(viewsets.ModelViewSet):
             return qs.filter(students=u)
         return qs
 
+    def _generate_now(self):
+        # রুটিন যোগ/এডিটের সাথে সাথেই আগামী ৭ দিনের ক্লাস তৈরি করি (দৈনিক ক্রনের অপেক্ষা না করে)
+        # → উস্তাদ ও শিক্ষার্থীর পোর্টালে তখনই দেখা যায় (idempotent — ডুপ্লিকেট হয় না)
+        try:
+            from .tasks import generate_routine_sessions
+            generate_routine_sessions()
+        except Exception:
+            pass
+
+    def perform_create(self, serializer):
+        serializer.save()
+        self._generate_now()
+
+    def perform_update(self, serializer):
+        serializer.save()
+        self._generate_now()
+
 
 class ClassSessionViewSet(viewsets.ModelViewSet):
     serializer_class = ClassSessionSerializer
