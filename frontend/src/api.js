@@ -5,6 +5,13 @@
  */
 const BASE = import.meta.env?.VITE_API_URL || "http://localhost:8000/api";
 
+/* Render ফ্রি ব্যাকএন্ড ~১৫ মিনিট নিষ্ক্রিয় থাকলে ঘুমায় → পরের লোড ধীর।
+   অ্যাপ খোলার সাথে সাথেই জাগানো শুরু + খোলা থাকলে প্রতি ১০ মিনিটে জাগিয়ে রাখা।
+   (সম্পূর্ণ সমাধানে বাইরের cron-job.org/UptimeRobot পিংও রাখুন — README দেখুন) */
+const wakeBackend = () => fetch(`${BASE}/ping/`).catch(() => {});
+wakeBackend();
+setInterval(wakeBackend, 10 * 60 * 1000);
+
 /* নিরাপত্তা: টোকেন sessionStorage-এ রাখি (localStorage নয়)।
    ফলে ব্রাউজার/ট্যাব বন্ধ করলেই সেশন মুছে যায় — পরেরবার পোর্টাল খুললে
    আবার পাসওয়ার্ড দিতে হবে। (localStorage হলে টোকেন স্থায়ী থেকে যেত ও

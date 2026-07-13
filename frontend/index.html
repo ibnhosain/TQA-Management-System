@@ -6,6 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Search engine কে index করতে নিষেধ — এটা internal app -->
     <meta name="robots" content="noindex, nofollow" />
+    <!-- ফন্ট একবারই head-এ লোড হয় (আগে body-র <style>@import> এ ছিল → reflow/flash হতো) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Amiri:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
     <title>TQA ম্যানেজমেন্ট সিস্টেম</title>
   </head>
   <body>

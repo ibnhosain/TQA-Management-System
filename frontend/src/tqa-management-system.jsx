@@ -12830,7 +12830,7 @@ export default function App() {
           fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
         }}
       >
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');`}</style>
+        {/* ফন্ট এখন index.html head-এ লোড হয় */}
         {overlays}
         <Login
           onLogin={(u) => {
@@ -12912,8 +12912,8 @@ export default function App() {
         color: C.text,
       }}
     >
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Amiri:wght@400;700&display=swap');
-        *{box-sizing:border-box} button:hover{filter:brightness(1.06)} ::selection{background:${C.goldL}}
+      <style>{`
+        *{box-sizing:border-box} button:hover{filter:brightness(1.06)} ::selection{background:rgba(201,150,42,.22)}
         @media(max-width:900px){.tqa-side{position:fixed;left:0;top:0;bottom:0;z-index:80;transform:translateX(${menu ? "0" : "-105%"});transition:transform .25s;overflow-y:auto}}
         @media(min-width:901px){.tqa-side{position:sticky;top:57px;height:calc(100vh - 57px)}}`}</style>
 
