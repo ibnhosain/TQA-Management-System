@@ -1998,9 +1998,19 @@ function ClassesView({
   }, [autoJoinId]);
   const [demoFast, setDemoFast] = useState(true);
   const usingApi = apiClasses !== null;
-  const teacherList = teachers.length
-    ? teachers
-    : USERS.filter((u) => u.role === "teacher");
+  const teacherList = (() => {
+    const m = new Map();
+    teachers.forEach((t) => t.id != null && m.set(String(t.id), t));
+    (courses || []).forEach((c) => {
+      if (c.teacherId != null && !m.has(String(c.teacherId)))
+        m.set(String(c.teacherId), {
+          id: c.teacherId,
+          name: c.teacherName || "উস্তাদ",
+          sub: "",
+        });
+    });
+    return [...m.values()];
+  })();
   const nameOf = (id) =>
     (
       teachers.find((t) => t.id === id) ||
@@ -8195,9 +8205,20 @@ function RoutineView({ db, setDb, courses, user }) {
       .catch(() => setStudents([]));
   }, [user?.id]);
   const usingApi = apiRoutines !== null;
-  const teacherList = teachers.length
-    ? teachers
-    : USERS.filter((u) => u.role === "teacher");
+  // উস্তাদ তালিকা: api.allTeachers + কোর্সের উস্তাদ (dedupe) — কোনোটা ব্যর্থ হলেও ড্রপডাউন খালি হয় না
+  const teacherList = (() => {
+    const m = new Map();
+    teachers.forEach((t) => t.id != null && m.set(String(t.id), t));
+    (courses || []).forEach((c) => {
+      if (c.teacherId != null && !m.has(String(c.teacherId)))
+        m.set(String(c.teacherId), {
+          id: c.teacherId,
+          name: c.teacherName || "উস্তাদ",
+          sub: "",
+        });
+    });
+    return [...m.values()];
+  })();
   // মডাল খুললে/উস্তাদ তালিকা এলে teacherId খালি থাকলে আসল উস্তাদ বসিয়ে দিই
   // (নইলে ড্রপডাউনে দেখা গেলেও state খালি থেকে "teacher আবশ্যক" error হতো)
   useEffect(() => {
@@ -12509,6 +12530,7 @@ export default function App() {
           id: c.id,
           name: c.name,
           teacherId: c.teacher,
+          teacherName: c.teacher_name,
           color: c.color,
           books: c.books || [],
           studentIds: c.students || [],
