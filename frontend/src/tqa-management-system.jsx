@@ -2017,10 +2017,11 @@ function ClassesView({
       students.find((s) => s.id === id) ||
       userById(id)
     ).name || "—";
-  // API মোডে ব্যাকএন্ড আগেই রোল অনুযায়ী ফিল্টার করে দেয়; mock মোডে itemVisible দিয়ে ফিল্টার
-  const mine = (
-    usingApi ? apiClasses : db.classes.filter((k) => itemVisible(k, user))
-  ).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  // ব্যাকএন্ড আগেই রোল অনুযায়ী ফিল্টার করে দেয়; লোড হওয়ার আগে খালি (লোডার দেখায়)
+  const classesLoading = apiClasses === null;
+  const mine = (apiClasses || []).sort((a, b) =>
+    (a.date + a.time).localeCompare(b.date + b.time),
+  );
   const today = mine.filter(
     (k) => k.date === todayISO() && k.status !== "done",
   );
@@ -2301,6 +2302,7 @@ function ClassesView({
   };
   return (
     <>
+      {classesLoading && <Loader text="ক্লাস লোড হচ্ছে" />}
       <Section
         title="আজকের ক্লাস"
         sub="সময় হলে এক ক্লিকে জুম মিটিং খুলে যাবে — ৪৫ মিনিটের কম থাকলে হাজিরা গণ্য হবে না"
@@ -2330,7 +2332,7 @@ function ClassesView({
         }
       >
         <div style={{ display: "grid", gap: 10 }}>
-          {today.length === 0 && (
+          {!classesLoading && today.length === 0 && (
             <div style={{ ...S.card, textAlign: "center", color: C.muted }}>
               আজ কোনো ক্লাস নেই।
             </div>
