@@ -8279,105 +8279,38 @@ function RoutineView({ db, setDb, courses, user }) {
       return notice("উস্তাদ/উস্তাদা বাছাই করুন — ড্রপডাউন থেকে একজন নির্বাচন করুন।");
     const c = courseById(courses, f.courseId);
     const students = f.studentIds.length ? f.studentIds : c.studentIds || []; // কাউকে না বাছলে কোর্সের সবাই
-    if (usingApi) {
-      // আসল persist — সার্ভারে রুটিন, দৈনিক ক্রন থেকে ক্লাস তৈরি হবে
-      try {
-        if (editId)
-          await api.updateRoutine(editId, routinePayload(f, students));
-        else await api.createRoutine(routinePayload(f, students));
-        await loadRoutines();
-        setShow(false);
-        setEditId(null);
-        setF(blankR());
-        notice(editId ? "✔ রুটিন আপডেট হয়েছে" : "✔ স্থায়ী রুটিন তৈরি হয়েছে");
-        return;
-      } catch (e) {
-        // ব্যাকএন্ড উঠছে কিন্তু সেভ ব্যর্থ = validation/ডেটা সমস্যা —
-        // mock এ ফেলি না (নইলে রুটিন দেখা যায় কিন্তু রিফ্রেশে "উধাও" হয় ও পোর্টালে আসে না)
-        const detail = e?.data
-          ? Object.entries(e.data)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join(" · ")
-          : e?.message || "যাচাই করুন";
-        notice("রুটিন সংরক্ষণ ব্যর্থ — " + detail);
-        return;
-      }
+    // সবসময় সরাসরি API-তে সেভ (backend ধীরে লোড হলেও) — লোকালে রাখলে "আসে-যায়" হতো ও পোর্টালে যেত না
+    try {
+      if (editId) await api.updateRoutine(editId, routinePayload(f, students));
+      else await api.createRoutine(routinePayload(f, students));
+      await loadRoutines();
+      setShow(false);
+      setEditId(null);
+      setF(blankR());
+      notice(
+        editId
+          ? "✔ রুটিন আপডেট হয়েছে"
+          : "✔ স্থায়ী রুটিন তৈরি হয়েছে — ক্লাস পোর্টালে যোগ হয়েছে",
+      );
+    } catch (e) {
+      const detail = e?.data
+        ? Object.entries(e.data)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(" · ")
+        : e?.message || "যাচাই করুন";
+      notice("রুটিন সংরক্ষণ ব্যর্থ — " + detail);
     }
-    if (editId) {
-      // ✏️ এডিট — আসন্ন ক্লাস নতুন বার-সময়ে আবার তৈরি, পোর্টাল অটো আপডেট
-      const newClasses = genClasses(editId, f, students);
-      setDb((d) => ({
-        ...d,
-        routine: d.routine.map((r) =>
-          r.id === editId
-            ? { ...r, ...f, dur: +f.dur, studentIds: students }
-            : r,
-        ),
-        classes: [
-          ...d.classes.filter(
-            (k) => !(k.routineId === editId && k.date >= todayISO()),
-          ),
-          ...newClasses,
-        ],
-        notifications: [
-          {
-            id: uid(),
-            for: [f.teacherId, ...students, "admin1", "dir1"],
-            text: `✏️ রুটিন আপডেট হয়েছে: ${c.name} — ${f.days.map((i) => DAY_BN[i]).join(", ")} ${f.time}। আপনার পোর্টালের ক্লাসগুলোও আপডেট হয়ে গেছে।`,
-            date: todayISO(),
-            read: false,
-          },
-          ...d.notifications,
-        ],
-      }));
-    } else {
-      const rid = uid();
-      const newClasses = genClasses(rid, f, students);
-      setDb((d) => ({
-        ...d,
-        routine: [
-          ...(d.routine || []),
-          { id: rid, ...f, dur: +f.dur, studentIds: students },
-        ],
-        classes: [...d.classes, ...newClasses], // স্টুডেন্ট ও উস্তাদের নাম অনুযায়ী পোর্টালে অটো যোগ
-        notifications: [
-          {
-            id: uid(),
-            for: [f.teacherId, ...students, "admin1", "dir1"],
-            text: `📅 স্থায়ী সাপ্তাহিক রুটিন তৈরি হয়েছে: ${c.name} — ${f.days.map((i) => DAY_BN[i]).join(", ")} ${f.time} (উস্তাদ: ${userById(f.teacherId).name})। শিক্ষার্থী: ${students.map((s) => userById(s).name).join(", ")}। ক্লাসগুলো স্বয়ংক্রিয়ভাবে আপনার পোর্টালে যোগ হয়ে গেছে।`,
-            date: todayISO(),
-            read: false,
-          },
-          ...d.notifications,
-        ],
-      }));
-    }
-    setShow(false);
-    setEditId(null);
-    setF(blankR());
   };
   const del = async (id) => {
-    if (usingApi) {
-      try {
-        await api.deleteRoutine(id);
-        await loadRoutines();
-        return;
-      } catch {
-        /* fall through */
-      }
+    try {
+      await api.deleteRoutine(id);
+      await loadRoutines();
+    } catch (e) {
+      notice("রুটিন মুছতে ব্যর্থ — " + (e?.message || "সার্ভার যাচাই করুন"));
     }
-    setDb((d) => ({
-      ...d,
-      routine: d.routine.filter((r) => r.id !== id),
-      classes: d.classes.filter(
-        (k) => !(k.routineId === id && k.date >= todayISO()),
-      ),
-    }));
   };
-  // API মোডে ব্যাকএন্ড আগেই রোল অনুযায়ী ফিল্টার করে; mock মোডে itemVisible
-  const visible = usingApi
-    ? apiRoutines
-    : (db.routine || []).filter((r) => itemVisible(r, user));
+  const routinesLoading = apiRoutines === null; // এখনো লোড হচ্ছে
+  const visible = apiRoutines || [];
   return (
     <Section
       title="ক্লাস রুটিন (স্থায়ী সাপ্তাহিক)"
@@ -8402,6 +8335,7 @@ function RoutineView({ db, setDb, courses, user }) {
       }
     >
       <TeacherWiseBoard db={db} setDb={setDb} user={user} />
+      {routinesLoading && <Loader text="রুটিন লোড হচ্ছে" />}
       <div style={{ display: "grid", gap: 10 }}>
         {WEEK_ORDER.map((wd) => {
           const items = visible.filter((r) => r.days.includes(wd));
