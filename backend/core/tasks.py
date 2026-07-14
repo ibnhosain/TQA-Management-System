@@ -124,22 +124,33 @@ def generate_monthly_dues():
 
 
 # ─────────────────── সাপ্তাহিক রুটিন → সামনের সপ্তাহের ক্লাস অটো তৈরি ───────────────────
+def generate_for_routine(r):
+    """একটি রুটিনের আগামী ৭ দিনের ক্লাস নিশ্চিত করা (idempotent) — রুটিন যোগ করলেই ডাকা হয়"""
+    from .models import ClassSession
+    if not r.teacher_id or not r.course_id:
+        return  # উস্তাদ/কোর্স ছাড়া ক্লাস তৈরি সম্ভব নয়
+    today = date.today()
+    for off in range(7):
+        d = today + timedelta(days=off)
+        if d.weekday() not in _js_to_py(r.days or []):
+            continue
+        if not ClassSession.objects.filter(routine=r, date=d).exists():
+            s = ClassSession.objects.create(
+                routine=r, course=r.course, teacher=r.teacher, date=d, time=r.time,
+                duration_min=r.duration_min, zoom_link=r.zoom_link, kind="regular")
+            s.students.set(r.students.all())
+
+
 @shared_task
 def generate_routine_sessions():
-    """প্রতিদিন রাতে: প্রতিটি সক্রিয় রুটিনের আগামী ৭ দিনের ক্লাস নিশ্চিত করা"""
-    from .models import Routine, ClassSession
-    today = date.today()
+    """প্রতিদিন রাতে: প্রতিটি সক্রিয় রুটিনের আগামী ৭ দিনের ক্লাস নিশ্চিত করা।
+    একটি রুটিনে সমস্যা হলেও বাকিগুলো যাতে থেমে না যায় — প্রতিটি আলাদা try তে।"""
+    from .models import Routine
     for r in Routine.objects.filter(is_active=True):
-        for off in range(7):
-            d = today + timedelta(days=off)
-            if d.weekday() not in _js_to_py(r.days):
-                continue
-            exists = ClassSession.objects.filter(routine=r, date=d).exists()
-            if not exists:
-                s = ClassSession.objects.create(
-                    routine=r, course=r.course, teacher=r.teacher, date=d, time=r.time,
-                    duration_min=r.duration_min, zoom_link=r.zoom_link, kind="regular")
-                s.students.set(r.students.all())
+        try:
+            generate_for_routine(r)
+        except Exception:
+            continue
 
 
 def _js_to_py(js_days):
