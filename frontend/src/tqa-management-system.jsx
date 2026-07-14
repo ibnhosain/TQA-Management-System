@@ -8270,6 +8270,19 @@ function RoutineView({ db, setDb, courses, user }) {
   const teacherList = teachers.length
     ? teachers
     : USERS.filter((u) => u.role === "teacher");
+  // মডাল খুললে/উস্তাদ তালিকা এলে teacherId খালি থাকলে আসল উস্তাদ বসিয়ে দিই
+  // (নইলে ড্রপডাউনে দেখা গেলেও state খালি থেকে "teacher আবশ্যক" error হতো)
+  useEffect(() => {
+    if (!show || !teacherList.length) return;
+    const valid = teacherList.some((t) => String(t.id) === String(f.teacherId));
+    if (!valid) {
+      const courseTeacher = courseById(courses, f.courseId)?.teacherId;
+      const pick = teacherList.some((t) => String(t.id) === String(courseTeacher))
+        ? courseTeacher
+        : teacherList[0]?.id;
+      if (pick) setF((prev) => ({ ...prev, teacherId: pick }));
+    }
+  }, [show, teachers]);
   const nameOf = (id) =>
     (
       teachers.find((t) => t.id === id) ||
@@ -8313,6 +8326,8 @@ function RoutineView({ db, setDb, courses, user }) {
     );
   const add = async () => {
     if (!f.days.length) return notice("সপ্তাহের অন্তত একটি দিন বাছাই করুন।");
+    if (!f.teacherId)
+      return notice("উস্তাদ/উস্তাদা বাছাই করুন — ড্রপডাউন থেকে একজন নির্বাচন করুন।");
     const c = courseById(courses, f.courseId);
     const students = f.studentIds.length ? f.studentIds : c.studentIds || []; // কাউকে না বাছলে কোর্সের সবাই
     if (usingApi) {
