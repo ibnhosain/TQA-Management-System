@@ -200,6 +200,14 @@ class RoutineViewSet(viewsets.ModelViewSet):
         routine = serializer.save()
         self._generate_now(routine)
 
+    @action(detail=False, methods=["post"], permission_classes=[IsAdminLevel])
+    def generate(self, request):
+        """সব সক্রিয় রুটিনের আগামী ৭ দিনের ক্লাস তৈরি/নিশ্চিত করা — পরিচালক/এডমিন এক ক্লিকে
+        পুরোনো রুটিনগুলোরও ক্লাস পোর্টালে আনতে পারবেন (idempotent)"""
+        from .tasks import generate_routine_sessions
+        created = generate_routine_sessions()
+        return Response({"created": created})
+
 
 class ClassSessionViewSet(viewsets.ModelViewSet):
     serializer_class = ClassSessionSerializer

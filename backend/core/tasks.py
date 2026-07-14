@@ -125,11 +125,13 @@ def generate_monthly_dues():
 
 # ─────────────────── সাপ্তাহিক রুটিন → সামনের সপ্তাহের ক্লাস অটো তৈরি ───────────────────
 def generate_for_routine(r):
-    """একটি রুটিনের আগামী ৭ দিনের ক্লাস নিশ্চিত করা (idempotent) — রুটিন যোগ করলেই ডাকা হয়"""
+    """একটি রুটিনের আগামী ৭ দিনের ক্লাস নিশ্চিত করা (idempotent) — রুটিন যোগ করলেই ডাকা হয়।
+    কতটি নতুন ক্লাস তৈরি হলো তা ফেরত দেয়।"""
     from .models import ClassSession
     if not r.teacher_id or not r.course_id:
-        return  # উস্তাদ/কোর্স ছাড়া ক্লাস তৈরি সম্ভব নয়
+        return 0  # উস্তাদ/কোর্স ছাড়া ক্লাস তৈরি সম্ভব নয়
     today = date.today()
+    created = 0
     for off in range(7):
         d = today + timedelta(days=off)
         if d.weekday() not in _js_to_py(r.days or []):
@@ -139,18 +141,22 @@ def generate_for_routine(r):
                 routine=r, course=r.course, teacher=r.teacher, date=d, time=r.time,
                 duration_min=r.duration_min, zoom_link=r.zoom_link, kind="regular")
             s.students.set(r.students.all())
+            created += 1
+    return created
 
 
 @shared_task
 def generate_routine_sessions():
-    """প্রতিদিন রাতে: প্রতিটি সক্রিয় রুটিনের আগামী ৭ দিনের ক্লাস নিশ্চিত করা।
-    একটি রুটিনে সমস্যা হলেও বাকিগুলো যাতে থেমে না যায় — প্রতিটি আলাদা try তে।"""
+    """প্রতিটি সক্রিয় রুটিনের আগামী ৭ দিনের ক্লাস নিশ্চিত করা (দৈনিক ক্রন + ম্যানুয়াল বাটন)।
+    একটি রুটিনে সমস্যা হলেও বাকিগুলো যাতে থেমে না যায় — প্রতিটি আলাদা try তে। মোট নতুন ক্লাস ফেরত।"""
     from .models import Routine
+    total = 0
     for r in Routine.objects.filter(is_active=True):
         try:
-            generate_for_routine(r)
+            total += generate_for_routine(r) or 0
         except Exception:
             continue
+    return total
 
 
 def _js_to_py(js_days):

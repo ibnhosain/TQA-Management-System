@@ -109,6 +109,7 @@ export const api = {
   createRoutine: (d) => request("/routines/", { method: "POST", body: d }),
   updateRoutine: (id, d) => request(`/routines/${id}/`, { method: "PATCH", body: d }),
   deleteRoutine: (id) => request(`/routines/${id}/`, { method: "DELETE" }),
+  generateRoutineClasses: () => request("/routines/generate/", { method: "POST" }), // সব রুটিনের ক্লাস তৈরি → পোর্টালে
 
   // কোর্স · বই · সিলেবাস · লেকচার
   courses: () => request("/courses/"),

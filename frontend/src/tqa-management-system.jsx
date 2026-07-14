@@ -8158,6 +8158,21 @@ function RoutineView({ db, setDb, courses, user }) {
   const [apiRoutines, setApiRoutines] = useState(null); // null হলে mock db.routine
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
+  const [genBusy, setGenBusy] = useState(false);
+  // এক ক্লিকে সব রুটিনের আগামী ৭ দিনের ক্লাস তৈরি → উস্তাদ/শিক্ষার্থীর পোর্টালে
+  const genClassesNow = async () => {
+    setGenBusy(true);
+    try {
+      const r = await api.generateRoutineClasses();
+      notice(
+        `✔ ${bn(r?.created || 0)}টি নতুন ক্লাস তৈরি হয়েছে — উস্তাদ ও শিক্ষার্থীর পোর্টালে (রিফ্রেশ করলে) দেখা যাবে।`,
+      );
+    } catch {
+      notice("ক্লাস তৈরি ব্যর্থ — সার্ভার সংযোগ যাচাই করুন।");
+    } finally {
+      setGenBusy(false);
+    }
+  };
   const loadRoutines = async () => {
     try {
       setApiRoutines((await api.routines()).map(adaptRoutine));
@@ -8351,7 +8366,18 @@ function RoutineView({ db, setDb, courses, user }) {
           : "আপনার স্থায়ী সাপ্তাহিক ক্লাসের সময়সূচি — তারিখ-সময় অনুযায়ী জয়েন অপশন অটো আসবে"
       }
       action={
-        canEdit && <Btn onClick={() => setShow(true)}>+ রুটিন তৈরি করুন</Btn>
+        canEdit && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Btn
+              kind="soft"
+              onClick={genClassesNow}
+              style={{ opacity: genBusy ? 0.6 : 1 }}
+            >
+              {genBusy ? "⏳ তৈরি হচ্ছে…" : "🔄 সব রুটিনের ক্লাস তৈরি করুন"}
+            </Btn>
+            <Btn onClick={() => setShow(true)}>+ রুটিন তৈরি করুন</Btn>
+          </div>
+        )
       }
     >
       <TeacherWiseBoard db={db} setDb={setDb} user={user} />
