@@ -19,11 +19,14 @@ class FlexTokenObtainPairSerializer(TokenObtainPairSerializer):
             candidates = list(User.objects.filter(
                 Q(username__iexact=ident) | Q(email__iexact=ident) | Q(phone=ident)
             ))
-            # একই আইডি/ইমেইল/নম্বর একাধিক অ্যাকাউন্টে থাকলেও —
-            # যার পাসওয়ার্ড মেলে তাকেই বেছে নিই (নইলে ভুল অ্যাকাউন্ট বেছে fail করত)
-            chosen = next((u for u in candidates if u.check_password(pwd)), None) \
-                or (candidates[0] if candidates else None)
-            if chosen:
+            # একটিমাত্র মিল (সাধারণ ক্ষেত্র) → সরাসরি সেটি; check_password এখানে চালাই না,
+            # super().validate() একবারই হ্যাশ যাচাই করবে। আগে এখানেও check_password চলত →
+            # মোট দুইবার হ্যাশ → Render ফ্রি-র দুর্বল CPU-তে লগইন দ্বিগুণ ধীর হতো।
+            if len(candidates) == 1:
+                attrs[self.username_field] = candidates[0].username
+            elif candidates:
+                # একই আইডি/ইমেইল/নম্বর একাধিক অ্যাকাউন্টে — যার পাসওয়ার্ড মেলে তাকে বেছে নিই
+                chosen = next((u for u in candidates if u.check_password(pwd)), candidates[0])
                 attrs[self.username_field] = chosen.username
         return super().validate(attrs)
 

@@ -176,7 +176,13 @@ class RoutineViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         u = self.request.user
-        qs = Routine.objects.filter(is_active=True)
+        # select_related/prefetch → course_name/teacher_name/student_names আনতে
+        # প্রতি সারিতে বাড়তি কোয়েরি (N+1) এড়ায় — তালিকা দ্রুত লোড হয়
+        qs = (
+            Routine.objects.filter(is_active=True)
+            .select_related("course", "teacher")
+            .prefetch_related("students")
+        )
         if u.role == "teacher":
             return qs.filter(teacher=u)
         if u.role == "student":
@@ -215,7 +221,11 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         u = self.request.user
-        qs = ClassSession.objects.all()
+        # select_related/prefetch → course_name/teacher_name/student_names আনতে
+        # প্রতি সারিতে বাড়তি কোয়েরি (N+1) এড়ায় — "আজকের/আসন্ন ক্লাস" দ্রুত লোড হয়
+        qs = ClassSession.objects.select_related(
+            "course", "teacher", "course__teacher"
+        ).prefetch_related("students")
         if u.role == "teacher":
             return qs.filter(Q(teacher=u) | Q(course__teacher=u)).distinct()
         if u.role == "student":
