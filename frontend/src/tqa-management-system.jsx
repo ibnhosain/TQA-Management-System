@@ -12506,13 +12506,19 @@ function Overview({ db, courses, user, goTo }) {
             position: "absolute",
             right: 18,
             top: 8,
-            opacity: 0.18,
+            opacity: 0.28,
           }}
         >
+          {/* সবুজ ব্যানারে সবুজ-ব্যাকগ্রাউন্ডের লোগো মিশে যেত বলে এখানে
+              transparent-background ভার্সন সাদা করে (CSS filter) বসানো হলো */}
           <img
-            src="/brand/logo-green.png"
+            src="/brand/logo-mark.png"
             alt=""
-            style={{ width: 64, height: 64, borderRadius: 14 }}
+            style={{
+              width: 72,
+              height: 72,
+              filter: "brightness(0) invert(1)",
+            }}
           />
         </div>
         <div
