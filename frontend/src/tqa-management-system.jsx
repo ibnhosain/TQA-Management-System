@@ -8393,9 +8393,19 @@ const DAY_BN = [
   "শুক্রবার",
   "শনিবার",
 ]; // JS getDay() ক্রম
+const DAY_EN = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+]; // শিক্ষার্থীর ইংরেজি ভিউয়ের জন্য — একই getDay() ক্রম
 const WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5]; // শনি → শুক্র
 
 function RoutineView({ db, setDb, courses, user }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const canEdit = isAdm(user);
   const [show, setShow] = useState(false);
   const blankR = () => ({
@@ -8558,11 +8568,14 @@ function RoutineView({ db, setDb, courses, user }) {
   const visible = apiRoutines || [];
   return (
     <Section
-      title="ক্লাস রুটিন (স্থায়ী সাপ্তাহিক)"
+      title={T("ক্লাস রুটিন (স্থায়ী সাপ্তাহিক)", "Class Routine (Fixed Weekly)")}
       sub={
         canEdit
           ? "কোন স্টুডেন্ট কোন উস্তাদের কাছে কোন বারে কোন সময়ে কোন কোর্সে পড়বে — সব সময়ের জন্য; এডিট কেবল এডমিনের হাতে"
-          : "আপনার স্থায়ী সাপ্তাহিক ক্লাসের সময়সূচি — তারিখ-সময় অনুযায়ী জয়েন অপশন অটো আসবে"
+          : T(
+              "আপনার স্থায়ী সাপ্তাহিক ক্লাসের সময়সূচি — তারিখ-সময় অনুযায়ী জয়েন অপশন অটো আসবে",
+              "Your fixed weekly class schedule — the join option will appear automatically at the right date and time",
+            )
       }
       action={
         canEdit && (
@@ -8580,7 +8593,9 @@ function RoutineView({ db, setDb, courses, user }) {
       }
     >
       <TeacherWiseBoard db={db} setDb={setDb} user={user} />
-      {routinesLoading && <Loader text="রুটিন লোড হচ্ছে" />}
+      {routinesLoading && (
+        <Loader text={T("রুটিন লোড হচ্ছে", "Loading routine")} />
+      )}
       <div style={{ display: "grid", gap: 10 }}>
         {WEEK_ORDER.map((wd) => {
           const items = visible.filter((r) => r.days.includes(wd));
@@ -8608,14 +8623,14 @@ function RoutineView({ db, setDb, courses, user }) {
                     color: items.length ? C.emerald : C.muted,
                   }}
                 >
-                  {DAY_BN[wd]}
+                  {T(DAY_BN[wd], DAY_EN[wd])}
                 </b>
                 <div
                   style={{ flex: 1, display: "flex", gap: 8, flexWrap: "wrap" }}
                 >
                   {items.length === 0 && (
                     <span style={{ fontSize: 12.5, color: C.muted }}>
-                      — ক্লাস নেই —
+                      {T("— ক্লাস নেই —", "— No class —")}
                     </span>
                   )}
                   {items.map((r) => {
@@ -8646,7 +8661,7 @@ function RoutineView({ db, setDb, courses, user }) {
                             {r.kind}
                           </Tag>
                         )}{" "}
-                        🕐 {r.time} · {bn(r.dur)} মি ·{" "}
+                        🕐 {r.time} · {T(`${bn(r.dur)} মি`, `${r.dur} min`)} ·{" "}
                         {r.teacherName || nameOf(r.teacherId || c.teacherId)}
                         {canEdit && studNames.length > 0 && (
                           <span style={{ color: C.muted }}>
@@ -12278,6 +12293,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
 
 /* ═══════════════ ওভারভিউ ড্যাশবোর্ড ═══════════════ */
 function Overview({ db, courses, user, goTo }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const todayClasses = db.classes.filter(
     (k) =>
       k.date === todayISO() &&
@@ -12296,7 +12312,7 @@ function Overview({ db, courses, user, goTo }) {
         ? `আসসালামু আলাইকুম, ${user.name} (এডমিন)`
         : user.role === "teacher"
           ? `আসসালামু আলাইকুম, ${user.name}`
-          : `আসসালামু আলাইকুম, ${user.name.split(" ")[0]}`;
+          : `Assalamu Alaikum, ${user.name.split(" ")[0]}`;
   return (
     <>
       <div
@@ -12329,14 +12345,17 @@ function Overview({ db, courses, user, goTo }) {
             letterSpacing: 1,
           }}
         >
-          তারবিয়াতুল কুরআন একাডেমি
+          {T("তারবিয়াতুল কুরআন একাডেমি", "Tarbiyatul Quran Academy")}
         </div>
         <div style={{ fontSize: 21, fontWeight: 800, margin: "4px 0" }}>
           {greet} 🌙
         </div>
         <div style={{ fontSize: 13, color: "#d7e9de" }}>
-          {fmtDate(todayISO())} · আজ {bn(todayClasses.length)}টি ক্লাস নির্ধারিত
-          আছে
+          {fmtDate(todayISO())} ·{" "}
+          {T(
+            `আজ ${bn(todayClasses.length)}টি ক্লাস নির্ধারিত আছে`,
+            `${todayClasses.length} class(es) scheduled today`,
+          )}
         </div>
       </div>
       <div
@@ -12347,11 +12366,15 @@ function Overview({ db, courses, user, goTo }) {
           marginBottom: 18,
         }}
       >
-        <Stat icon="🎥" label="আজকের ক্লাস" value={bn(todayClasses.length)} />
+        <Stat
+          icon="🎥"
+          label={T("আজকের ক্লাস", "Today's Classes")}
+          value={T(bn(todayClasses.length), todayClasses.length)}
+        />
         <Stat
           icon="📚"
-          label="চলমান কোর্স"
-          value={bn(courses.length)}
+          label={T("চলমান কোর্স", "Active Courses")}
+          value={T(bn(courses.length), courses.length)}
           accent={C.blue}
         />
         {isAdm(user) && (
@@ -12401,8 +12424,13 @@ function Overview({ db, courses, user, goTo }) {
         {user.role !== "admin" && (
           <Stat
             icon="📝"
-            label="অ্যাসাইনমেন্ট"
-            value={bn(
+            label={T("অ্যাসাইনমেন্ট", "Assignments")}
+            value={T(
+              bn(
+                db.assignments.filter(
+                  (a) => courseById(courses, a.courseId).id,
+                ).length,
+              ),
               db.assignments.filter((a) => courseById(courses, a.courseId).id)
                 .length,
             )}
@@ -12412,25 +12440,28 @@ function Overview({ db, courses, user, goTo }) {
         {missedTopics > 0 && (
           <Stat
             icon="✘"
-            label="বাদ পড়া টপিক"
-            value={bn(missedTopics)}
+            label={T("বাদ পড়া টপিক", "Missed Topics")}
+            value={T(bn(missedTopics), missedTopics)}
             accent={C.red}
-            note="এডমিন সংশোধনযোগ্য"
+            note={T("এডমিন সংশোধনযোগ্য", "Fixable by admin")}
           />
         )}
       </div>
       <Section
-        title="আজকের ক্লাসে ফোকাস করুন"
+        title={T("আজকের ক্লাসে ফোকাস করুন", "Focus on Today's Classes")}
         action={
           <Btn sm kind="ghost" onClick={() => goTo("classes")}>
-            সব ক্লাস দেখুন →
+            {T("সব ক্লাস দেখুন →", "View all classes →")}
           </Btn>
         }
       >
         <div style={{ display: "grid", gap: 10 }}>
           {todayClasses.length === 0 && (
             <div style={{ ...S.card, textAlign: "center", color: C.muted }}>
-              আজ আর কোনো ক্লাস বাকি নেই। আলহামদুলিল্লাহ।
+              {T(
+                "আজ আর কোনো ক্লাস বাকি নেই। আলহামদুলিল্লাহ।",
+                "No more classes today. Alhamdulillah.",
+              )}
             </div>
           )}
           {todayClasses.map((k) => {
@@ -12456,14 +12487,18 @@ function Overview({ db, courses, user, goTo }) {
                     {c.name} — {k.time}
                   </div>
                   <div style={{ fontSize: 12.5, color: C.muted }}>
-                    লেকচার {bn(k.lectureNo)}: {lec?.title}
+                    {T(
+                      `লেকচার ${bn(k.lectureNo)}: ${lec?.title}`,
+                      `Lecture ${k.lectureNo}: ${lec?.title}`,
+                    )}
                   </div>
                   <div style={{ fontSize: 12, color: C.muted }}>
-                    আজকের টপিক: {lec?.topics.map((t) => t.text).join(" · ")}
+                    {T("আজকের টপিক", "Today's topics")}:{" "}
+                    {lec?.topics.map((t) => t.text).join(" · ")}
                   </div>
                 </div>
                 <Btn kind="gold" onClick={() => goTo("classes")}>
-                  ক্লাসে যান →
+                  {T("ক্লাসে যান →", "Go to class →")}
                 </Btn>
               </div>
             );
@@ -12471,10 +12506,10 @@ function Overview({ db, courses, user, goTo }) {
         </div>
       </Section>
       <Section
-        title="সাম্প্রতিক নোটিশ"
+        title={T("সাম্প্রতিক নোটিশ", "Recent Notices")}
         action={
           <Btn sm kind="ghost" onClick={() => goTo("notices")}>
-            সব দেখুন →
+            {T("সব দেখুন →", "View all →")}
           </Btn>
         }
       >
