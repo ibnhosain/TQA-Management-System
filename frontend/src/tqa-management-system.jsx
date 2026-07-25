@@ -898,7 +898,9 @@ const Loader = ({ text = "একটু অপেক্ষা করুন…" })
       رَبِّ زِدْنِي عِلْمًا
     </div>
     <div style={{ fontSize: 12.5, color: C.muted, marginTop: 6, lineHeight: 1.6 }}>
-      “হে আমার রব, আমার জ্ঞান বাড়িয়ে দিন”
+      {CURRENT_LANG === "en"
+        ? "“My Lord, increase me in knowledge”"
+        : "“হে আমার রব, আমার জ্ঞান বাড়িয়ে দিন”"}
       <br />
       {text}
     </div>
@@ -11958,6 +11960,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
   const [form, setForm] = useState(null); // {name, file, fileObj, courseIds:[]}
   const [books, setBooks] = useState(db.academicBooks || []);
   const [allCourses, setAllCourses] = useState(courses || []);
+  const [booksLoading, setBooksLoading] = useState(true);
 
   const BASE_MEDIA = (
     import.meta.env?.VITE_API_URL || "http://localhost:8000/api"
@@ -12003,6 +12006,8 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     } catch {
       setBooks(db.academicBooks || []);
       setAllCourses(courses || []);
+    } finally {
+      setBooksLoading(false);
     }
   };
   useEffect(() => {
@@ -12275,7 +12280,8 @@ function AcademicBooksView({ db, setDb, user, courses }) {
       }
     >
       {/* viewer state সরানো হয়েছে — BookLink সরাসরি ডিভাইসে খোলে */}
-      {visible.length === 0 && (
+      {booksLoading && <Loader text={T("বই লোড হচ্ছে", "Loading books")} />}
+      {!booksLoading && visible.length === 0 && (
         <div
           style={{
             ...S.card,

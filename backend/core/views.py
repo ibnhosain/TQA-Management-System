@@ -238,10 +238,12 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         u = self.request.user
         # select_related/prefetch → course_name/teacher_name/student_names আনতে
-        # প্রতি সারিতে বাড়তি কোয়েরি (N+1) এড়ায় — "আজকের/আসন্ন ক্লাস" দ্রুত লোড হয়
+        # প্রতি সারিতে বাড়তি কোয়েরি (N+1) এড়ায় — "আজকের/আসন্ন ক্লাস" দ্রুত লোড হয়।
+        # attendance/attendance__user prefetch না থাকলে ClassSessionSerializer-এর নেস্টেড
+        # AttendanceSerializer প্রতি ক্লাসে + প্রতি হাজিরায় আলাদা কোয়েরি করত (ডাবল N+1)
         qs = ClassSession.objects.select_related(
             "course", "teacher", "course__teacher"
-        ).prefetch_related("students")
+        ).prefetch_related("students", "attendance", "attendance__user")
         if u.role == "teacher":
             return qs.filter(Q(teacher=u) | Q(course__teacher=u)).distinct()
         if u.role == "student":
