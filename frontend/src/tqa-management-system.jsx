@@ -7413,7 +7413,8 @@ function ManageView({ db, setDb, refresh }) {
 }
 
 /* ═══════════════ লাইভ ক্লাস ফুল-পেজ পপআপ (স্টুডেন্ট) — আয়াতসহ ═══════════════ */
-function LiveClassPopup({ k, course, onJoin, onLater }) {
+function LiveClassPopup({ k, course, user, onJoin, onLater }) {
+  const T = (bnText, enText) => (user?.role === "student" ? enText : bnText);
   const lec = course.lectures?.[k.lectureNo - 1];
   return (
     <div
@@ -7451,10 +7452,13 @@ function LiveClassPopup({ k, course, onJoin, onLater }) {
           ﴿وَقُلْ رَبِّ زِدْنِي عِلْمًا﴾
         </div>
         <div style={{ fontSize: 14, color: "#d7e9de", marginBottom: 4 }}>
-          "এবং বলো: হে আমার রব! আমার জ্ঞান বৃদ্ধি করে দিন।"
+          {T(
+            '"এবং বলো: হে আমার রব! আমার জ্ঞান বৃদ্ধি করে দিন।"',
+            '"And say: My Lord, increase me in knowledge."',
+          )}
         </div>
         <div style={{ fontSize: 11.5, color: "#9fc4ae", marginBottom: 18 }}>
-          — সূরা ত্বহা, আয়াত ১১৪
+          {T("— সূরা ত্বহা, আয়াত ১১৪", "— Surah Taha, Ayah 114")}
         </div>
         <div
           style={{
@@ -7466,10 +7470,10 @@ function LiveClassPopup({ k, course, onJoin, onLater }) {
           }}
         >
           <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>
-            ✨ এখনই দারস শুরু হবে — জয়েন করো!
+            {T("✨ এখনই দারস শুরু হবে — জয়েন করো!", "✨ Class is starting now — join in!")}
           </div>
           <div style={{ fontSize: 14.5, fontWeight: 700, color: C.goldL }}>
-            {course.name} · লেকচার {bn(k.lectureNo)}
+            {course.name} · {T(`লেকচার ${bn(k.lectureNo)}`, `Lecture ${k.lectureNo}`)}
           </div>
           {lec && (
             <div style={{ fontSize: 13, color: "#d7e9de", margin: "4px 0" }}>
@@ -7477,7 +7481,7 @@ function LiveClassPopup({ k, course, onJoin, onLater }) {
             </div>
           )}
           <div style={{ fontSize: 12.5, color: "#cfe6d8", marginBottom: 16 }}>
-            🕐 {k.time} · উস্তাদ: {userById(course.teacherId).name}
+            🕐 {k.time} · {T("উস্তাদ", "Teacher")}: {userById(course.teacherId).name}
           </div>
           <a
             href={k.zoom}
@@ -7500,7 +7504,7 @@ function LiveClassPopup({ k, course, onJoin, onLater }) {
               boxSizing: "border-box",
             }}
           >
-            🎥 এখনই জয়েন করুন — জুম খুলে যাবে
+            {T("🎥 এখনই জয়েন করুন — জুম খুলে যাবে", "🎥 Join Now — Zoom will open")}
           </a>
           <div
             style={{
@@ -7510,7 +7514,7 @@ function LiveClassPopup({ k, course, onJoin, onLater }) {
               fontStyle: "italic",
             }}
           >
-            জাযাকাল্লাহু খাইরান ফীদ-দ্বারাইন 🤲
+            {T("জাযাকাল্লাহু খাইরান ফীদ-দ্বারাইন 🤲", "Jazakallahu Khairan Fid-darayn 🤲")}
           </div>
         </div>
         <button
@@ -7527,7 +7531,7 @@ function LiveClassPopup({ k, course, onJoin, onLater }) {
             cursor: "pointer",
           }}
         >
-          পরে জয়েন করব
+          {T("পরে জয়েন করব", "I'll join later")}
         </button>
       </div>
       <style>{`@keyframes tqaPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}`}</style>
@@ -12850,6 +12854,7 @@ const NAV = [
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const T = (bnText, enText) => (user?.role === "student" ? enText : bnText);
   const [restoring, setRestoring] = useState(hasToken());
   const [db, setDb] = useState(seedDB);
   const [view, setView] = useState("overview");
@@ -13284,7 +13289,7 @@ export default function App() {
         ? "এডমিন"
         : user.role === "teacher"
           ? "উস্তাদ/উস্তাদা"
-          : "স্টুডেন্ট";
+          : "Student";
   const roleColor =
     user.role === "director"
       ? C.red
@@ -13425,11 +13430,11 @@ export default function App() {
               <div
                 style={{ fontWeight: 800, fontSize: 13, padding: "4px 6px" }}
               >
-                🔔 নোটিফিকেশন
+                {T("🔔 নোটিফিকেশন", "🔔 Notifications")}
               </div>
               {myNotifs.length === 0 && (
                 <div style={{ padding: 10, fontSize: 12.5, color: C.muted }}>
-                  কোনো নোটিফিকেশন নেই
+                  {T("কোনো নোটিফিকেশন নেই", "No notifications")}
                 </div>
               )}
               {myNotifs.slice(0, 6).map((n) => (
@@ -13481,7 +13486,7 @@ export default function App() {
               setUser(null);
             }}
           >
-            লগ আউট
+            {T("লগ আউট", "Log Out")}
           </Btn>
         </div>
       </div>
@@ -13503,6 +13508,7 @@ export default function App() {
             <LiveClassPopup
               k={livePopup}
               course={c}
+              user={user}
               onJoin={joinFromPopup}
               onLater={() => setLivePopup(null)}
             />
