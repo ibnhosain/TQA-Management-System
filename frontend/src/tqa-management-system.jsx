@@ -4875,6 +4875,7 @@ function ExamsView({ db, setDb, courses, user }) {
 
 /* ═══════════════ স্টুডেন্ট প্রোফাইল ও অগ্রগতি রিপোর্ট (ফিচার ৭) ═══════════════ */
 function ProgressView({ db, setDb, courses, user }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [allStudents, setAllStudents] = useState(
     user.role === "student"
       ? [user]
@@ -5045,8 +5046,11 @@ function ProgressView({ db, setDb, courses, user }) {
   };
   return (
     <Section
-      title="শিক্ষার্থীর অগ্রগতি ও রিপোর্ট"
-      sub="অগ্রগতি · ফি · মিসিং ক্লাস · মেকআপ ক্লাস — সব এক জায়গায়"
+      title={T("শিক্ষার্থীর অগ্রগতি ও রিপোর্ট", "Student Progress & Report")}
+      sub={T(
+        "অগ্রগতি · ফি · মিসিং ক্লাস · মেকআপ ক্লাস — সব এক জায়গায়",
+        "Progress · Fees · Missed classes · Makeup classes — all in one place",
+      )}
       action={
         isAdm(user) && (
           <Btn kind="gold" sm onClick={() => setMaker(true)}>
@@ -5085,32 +5089,39 @@ function ProgressView({ db, setDb, courses, user }) {
           marginBottom: 14,
         }}
       >
-        <Stat icon="✅" label="উপস্থিত ক্লাস" value={bn(present)} />
+        <Stat
+          icon="✅"
+          label={T("উপস্থিত ক্লাস", "Classes Attended")}
+          value={T(bn(present), present)}
+        />
         <Stat
           icon="❌"
-          label="মিসিং ক্লাস"
-          value={bn(missed)}
+          label={T("মিসিং ক্লাস", "Classes Missed")}
+          value={T(bn(missed), missed)}
           accent={C.red}
-          note="৪৫ মিনিটের কম উপস্থিতিসহ"
+          note={T(
+            "৪৫ মিনিটের কম উপস্থিতিসহ",
+            "Includes attendance under 45 minutes",
+          )}
         />
         <Stat
           icon="💰"
-          label="পরিশোধিত ফি"
+          label={T("পরিশোধিত ফি", "Fees Paid")}
           value={`৳${bn(paid.toLocaleString("en"))}`}
           accent={C.gold}
         />
         <Stat
           icon="⏳"
-          label="বকেয়া"
+          label={T("বকেয়া", "Due")}
           value={`৳${bn(due.toLocaleString("en"))}`}
           accent={C.red}
-          note={dueMonths.join(", ") || "নেই"}
+          note={dueMonths.join(", ") || T("নেই", "None")}
         />
       </div>
       <div style={{ display: "grid", gap: 14 }}>
         <div style={{ ...S.card }}>
           <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            📈 কোর্সভিত্তিক সিলেবাস অগ্রগতি
+            {T("📈 কোর্সভিত্তিক সিলেবাস অগ্রগতি", "📈 Syllabus Progress by Course")}
           </div>
           {stCourses.map((c) => {
             const cv = coverageOf(c);
@@ -5153,11 +5164,13 @@ function ProgressView({ db, setDb, courses, user }) {
               marginBottom: 10,
             }}
           >
-            <div style={{ fontWeight: 800 }}>💳 ফি পরিশোধের ইতিহাস</div>
+            <div style={{ fontWeight: 800 }}>
+              {T("💳 ফি পরিশোধের ইতিহাস", "💳 Fee Payment History")}
+            </div>
             <span style={{ display: "flex", gap: 8 }}>
               {user.role === "student" && due > 0 && (
                 <Btn sm kind="gold" onClick={() => setPay(true)}>
-                  💳 ফি পরিশোধ করুন
+                  💳 Pay Fee
                 </Btn>
               )}
               {isAdm(user) && due > 0 && (
@@ -5168,7 +5181,10 @@ function ProgressView({ db, setDb, courses, user }) {
             </span>
           </div>
           <Table
-            head={["মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "অবস্থা", "রিসিট"]}
+            head={T(
+              ["মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "অবস্থা", "রিসিট"],
+              ["Month", "Amount", "Date", "Method", "Status", "Receipt"],
+            )}
             rows={myFees.map((p) => [
               p.month,
               `৳${bn((+p.amount).toLocaleString("en"))}`,
@@ -5181,11 +5197,11 @@ function ProgressView({ db, setDb, courses, user }) {
                   </Btn>
                 ) : (
                   <Tag key="t" color={C.gold} bg={C.amberBg}>
-                    ⏳ পেন্ডিং
+                    {T("⏳ পেন্ডিং", "⏳ Pending")}
                   </Tag>
                 )
               ) : (
-                <Tag key="t">যাচাইকৃত ✔</Tag>
+                <Tag key="t">{T("যাচাইকৃত ✔", "Verified ✔")}</Tag>
               ),
               <Btn
                 key="r"
@@ -5202,11 +5218,14 @@ function ProgressView({ db, setDb, courses, user }) {
                 🧾 PDF
               </Btn>,
             ])}
-            empty="কোনো পেমেন্ট নেই"
+            empty={T("কোনো পেমেন্ট নেই", "No payments yet")}
           />
           {pay && (
             <Modal
-              title={`ফি পরিশোধ — ${dueMonths[0] || ""}`}
+              title={T(
+                `ফি পরিশোধ — ${dueMonths[0] || ""}`,
+                `Pay Fee — ${dueMonths[0] || ""}`,
+              )}
               onClose={() => setPay(false)}
             >
               <div
@@ -5219,10 +5238,18 @@ function ProgressView({ db, setDb, courses, user }) {
                   fontSize: 13,
                 }}
               >
-                পরিমাণ: <b>৳{bn((st.fee || 0).toLocaleString("en"))}</b> ·
-                পরিশোধের পর এডমিন যাচাই করলে নিশ্চিত হবে।
+                {T(
+                  <>
+                    পরিমাণ: <b>৳{bn((st.fee || 0).toLocaleString("en"))}</b> ·
+                    পরিশোধের পর এডমিন যাচাই করলে নিশ্চিত হবে।
+                  </>,
+                  <>
+                    Amount: <b>৳{(st.fee || 0).toLocaleString("en")}</b> · Once
+                    paid, it will be confirmed after admin verification.
+                  </>,
+                )}
               </div>
-              <label style={S.label}>পেমেন্ট মাধ্যম</label>
+              <label style={S.label}>{T("পেমেন্ট মাধ্যম", "Payment Method")}</label>
               <div
                 style={{
                   display: "grid",
@@ -5249,18 +5276,28 @@ function ProgressView({ db, setDb, courses, user }) {
                   >
                     {m === "বিকাশ" ? "📱" : m === "নগদ" ? "🟠" : "🏦"}
                     <br />
-                    {m}
+                    {T(
+                      m,
+                      m === "বিকাশ"
+                        ? "bKash"
+                        : m === "নগদ"
+                          ? "Nagad"
+                          : "Bank Transfer",
+                    )}
                   </button>
                 ))}
               </div>
               <label style={S.label}>
-                ট্রানজেকশন আইডি / রেফারেন্স (ঐচ্ছিক)
+                {T(
+                  "ট্রানজেকশন আইডি / রেফারেন্স (ঐচ্ছিক)",
+                  "Transaction ID / Reference (optional)",
+                )}
               </label>
               <input
                 style={S.input}
                 value={pf.trx}
                 onChange={(e) => setPf({ ...pf, trx: e.target.value })}
-                placeholder="যেমন: 9HX2K7..."
+                placeholder="e.g. 9HX2K7..."
               />
               <Btn
                 style={{
@@ -5270,40 +5307,46 @@ function ProgressView({ db, setDb, courses, user }) {
                 }}
                 onClick={studentPay}
               >
-                পরিশোধ সম্পন্ন করুন
+                {T("পরিশোধ সম্পন্ন করুন", "Complete Payment")}
               </Btn>
             </Modal>
           )}
         </div>
         <div style={{ ...S.card }}>
           <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            📝 পরীক্ষার ফলাফল
+            {T("📝 পরীক্ষার ফলাফল", "📝 Exam Results")}
           </div>
           <Table
-            head={["পরীক্ষা", "তারিখ", "প্রাপ্ত মার্ক"]}
+            head={T(["পরীক্ষা", "তারিখ", "প্রাপ্ত মার্ক"], ["Exam", "Date", "Marks Obtained"])}
             rows={exams.map((e) => [
               e.title,
               fmtDate(e.date),
-              `${bn(e.marks[sel])}/${bn(e.total)}`,
+              T(`${bn(e.marks[sel])}/${bn(e.total)}`, `${e.marks[sel]}/${e.total}`),
             ])}
-            empty="এখনো কোনো ফল নেই"
+            empty={T("এখনো কোনো ফল নেই", "No results yet")}
           />
         </div>
         <div style={{ ...S.card }}>
           <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            🔁 মেকআপ ক্লাস
+            {T("🔁 মেকআপ ক্লাস", "🔁 Makeup Classes")}
           </div>
           <Table
-            head={["কোর্স", "কারণ", "তারিখ ও সময়", "অবস্থা"]}
+            head={T(
+              ["কোর্স", "কারণ", "তারিখ ও সময়", "অবস্থা"],
+              ["Course", "Reason", "Date & Time", "Status"],
+            )}
             rows={makeups.map((m) => [
               courseById(courses, m.courseId).name,
               m.reason,
               `${fmtDate(m.date)} · ${m.time}`,
               <Tag key="t" color={C.blue} bg={C.blueBg}>
-                {m.status === "scheduled" ? "নির্ধারিত" : "সম্পন্ন"}
+                {T(
+                  m.status === "scheduled" ? "নির্ধারিত" : "সম্পন্ন",
+                  m.status === "scheduled" ? "Scheduled" : "Completed",
+                )}
               </Tag>,
             ])}
-            empty="কোনো মেকআপ ক্লাস নেই"
+            empty={T("কোনো মেকআপ ক্লাস নেই", "No makeup classes")}
           />
         </div>
       </div>
