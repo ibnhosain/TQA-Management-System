@@ -1116,6 +1116,7 @@ const adaptPerson = (u) => ({
   id: u.id,
   name: u.name || u.name_bn,
   sub: u.sub || u.sub_title || "",
+  phone: u.phone || "",
 });
 /* API Routine → ফ্রন্টএন্ড shape */
 const adaptRoutine = (r) => ({
@@ -2047,6 +2048,33 @@ function ClassesView({
     // জুম খোলে অ্যাংকর লিংকে (নিচে <a>); বাকি সব (presence/২৭-মিনিট/হাজিরা) LiveClassPanel সামলায়
     setJoined({ classId: k.id });
   };
+  // এডমিন/পরিচালক → আজকের ক্লাসের শিক্ষার্থীকে জয়েন-করার নিয়ম জানিয়ে WhatsApp (ইংরেজি, ইসলামিক টোন)
+  const notifyStudents = (k, c, kStudents) => {
+    const targets = kStudents
+      .map((id) => students.find((s) => String(s.id) === String(id)))
+      .filter((s) => s && s.phone);
+    if (!targets.length)
+      return notice("এই ক্লাসের শিক্ষার্থীর ফোন নম্বর পাওয়া যায়নি।");
+    const courseName = c.name || k.courseName || "your class";
+    targets.forEach((s, i) => {
+      const text =
+        `Assalamu Alaikum Warahmatullah,\n\n` +
+        `Dear ${s.name},\n\n` +
+        `This is a reminder that you have a class today — "${courseName}" at ${k.time}.\n\n` +
+        `How to join: Log in as Student → tap the 2nd top-left menu "Classes & Zoom Join" → tap "Join Zoom" → join via the Zoom app.\n\n` +
+        `Jazakallahu Khairan Fid-darayn.\n— Tarbiyatul Quran Academy`;
+      const phone = s.phone.replace(/[^\d]/g, "");
+      setTimeout(
+        () =>
+          window.open(
+            `https://wa.me/${phone}?text=${encodeURIComponent(text)}`,
+            "_blank",
+          ),
+        i * 400,
+      );
+    });
+    notice(`✔ ${bn(targets.length)} জন শিক্ষার্থীকে WhatsApp পাঠানো হচ্ছে`);
+  };
   // প্যানেল থেকে বেরোলে (Leave & Save / End Class) — স্টুডেন্ট হলে রেটিং পপআপ
   const onPanelExit = (finished) => {
     const cls = joined?.classId;
@@ -2282,6 +2310,15 @@ function ClassesView({
             >
               <Btn kind="gold">🎥 জুমে জয়েন করুন</Btn>
             </a>
+          )}
+          {joinable && isAdm(user) && k.status !== "postponed" && (
+            <Btn
+              sm
+              kind="soft"
+              onClick={() => notifyStudents(k, c, kStudents)}
+            >
+              📨 স্টুডেন্টকে জানান
+            </Btn>
           )}
           {isDir(user) && !isJoined && (
             <Btn sm kind="soft" onClick={() => setAttnMark(k)}>
