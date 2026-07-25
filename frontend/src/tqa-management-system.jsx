@@ -1708,13 +1708,13 @@ function playAlarm() {
 }
 
 /* ইন-ক্লাস প্যানেল — দুজন-জয়েন গেটিং, ২৭-মিনিট অটো সেগমেন্ট (অ্যালার্ম+রিজয়েন), সব মিলিয়ে ৪৫-মিনিট হাজিরা */
-function LiveClassPanel({ k, user, demoFast, usingApi, onExit }) {
+function LiveClassPanel({ k, user, usingApi, onExit }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [segSec, setSegSec] = useState(0);
   const [presence, setPresence] = useState(null);
   const [inMeeting, setInMeeting] = useState(true);
   const [rejoin, setRejoin] = useState(false);
-  const SEG = demoFast ? 27 : 27 * 60; // এক সেগমেন্ট = ২৭ মিনিট (ডেমোতে ২৭ সেকেন্ড)
+  const SEG = 27 * 60; // এক সেগমেন্ট = ২৭ মিনিট
   const NEED = 45; // মোট মিনিট → হাজিরা
 
   const refreshPresence = async () => {
@@ -1745,9 +1745,9 @@ function LiveClassPanel({ k, user, demoFast, usingApi, onExit }) {
   // presence poll — কে এখন মিটিংয়ে আছে
   useEffect(() => {
     refreshPresence();
-    const iv = setInterval(refreshPresence, demoFast ? 3000 : 12000);
+    const iv = setInterval(refreshPresence, 12000);
     return () => clearInterval(iv);
-  }, [k.id, demoFast]);
+  }, [k.id]);
 
   const bothIn = user.role === "teacher" ? !!presence?.sa : !!presence?.ta;
 
@@ -1759,7 +1759,7 @@ function LiveClassPanel({ k, user, demoFast, usingApi, onExit }) {
     return () => clearInterval(iv);
   }, [inMeeting, bothIn]);
 
-  const segMin = Math.round(segSec / (demoFast ? 1 : 60));
+  const segMin = Math.round(segSec / 60);
   const total = (presence?.myMin || 0) + segMin;
   const done = total >= NEED;
 
@@ -1897,14 +1897,12 @@ function LiveClassPanel({ k, user, demoFast, usingApi, onExit }) {
         <span style={{ fontWeight: 800, color: done ? C.green : C.gold }}>
           {user.role === "student" ? (
             <>
-              ⏱️ {demoFast ? segSec : Math.floor(segSec / 60)}/
-              {demoFast ? SEG : 27} {demoFast ? "sec" : "min"} · Total {total}/
-              {NEED} min {done ? "✓ Attendance confirmed" : ""}
+              ⏱️ {Math.floor(segSec / 60)}/27 min · Total {total}/{NEED} min{" "}
+              {done ? "✓ Attendance confirmed" : ""}
             </>
           ) : (
             <>
-              ⏱️ {bn(demoFast ? segSec : Math.floor(segSec / 60))}/
-              {bn(demoFast ? SEG : 27)} {demoFast ? "সেকেন্ড" : "মিনিট"} · মোট{" "}
+              ⏱️ {bn(Math.floor(segSec / 60))}/{bn(27)} মিনিট · মোট{" "}
               {bn(total)}/{bn(NEED)} মিনিট {done ? "✓ হাজিরা নিশ্চিত" : ""}
             </>
           )}
@@ -2056,7 +2054,6 @@ function ClassesView({
       onAutoJoinConsumed && onAutoJoinConsumed();
     }
   }, [autoJoinId]);
-  const [demoFast, setDemoFast] = useState(true);
   const usingApi = apiClasses !== null;
   const teacherList = (() => {
     const m = new Map();
@@ -2347,7 +2344,6 @@ function ClassesView({
             <LiveClassPanel
               k={k}
               user={user}
-              demoFast={demoFast}
               usingApi={usingApi}
               onExit={onPanelExit}
             />
@@ -2418,28 +2414,9 @@ function ClassesView({
           "The Zoom meeting will open with one click when it's time — attendance is only counted if you stay 45+ minutes",
         )}
         action={
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <label
-              style={{
-                fontSize: 12,
-                color: C.muted,
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                cursor: "pointer",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={demoFast}
-                onChange={(e) => setDemoFast(e.target.checked)}
-              />{" "}
-              {T("ডেমো মোড (১ সেকেন্ড = ১ মিনিট)", "Demo mode (1 second = 1 minute)")}
-            </label>
-            {isAdm(user) && (
-              <Btn onClick={() => setShow(true)}>+ ক্লাস শিডিউল</Btn>
-            )}
-          </div>
+          isAdm(user) && (
+            <Btn onClick={() => setShow(true)}>+ ক্লাস শিডিউল</Btn>
+          )
         }
       >
         <div style={{ display: "grid", gap: 10 }}>
