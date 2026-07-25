@@ -27,23 +27,22 @@ const C = {
 
 const bn = (n) => String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
 const todayISO = () => new Date().toISOString().slice(0, 10);
+// লগইন করা ব্যবহারকারীর ভাষা — App-এর রেন্ডারের শুরুতেই সেট হয় (student → "en")।
+// fmtDate ৫০+ জায়গায় ব্যবহৃত; প্রতিটি call site বদলানোর বদলে এখানেই একবার ঠিক করা হলো।
+let CURRENT_LANG = "bn";
+const MONTHS_BN_FULL = [
+  "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
+  "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর",
+];
+const MONTHS_EN_FULL = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 const fmtDate = (iso) => {
   const d = new Date(iso + "T00:00:00");
-  const m = [
-    "জানুয়ারি",
-    "ফেব্রুয়ারি",
-    "মার্চ",
-    "এপ্রিল",
-    "মে",
-    "জুন",
-    "জুলাই",
-    "আগস্ট",
-    "সেপ্টেম্বর",
-    "অক্টোবর",
-    "নভেম্বর",
-    "ডিসেম্বর",
-  ];
-  return `${bn(d.getDate())} ${m[d.getMonth()]} ${bn(d.getFullYear())}`;
+  if (CURRENT_LANG === "en")
+    return `${d.getDate()} ${MONTHS_EN_FULL[d.getMonth()]} ${d.getFullYear()}`;
+  return `${bn(d.getDate())} ${MONTHS_BN_FULL[d.getMonth()]} ${bn(d.getFullYear())}`;
 };
 const addDays = (n) => {
   const d = new Date();
@@ -12855,6 +12854,7 @@ const NAV = [
 export default function App() {
   const [user, setUser] = useState(null);
   const T = (bnText, enText) => (user?.role === "student" ? enText : bnText);
+  CURRENT_LANG = user?.role === "student" ? "en" : "bn"; // fmtDate সব জায়গায় এই ভাষা মেনে চলে
   const [restoring, setRestoring] = useState(hasToken());
   const [db, setDb] = useState(seedDB);
   const [view, setView] = useState("overview");
