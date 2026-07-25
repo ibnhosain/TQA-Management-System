@@ -16,13 +16,20 @@ def _clean(phone):
     return "".join(ch for ch in str(phone) if ch.isdigit())
 
 
+# Celery ছাড়া এই কলগুলো request-এর মূল প্রসেসেই (synchronous) চলে — মাত্র ২টা
+# gunicorn worker থাকায় WhatsApp API ধীর/আটকে গেলে একটা worker দীর্ঘক্ষণ বন্দী হয়ে
+# বাকি সব ব্যবহারকারীর (লগইন/ক্লাস লোড) জন্য সার্ভার এলোমেলো ধীর হয়ে যেতে পারে —
+# তাই timeout ছোট রাখা হলো (২০s → ৮s, স্বাভাবিক API রেসপন্সের জন্য যথেষ্ট)
+_WA_TIMEOUT = 8
+
+
 def _send_twilio(to, text):
     sid, token = os.environ["TWILIO_ACCOUNT_SID"], os.environ["TWILIO_AUTH_TOKEN"]
     r = http.post(
         f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
         auth=(sid, token),
         data={"From": f"whatsapp:{os.environ['TWILIO_WHATSAPP_FROM']}",
-              "To": f"whatsapp:+{_clean(to)}", "Body": text}, timeout=20)
+              "To": f"whatsapp:+{_clean(to)}", "Body": text}, timeout=_WA_TIMEOUT)
     r.raise_for_status()
     return r.json().get("sid", "")
 
@@ -32,7 +39,7 @@ def _send_meta(to, text):
         f"https://graph.facebook.com/v19.0/{os.environ['META_PHONE_NUMBER_ID']}/messages",
         headers={"Authorization": f"Bearer {os.environ['META_ACCESS_TOKEN']}"},
         json={"messaging_product": "whatsapp", "to": _clean(to),
-              "type": "text", "text": {"body": text}}, timeout=20)
+              "type": "text", "text": {"body": text}}, timeout=_WA_TIMEOUT)
     r.raise_for_status()
     return (r.json().get("messages") or [{}])[0].get("id", "")
 
