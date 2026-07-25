@@ -5877,11 +5877,12 @@ function BooksView({ db, user }) {
 
 /* ═══════════════ নোটিশ বোর্ড (অতিরিক্ত প্রফেশনাল ফিচার) ═══════════════ */
 function NoticesView({ db, setDb, user }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [show, setShow] = useState(false);
   const [f, setF] = useState({ title: "", body: "" });
   return (
     <Section
-      title="নোটিশ বোর্ড"
+      title={T("নোটিশ বোর্ড", "Notice Board")}
       action={
         isAdm(user) && <Btn onClick={() => setShow(true)}>+ নোটিশ দিন</Btn>
       }
