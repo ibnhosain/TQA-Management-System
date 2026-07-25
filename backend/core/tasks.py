@@ -76,7 +76,14 @@ def send_whatsapp(self, msg_id):
         raise self.retry(exc=exc)
 
 
-# ─────────────────── ৫-মিনিট রিমাইন্ডার (প্রতি মিনিটে beat চালায়) ───────────────────
+# ─────────────────── ক্লাস-শুরুর রিমাইন্ডার (cron প্রতি ~১৫ মিনিটে চালান) ───────────────────
+# আগে জানালা ছিল ৫ মিনিট আর cron চলত প্রতি মিনিটে — কিন্তু এতে ডেটাবেস (Neon) কখনো
+# অলস হয়ে "ঘুমাতে" পারত না, ফলে ফ্রি compute-quota কয়েক দিনেই শেষ হয়ে যেত (লগইন 500)।
+# এখন cron কম ঘন ঘন চলার কথা (~১৫ মিনিট পরপর) — তাই জানালা ১৮ মিনিট রাখা হলো (কিছুটা
+# মার্জিনসহ) যাতে কোনো ক্লাস রিমাইন্ডার ছাড়া বাদ না পড়ে। বার্তায় প্রকৃত বাকি-মিনিট দেখানো হয়।
+REMINDER_WINDOW_MINUTES = 18
+
+
 @shared_task
 def queue_class_reminders():
     from .models import ClassSession, WaMessage, Notification
@@ -85,12 +92,14 @@ def queue_class_reminders():
     sessions = ClassSession.objects.filter(date=today, status="upcoming", reminder_sent=False)
     for s in sessions:
         start = timezone.make_aware(datetime.combine(today, s.time))
-        if not (timedelta(0) <= start - now <= timedelta(minutes=5)):
-            continue  # ঠিক ৫ মিনিটের জানালায় নয়
+        mins_left = int((start - now).total_seconds() // 60)
+        if not (0 <= mins_left <= REMINDER_WINDOW_MINUTES):
+            continue  # জানালার বাইরে
+        mins_bn = str(mins_left).translate(BN_DIGITS)
         students = list(s.students.all())
         # ইন-অ্যাপ নোটিফিকেশন
         n = Notification.objects.create(
-            text=f"⏰ {s.course.name} ক্লাস {s.time.strftime('%H:%M')}-এ শুরু হচ্ছে (৫ মিনিটের মধ্যে)! "
+            text=f"⏰ {s.course.name} ক্লাস {s.time.strftime('%H:%M')}-এ শুরু হচ্ছে (আর {mins_bn} মিনিটের মধ্যে)! "
                  f"ড্যাশবোর্ড থেকে জয়েন করুন।")
         n.recipients.set(students + ([s.teacher] if s.teacher else []))
         # অভিভাবকের WhatsApp
@@ -99,7 +108,7 @@ def queue_class_reminders():
                 continue
             text = (f"আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম {st.guardian or 'অভিভাবক'}, "
                     f"{st.name_bn}-এর \"{s.course.name}\" ক্লাস আজ {s.time.strftime('%H:%M')}-এ "
-                    f"(আর ৫ মিনিটের মধ্যে) শুরু হচ্ছে ইনশাআল্লাহ। অনুগ্রহ করে ক্লাসে যুক্ত হতে সহায়তা করুন। "
+                    f"(আর {mins_bn} মিনিটের মধ্যে) শুরু হচ্ছে ইনশাআল্লাহ। অনুগ্রহ করে ক্লাসে যুক্ত হতে সহায়তা করুন। "
                     f"জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি")
             m = WaMessage.objects.create(to_name=st.guardian or st.name_bn, student=st,
                                          phone=st.phone, text=text, reason="reminder")
