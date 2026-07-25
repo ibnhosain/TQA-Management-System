@@ -2250,8 +2250,8 @@ function ClassesView({
         `Assalamu Alaikum Warahmatullah,\n\n` +
         `Dear ${s.name},\n\n` +
         `This is a reminder that you have a class today — "${courseName}" at ${k.time}.\n\n` +
-        `How to join: Log in as Student → tap the 2nd top-left menu "Classes & Zoom Join" → tap "Join Zoom" → join via the Zoom app.\n\n` +
-        `Jazakallahu Khairan Fid-darayn.\n— Tarbiyatul Quran Academy`;
+        `*Please join on time insaallah.*\n\n` +
+        `Jazakallahu Khairan Fid-darayn.\n— Tarbiyatul Quran Academy.`;
       const phone = s.phone.replace(/[^\d]/g, "");
       setTimeout(
         () =>
