@@ -1235,6 +1235,8 @@ function Login({ onLogin, onAdmission }) {
       icon: "🛡️",
       desc: "শিক্ষার্থী, উস্তাদ, ক্লাস ও পেমেন্ট ব্যবস্থাপনা",
       tint: "rgba(99,102,241,.10)",
+      cardTitle: "Admin",
+      cardDesc: "Full access — manage students, teachers, schedules and payments",
     },
     {
       key: "teacher",
@@ -1242,6 +1244,8 @@ function Login({ onLogin, onAdmission }) {
       icon: "📖",
       desc: "ক্লাস, হাজিরা, পড়ানো ও শিক্ষার্থীর অগ্রগতি",
       tint: "rgba(26,92,58,.10)",
+      cardTitle: "Ustadh / Ustadha",
+      cardDesc: "View your schedule, student progress and lesson notes",
     },
     {
       key: "student",
@@ -1249,8 +1253,14 @@ function Login({ onLogin, onAdmission }) {
       icon: "🎓",
       desc: "Routine, classes, exams & fee status",
       tint: "rgba(201,150,42,.10)",
+      cardTitle: "Student",
+      cardDesc: "View your timetable, homework and progress reports",
     },
   ];
+  // ধাপ ১ (ভূমিকা বাছাই)-এ শুধু এই ৩টা দেখানো হয় — ওয়েবসাইটের login.html-এর
+  // মতোই; পরিচালক পুরো ROLES তালিকায় থেকে যান (?role=director লিংক ও
+  // "Director login" এর জন্য), কিন্তু আলাদা কার্ড হিসেবে প্রকাশ্যে দেখানো হয় না
+  const VISIBLE_ROLES = ROLES.filter((r) => r.key !== "director");
   /* ওয়েবসাইটের login.html থেকে ?role=admin দিয়ে এলে সরাসরি ফর্মে */
   const initRole = (() => {
     try {
@@ -1263,6 +1273,9 @@ function Login({ onLogin, onAdmission }) {
   const [role, setRole] = useState(initRole);
   // স্টুডেন্ট বেছে নিলে ফর্ম ইংরেজিতে দেখাবে — বেশিরভাগ শিক্ষার্থী বাংলা বোঝে না
   const T = (bnText, enText) => (role === "student" ? enText : bnText);
+  // হেডার (একাডেমির নাম) — role বাছাইয়ের আগে (ওয়েবসাইটের role-card স্ক্রিনের
+  // মতো) ও student-এর জন্য ইংরেজি; director/admin/teacher বেছে নেওয়ার পরই বাংলা
+  const TH = (bnText, enText) => (role && role !== "student" ? bnText : enText);
   const [u, setU] = useState("");
   const [p, setP] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -1404,7 +1417,7 @@ function Login({ onLogin, onAdmission }) {
                   lineHeight: 1.15,
                 }}
               >
-                {T("তারবিয়াতুল কুরআন একাডেমি", "Tarbiyatul Quran Academy")}
+                {TH("তারবিয়াতুল কুরআন একাডেমি", "Tarbiyatul Quran Academy")}
               </span>
               <span
                 style={{
@@ -1414,7 +1427,7 @@ function Login({ onLogin, onAdmission }) {
                   marginTop: 2,
                 }}
               >
-                {T("ম্যানেজমেন্ট পোর্টাল", "Management Portal")}
+                {TH("ম্যানেজমেন্ট পোর্টাল", "Management Portal")}
               </span>
             </div>
           </div>
@@ -1432,7 +1445,7 @@ function Login({ onLogin, onAdmission }) {
                   lineHeight: 1.3,
                 }}
               >
-                আপনি কে হিসেবে লগইন করবেন? / Who are you logging in as?
+                Who are you logging in as?
               </h1>
               <div
                 style={{
@@ -1443,10 +1456,10 @@ function Login({ onLogin, onAdmission }) {
                   lineHeight: 1.5,
                 }}
               >
-                আপনার ভূমিকা বাছাই করুন / Select your role to continue
+                Choose your role to continue to the management dashboard.
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {ROLES.map((r) => (
+                {VISIBLE_ROLES.map((r) => (
                   <button
                     key={r.key}
                     className="tqaRoleCard"
@@ -1492,7 +1505,7 @@ function Login({ onLogin, onAdmission }) {
                           color: C.text,
                         }}
                       >
-                        {r.label}
+                        {r.cardTitle}
                       </span>
                       <span
                         style={{
@@ -1503,7 +1516,7 @@ function Login({ onLogin, onAdmission }) {
                           lineHeight: 1.4,
                         }}
                       >
-                        {r.desc}
+                        {r.cardDesc}
                       </span>
                     </span>
                     <span
@@ -1529,7 +1542,7 @@ function Login({ onLogin, onAdmission }) {
                 }}
                 onClick={() => setApply(true)}
               >
-                🎓 নতুন শিক্ষার্থী? ভর্তি আবেদন করুন / New student? Apply here
+                🎓 New student? Apply here
               </Btn>
               {ok && (
                 <div
@@ -1544,10 +1557,59 @@ function Login({ onLogin, onAdmission }) {
                     textAlign: "center",
                   }}
                 >
-                  ✔ আবেদন জমা হয়েছে! এডমিন গ্রহণ করলে লগইন তথ্য জানানো হবে
-                  ইনশাআল্লাহ।
+                  ✔ Application submitted! You'll receive login details once
+                  the admin approves it, InshaAllah.
                 </div>
               )}
+              <div
+                style={{
+                  marginTop: 24,
+                  paddingTop: 20,
+                  borderTop: `1px solid ${C.line}`,
+                  textAlign: "center",
+                  fontSize: 12,
+                  color: "#9ca3af",
+                  lineHeight: 1.6,
+                }}
+              >
+                Need an account? Contact{" "}
+                <a
+                  href="mailto:ibnhosain014@gmail.com"
+                  style={{ color: C.emerald, fontWeight: 600 }}
+                >
+                  ibnhosain014@gmail.com
+                </a>{" "}
+                or{" "}
+                <a
+                  href="https://wa.me/8801402499027"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: C.emerald, fontWeight: 600 }}
+                >
+                  WhatsApp
+                </a>
+                .
+                <br />
+                <button
+                  onClick={() => {
+                    setRole("director");
+                    setErr("");
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: C.muted,
+                    fontSize: 12,
+                    cursor: "pointer",
+                    padding: 0,
+                    marginTop: 8,
+                    fontFamily: "inherit",
+                    textDecoration: "underline",
+                  }}
+                >
+                  Director login →
+                </button>
+              </div>
             </>
           ) : (
             <>
