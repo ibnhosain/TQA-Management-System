@@ -29,7 +29,9 @@ class UserAdminSerializer(UserSerializer):
         fields = UserSerializer.Meta.fields + ["password", "plain_password", "due_months"]
 
     def get_due_months(self, obj):
-        return list(obj.due_months.values_list("month_label", flat=True))
+        # .values_list()-এর বদলে .all() ইটারেট — prefetch_related("due_months") এর ক্যাশ
+        # ব্যবহার হয়, নইলে প্রতি ব্যবহারকারীতে আলাদা কোয়েরি হতো (N+1)
+        return [d.month_label for d in obj.due_months.all()]
 
     def create(self, validated):
         from .utils import make_password_str
@@ -324,8 +326,10 @@ class NotificationSerializer(serializers.ModelSerializer):
         fields = ["id", "text", "created_at", "is_read"]
 
     def get_is_read(self, obj):
+        # .filter().exists() prefetch cache এড়িয়ে প্রতিবার নতুন কোয়েরি করত (N+1)।
+        # .all() ইটারেট করে পাইথনে মেলানো — prefetch_related("read_by") ব্যবহার হয়।
         u = self.context["request"].user
-        return obj.read_by.filter(pk=u.pk).exists()
+        return any(ru.pk == u.pk for ru in obj.read_by.all())
 
 
 class WaMessageSerializer(serializers.ModelSerializer):

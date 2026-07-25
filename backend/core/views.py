@@ -33,9 +33,13 @@ def admins():
 
 # ─────────────────────────── ব্যবহারকারী ───────────────────────────
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.exclude(is_superuser=True)
     permission_classes = [IsDirector]  # যোগ/মুছা/পাসওয়ার্ড — কেবল পরিচালক
     serializer_class = UserAdminSerializer
+
+    def get_queryset(self):
+        # prefetch_related("due_months") → UserAdminSerializer.get_due_months প্রতি
+        # ব্যবহারকারীতে আলাদা কোয়েরি না করে prefetch cache ব্যবহার করে (N+1 এড়ায়)
+        return User.objects.exclude(is_superuser=True).prefetch_related("due_months")
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def me(self, request):
@@ -43,7 +47,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, permission_classes=[IsAdminLevel])
     def students(self, request):  # "সকল স্টুডেন্ট" পেজ — এডমিনও দেখতে পারে
-        qs = User.objects.filter(role="student")
+        qs = User.objects.filter(role="student").prefetch_related("due_months")
         ser = UserAdminSerializer if request.user.role == "director" else UserSerializer
         return Response(ser(qs, many=True).data)
 
@@ -123,7 +127,8 @@ class CourseViewSet(viewsets.ModelViewSet):
 
 
 class SyllabusViewSet(viewsets.ModelViewSet):
-    queryset = SyllabusItem.objects.all()
+    # select_related("book") → get_book_name প্রতি আইটেমে আলাদা কোয়েরি না করে (N+1 এড়ায়)
+    queryset = SyllabusItem.objects.select_related("book").all()
     serializer_class = SyllabusItemSerializer
     permission_classes = [ReadAllWriteDirector]
     filterset_fields = ["course"]
@@ -143,7 +148,9 @@ class SyllabusViewSet(viewsets.ModelViewSet):
 
 
 class LectureViewSet(viewsets.ModelViewSet):
-    queryset = Lecture.objects.all()
+    # prefetch_related("topics") → নেস্টেড topics প্রতি লেকচারে আলাদা কোয়েরি না করে
+    # prefetch cache ব্যবহার করে (N+1 এড়ায়) — লেকচার প্ল্যান পেজে সব দারসের টপিক দেখায়
+    queryset = Lecture.objects.prefetch_related("topics").all()
     serializer_class = LectureSerializer
     permission_classes = [ReadAllWriteDirector]
     filterset_fields = ["course"]
@@ -358,11 +365,14 @@ class AssignmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         u = self.request.user
+        # prefetch → নেস্টেড questions/submissions (ও submissions.student_name) প্রতি
+        # অ্যাসাইনমেন্টে আলাদা কোয়েরি না করে prefetch cache ব্যবহার করে (N+1 এড়ায়)
+        qs = Assignment.objects.prefetch_related("questions", "submissions__student")
         if u.role == "student":
-            return Assignment.objects.filter(course__students=u)
+            return qs.filter(course__students=u)
         if u.role == "teacher":
-            return Assignment.objects.filter(course__teacher=u)
-        return Assignment.objects.all()
+            return qs.filter(course__teacher=u)
+        return qs
 
     def perform_create(self, serializer):
         if self.request.user.role == "student":
@@ -395,11 +405,14 @@ class ExamViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         u = self.request.user
+        # prefetch → নেস্টেড questions/submissions/results প্রতি পরীক্ষায় আলাদা কোয়েরি
+        # না করে prefetch cache ব্যবহার করে (N+1 এড়ায়)
+        qs = Exam.objects.prefetch_related("questions", "results", "submissions__student")
         if u.role == "student":
-            return Exam.objects.filter(course__students=u)
+            return qs.filter(course__students=u)
         if u.role == "teacher":
-            return Exam.objects.filter(course__teacher=u)
-        return Exam.objects.all()
+            return qs.filter(course__teacher=u)
+        return qs
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def submit(self, request, pk=None):
@@ -437,10 +450,12 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         u = self.request.user
+        # select_related("student") → student_name প্রতি পেমেন্টে আলাদা কোয়েরি এড়ায়
+        qs = FeePayment.objects.select_related("student")
         if u.role == "student":
-            return FeePayment.objects.filter(student=u)
+            return qs.filter(student=u)
         if u.role in ("director", "admin"):
-            return FeePayment.objects.all()
+            return qs
         return FeePayment.objects.none()
 
     def perform_create(self, serializer):  # স্টুডেন্টের "এখনই পেমেন্ট" → pending
@@ -483,10 +498,12 @@ class TeacherPaymentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         u = self.request.user
+        # select_related("teacher") → teacher_name প্রতি পেমেন্টে আলাদা কোয়েরি এড়ায়
+        qs = TeacherPayment.objects.select_related("teacher")
         if u.role == "teacher":
-            return TeacherPayment.objects.filter(teacher=u)
+            return qs.filter(teacher=u)
         if u.role == "director":
-            return TeacherPayment.objects.all()
+            return qs
         return TeacherPayment.objects.none()
 
     def get_permissions(self):
@@ -498,9 +515,11 @@ class SentReceiptViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         u = self.request.user
+        # select_related("sent_by") → sent_by_name প্রতি রিসিটে আলাদা কোয়েরি এড়ায়
+        qs = SentReceipt.objects.select_related("sent_by")
         if u.role in ("director", "admin"):
-            return SentReceipt.objects.all()
-        return SentReceipt.objects.filter(to_user=u)  # নিজের ভাউচার/রিসিট
+            return qs
+        return qs.filter(to_user=u)  # নিজের ভাউচার/রিসিট
 
     def get_permissions(self):
         return [IsAdminLevel()] if self.action == "create" else [IsAuthenticated()]
@@ -626,9 +645,12 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         u = self.request.user
+        # select_related("applicant") → applicant_name/applicant_role প্রতি আবেদনে
+        # আলাদা কোয়েরি এড়ায়
+        qs = LeaveRequest.objects.select_related("applicant")
         if u.role in ("director", "admin"):
-            return LeaveRequest.objects.all().order_by("-applied_at")
-        return LeaveRequest.objects.filter(applicant=u)
+            return qs.order_by("-applied_at")
+        return qs.filter(applicant=u)
 
     def perform_create(self, serializer):
         lv = serializer.save(applicant=self.request.user)
@@ -696,7 +718,10 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return self.request.user.notifications.all()
+        # prefetch_related("read_by") → NotificationSerializer.get_is_read প্রতি
+        # নোটিফিকেশনে আলাদা কোয়েরি না করে prefetch cache ব্যবহার করে (N+1 এড়ায়) —
+        # এই এন্ডপয়েন্ট প্রায় প্রতি পেজেই (নোটিফিকেশন বেল) চলে, তাই প্রভাব বড়
+        return self.request.user.notifications.prefetch_related("read_by").all()
 
     @action(detail=False, methods=["post"])
     def mark_all_read(self, request):
