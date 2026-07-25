@@ -4393,6 +4393,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
 
 /* ═══════════════ পরীক্ষা (ফিচার ৬) — ফরম (MCQ/লিখিত) বা ছবি, মূল্যায়নসহ ═══════════════ */
 function ExamsView({ db, setDb, courses, user }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [show, setShow] = useState(false);
   const [marksFor, setMarksFor] = useState(null);
   const [doSub, setDoSub] = useState(null);
@@ -4565,7 +4566,7 @@ function ExamsView({ db, setDb, courses, user }) {
   };
   return (
     <Section
-      title="পরীক্ষা — মাসিক MCQ ও লাইভ টেস্ট"
+      title={T("পরীক্ষা — মাসিক MCQ ও লাইভ টেস্ট", "Exams — Monthly MCQ & Live Tests")}
       sub="ফরমে (MCQ/লিখিত) বা ছবিতে — মূল্যায়ন করলেই ফলাফল অটো স্টুডেন্ট পোর্টালে"
       action={
         canCreate && (
@@ -4601,18 +4602,22 @@ function ExamsView({ db, setDb, courses, user }) {
                       </Tag>
                     ) : (
                       <Tag color={C.gold} bg={C.amberBg}>
-                        লাইভ টেস্ট
+                        {T("লাইভ টেস্ট", "Live Test")}
                       </Tag>
                     )}{" "}
                     <Tag
                       color={ex.mode === "form" ? C.emerald : C.gold}
                       bg={ex.mode === "form" ? C.greenBg : C.amberBg}
                     >
-                      {ex.mode === "form" ? "📋 ফরম" : "📷 ছবি/খাতা"}
+                      {T(
+                        ex.mode === "form" ? "📋 ফরম" : "📷 ছবি/খাতা",
+                        ex.mode === "form" ? "📋 Form" : "📷 Photo/Answer sheet",
+                      )}
                     </Tag>
                   </div>
                   <div style={{ fontSize: 12.5, color: C.muted }}>
-                    {c.name} · {fmtDate(ex.date)} · পূর্ণমান {bn(ex.total)}
+                    {c.name} · {fmtDate(ex.date)} ·{" "}
+                    {T(`পূর্ণমান ${bn(ex.total)}`, `Total marks ${ex.total}`)}
                     {canCreate && pendingEval > 0 && (
                       <span style={{ color: C.red }}>
                         {" "}
@@ -4639,27 +4644,29 @@ function ExamsView({ db, setDb, courses, user }) {
                             color: C.emerald,
                           }}
                         >
-                          {bn(myMark)}
+                          {myMark}
                           <span style={{ fontSize: 13, color: C.muted }}>
-                            /{bn(ex.total)}
+                            /{ex.total}
                           </span>
                         </div>
                         <Tag
                           color={myMark / ex.total >= 0.8 ? C.green : C.gold}
                           bg={myMark / ex.total >= 0.8 ? C.greenBg : C.amberBg}
                         >
-                          {myMark / ex.total >= 0.8 ? "মুমতায" : "জায়্যিদ"}
+                          {myMark / ex.total >= 0.8
+                            ? "Mumtaz (Excellent)"
+                            : "Jayyid (Good)"}
                         </Tag>
                       </div>
                     ) : mySub ? (
                       <Tag color={C.gold} bg={C.amberBg}>
-                        জমা হয়েছে — ফলাফলের অপেক্ষায়
+                        Submitted — awaiting result
                       </Tag>
                     ) : (
                       <Btn sm kind="gold" onClick={() => setDoSub(ex)}>
                         {ex.mode === "form"
-                          ? "📋 পরীক্ষা দিন"
-                          : "📷 খাতার ছবি জমা দিন"}
+                          ? "📋 Take Exam"
+                          : "📷 Submit Answer Sheet Photo"}
                       </Btn>
                     ))}
                   {canCreate && (
