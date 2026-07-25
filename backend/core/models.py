@@ -169,8 +169,8 @@ class Attendance(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     course_name = models.CharField(max_length=120, blank=True, default="")
     teacher_name = models.CharField(max_length=120, blank=True, default="")
-    teacher_id = models.PositiveIntegerField(null=True, blank=True)  # FK নয় — session/teacher মুছে গেলেও ফিল্টারযোগ্য
-    class_date = models.DateField(null=True, blank=True)
+    teacher_id = models.PositiveIntegerField(null=True, blank=True, db_index=True)  # FK নয় — session/teacher মুছে গেলেও ফিল্টারযোগ্য
+    class_date = models.DateField(null=True, blank=True, db_index=True)  # মাসভিত্তিক ফিল্টার+সর্ট দ্রুত করতে
     joined_at = models.DateTimeField(auto_now_add=True)
     left_at = models.DateTimeField(null=True, blank=True)
     minutes = models.PositiveIntegerField(default=0)      # সব সেগমেন্ট মিলিয়ে মোট মিনিট

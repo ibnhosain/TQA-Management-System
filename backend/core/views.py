@@ -110,7 +110,11 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         u = self.request.user
-        qs = Course.objects.filter(is_active=True)
+        # select_related/prefetch → teacher_name/students/books/student_count আনতে
+        # প্রতি কোর্সে বাড়তি কোয়েরি (N+1) এড়ায় — কোর্স সব জায়গায় ব্যবহৃত হয় বলে এটা জরুরি
+        qs = Course.objects.filter(is_active=True).select_related(
+            "teacher"
+        ).prefetch_related("students", "books")
         if u.role == "teacher":
             return qs.filter(teacher=u)
         if u.role == "student":

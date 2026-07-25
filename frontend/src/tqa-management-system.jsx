@@ -12229,8 +12229,10 @@ function AcademicBooksView({ db, setDb, user, courses }) {
               </Tag>{" "}
               {b.file?.name || T("ফাইল সংযুক্ত নেই", "No file attached")}
             </>
-          )}{" "}
-          · {T("যোগ", "Added")}: {fmtDate(b.date)}
+          )}
+          {user.role !== "student" && (
+            <> · যোগ: {fmtDate(b.date)}</>
+          )}
           {isAdm(user) && (
             <span>
               {" "}

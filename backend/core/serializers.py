@@ -59,13 +59,18 @@ class AcademicBookSerializer(serializers.ModelSerializer):
 
 class CourseSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source="teacher.name_bn", read_only=True)
-    student_count = serializers.IntegerField(source="students.count", read_only=True)
+    student_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
         fields = ["id", "name", "teacher", "teacher_name", "students", "books",
                   "color", "is_active", "student_count"]
     # কোর্সে বই সংখ্যায় কোনো সীমা নেই — যত খুশি যোগ করা যাবে
+
+    def get_student_count(self, obj):
+        # source="students.count" প্রতিবার নতুন COUNT কোয়েরি করত (prefetch_related উপেক্ষা করে)।
+        # .all() ইটারেট করলে queryset-এর prefetch_related("students") ব্যবহার হয় — বাড়তি কোয়েরি নেই।
+        return len(obj.students.all())
 
 
 class SyllabusItemSerializer(serializers.ModelSerializer):
@@ -155,7 +160,9 @@ class RoutineSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def get_student_names(self, obj):
-        return list(obj.students.values_list("name_bn", flat=True))
+        # .values_list() prefetch_related-এর ক্যাশ এড়িয়ে প্রতিবার নতুন কোয়েরি করত (N+1)।
+        # .all() ইটারেট করলে queryset-এ prefetch করা students-ই ব্যবহার হয় — বাড়তি কোয়েরি নেই।
+        return [s.name_bn for s in obj.students.all()]
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
@@ -183,7 +190,8 @@ class ClassSessionSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def get_student_names(self, obj):
-        return list(obj.students.values_list("name_bn", flat=True))
+        # .values_list()-এর বদলে .all() ইটারেট — prefetch_related-এর ক্যাশ ব্যবহার হয় (N+1 নেই)
+        return [s.name_bn for s in obj.students.all()]
 
 
 class QuestionSerializer(serializers.ModelSerializer):
