@@ -7598,7 +7598,7 @@ function StudentPaymentsView({ db, setDb, user }) {
   };
   const submitPay = async () => {
     if (!pf.trx.trim() && !pf.shot)
-      return notice("দয়া করে স্ক্রিনশট বা ট্রানজেকশন আইডি যুক্ত করুন।");
+      return notice("Please add a screenshot or transaction ID.");
     try {
       await api.payFee({
         amount: userFee,
@@ -7655,24 +7655,27 @@ function StudentPaymentsView({ db, setDb, user }) {
   const acct = {
     বিকাশ: {
       icon: "📱",
-      line1: "বিকাশ পার্সোনাল (Send Money)",
-      line2: "নম্বর: 01402-499027",
+      name: "bKash",
+      line1: "bKash Personal (Send Money)",
+      line2: "Number: 01402-499027",
     },
     নগদ: {
       icon: "🟠",
-      line1: "নগদ পার্সোনাল (Send Money)",
-      line2: "নম্বর: 01402-499027",
+      name: "Nagad",
+      line1: "Nagad Personal (Send Money)",
+      line2: "Number: 01402-499027",
     },
     "ব্যাংক ট্রান্সফার": {
       icon: "🏦",
-      line1: "ইসলামী ব্যাংক বাংলাদেশ — তারবিয়াতুল কুরআন একাডেমি",
-      line2: "হিসাব নং: 2050-1234-5678-901 (ঢাকা শাখা)",
+      name: "Bank Transfer",
+      line1: "Islami Bank Bangladesh — Tarbiyatul Quran Academy",
+      line2: "Account No: 2050-1234-5678-901 (Dhaka Branch)",
     },
   };
   return (
     <Section
-      title="পেমেন্ট"
-      sub="শুরু থেকে সকল পেমেন্ট হিস্টরি, বকেয়া ফি ও রিসিট"
+      title="Payments"
+      sub="All payment history, dues, and receipts from the start"
     >
       <div
         style={{
@@ -7684,15 +7687,15 @@ function StudentPaymentsView({ db, setDb, user }) {
       >
         <Stat
           icon="✅"
-          label="মোট পরিশোধিত (ভেরিফাইড)"
-          value={`৳${bn(totalPaid.toLocaleString("en"))}`}
+          label="Total Paid (Verified)"
+          value={`৳${totalPaid.toLocaleString("en")}`}
         />
         <Stat
           icon="⏳"
-          label="বকেয়া"
-          value={`৳${bn((dues.length * userFee).toLocaleString("en"))}`}
+          label="Due"
+          value={`৳${(dues.length * userFee).toLocaleString("en")}`}
           accent={dues.length ? C.red : C.emerald}
-          note={dues.join(", ") || "আলহামদুলিল্লাহ, বকেয়া নেই"}
+          note={dues.join(", ") || "Alhamdulillah, no dues"}
         />
       </div>
       {dues.length > 0 && (
@@ -7703,7 +7706,7 @@ function StudentPaymentsView({ db, setDb, user }) {
             borderLeft: `4px solid ${C.red}`,
           }}
         >
-          <div style={{ fontWeight: 800, marginBottom: 10 }}>⏳ বকেয়া ফি</div>
+          <div style={{ fontWeight: 800, marginBottom: 10 }}>⏳ Due Fees</div>
           {dues.map((m) => (
             <div
               key={m}
@@ -7726,10 +7729,10 @@ function StudentPaymentsView({ db, setDb, user }) {
                   minWidth: 140,
                 }}
               >
-                {m} — ৳{bn(userFee.toLocaleString("en"))}
+                {m} — ৳{userFee.toLocaleString("en")}
               </span>
               <Btn sm kind="gold" onClick={() => setPayMonth(m)}>
-                ⚡ এখনই পেমেন্ট করুন
+                ⚡ Pay Now
               </Btn>
             </div>
           ))}
@@ -7737,13 +7740,13 @@ function StudentPaymentsView({ db, setDb, user }) {
       )}
       <div style={{ ...S.card }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          📜 পেমেন্ট হিস্টরি
+          📜 Payment History
         </div>
         <Table
-          head={["মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "অবস্থা", "রিসিট"]}
+          head={["Month", "Amount", "Date", "Method", "Status", "Receipt"]}
           rows={paid.map((p) => [
             p.month,
-            `৳${bn(p.amount.toLocaleString("en"))}`,
+            `৳${p.amount.toLocaleString("en")}`,
             fmtDate(p.date),
             p.method,
             p.status === "pending" ? (
@@ -7760,7 +7763,7 @@ function StudentPaymentsView({ db, setDb, user }) {
                   whiteSpace: "nowrap",
                 }}
               >
-                ⏳ পেন্ডিং
+                ⏳ Pending
               </span>
             ) : (
               <span
@@ -7776,14 +7779,14 @@ function StudentPaymentsView({ db, setDb, user }) {
                   whiteSpace: "nowrap",
                 }}
               >
-                ✔ ভেরিফাইড
+                ✔ Verified
               </span>
             ),
             <Btn
               key="eye"
               sm
               kind="soft"
-              title="রিসিট দেখুন / ডাউনলোড করুন"
+              title="View / download receipt"
               onClick={() =>
                 printReceipt(
                   { ...p, date: fmtDate(p.date) },
@@ -7792,15 +7795,15 @@ function StudentPaymentsView({ db, setDb, user }) {
                 )
               }
             >
-              👁 দেখুন
+              👁 View
             </Btn>,
           ])}
-          empty="এখনো কোনো পেমেন্ট নেই"
+          empty="No payments yet"
         />
       </div>
       {payMonth && (
         <Modal
-          title={`এখনই পেমেন্ট করুন — ${payMonth}`}
+          title={`Pay Now — ${payMonth}`}
           onClose={() => setPayMonth(null)}
         >
           <div
@@ -7813,9 +7816,9 @@ function StudentPaymentsView({ db, setDb, user }) {
               marginBottom: 12,
             }}
           >
-            পরিমাণ: ৳{bn(userFee.toLocaleString("en"))}
+            Amount: ৳{userFee.toLocaleString("en")}
           </div>
-          <label style={S.label}>পেমেন্ট মাধ্যম</label>
+          <label style={S.label}>Payment Method</label>
           <div
             style={{
               display: "grid",
@@ -7842,7 +7845,7 @@ function StudentPaymentsView({ db, setDb, user }) {
               >
                 {acct[m].icon}
                 <br />
-                {m}
+                {acct[m].name}
               </button>
             ))}
           </div>
@@ -7859,15 +7862,15 @@ function StudentPaymentsView({ db, setDb, user }) {
             <br />
             {acct[pf.method].line2}
           </div>
-          <label style={S.label}>ট্রানজেকশন আইডি</label>
+          <label style={S.label}>Transaction ID</label>
           <input
             style={S.input}
             value={pf.trx}
             onChange={(e) => setPf({ ...pf, trx: e.target.value })}
-            placeholder="যেমন: 9HX2K7QM"
+            placeholder="e.g. 9HX2K7QM"
           />
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>পেমেন্টের স্ক্রিনশট</label>
+            <label style={S.label}>Payment Screenshot</label>
             <label
               style={{
                 display: "grid",
@@ -7883,7 +7886,7 @@ function StudentPaymentsView({ db, setDb, user }) {
             >
               <span style={{ fontSize: 24 }}>{pf.shot ? "✅" : "🖼️"}</span>
               <span style={{ fontSize: 12.5, fontWeight: 700 }}>
-                {pf.shot ? pf.shot.name : "স্ক্রিনশট / ছবি যোগ করুন"}
+                {pf.shot ? pf.shot.name : "Add a screenshot / photo"}
               </span>
               <input
                 type="file"
@@ -7895,7 +7898,7 @@ function StudentPaymentsView({ db, setDb, user }) {
             {pf.shot && (
               <img
                 src={pf.shot.data}
-                alt="স্ক্রিনশট"
+                alt="Screenshot"
                 style={{
                   width: "100%",
                   borderRadius: 10,
@@ -7913,14 +7916,14 @@ function StudentPaymentsView({ db, setDb, user }) {
               textAlign: "center",
             }}
           >
-            দয়া করে পেমেন্ট সম্পন্ন করে স্ক্রিনশট বা ট্রানজেকশন আইডি যুক্ত করে
-            ভেরিফাই করুন।
+            Please complete the payment, then add a screenshot or transaction
+            ID and verify.
           </div>
           <Btn
             style={{ marginTop: 12, width: "100%", justifyContent: "center" }}
             onClick={submitPay}
           >
-            ✔ ভেরিফাই করুন
+            ✔ Verify
           </Btn>
         </Modal>
       )}
@@ -7960,11 +7963,11 @@ function StudentPaymentsView({ db, setDb, user }) {
               والحمدُ
             </div>
             <div style={{ fontSize: 13.5, color: C.text, marginBottom: 6 }}>
-              "আল্লাহ আপনার পরিবার ও সম্পদে বরকত দান করুন। ঋণ (প্রাপ্য) পরিশোধের
-              প্রতিদান তো পূর্ণ আদায় ও কৃতজ্ঞতা প্রকাশই।"
+              "May Allah bless you in your family and wealth. The reward for a
+              debt repaid is nothing but full payment and gratitude."
             </div>
             <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 14 }}>
-              — সুনানে নাসাঈ ও ইবনে মাজাহ
+              — Sunan al-Nasa'i and Ibn Majah
             </div>
             <div
               style={{
@@ -7976,14 +7979,14 @@ function StudentPaymentsView({ db, setDb, user }) {
                 fontSize: 13.5,
               }}
             >
-              ✔ আপনার পেমেন্ট জমা হয়েছে! পরিচালক যাচাই করলে "ভেরিফাইড" দেখাবে
-              ইনশাআল্লাহ।
+              ✔ Your payment has been submitted! It will show "Verified" once
+              the director confirms it, InshaAllah.
             </div>
             <Btn
               style={{ marginTop: 14, width: "100%", justifyContent: "center" }}
               onClick={() => setDuaMsg(false)}
             >
-              আলহামদুলিল্লাহ
+              Alhamdulillah
             </Btn>
           </div>
         </div>
