@@ -3620,8 +3620,8 @@ function SubmitWork({ item, kind, onClose, onDone }) {
       tab === "form" &&
       item.questions.some((q) => !ans[q.id] && ans[q.id] !== 0)
     )
-      return notice("সব প্রশ্নের উত্তর দিন।");
-    if (tab === "photo" && !img) return notice("ছবি বা PDF নির্বাচন করুন।");
+      return notice("Please answer all questions.");
+    if (tab === "photo" && !img) return notice("Please select a photo or PDF.");
     onDone({
       answers: tab === "form" ? ans : null,
       image: tab === "photo" ? img : null,
@@ -3629,7 +3629,7 @@ function SubmitWork({ item, kind, onClose, onDone }) {
     });
   };
   return (
-    <Modal title={`${kind} জমা — ${item.title}`} onClose={onClose} wide>
+    <Modal title={`Submit ${kind} — ${item.title}`} onClose={onClose} wide>
       {item.mode === "form" && item.questions?.length > 0 && (
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           <Btn
@@ -3637,14 +3637,14 @@ function SubmitWork({ item, kind, onClose, onDone }) {
             kind={tab === "form" ? "primary" : "soft"}
             onClick={() => setTab("form")}
           >
-            📋 ফরম পূরণ করে
+            📋 Fill Form
           </Btn>
           <Btn
             sm
             kind={tab === "photo" ? "primary" : "soft"}
             onClick={() => setTab("photo")}
           >
-            📷 ছবি তুলে
+            📷 Take Photo
           </Btn>
         </div>
       )}
@@ -3653,7 +3653,7 @@ function SubmitWork({ item, kind, onClose, onDone }) {
           {item.questions.map((q, i) => (
             <div key={q.id} style={{ marginBottom: 14 }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>
-                {bn(i + 1)}. {q.q}
+                {i + 1}. {q.q}
               </div>
               {q.type === "mcq" ? (
                 <div style={{ display: "grid", gap: 6 }}>
@@ -3688,7 +3688,7 @@ function SubmitWork({ item, kind, onClose, onDone }) {
                   style={{ ...S.input, resize: "vertical" }}
                   value={ans[q.id] || ""}
                   onChange={(e) => setAns({ ...ans, [q.id]: e.target.value })}
-                  placeholder="উত্তর লিখুন..."
+                  placeholder="Write your answer..."
                 />
               )}
             </div>
@@ -3714,7 +3714,7 @@ function SubmitWork({ item, kind, onClose, onDone }) {
           >
             <span style={{ fontSize: 30 }}>{img ? "✅" : "📷"}</span>
             <span style={{ fontSize: 13.5, fontWeight: 700 }}>
-              {img ? img.name : "ছবি তুলুন বা ফাইল বেছে নিন (ছবি / PDF)"}
+              {img ? img.name : "Take a photo or choose a file (image / PDF)"}
             </span>
             <input
               type="file"
@@ -3727,7 +3727,7 @@ function SubmitWork({ item, kind, onClose, onDone }) {
           {img && !img.isPdf && (
             <img
               src={img.data}
-              alt="জমা"
+              alt="Submission"
               style={{
                 width: "100%",
                 borderRadius: 12,
@@ -3739,19 +3739,19 @@ function SubmitWork({ item, kind, onClose, onDone }) {
         </div>
       )}
       <div style={{ marginTop: 8 }}>
-        <label style={S.label}>মন্তব্য (ঐচ্ছিক)</label>
+        <label style={S.label}>Comment (optional)</label>
         <input
           style={S.input}
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="উস্তাদের জন্য কোনো কথা..."
+          placeholder="Any note for the teacher..."
         />
       </div>
       <Btn
         style={{ marginTop: 14, width: "100%", justifyContent: "center" }}
         onClick={submit}
       >
-        জমা দিন
+        Submit
       </Btn>
     </Modal>
   );
@@ -3984,6 +3984,7 @@ function EvalWork({ item, onClose, onMark }) {
 
 /* ═══════════════ অ্যাসাইনমেন্ট (ফিচার ৫) — ফরম বা ছবি, মূল্যায়নসহ ═══════════════ */
 function AssignmentsView({ db, setDb, courses, user }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [show, setShow] = useState(false);
   const [doSub, setDoSub] = useState(null);
   const [evalFor, setEvalFor] = useState(null);
@@ -4154,7 +4155,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
   };
   return (
     <Section
-      title="অ্যাসাইনমেন্ট"
+      title={T("অ্যাসাইনমেন্ট", "Assignments")}
       sub="ফরম বানিয়ে বা ছবি জমার নির্দেশনা দিয়ে — মূল্যায়ন করলেই মার্ক স্টুডেন্ট পোর্টালে"
       action={
         canCreate && (
@@ -4165,7 +4166,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
       <div style={{ display: "grid", gap: 10 }}>
         {list.length === 0 && (
           <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
-            এখনো কোনো অ্যাসাইনমেন্ট নেই।
+            {T("এখনো কোনো অ্যাসাইনমেন্ট নেই।", "No assignments yet.")}
           </div>
         )}
         {list.map((a) => {
@@ -4192,7 +4193,10 @@ function AssignmentsView({ db, setDb, courses, user }) {
                       color={a.mode === "form" ? C.emerald : C.gold}
                       bg={a.mode === "form" ? C.greenBg : C.amberBg}
                     >
-                      {a.mode === "form" ? "📋 ফরম" : "📷 ছবি জমা"}
+                      {T(
+                      a.mode === "form" ? "📋 ফরম" : "📷 ছবি জমা",
+                      a.mode === "form" ? "📋 Form" : "📷 Photo Submission",
+                    )}
                     </Tag>
                   </div>
                   <div
@@ -4201,8 +4205,12 @@ function AssignmentsView({ db, setDb, courses, user }) {
                     {a.desc}
                   </div>
                   <div style={{ fontSize: 12 }}>
-                    📅 শেষ তারিখ: <b>{fmtDate(a.due)}</b> · পূর্ণমান:{" "}
-                    <b>{bn(a.total)}</b> · জমা: <b>{bn(a.subs.length)}</b> জন
+                    {T("📅 শেষ তারিখ", "📅 Due date")}:{" "}
+                    <b>{fmtDate(a.due)}</b> ·{" "}
+                    {T("পূর্ণমান", "Total marks")}: <b>{T(bn(a.total), a.total)}</b> ·{" "}
+                    {T("জমা", "Submitted")}:{" "}
+                    <b>{T(bn(a.subs.length), a.subs.length)}</b>{" "}
+                    {T("জন", "")}
                     {canCreate && pendingEval > 0 && (
                       <span style={{ color: C.red }}>
                         {" "}
@@ -4223,18 +4231,18 @@ function AssignmentsView({ db, setDb, courses, user }) {
                     (mySub ? (
                       mySub.mark != null ? (
                         <Tag>
-                          প্রাপ্ত মার্ক: {bn(mySub.mark)}/{bn(a.total)} ✔
+                          Marks obtained: {mySub.mark}/{a.total} ✔
                         </Tag>
                       ) : (
                         <Tag color={C.gold} bg={C.amberBg}>
-                          জমা হয়েছে — মূল্যায়নের অপেক্ষায়
+                          Submitted — awaiting evaluation
                         </Tag>
                       )
                     ) : (
                       <Btn sm kind="gold" onClick={() => setDoSub(a)}>
                         {a.mode === "form"
-                          ? "📋 ফরম পূরণ করে জমা দিন"
-                          : "📷 ছবি তুলে জমা দিন"}
+                          ? "📋 Fill & Submit Form"
+                          : "📷 Take Photo & Submit"}
                       </Btn>
                     ))}
                   {canCreate && (
@@ -4256,7 +4264,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
       {doSub && (
         <SubmitWork
           item={doSub}
-          kind="অ্যাসাইনমেন্ট"
+          kind="Assignment"
           onClose={() => setDoSub(null)}
           onDone={(p) => submitWork(doSub, p)}
         />
@@ -4689,7 +4697,7 @@ function ExamsView({ db, setDb, courses, user }) {
       {doSub && (
         <SubmitWork
           item={doSub}
-          kind="পরীক্ষা"
+          kind="Exam"
           onClose={() => setDoSub(null)}
           onDone={(p) => submitWork(doSub, p)}
         />
