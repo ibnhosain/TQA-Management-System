@@ -3,13 +3,16 @@ services:
     name: tqa-backend
     env: python
     region: singapore          # বাংলাদেশের কাছাকাছি
-    plan: free
+    plan: starter          # পেইড — free নয় (dashboard থেকে আপগ্রেড করা হয়েছে, এখানে সিঙ্ক রাখা হলো)
     buildCommand: >-
       pip install -r requirements.txt &&
       python manage.py collectstatic --noinput &&
       python manage.py migrate &&
       python manage.py create_director
-    startCommand: gunicorn tqa_backend.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --capture-output --log-level warning
+    # gthread + threads → একসাথে অনেক বেশি রিকোয়েস্ট সামলাতে পারে (আমাদের কাজ বেশিরভাগ
+    # সময় CPU নয়, ডেটাবেস-অপেক্ষায় কাটে — থ্রেড এই অপেক্ষার সময় GIL ছেড়ে দেয়, তাই একই
+    # ২টা worker প্রসেসেই অনেক বেশি একসাথে ব্যবহারকারী সামলানো যায়, বাড়তি CPU/RAM ছাড়াই)
+    startCommand: gunicorn tqa_backend.wsgi --bind 0.0.0.0:$PORT --workers 2 --worker-class gthread --threads 4 --timeout 120 --capture-output --log-level warning
     envVars:
       - key: SECRET_KEY
         generateValue: true
