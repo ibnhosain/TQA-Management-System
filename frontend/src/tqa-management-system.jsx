@@ -11868,6 +11868,7 @@ function SyllabusView({ db, setDb, courses, user }) {
 
 /* ═══════════════ একাডেমিক বইসমূহ — পরিচালক আপলোড করেন; যে যার কোর্সের বই দেখে ═══════════════ */
 function AcademicBooksView({ db, setDb, user, courses }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [form, setForm] = useState(null); // {name, file, fileObj, courseIds:[]}
   const [books, setBooks] = useState(db.academicBooks || []);
   const [allCourses, setAllCourses] = useState(courses || []);
@@ -12010,7 +12011,10 @@ function AcademicBooksView({ db, setDb, user, courses }) {
      পরেরবার সরাসরি cache থেকে ডিভাইসের default reader এ খোলে */
   const openBook = async (b, setStatus) => {
     const url = b.file?.data;
-    if (!url) return notice("এই বইয়ের কোনো ফাইল সংযুক্ত নেই।");
+    if (!url)
+      return notice(
+        T("এই বইয়ের কোনো ফাইল সংযুক্ত নেই।", "No file is attached to this book."),
+      );
     // বাহ্যিক লিংক (Google Drive/Dropbox/অন্য সাইট) → ক্লিকের সাথে সাথেই সরাসরি খুলুন।
     // (ডাউনলোড/cache করলে CORS-এ আটকায়, আর await-এর পর window.open ব্রাউজার popup ব্লক করে দেয়)
     const isExternal = !/cloudinary\.com/.test(url) && !url.includes("/media/");
@@ -12046,7 +12050,10 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     } catch (e) {
       if (e?.status === 404) {
         notice(
-          "ফাইলটি সার্ভারে পাওয়া যাচ্ছে না। পরিচালক বইটি আবার আপলোড করুন।",
+          T(
+            "ফাইলটি সার্ভারে পাওয়া যাচ্ছে না। পরিচালক বইটি আবার আপলোড করুন।",
+            "This file could not be found on the server. Please ask the director to re-upload it.",
+          ),
         );
       } else {
         // CORS বা অন্য সমস্যা → সরাসরি নতুন ট্যাবে খোলো (ব্রাউজার নিজে cache করবে)
@@ -12061,11 +12068,11 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     const busy = status === "downloading" || status === "opening";
     const msg =
       status === "downloading"
-        ? "প্রথমবার নামছে…"
+        ? T("প্রথমবার নামছে…", "Downloading for the first time…")
         : status === "opening"
-          ? "ডিভাইস থেকে খুলছে…"
+          ? T("ডিভাইস থেকে খুলছে…", "Opening from device…")
           : status === "done"
-            ? "খুলছে…"
+            ? T("খুলছে…", "Opening…")
             : null;
     const icon =
       status === "downloading"
@@ -12085,11 +12092,14 @@ function AcademicBooksView({ db, setDb, user, courses }) {
           cursor: busy ? "wait" : "pointer",
           borderBottom: `1.5px dashed ${busy ? C.muted : C.emerald}`,
         }}
-        title={
+        title={T(
           busy
             ? "একটু অপেক্ষা করুন…"
-            : "ক্লিক করলেই খুলবে — প্রথমবার একবার নামবে, পরেরবার সরাসরি ডিভাইস থেকে"
-        }
+            : "ক্লিক করলেই খুলবে — প্রথমবার একবার নামবে, পরেরবার সরাসরি ডিভাইস থেকে",
+          busy
+            ? "Please wait…"
+            : "Click to open — downloads once the first time, then opens directly from your device",
+        )}
       >
         {icon} {b.name}
         {msg && (
@@ -12124,17 +12134,17 @@ function AcademicBooksView({ db, setDb, user, courses }) {
         <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3 }}>
           {b.isLink ? (
             <Tag color={C.blue} bg={C.blueBg}>
-              🔗 লিংক
+              🔗 {T("লিংক", "Link")}
             </Tag>
           ) : (
             <>
               <Tag color={C.blue} bg={C.blueBg}>
                 {bookExt(b.file?.name)}
               </Tag>{" "}
-              {b.file?.name || "ফাইল সংযুক্ত নেই"}
+              {b.file?.name || T("ফাইল সংযুক্ত নেই", "No file attached")}
             </>
           )}{" "}
-          · যোগ: {fmtDate(b.date)}
+          · {T("যোগ", "Added")}: {fmtDate(b.date)}
           {isAdm(user) && (
             <span>
               {" "}
@@ -12155,11 +12165,14 @@ function AcademicBooksView({ db, setDb, user, courses }) {
   );
   return (
     <Section
-      title="একাডেমিক বইসমূহ"
+      title={T("একাডেমিক বইসমূহ", "Academic Books")}
       sub={
         isAdm(user)
           ? "একাডেমির সকল বইয়ের কেন্দ্রীয় তালিকা — কোর্স তৈরির সময় এখান থেকেই বই সিলেক্ট হয়"
-          : "আপনার কোর্সের নির্ধারিত বইসমূহ — নামে ক্লিক করলেই খুলবে"
+          : T(
+              "আপনার কোর্সের নির্ধারিত বইসমূহ — নামে ক্লিক করলেই খুলবে",
+              "Books assigned to your course — click a name to open it",
+            )
       }
       action={
         isDir(user) && (
@@ -12186,7 +12199,10 @@ function AcademicBooksView({ db, setDb, user, courses }) {
           📚{" "}
           {isAdm(user)
             ? 'এখনো কোনো বই যোগ হয়নি — "+ বই যোগ করুন" দিয়ে শুরু করুন।'
-            : "আপনার কোর্সে এখনো কোনো বই নির্ধারিত হয়নি।"}
+            : T(
+                "আপনার কোর্সে এখনো কোনো বই নির্ধারিত হয়নি।",
+                "No books have been assigned to your course yet.",
+              )}
         </div>
       )}
       {isAdm(user) ? (
