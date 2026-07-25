@@ -881,8 +881,12 @@ const Loader = ({ text = "একটু অপেক্ষা করুন…" })
       @keyframes tqaFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
       @keyframes tqaGlow{0%,100%{opacity:.4;transform:scale(.85)}50%{opacity:1;transform:scale(1)}}
     `}</style>
-    <div style={{ fontSize: 46, animation: "tqaFloat 2.2s ease-in-out infinite" }}>
-      🕌
+    <div style={{ animation: "tqaFloat 2.2s ease-in-out infinite" }}>
+      <img
+        src="/brand/logo-green.png"
+        alt="তারবিয়াতুল কুরআন একাডেমি"
+        style={{ width: 52, height: 52, borderRadius: 12 }}
+      />
     </div>
     <div
       style={{
@@ -1223,24 +1227,28 @@ function Login({ onLogin, onAdmission }) {
       label: "পরিচালক / Director",
       icon: "👑",
       desc: "সার্বিক তত্ত্বাবধান — ফি, বেতন, রিপোর্ট ও সকল ক্ষমতা",
+      tint: "rgba(124,58,237,.10)",
     },
     {
       key: "admin",
       label: "এডমিন / Admin",
       icon: "🛡️",
       desc: "শিক্ষার্থী, উস্তাদ, ক্লাস ও পেমেন্ট ব্যবস্থাপনা",
+      tint: "rgba(99,102,241,.10)",
     },
     {
       key: "teacher",
       label: "উস্তাদ/উস্তাদা / Teacher",
       icon: "📖",
       desc: "ক্লাস, হাজিরা, পড়ানো ও শিক্ষার্থীর অগ্রগতি",
+      tint: "rgba(26,92,58,.10)",
     },
     {
       key: "student",
       label: "স্টুডেন্ট / Student",
       icon: "🎓",
       desc: "Routine, classes, exams & fee status",
+      tint: "rgba(201,150,42,.10)",
     },
   ];
   /* ওয়েবসাইটের login.html থেকে ?role=admin দিয়ে এলে সরাসরি ফর্মে */
@@ -1330,70 +1338,118 @@ function Login({ onLogin, onAdmission }) {
     <div
       style={{
         minHeight: "100vh",
-        background: `linear-gradient(160deg, ${C.emeraldD}, ${C.emerald} 60%, ${C.emeraldL})`,
+        background: "#fff",
         display: "grid",
         placeItems: "center",
         padding: 16,
       }}
     >
-      <div style={{ width: "100%", maxWidth: 420 }}>
-        <div style={{ textAlign: "center", marginBottom: 22 }}>
-          <div style={{ fontSize: 42 }}>🕌</div>
+      <style>{`
+        .tqaRoleCard{transition:border-color .15s,background .15s,box-shadow .15s,transform .15s}
+        .tqaRoleCard:hover{border-color:${C.emerald};background:#f2f7f4;box-shadow:0 4px 16px rgba(26,92,58,.12);transform:translateY(-2px)}
+        .tqaRoleCard:hover .tqaRoleArrow{color:${C.emerald};transform:translateX(3px)}
+      `}</style>
+      <div style={{ width: "100%", maxWidth: 480 }}>
+        <div
+          style={{
+            background: "rgba(255,255,255,.97)",
+            borderRadius: 24,
+            padding: "44px 40px 40px",
+            boxShadow: "0 24px 64px rgba(0,0,0,.25)",
+            border: `1px solid ${C.line}`,
+            boxSizing: "border-box",
+          }}
+        >
+          {/* লোগো — ওয়েবসাইটের সাথে মেলানো (ফ্রেমযুক্ত আইকন + নাম পাশাপাশি) */}
           <div
             style={{
-              color: C.goldL,
-              fontSize: 13,
-              letterSpacing: 2,
-              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              marginBottom: 28,
             }}
           >
-            تربية القرآن
+            <div
+              style={{
+                width: 54,
+                height: 52,
+                padding: 2,
+                border: `3px solid ${C.emeraldL}`,
+                borderRadius: 12,
+                boxShadow: "0 2px 12px rgba(26,92,58,.35), 0 0 0 2px rgba(240,195,85,.25)",
+                flexShrink: 0,
+                boxSizing: "border-box",
+              }}
+            >
+              <img
+                src="/brand/logo-green.png"
+                alt="তারবিয়াতুল কুরআন একাডেমি"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: 7,
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+            </div>
+            <div style={{ textAlign: "left" }}>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: C.emeraldD,
+                  lineHeight: 1.15,
+                }}
+              >
+                {T("তারবিয়াতুল কুরআন একাডেমি", "Tarbiyatul Quran Academy")}
+              </span>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: 12,
+                  color: C.muted,
+                  marginTop: 2,
+                }}
+              >
+                {T("ম্যানেজমেন্ট পোর্টাল", "Management Portal")}
+              </span>
+            </div>
           </div>
-          <h1
-            style={{
-              color: "#fff",
-              fontSize: 24,
-              margin: "4px 0 2px",
-              fontWeight: 800,
-            }}
-          >
-            {T("তারবিয়াতুল কুরআন একাডেমি", "Tarbiyatul Quran Academy")}
-          </h1>
-          <div style={{ color: "#cfe6d8", fontSize: 13 }}>
-            {T(
-              "ম্যানেজমেন্ট সিস্টেম — এডমিন · উস্তাদ/উস্তাদা · স্টুডেন্ট",
-              "Management System",
-            )}
-          </div>
-        </div>
-        <div style={{ ...S.card, borderRadius: 20, padding: 22 }}>
           {!role ? (
             <>
               {/* ── ধাপ ১: ভূমিকা বাছাই (এখনো কে বাছবে জানা নেই, তাই দুই ভাষাতেই) ── */}
-              <div
+              <h1
                 style={{
+                  fontFamily: "'Playfair Display', Georgia, serif",
                   fontWeight: 800,
-                  fontSize: 16,
+                  fontSize: 22,
+                  color: C.text,
                   textAlign: "center",
-                  marginBottom: 4,
+                  marginBottom: 6,
+                  lineHeight: 1.3,
                 }}
               >
                 আপনি কে হিসেবে লগইন করবেন? / Who are you logging in as?
-              </div>
+              </h1>
               <div
                 style={{
-                  fontSize: 12.5,
+                  fontSize: 13.5,
                   color: C.muted,
                   textAlign: "center",
-                  marginBottom: 14,
+                  marginBottom: 26,
+                  lineHeight: 1.5,
                 }}
               >
-                আপনার ভূমিকা বাছাই করুন / Select your role
+                আপনার ভূমিকা বাছাই করুন / Select your role to continue
               </div>
-              <div style={{ display: "grid", gap: 10 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {ROLES.map((r) => (
                   <button
                     key={r.key}
+                    className="tqaRoleCard"
                     onClick={() => {
                       setRole(r.key);
                       setErr("");
@@ -1401,18 +1457,30 @@ function Login({ onLogin, onAdmission }) {
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 12,
-                      padding: "12px 14px",
-                      borderRadius: 14,
-                      border: `1.5px solid ${C.line}`,
+                      gap: 16,
+                      padding: "18px 20px",
+                      borderRadius: 16,
+                      border: `2px solid ${C.line}`,
                       background: "#fff",
                       cursor: "pointer",
                       textAlign: "left",
                       width: "100%",
                       fontFamily: "inherit",
+                      boxSizing: "border-box",
                     }}
                   >
-                    <span style={{ fontSize: 26, flexShrink: 0 }}>
+                    <span
+                      style={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: 14,
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: 26,
+                        flexShrink: 0,
+                        background: r.tint,
+                      }}
+                    >
                       {r.icon}
                     </span>
                     <span style={{ flex: 1, minWidth: 0 }}>
@@ -1420,7 +1488,7 @@ function Login({ onLogin, onAdmission }) {
                         style={{
                           display: "block",
                           fontWeight: 800,
-                          fontSize: 14.5,
+                          fontSize: 16,
                           color: C.text,
                         }}
                       >
@@ -1429,19 +1497,22 @@ function Login({ onLogin, onAdmission }) {
                       <span
                         style={{
                           display: "block",
-                          fontSize: 11.5,
+                          fontSize: 13,
                           color: C.muted,
-                          marginTop: 2,
+                          marginTop: 3,
+                          lineHeight: 1.4,
                         }}
                       >
                         {r.desc}
                       </span>
                     </span>
                     <span
+                      className="tqaRoleArrow"
                       style={{
-                        color: C.emerald,
-                        fontWeight: 800,
+                        fontSize: 18,
+                        color: "#9ca3af",
                         flexShrink: 0,
+                        transition: "color .15s, transform .15s",
                       }}
                     >
                       →
@@ -1454,7 +1525,7 @@ function Login({ onLogin, onAdmission }) {
                 style={{
                   width: "100%",
                   justifyContent: "center",
-                  marginTop: 14,
+                  marginTop: 20,
                 }}
                 onClick={() => setApply(true)}
               >
@@ -1511,7 +1582,14 @@ function Login({ onLogin, onAdmission }) {
                   {ROLES.find((r) => r.key === role).icon}
                 </span>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>
+                  <div
+                    style={{
+                      fontFamily: "'Playfair Display', Georgia, serif",
+                      fontWeight: 800,
+                      fontSize: 17,
+                      color: C.text,
+                    }}
+                  >
                     {T(
                       `${ROLES.find((r) => r.key === role).label} লগইন`,
                       "Student Login",
@@ -7438,8 +7516,12 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
           color: "#fff",
         }}
       >
-        <div style={{ fontSize: 46, animation: "tqaPulse 1.6s infinite" }}>
-          🕌
+        <div style={{ animation: "tqaPulse 1.6s infinite" }}>
+          <img
+            src="/brand/logo-green.png"
+            alt="তারবিয়াতুল কুরআন একাডেমি"
+            style={{ width: 60, height: 60, borderRadius: 14 }}
+          />
         </div>
         <div
           style={{
@@ -12523,11 +12605,14 @@ function Overview({ db, courses, user, goTo }) {
             position: "absolute",
             right: 18,
             top: 8,
-            fontSize: 56,
             opacity: 0.18,
           }}
         >
-          🕌
+          <img
+            src="/brand/logo-green.png"
+            alt=""
+            style={{ width: 64, height: 64, borderRadius: 14 }}
+          />
         </div>
         <div
           style={{
@@ -13226,7 +13311,11 @@ export default function App() {
         }}
       >
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 40 }}>🕌</div>
+          <img
+            src="/brand/logo-green.png"
+            alt="তারবিয়াতুল কুরআন একাডেমি"
+            style={{ width: 56, height: 56, borderRadius: 14 }}
+          />
           <div style={{ marginTop: 10, fontWeight: 700 }}>সংযোগ করা হচ্ছে…</div>
           <div style={{ marginTop: 4, fontSize: 12.5, color: "#6b7280" }}>
             সার্ভার জেগে উঠছে, একটু অপেক্ষা করুন
@@ -13366,7 +13455,16 @@ export default function App() {
             minWidth: 0,
           }}
         >
-          <span style={{ fontSize: 20 }}>🕌</span>
+          <img
+            src="/brand/logo-green.png"
+            alt=""
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 7,
+              flexShrink: 0,
+            }}
+          />
           <div style={{ minWidth: 0 }}>
             <div
               style={{
