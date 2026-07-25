@@ -1214,27 +1214,27 @@ function Login({ onLogin, onAdmission }) {
   const ROLES = [
     {
       key: "director",
-      label: "পরিচালক",
+      label: "পরিচালক / Director",
       icon: "👑",
       desc: "সার্বিক তত্ত্বাবধান — ফি, বেতন, রিপোর্ট ও সকল ক্ষমতা",
     },
     {
       key: "admin",
-      label: "এডমিন",
+      label: "এডমিন / Admin",
       icon: "🛡️",
       desc: "শিক্ষার্থী, উস্তাদ, ক্লাস ও পেমেন্ট ব্যবস্থাপনা",
     },
     {
       key: "teacher",
-      label: "উস্তাদ / উস্তাদা",
+      label: "উস্তাদ/উস্তাদা / Teacher",
       icon: "📖",
       desc: "ক্লাস, হাজিরা, পড়ানো ও শিক্ষার্থীর অগ্রগতি",
     },
     {
       key: "student",
-      label: "স্টুডেন্ট",
+      label: "স্টুডেন্ট / Student",
       icon: "🎓",
-      desc: "রুটিন, পড়া, পরীক্ষা ও ফি-এর হিসাব",
+      desc: "Routine, classes, exams & fee status",
     },
   ];
   /* ওয়েবসাইটের login.html থেকে ?role=admin দিয়ে এলে সরাসরি ফর্মে */
@@ -1247,6 +1247,8 @@ function Login({ onLogin, onAdmission }) {
     }
   })();
   const [role, setRole] = useState(initRole);
+  // স্টুডেন্ট বেছে নিলে ফর্ম ইংরেজিতে দেখাবে — বেশিরভাগ শিক্ষার্থী বাংলা বোঝে না
+  const T = (bnText, enText) => (role === "student" ? enText : bnText);
   const [u, setU] = useState("");
   const [p, setP] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -1254,7 +1256,7 @@ function Login({ onLogin, onAdmission }) {
   const [busy, setBusy] = useState(false);
   const go = async () => {
     if (!u.trim() || !p) {
-      setErr("আইডি ও পাসওয়ার্ড দুটোই লিখুন");
+      setErr(T("আইডি ও পাসওয়ার্ড দুটোই লিখুন", "Please enter both ID and password"));
       return;
     }
     setBusy(true);
@@ -1275,9 +1277,14 @@ function Login({ onLogin, onAdmission }) {
       });
     } catch (e) {
       if (e?.status === 401 || e?.message?.includes("401")) {
-        setErr("ভুল আইডি বা পাসওয়ার্ড!");
+        setErr(T("ভুল আইডি বা পাসওয়ার্ড!", "Incorrect ID or password!"));
       } else {
-        setErr("সার্ভার সংযোগ নেই। ব্যাকএন্ড চালু আছে কি?");
+        setErr(
+          T(
+            "সার্ভার সংযোগ নেই। ব্যাকএন্ড চালু আছে কি?",
+            "No server connection. Please check your internet and try again.",
+          ),
+        );
       }
     } finally {
       setBusy(false);
@@ -1344,16 +1351,19 @@ function Login({ onLogin, onAdmission }) {
               fontWeight: 800,
             }}
           >
-            তারবিয়াতুল কুরআন একাডেমি
+            {T("তারবিয়াতুল কুরআন একাডেমি", "Tarbiyatul Quran Academy")}
           </h1>
           <div style={{ color: "#cfe6d8", fontSize: 13 }}>
-            ম্যানেজমেন্ট সিস্টেম — এডমিন · উস্তাদ/উস্তাদা · স্টুডেন্ট
+            {T(
+              "ম্যানেজমেন্ট সিস্টেম — এডমিন · উস্তাদ/উস্তাদা · স্টুডেন্ট",
+              "Management System",
+            )}
           </div>
         </div>
         <div style={{ ...S.card, borderRadius: 20, padding: 22 }}>
           {!role ? (
             <>
-              {/* ── ধাপ ১: ভূমিকা বাছাই ── */}
+              {/* ── ধাপ ১: ভূমিকা বাছাই (এখনো কে বাছবে জানা নেই, তাই দুই ভাষাতেই) ── */}
               <div
                 style={{
                   fontWeight: 800,
@@ -1362,7 +1372,7 @@ function Login({ onLogin, onAdmission }) {
                   marginBottom: 4,
                 }}
               >
-                আপনি কে হিসেবে লগইন করবেন?
+                আপনি কে হিসেবে লগইন করবেন? / Who are you logging in as?
               </div>
               <div
                 style={{
@@ -1372,7 +1382,7 @@ function Login({ onLogin, onAdmission }) {
                   marginBottom: 14,
                 }}
               >
-                আপনার ভূমিকা বাছাই করুন
+                আপনার ভূমিকা বাছাই করুন / Select your role
               </div>
               <div style={{ display: "grid", gap: 10 }}>
                 {ROLES.map((r) => (
@@ -1442,7 +1452,7 @@ function Login({ onLogin, onAdmission }) {
                 }}
                 onClick={() => setApply(true)}
               >
-                🎓 নতুন শিক্ষার্থী? ভর্তি আবেদন করুন
+                🎓 নতুন শিক্ষার্থী? ভর্তি আবেদন করুন / New student? Apply here
               </Btn>
               {ok && (
                 <div
@@ -1481,7 +1491,7 @@ function Login({ onLogin, onAdmission }) {
                   fontFamily: "inherit",
                 }}
               >
-                ← ভূমিকা বদলান
+                {T("← ভূমিকা বদলান", "← Change role")}
               </button>
               <div
                 style={{
@@ -1496,23 +1506,29 @@ function Login({ onLogin, onAdmission }) {
                 </span>
                 <div>
                   <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>
-                    {ROLES.find((r) => r.key === role).label} লগইন
+                    {T(
+                      `${ROLES.find((r) => r.key === role).label} লগইন`,
+                      "Student Login",
+                    )}
                   </div>
                   <div style={{ fontSize: 11.5, color: C.muted }}>
-                    আপনার আইডি ও পাসওয়ার্ড দিন
+                    {T("আপনার আইডি ও পাসওয়ার্ড দিন", "Enter your ID and password")}
                   </div>
                 </div>
               </div>
-              <label style={S.label}>আইডি</label>
+              <label style={S.label}>{T("আইডি", "ID")}</label>
               <input
                 style={{ ...S.input, width: "100%", boxSizing: "border-box" }}
                 value={u}
                 onChange={(e) => setU(e.target.value)}
-                placeholder="আইডি / ইমেইল / মোবাইল নম্বর"
+                placeholder={T(
+                  "আইডি / ইমেইল / মোবাইল নম্বর",
+                  "ID / Email / Mobile number",
+                )}
                 autoFocus
               />
               <div style={{ height: 12 }} />
-              <label style={S.label}>পাসওয়ার্ড</label>
+              <label style={S.label}>{T("পাসওয়ার্ড", "Password")}</label>
               <div style={{ position: "relative" }}>
                 <input
                   style={{
@@ -1529,10 +1545,14 @@ function Login({ onLogin, onAdmission }) {
                 />
                 <button
                   onClick={() => setShowPass((s) => !s)}
-                  title={showPass ? "পাসওয়ার্ড লুকান" : "পাসওয়ার্ড দেখুন"}
-                  aria-label={
-                    showPass ? "পাসওয়ার্ড লুকান" : "পাসওয়ার্ড দেখুন"
-                  }
+                  title={T(
+                    showPass ? "পাসওয়ার্ড লুকান" : "পাসওয়ার্ড দেখুন",
+                    showPass ? "Hide password" : "Show password",
+                  )}
+                  aria-label={T(
+                    showPass ? "পাসওয়ার্ড লুকান" : "পাসওয়ার্ড দেখুন",
+                    showPass ? "Hide password" : "Show password",
+                  )}
                   style={{
                     position: "absolute",
                     right: 10,
@@ -1564,7 +1584,7 @@ function Login({ onLogin, onAdmission }) {
                 disabled={busy || !u.trim() || !p}
                 onClick={go}
               >
-                {busy ? "যাচাই হচ্ছে…" : "লগ ইন করুন"}
+                {busy ? T("যাচাই হচ্ছে…", "Verifying…") : T("লগ ইন করুন", "Log In")}
               </Btn>
             </>
           )}
@@ -1681,6 +1701,7 @@ function playAlarm() {
 
 /* ইন-ক্লাস প্যানেল — দুজন-জয়েন গেটিং, ২৭-মিনিট অটো সেগমেন্ট (অ্যালার্ম+রিজয়েন), সব মিলিয়ে ৪৫-মিনিট হাজিরা */
 function LiveClassPanel({ k, user, demoFast, usingApi, onExit }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [segSec, setSegSec] = useState(0);
   const [presence, setPresence] = useState(null);
   const [inMeeting, setInMeeting] = useState(true);
@@ -1799,7 +1820,7 @@ function LiveClassPanel({ k, user, demoFast, usingApi, onExit }) {
               marginTop: 6,
             }}
           >
-            27 minutes are over!
+            {T("২৭ মিনিট শেষ!", "27 minutes are over!")}
           </div>
           <div
             style={{
@@ -1809,8 +1830,10 @@ function LiveClassPanel({ k, user, demoFast, usingApi, onExit }) {
               lineHeight: 1.6,
             }}
           >
-            Please leave the Zoom meeting, then tap "Join Again" to continue the
-            class.
+            {T(
+              'জুম মিটিং থেকে বের হয়ে "আবার জয়েন করুন" চাপুন ক্লাস চালিয়ে যেতে।',
+              'Please leave the Zoom meeting, then tap "Join Again" to continue the class.',
+            )}
           </div>
           <div
             style={{
@@ -1821,8 +1844,14 @@ function LiveClassPanel({ k, user, demoFast, usingApi, onExit }) {
             }}
           >
             {done
-              ? "✓ Attendance is complete (45+ minutes)."
-              : `Total ${total}/45 minutes so far — join again to complete.`}
+              ? T(
+                  "✓ হাজিরা সম্পূর্ণ হয়েছে (৪৫+ মিনিট)।",
+                  "✓ Attendance is complete (45+ minutes).",
+                )
+              : T(
+                  `এখন পর্যন্ত মোট ${total}/৪৫ মিনিট — সম্পূর্ণ করতে আবার জয়েন করুন।`,
+                  `Total ${total}/45 minutes so far — join again to complete.`,
+                )}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Btn
@@ -1830,7 +1859,7 @@ function LiveClassPanel({ k, user, demoFast, usingApi, onExit }) {
               style={{ flex: 1, justifyContent: "center" }}
               onClick={doRejoin}
             >
-              🔁 Join Again
+              {T("🔁 আবার জয়েন করুন", "🔁 Join Again")}
             </Btn>
             <Btn
               kind="soft"
@@ -1840,7 +1869,7 @@ function LiveClassPanel({ k, user, demoFast, usingApi, onExit }) {
                 onExit(true);
               }}
             >
-              End Class
+              {T("ক্লাস শেষ করুন", "End Class")}
             </Btn>
           </div>
         </div>
@@ -1851,19 +1880,31 @@ function LiveClassPanel({ k, user, demoFast, usingApi, onExit }) {
     <div style={{ marginTop: 6, fontSize: 13 }}>
       {!bothIn ? (
         <span style={{ fontWeight: 700, color: C.gold }}>
-          ⏳ Waiting for {user.role === "teacher" ? "student" : "teacher"} to
-          join…
+          {T(
+            `⏳ ${user.role === "teacher" ? "শিক্ষার্থীর" : "উস্তাদের"} জয়েনের অপেক্ষায়…`,
+            `⏳ Waiting for ${user.role === "teacher" ? "student" : "teacher"} to join…`,
+          )}
         </span>
       ) : (
         <span style={{ fontWeight: 800, color: done ? C.green : C.gold }}>
-          ⏱️ {bn(demoFast ? segSec : Math.floor(segSec / 60))}/
-          {bn(demoFast ? SEG : 27)} {demoFast ? "সেকেন্ড" : "মিনিট"} · মোট{" "}
-          {bn(total)}/{bn(NEED)} মিনিট {done ? "✓ হাজিরা নিশ্চিত" : ""}
+          {user.role === "student" ? (
+            <>
+              ⏱️ {demoFast ? segSec : Math.floor(segSec / 60)}/
+              {demoFast ? SEG : 27} {demoFast ? "sec" : "min"} · Total {total}/
+              {NEED} min {done ? "✓ Attendance confirmed" : ""}
+            </>
+          ) : (
+            <>
+              ⏱️ {bn(demoFast ? segSec : Math.floor(segSec / 60))}/
+              {bn(demoFast ? SEG : 27)} {demoFast ? "সেকেন্ড" : "মিনিট"} · মোট{" "}
+              {bn(total)}/{bn(NEED)} মিনিট {done ? "✓ হাজিরা নিশ্চিত" : ""}
+            </>
+          )}
         </span>
       )}
       <div style={{ marginTop: 6 }}>
         <Btn sm kind="danger" onClick={() => endSegment(false)}>
-          Leave &amp; Save
+          {T("সংরক্ষণ করে বের হন", "Leave & Save")}
         </Btn>
       </div>
     </div>
@@ -1955,6 +1996,8 @@ function ClassesView({
   autoJoinId,
   onAutoJoinConsumed,
 }) {
+  // শিক্ষার্থী বাংলা বোঝে না বলে তাদের জন্য ইংরেজি; উস্তাদ/এডমিন/পরিচালকের জন্য বাংলাই থাকছে
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [show, setShow] = useState(false);
   const blankSched = () => ({
     courseId: courses[0]?.id,
@@ -2245,7 +2288,7 @@ function ClassesView({
           <div style={{ fontWeight: 800, fontSize: 15 }}>
             {c.name || k.courseName}{" "}
             <span style={{ color: C.muted, fontWeight: 600, fontSize: 12.5 }}>
-              · লেকচার {bn(k.lectureNo)}
+              · {T(`লেকচার ${bn(k.lectureNo)}`, `Lecture ${k.lectureNo}`)}
             </span>{" "}
             {k.kind && k.kind !== "নিয়মিত ক্লাস" && (
               <Tag color={C.red} bg={C.redBg}>
@@ -2254,7 +2297,7 @@ function ClassesView({
             )}
           </div>
           <div style={{ fontSize: 12.5, color: C.muted }}>
-            {lec?.title} · উস্তাদ:{" "}
+            {lec?.title} · {T("উস্তাদ", "Teacher")}:{" "}
             {k.teacherName || nameOf(k.teacherId || c.teacherId)}
           </div>
           {user.role !== "student" && (
@@ -2282,12 +2325,15 @@ function ClassesView({
                 borderRadius: 8,
               }}
             >
-              ⛔ ক্লাসটি অনিবার্য কারণে / উস্তাদ-উস্তাদা অসুস্থ থাকার দরুন
-              স্থগিত করা হয়েছে। পরবর্তীতে শিডিউল করে মেকআপ করা হবে ইনশাআল্লাহ।
+              {T(
+                "⛔ ক্লাসটি অনিবার্য কারণে / উস্তাদ-উস্তাদা অসুস্থ থাকার দরুন স্থগিত করা হয়েছে। পরবর্তীতে শিডিউল করে মেকআপ করা হবে ইনশাআল্লাহ।",
+                "⛔ This class has been postponed due to unavoidable circumstances / the teacher being unwell. A makeup class will be scheduled soon, InshaAllah.",
+              )}
             </div>
           )}
           <div style={{ fontSize: 12.5, color: C.text, marginTop: 2 }}>
-            📅 {fmtDate(k.date)} · 🕐 {k.time} · {bn(k.dur)} মিনিট
+            📅 {fmtDate(k.date)} · 🕐 {k.time} ·{" "}
+            {T(`${bn(k.dur)} মিনিট`, `${k.dur} min`)}
           </div>
           {isJoined && (
             <LiveClassPanel
@@ -2308,7 +2354,7 @@ function ClassesView({
               onClick={() => join(k)}
               style={{ textDecoration: "none" }}
             >
-              <Btn kind="gold">🎥 জুমে জয়েন করুন</Btn>
+              <Btn kind="gold">{T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}</Btn>
             </a>
           )}
           {joinable && isAdm(user) && k.status !== "postponed" && (
@@ -2337,7 +2383,7 @@ function ClassesView({
           )}
           {k.status === "postponed" && (
             <Tag color={C.red} bg={C.redBg}>
-              ⛔ স্থগিত
+              {T("⛔ স্থগিত", "⛔ Postponed")}
             </Tag>
           )}
           {!joinable && k.status !== "postponed" && (
@@ -2345,7 +2391,7 @@ function ClassesView({
               color={k.status === "done" ? C.green : C.blue}
               bg={k.status === "done" ? C.greenBg : C.blueBg}
             >
-              {k.status === "done" ? "সম্পন্ন" : "আসন্ন"}
+              {k.status === "done" ? T("সম্পন্ন", "Done") : T("আসন্ন", "Upcoming")}
             </Tag>
           )}
         </div>
@@ -2354,10 +2400,15 @@ function ClassesView({
   };
   return (
     <>
-      {classesLoading && <Loader text="ক্লাস লোড হচ্ছে" />}
+      {classesLoading && (
+        <Loader text={T("ক্লাস লোড হচ্ছে", "Loading classes")} />
+      )}
       <Section
-        title="আজকের ক্লাস"
-        sub="সময় হলে এক ক্লিকে জুম মিটিং খুলে যাবে — ৪৫ মিনিটের কম থাকলে হাজিরা গণ্য হবে না"
+        title={T("আজকের ক্লাস", "Today's Classes")}
+        sub={T(
+          "সময় হলে এক ক্লিকে জুম মিটিং খুলে যাবে — ৪৫ মিনিটের কম থাকলে হাজিরা গণ্য হবে না",
+          "The Zoom meeting will open with one click when it's time — attendance is only counted if you stay 45+ minutes",
+        )}
         action={
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <label
@@ -2375,7 +2426,7 @@ function ClassesView({
                 checked={demoFast}
                 onChange={(e) => setDemoFast(e.target.checked)}
               />{" "}
-              ডেমো মোড (১ সেকেন্ড = ১ মিনিট)
+              {T("ডেমো মোড (১ সেকেন্ড = ১ মিনিট)", "Demo mode (1 second = 1 minute)")}
             </label>
             {isAdm(user) && (
               <Btn onClick={() => setShow(true)}>+ ক্লাস শিডিউল</Btn>
@@ -2386,17 +2437,20 @@ function ClassesView({
         <div style={{ display: "grid", gap: 10 }}>
           {!classesLoading && today.length === 0 && (
             <div style={{ ...S.card, textAlign: "center", color: C.muted }}>
-              আজ কোনো ক্লাস নেই।
+              {T("আজ কোনো ক্লাস নেই।", "No classes today.")}
             </div>
           )}
           {today.map((k) => Row(k, user.role !== "admin" || true))}
         </div>
       </Section>
-      <Section title="আসন্ন ক্লাস" sub="সামনের ৭ দিনের ক্লাস">
+      <Section
+        title={T("আসন্ন ক্লাস", "Upcoming Classes")}
+        sub={T("সামনের ৭ দিনের ক্লাস", "Classes in the next 7 days")}
+      >
         <div style={{ display: "grid", gap: 10 }}>
           {upcoming.length === 0 ? (
             <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
-              কিছু নেই
+              {T("কিছু নেই", "Nothing yet")}
             </div>
           ) : (
             upcoming.map((k) => Row(k, false))
@@ -2404,8 +2458,11 @@ function ClassesView({
         </div>
       </Section>
       <Section
-        title="বিগত ক্লাস"
-        sub="গত ৩ দিনের হিস্টরি — পুরনো ক্লাসের তথ্য ডাটাবেসে সংরক্ষিতই থাকে, শুধু এখানে কম দেখানো হয়"
+        title={T("বিগত ক্লাস", "Past Classes")}
+        sub={T(
+          "গত ৩ দিনের হিস্টরি — পুরনো ক্লাসের তথ্য ডাটাবেসে সংরক্ষিতই থাকে, শুধু এখানে কম দেখানো হয়",
+          "Last 3 days of history — older class records stay saved in the database, just not shown here",
+        )}
       >
         <div style={{ display: "grid", gap: 10 }}>
           {past.map((k) => Row(k, false))}
@@ -3217,6 +3274,7 @@ function LecturePlan({ db, courses, user, refresh }) {
 
 /* ═══════════════ হাজিরা রিপোর্ট (ফিচার ৪) ═══════════════ */
 function AttendanceView({ user }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const isDirector = user.role === "director" || user.role === "admin";
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // "２０２６-０７" ফরম্যাটে না — plain "YYYY-MM"
   const [rows, setRows] = useState(null); // null = লোড হচ্ছে
@@ -3253,7 +3311,13 @@ function AttendanceView({ user }) {
     });
   };
 
-  const monthLabel = monthLabelBn(month);
+  const monthLabel = T(
+    monthLabelBn(month),
+    new Date(month + "-01").toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    }),
+  );
 
   const exportExcel = () => {
     if (!rows || !rows.length) return notice("এই মাসে কোনো হাজিরা রেকর্ড নেই।");
@@ -3322,12 +3386,12 @@ th{background:#eef5f0}
   };
 
   const head = [
-    "নাম",
-    "কোর্স",
-    "উস্তাদ",
-    "তারিখ",
-    "মিনিট",
-    "অবস্থা",
+    T("নাম", "Name"),
+    T("কোর্স", "Course"),
+    T("উস্তাদ", "Teacher"),
+    T("তারিখ", "Date"),
+    T("মিনিট", "Minutes"),
+    T("অবস্থা", "Status"),
     ...(isDirector ? ["অ্যাকশন"] : []),
   ];
   const tableRows = (rows || []).map((r) => [
@@ -3335,12 +3399,12 @@ th{background:#eef5f0}
     r.course_name || "—",
     r.teacher_name || "—",
     r.class_date ? fmtDate(r.class_date) : "—",
-    `${bn(r.minutes ?? 0)} মিনিট`,
+    T(`${bn(r.minutes ?? 0)} মিনিট`, `${r.minutes ?? 0} min`),
     r.present ? (
-      <Tag key="t">উপস্থিত ✔</Tag>
+      <Tag key="t">{T("উপস্থিত ✔", "Present ✔")}</Tag>
     ) : (
       <Tag key="t" color={C.red} bg={C.redBg}>
-        অনুপস্থিত
+        {T("অনুপস্থিত", "Absent")}
       </Tag>
     ),
     ...(isDirector
@@ -3359,8 +3423,11 @@ th{background:#eef5f0}
 
   return (
     <Section
-      title="হাজিরা রিপোর্ট"
-      sub="ন্যূনতম ৪৫ মিনিট ক্লাসে থাকলে তবেই হাজিরা গণ্য হয় — এই তালিকা কখনো মোছা হয় না (পুরনো ক্লাস-শিডিউল ৬০ দিন পর মুছলেও হাজিরা টিকে থাকে)"
+      title={T("হাজিরা রিপোর্ট", "Attendance Report")}
+      sub={T(
+        "ন্যূনতম ৪৫ মিনিট ক্লাসে থাকলে তবেই হাজিরা গণ্য হয় — এই তালিকা কখনো মোছা হয় না (পুরনো ক্লাস-শিডিউল ৬০ দিন পর মুছলেও হাজিরা টিকে থাকে)",
+        "Attendance only counts if you stayed 45+ minutes — this record is never deleted (it stays even after the old class schedule is removed after 60 days)",
+      )}
       action={
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <input
@@ -3373,7 +3440,7 @@ th{background:#eef5f0}
             📊 Excel
           </Btn>
           <Btn sm kind="soft" onClick={printReport}>
-            🖨️ প্রিন্ট
+            {T("🖨️ প্রিন্ট", "🖨️ Print")}
           </Btn>
           <Btn sm kind="soft" onClick={sendWhatsApp}>
             📱 WhatsApp
@@ -3382,12 +3449,15 @@ th{background:#eef5f0}
       }
     >
       {rows === null ? (
-        <Loader text="হাজিরা লোড হচ্ছে" />
+        <Loader text={T("হাজিরা লোড হচ্ছে", "Loading attendance")} />
       ) : (
         <Table
           head={head}
           rows={tableRows}
-          empty={`${monthLabel}-এ কোনো হাজিরা রেকর্ড নেই`}
+          empty={T(
+            `${monthLabel}-এ কোনো হাজিরা রেকর্ড নেই`,
+            `No attendance records for ${monthLabel}`,
+          )}
         />
       )}
     </Section>
@@ -5821,11 +5891,11 @@ function RatingPopup({ courseName, onSubmit, onSkip }) {
   const [comment, setComment] = useState("");
   const labels = [
     "",
-    "উন্নতি দরকার",
-    "মোটামুটি",
-    "ভালো",
-    "খুব ভালো",
-    "অসাধারণ",
+    "Needs improvement",
+    "Okay",
+    "Good",
+    "Very good",
+    "Excellent",
   ];
   return (
     <div
@@ -5858,11 +5928,11 @@ function RatingPopup({ courseName, onSubmit, onSkip }) {
             color: C.text,
           }}
         >
-          আজকের ক্লাসটি কেমন লাগলো?
+          How was today's class?
         </h3>
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 14 }}>
-          {courseName} — আপনার মূল্যায়ন একাডেমির মান উন্নয়নে সাহায্য করবে
-          (ঐচ্ছিক)
+          {courseName} — your feedback helps improve the academy's quality
+          (optional)
         </div>
         <div
           style={{
@@ -5903,7 +5973,7 @@ function RatingPopup({ courseName, onSubmit, onSkip }) {
           rows={2}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="কোনো মন্তব্য থাকলে লিখুন (ঐচ্ছিক)..."
+          placeholder="Write a comment if you'd like (optional)..."
           style={{ ...S.input, resize: "vertical", marginTop: 8, fontSize: 13 }}
         />
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
@@ -5912,7 +5982,7 @@ function RatingPopup({ courseName, onSubmit, onSkip }) {
             style={{ flex: 1, justifyContent: "center" }}
             onClick={onSkip}
           >
-            এড়িয়ে যান
+            Skip
           </Btn>
           <Btn
             kind="gold"
@@ -5923,12 +5993,12 @@ function RatingPopup({ courseName, onSubmit, onSkip }) {
             }}
             onClick={() => stars && onSubmit(stars, comment.trim())}
           >
-            মূল্যায়ন জমা দিন
+            Submit Rating
           </Btn>
         </div>
         <div style={{ fontSize: 11, color: C.muted, marginTop: 10 }}>
-          আপনার নাম ও মন্তব্য কেবল এডমিন দেখতে পাবেন — উস্তাদ শুধু গড় রেটিং
-          দেখবেন।
+          Only the admin can see your name and comment — teachers only see the
+          average rating.
         </div>
       </div>
     </div>
@@ -12427,57 +12497,72 @@ const NAV = [
     id: "overview",
     icon: "🏠",
     label: "ড্যাশবোর্ড",
+    labelEn: "Dashboard",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "classes",
     icon: "🎥",
     label: "ক্লাস ও জুম জয়েন",
+    labelEn: "Classes & Zoom Join",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "routine",
     icon: "📅",
     label: "ক্লাস রুটিন",
+    labelEn: "Class Routine",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "lectures",
     icon: "📋",
     label: "লেকচার প্ল্যান",
+    labelEn: "Lecture Plan",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "syllabus",
     icon: "📜",
     label: "সিলেবাস",
+    labelEn: "Syllabus",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "attendance",
     icon: "🗓️",
     label: "হাজিরা",
+    labelEn: "Attendance",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "assignments",
     icon: "📝",
     label: "অ্যাসাইনমেন্ট",
+    labelEn: "Assignments",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "exams",
     icon: "🏅",
     label: "পরীক্ষা ও ফলাফল",
+    labelEn: "Exams & Results",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "progress",
     icon: "📈",
     label: "অগ্রগতি ও ফি রিপোর্ট",
+    labelEn: "Progress & Fee Report",
     roles: ["director", "admin", "teacher", "student"],
   },
-  { id: "payments", icon: "💳", label: "পেমেন্ট", roles: ["student"] },
+  {
+    id: "payments",
+    icon: "💳",
+    label: "পেমেন্ট",
+    labelEn: "Payments",
+    roles: ["student"],
+  },
   {
     id: "studentpayments",
     icon: "💵",
@@ -12520,24 +12605,28 @@ const NAV = [
     id: "books",
     icon: "📚",
     label: "একাডেমিক বইসমূহ",
+    labelEn: "Academic Books",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "myreceipts",
     icon: "🧾",
     label: "ভাউচার/রিসিট",
+    labelEn: "Vouchers/Receipts",
     roles: ["admin", "teacher", "student"],
   },
   {
     id: "leaves",
     icon: "✉️",
     label: "ছুটির আবেদন",
+    labelEn: "Leave Application",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "notices",
     icon: "📌",
     label: "নোটিশ বোর্ড",
+    labelEn: "Notice Board",
     roles: ["director", "admin", "teacher", "student"],
   },
   { id: "manage", icon: "⚙️", label: "ম্যানেজ সেটিংস", roles: ["director"] },
@@ -13247,7 +13336,8 @@ export default function App() {
                     : "3px solid transparent",
               }}
             >
-              <span>{n.icon}</span> {n.label}
+              <span>{n.icon}</span>{" "}
+              {user.role === "student" && n.labelEn ? n.labelEn : n.label}
             </button>
           ))}
           <div
