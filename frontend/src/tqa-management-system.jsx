@@ -1219,7 +1219,7 @@ const coverageOf = (course) => {
 };
 
 /* ═══════════════ লগইন ═══════════════ */
-function Login({ onLogin, onAdmission }) {
+function Login({ onLogin }) {
   /* ভূমিকার তালিকা — কার্ড হিসেবে দেখানো হয় */
   const ROLES = [
     {
@@ -1315,36 +1315,6 @@ function Login({ onLogin, onAdmission }) {
       }
     } finally {
       setBusy(false);
-    }
-  };
-  const [apply, setApply] = useState(false);
-  const [ok, setOk] = useState(false);
-  const [sending, setSending] = useState(false);
-  const blankAf = {
-    name: "",
-    age: "",
-    guardian: "",
-    country: "",
-    contact: "",
-    course: "নুরানী কায়দা",
-    msg: "",
-  };
-  const [af, setAf] = useState(blankAf);
-  const sendApply = async () => {
-    if (!af.name || !af.guardian || !af.contact) return;
-    setSending(true);
-    try {
-      await onAdmission(af); // ব্যাকএন্ডে সত্যিকারের জমা — সফল হলেই "জমা হয়েছে"
-      setApply(false);
-      setOk(true);
-      setTimeout(() => setOk(false), 5000);
-      setAf(blankAf);
-    } catch {
-      notice(
-        "আবেদন পাঠানো যায়নি — ইন্টারনেট সংযোগ যাচাই করে আবার চেষ্টা করুন।",
-      );
-    } finally {
-      setSending(false);
     }
   };
   return (
@@ -1533,34 +1503,6 @@ function Login({ onLogin, onAdmission }) {
                   </button>
                 ))}
               </div>
-              <Btn
-                kind="ghost"
-                style={{
-                  width: "100%",
-                  justifyContent: "center",
-                  marginTop: 20,
-                }}
-                onClick={() => setApply(true)}
-              >
-                🎓 New student? Apply here
-              </Btn>
-              {ok && (
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    background: C.greenBg,
-                    color: C.green,
-                    fontSize: 12.5,
-                    fontWeight: 700,
-                    textAlign: "center",
-                  }}
-                >
-                  ✔ Application submitted! You'll receive login details once
-                  the admin approves it, InshaAllah.
-                </div>
-              )}
               <div
                 style={{
                   marginTop: 24,
@@ -1736,86 +1678,6 @@ function Login({ onLogin, onAdmission }) {
           )}
         </div>
       </div>
-      {apply && (
-        <Modal title="ভর্তি আবেদন ফরম" onClose={() => setApply(false)}>
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
-          >
-            <div>
-              <label style={S.label}>শিক্ষার্থীর নাম *</label>
-              <input
-                style={S.input}
-                value={af.name}
-                onChange={(e) => setAf({ ...af, name: e.target.value })}
-              />
-            </div>
-            <div>
-              <label style={S.label}>বয়স</label>
-              <input
-                type="number"
-                style={S.input}
-                value={af.age}
-                onChange={(e) => setAf({ ...af, age: e.target.value })}
-              />
-            </div>
-            <div>
-              <label style={S.label}>অভিভাবকের নাম *</label>
-              <input
-                style={S.input}
-                value={af.guardian}
-                onChange={(e) => setAf({ ...af, guardian: e.target.value })}
-              />
-            </div>
-            <div>
-              <label style={S.label}>দেশ</label>
-              <input
-                style={S.input}
-                value={af.country}
-                onChange={(e) => setAf({ ...af, country: e.target.value })}
-              />
-            </div>
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>যোগাযোগ (WhatsApp/ইমেইল) *</label>
-            <input
-              style={S.input}
-              value={af.contact}
-              onChange={(e) => setAf({ ...af, contact: e.target.value })}
-            />
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>কাঙ্ক্ষিত কোর্স</label>
-            <input
-              type="text"
-              style={S.input}
-              value={af.course}
-              onChange={(e) => setAf({ ...af, course: e.target.value })}
-              placeholder="যে কোর্সে ভর্তি হতে চান লিখুন"
-            />
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>বার্তা (ঐচ্ছিক)</label>
-            <textarea
-              rows={2}
-              style={{ ...S.input, resize: "vertical" }}
-              value={af.msg}
-              onChange={(e) => setAf({ ...af, msg: e.target.value })}
-            />
-          </div>
-          <Btn
-            style={{
-              marginTop: 16,
-              width: "100%",
-              justifyContent: "center",
-              opacity: sending ? 0.6 : 1,
-            }}
-            disabled={sending}
-            onClick={sendApply}
-          >
-            {sending ? "পাঠানো হচ্ছে…" : "আবেদন জমা দিন"}
-          </Btn>
-        </Modal>
-      )}
     </div>
   );
 }
@@ -13400,18 +13262,6 @@ export default function App() {
             setUser(u);
             setView("overview");
           }}
-          onAdmission={(a) =>
-            api.applyAdmission({
-              kind: "admission",
-              name: a.name,
-              age: +a.age || null,
-              guardian: a.guardian,
-              country: a.country,
-              contact: a.contact,
-              course_name: a.course,
-              message: a.msg,
-            })
-          }
         />
       </div>
     );
