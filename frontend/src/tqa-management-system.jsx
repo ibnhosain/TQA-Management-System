@@ -5057,6 +5057,7 @@ function ProgressView({ db, setDb, courses, user }) {
 /* ═══════════════ হিসাব-নিকাশ (ফিচার ৯) ═══════════════ */
 function AccountsView({ db, setDb, user }) {
   const [maker, setMaker] = useState(false);
+  const [genDuesBusy, setGenDuesBusy] = useState(false);
   const [fees, setFees] = useState(db.feePayments || []);
   const [salaries, setSalaries] = useState(db.teacherPayments || []);
   const [teachers, setTeachers] = useState([]);
@@ -5105,6 +5106,17 @@ function AccountsView({ db, setDb, user }) {
     loadData();
   }, []);
 
+  const genDuesNow = async () => {
+    setGenDuesBusy(true);
+    try {
+      const r = await api.generateMonthlyDues();
+      notice(`✔ চলতি মাসের বকেয়া তৈরি হয়েছে — ${bn(r.created)}টি নতুন যোগ হলো`);
+      await loadData();
+    } catch (e) {
+      notice("বকেয়া তৈরি ব্যর্থ — " + (e?.message || "যাচাই করুন"));
+    }
+    setGenDuesBusy(false);
+  };
   const income = fees.reduce((s, p) => s + (+p.amount || 0), 0);
   const expense = salaries.reduce((s, p) => s + (+p.amount || 0), 0);
   const payTeacher = async (t) => {
@@ -5144,9 +5156,18 @@ function AccountsView({ db, setDb, user }) {
       title="হিসাব-নিকাশ"
       sub="আয় (স্টুডেন্ট ফি) · ব্যয় (উস্তাদদের বেতন) · বকেয়া"
       action={
-        <Btn kind="gold" onClick={() => setMaker(true)}>
-          🧾 রিসিট বানান
-        </Btn>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Btn
+            kind="soft"
+            onClick={genDuesNow}
+            style={{ opacity: genDuesBusy ? 0.6 : 1 }}
+          >
+            {genDuesBusy ? "⏳ তৈরি হচ্ছে…" : "🔄 এই মাসের বকেয়া তৈরি করুন"}
+          </Btn>
+          <Btn kind="gold" onClick={() => setMaker(true)}>
+            🧾 রিসিট বানান
+          </Btn>
+        </div>
       }
     >
       {maker && <ReceiptMaker user={user} onClose={() => setMaker(false)} />}

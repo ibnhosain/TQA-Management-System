@@ -168,6 +168,7 @@ export const api = {
   // ফি ও বেতন ও রিসিট
   myFees: () => request("/fees/"),
   myDues: () => request("/fees/dues/"),
+  generateMonthlyDues: () => request("/fees/generate_dues/", { method: "POST" }), // চলতি মাসের বকেয়া এখনই তৈরি (cron বন্ধ থাকলে ম্যানুয়াল)
   payFee: ({ amount, month_label, method, trx_id, screenshot }) => {  // বিকাশ/নগদ/ব্যাংক + স্ক্রিনশট
     const f = new FormData();
     f.append("amount", amount); f.append("month_label", month_label);

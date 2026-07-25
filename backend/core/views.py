@@ -405,6 +405,14 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
             qs = DueMonth.objects.none()
         return Response(DueMonthSerializer(qs, many=True).data)
 
+    @action(detail=False, methods=["post"], permission_classes=[IsAdminLevel])
+    def generate_dues(self, request):
+        """চলতি মাসের বকেয়া এখনই তৈরি/নিশ্চিত করা (idempotent) — cron বন্ধ থাকলে
+        পরিচালক নিজে এক ক্লিকে চালাতে পারবেন।"""
+        from .tasks import generate_monthly_dues
+        created = generate_monthly_dues()
+        return Response({"created": created})
+
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])
     def verify(self, request, pk=None):  # ভেরিফাই — কেবল পরিচালক
         pay = self.get_object()

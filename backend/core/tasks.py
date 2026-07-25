@@ -125,11 +125,16 @@ BN_DIGITS = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
 
 @shared_task
 def generate_monthly_dues():
+    """চলতি মাসের বকেয়া তৈরি (idempotent) — কতগুলো নতুন তৈরি হলো তা ফেরত দেয়।"""
     from .models import User, DueMonth
     t = date.today()
     label = f"{BN_MONTHS[t.month - 1]} {str(t.year).translate(BN_DIGITS)}"
+    created = 0
     for u in User.objects.filter(role__in=["student", "teacher"], is_active=True):
-        DueMonth.objects.get_or_create(user=u, month_label=label)
+        _, is_new = DueMonth.objects.get_or_create(user=u, month_label=label)
+        if is_new:
+            created += 1
+    return created
 
 
 # ─────────────────── সাপ্তাহিক রুটিন → সামনের সপ্তাহের ক্লাস অটো তৈরি ───────────────────
