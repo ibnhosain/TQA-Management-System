@@ -166,7 +166,10 @@ class AttendanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attendance
         fields = ["id", "session", "user", "user_name", "minutes", "present",
-                  "active", "marked_present", "joined_at", "left_at"]
+                  "active", "marked_present", "joined_at", "left_at",
+                  # denormalized — session ৬০ দিন পর মুছে গেলেও (SET_NULL) এই তথ্য থেকে যায়,
+                  # তাই মাসিক রিপোর্ট সবসময় সম্পূর্ণ থাকে
+                  "course_name", "teacher_name", "teacher_id", "class_date"]
 
 
 class ClassSessionSerializer(serializers.ModelSerializer):

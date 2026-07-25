@@ -161,8 +161,16 @@ class ClassSession(models.Model):
 
 
 class Attendance(models.Model):
-    session = models.ForeignKey(ClassSession, on_delete=models.CASCADE, related_name="attendance")
+    # SET_NULL (CASCADE নয়) — পুরনো ক্লাস (ClassSession) ৬০ দিন পর মুছে গেলেও
+    # হাজিরার রেকর্ড কখনো মুছবে না; নিচের denormalized ফিল্ডগুলো (course_name/
+    # teacher_name/teacher_id/class_date) session মুছে যাওয়ার পরও রিপোর্টের জন্য
+    # প্রয়োজনীয় তথ্য ধরে রাখে
+    session = models.ForeignKey(ClassSession, on_delete=models.SET_NULL, null=True, blank=True, related_name="attendance")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    course_name = models.CharField(max_length=120, blank=True, default="")
+    teacher_name = models.CharField(max_length=120, blank=True, default="")
+    teacher_id = models.PositiveIntegerField(null=True, blank=True)  # FK নয় — session/teacher মুছে গেলেও ফিল্টারযোগ্য
+    class_date = models.DateField(null=True, blank=True)
     joined_at = models.DateTimeField(auto_now_add=True)
     left_at = models.DateTimeField(null=True, blank=True)
     minutes = models.PositiveIntegerField(default=0)      # সব সেগমেন্ট মিলিয়ে মোট মিনিট

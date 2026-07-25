@@ -50,6 +50,14 @@ const addDays = (n) => {
   d.setDate(d.getDate() + n);
   return d.toISOString().slice(0, 10);
 };
+const MONTHS_BN = [
+  "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
+  "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর",
+];
+const monthLabelBn = (ym) => {  // "2026-07" → "জুলাই ২০২৬"
+  const [y, m] = String(ym).split("-").map(Number);
+  return `${MONTHS_BN[(m || 1) - 1]} ${bn(y || "")}`;
+};
 const uid = () => Math.random().toString(36).slice(2, 9);
 const genPass = () => {
   // অক্ষর ও সংখ্যা মিশ্রিত পাসওয়ার্ড (যেমন: t7q2m9k4)
@@ -3171,83 +3179,180 @@ function LecturePlan({ db, courses, user, refresh }) {
 }
 
 /* ═══════════════ হাজিরা রিপোর্ট (ফিচার ৪) ═══════════════ */
-function AttendanceView({ db, courses, user }) {
-  const [sessions, setSessions] = useState(null);
+function AttendanceView({ user }) {
+  const isDirector = user.role === "director" || user.role === "admin";
+  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // "２０２６-０７" ফরম্যাটে না — plain "YYYY-MM"
+  const [rows, setRows] = useState(null); // null = লোড হচ্ছে
 
+  const load = async () => {
+    setRows(null);
+    try {
+      setRows(await api.attendanceReport(month));
+    } catch {
+      setRows([]);
+    }
+  };
   useEffect(() => {
-    api
-      .classes()
-      .then(setSessions)
-      .catch(() => setSessions(null));
-  }, []);
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [month]);
 
-  let rows;
-  if (sessions) {
-    rows = sessions
-      .flatMap((k) =>
-        (k.attendance || []).map((a) => ({
-          name: a.user_name || "—",
-          courseName:
-            k.course_name || courseById(courses, k.course || k.courseId).name,
-          date: k.date,
-          minutes: a.minutes || 0,
-          userId: a.user,
-        })),
+  const toggle = async (a) => {
+    try {
+      await api.updateAttendance(a.id, { marked_present: !a.present });
+      await load();
+    } catch (e) {
+      notice("আপডেট ব্যর্থ — " + (e?.message || "যাচাই করুন"));
+    }
+  };
+  const remove = (a) => {
+    askConfirm(`${a.user_name || "এই শিক্ষার্থীর"}-এর এই হাজিরা রেকর্ডটি মুছে ফেলবেন?`, async () => {
+      try {
+        await api.deleteAttendance(a.id);
+        await load();
+      } catch (e) {
+        notice("মুছতে ব্যর্থ — " + (e?.message || "যাচাই করুন"));
+      }
+    });
+  };
+
+  const monthLabel = monthLabelBn(month);
+
+  const exportExcel = () => {
+    if (!rows || !rows.length) return notice("এই মাসে কোনো হাজিরা রেকর্ড নেই।");
+    const head = ["নাম", "কোর্স", "উস্তাদ", "তারিখ", "মিনিট", "অবস্থা"];
+    const body = rows.map((r) => [
+      r.user_name || "—",
+      r.course_name || "—",
+      r.teacher_name || "—",
+      r.class_date ? fmtDate(r.class_date) : "—",
+      r.minutes ?? 0,
+      r.present ? "উপস্থিত" : "অনুপস্থিত",
+    ]);
+    const csv = [head, ...body]
+      .map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\r\n");
+    // ﻿ (BOM) না দিলে Excel-এ বাংলা লেখা ভাঙা দেখায়
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `হাজিরা-রিপোর্ট-${month}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  };
+
+  const printReport = () => {
+    if (!rows || !rows.length) return notice("এই মাসে কোনো হাজিরা রেকর্ড নেই।");
+    const esc = (s) =>
+      String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+    const body = rows
+      .map(
+        (r) =>
+          `<tr><td>${esc(r.user_name)}</td><td>${esc(r.course_name)}</td><td>${esc(r.teacher_name)}</td><td>${r.class_date ? fmtDate(r.class_date) : "—"}</td><td>${bn(r.minutes ?? 0)}</td><td>${r.present ? "উপস্থিত ✔" : "অনুপস্থিত ✘"}</td></tr>`,
       )
-      .filter((r) =>
-        user.role === "student" ? String(r.userId) === String(user.id) : true,
-      )
-      .map((r) => {
-        const ok = r.present ?? r.minutes >= 45;
-        return [
-          r.name,
-          r.courseName,
-          fmtDate(r.date),
-          `${bn(r.minutes)} মিনিট`,
-          ok ? (
-            <Tag key="t">উপস্থিত ✔</Tag>
-          ) : (
-            <Tag key="t" color={C.red} bg={C.redBg}>
-              অনুপস্থিত (৪৫ মিনিটের কম)
-            </Tag>
-          ),
-        ];
-      });
-  } else {
-    rows = db.attendance
-      .map((a) => ({ a, k: db.classes.find((k) => k.id === a.classId) }))
-      .filter(({ k }) => k && courseById(courses, k.courseId).id)
-      .filter(({ a }) =>
-        user.role === "student" ? a.userId === user.id : true,
-      )
-      .map(({ a, k }) => {
-        const c = courseById(courses, k.courseId);
-        const ok = a.present ?? a.minutes >= 45;
-        return [
-          userById(a.userId).name,
-          c.name,
-          fmtDate(k.date),
-          `${bn(a.minutes)} মিনিট`,
-          ok ? (
-            <Tag key="t">উপস্থিত ✔</Tag>
-          ) : (
-            <Tag key="t" color={C.red} bg={C.redBg}>
-              অনুপস্থিত (৪৫ মিনিটের কম)
-            </Tag>
-          ),
-        ];
-      });
-  }
+      .join("");
+    const html = `<!doctype html><html lang="bn"><head><meta charset="utf-8"><title>হাজিরা রিপোর্ট — ${monthLabel}</title>
+<style>
+body{font-family:'Noto Sans Bengali',Arial,sans-serif;padding:24px;color:#1f2a24}
+h1{font-size:18px;text-align:center;margin:0 0 4px}
+.s{text-align:center;font-size:12px;color:#6b7280;margin-bottom:18px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border:1px solid #d8ded9;padding:7px 10px;text-align:right}
+th{background:#eef5f0}
+.pr{display:block;margin:18px auto 0;background:#1a5c3a;color:#fff;border:none;padding:11px 26px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}
+@media print{.pr{display:none}body{padding:0}}
+</style></head><body>
+<h1>তারবিয়াতুল কুরআন একাডেমী — হাজিরা রিপোর্ট</h1>
+<div class="s">${monthLabel}</div>
+<table><tr><th>নাম</th><th>কোর্স</th><th>উস্তাদ</th><th>তারিখ</th><th>মিনিট</th><th>অবস্থা</th></tr>${body}</table>
+<button class="pr" onclick="window.print()">🖨️ প্রিন্ট / PDF সেভ করুন</button>
+</body></html>`;
+    openPrintDoc(html, `হাজিরা-রিপোর্ট-${month}.html`);
+  };
+
+  const sendWhatsApp = () => {
+    if (!rows || !rows.length) return notice("এই মাসে কোনো হাজিরা রেকর্ড নেই।");
+    const present = rows.filter((r) => r.present).length;
+    const text =
+      `📊 হাজিরা রিপোর্ট — ${monthLabel}\n` +
+      `মোট রেকর্ড: ${bn(rows.length)}\n` +
+      `উপস্থিত: ${bn(present)}\n` +
+      `অনুপস্থিত: ${bn(rows.length - present)}\n\n` +
+      `— তারবিয়াতুল কুরআন একাডেমী`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  const head = [
+    "নাম",
+    "কোর্স",
+    "উস্তাদ",
+    "তারিখ",
+    "মিনিট",
+    "অবস্থা",
+    ...(isDirector ? ["অ্যাকশন"] : []),
+  ];
+  const tableRows = (rows || []).map((r) => [
+    r.user_name || "—",
+    r.course_name || "—",
+    r.teacher_name || "—",
+    r.class_date ? fmtDate(r.class_date) : "—",
+    `${bn(r.minutes ?? 0)} মিনিট`,
+    r.present ? (
+      <Tag key="t">উপস্থিত ✔</Tag>
+    ) : (
+      <Tag key="t" color={C.red} bg={C.redBg}>
+        অনুপস্থিত
+      </Tag>
+    ),
+    ...(isDirector
+      ? [
+          <div key="act" style={{ display: "flex", gap: 4 }}>
+            <Btn sm kind="soft" onClick={() => toggle(r)}>
+              {r.present ? "❌ অনুপস্থিত করুন" : "✔️ উপস্থিত করুন"}
+            </Btn>
+            <Btn sm kind="danger" onClick={() => remove(r)}>
+              🗑️
+            </Btn>
+          </div>,
+        ]
+      : []),
+  ]);
+
   return (
     <Section
       title="হাজিরা রিপোর্ট"
-      sub="ন্যূনতম ৪৫ মিনিট ক্লাসে থাকলে তবেই হাজিরা গণ্য হয়"
+      sub="ন্যূনতম ৪৫ মিনিট ক্লাসে থাকলে তবেই হাজিরা গণ্য হয় — এই তালিকা কখনো মোছা হয় না (পুরনো ক্লাস-শিডিউল ৬০ দিন পর মুছলেও হাজিরা টিকে থাকে)"
+      action={
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            style={{ ...S.input, padding: "8px 10px", width: 160 }}
+          />
+          <Btn sm kind="soft" onClick={exportExcel}>
+            📊 Excel
+          </Btn>
+          <Btn sm kind="soft" onClick={printReport}>
+            🖨️ প্রিন্ট
+          </Btn>
+          <Btn sm kind="soft" onClick={sendWhatsApp}>
+            📱 WhatsApp
+          </Btn>
+        </div>
+      }
     >
-      <Table
-        head={["নাম", "কোর্স", "তারিখ", "উপস্থিতি", "অবস্থা"]}
-        rows={rows}
-        empty="কোনো হাজিরা রেকর্ড নেই"
-      />
+      {rows === null ? (
+        <Loader text="হাজিরা লোড হচ্ছে" />
+      ) : (
+        <Table
+          head={head}
+          rows={tableRows}
+          empty={`${monthLabel}-এ কোনো হাজিরা রেকর্ড নেই`}
+        />
+      )}
     </Section>
   );
 }

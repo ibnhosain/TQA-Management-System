@@ -183,3 +183,16 @@ def generate_routine_sessions():
 def _js_to_py(js_days):
     """JS getDay() (০=রবি) → Python weekday() (০=সোম)"""
     return {(d - 1) % 7 for d in js_days}
+
+
+# ─────────────────── পুরনো ক্লাস-শিডিউল ৬০ দিন পর মোছা (হাজিরা কখনো মোছা হয় না) ───────────────────
+@shared_task
+def cleanup_old_classes():
+    """৬০ দিনের বেশি পুরনো ClassSession মুছে ফেলা (প্রতিদিন QA Daily-এর সাথে চলে)।
+    Attendance.session-এ on_delete=SET_NULL থাকায় হাজিরার রেকর্ড কখনো মোছে না —
+    course_name/teacher_name/class_date আগে থেকেই আলাদাভাবে সংরক্ষিত (migration 0008),
+    তাই মাসিক হাজিরা রিপোর্ট সবসময় সম্পূর্ণ থাকে। কতগুলো ClassSession মুছল তা ফেরত দেয়।"""
+    from .models import ClassSession
+    cutoff = date.today() - timedelta(days=60)
+    deleted, _ = ClassSession.objects.filter(date__lt=cutoff).delete()
+    return deleted

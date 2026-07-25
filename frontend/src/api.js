@@ -104,6 +104,11 @@ export const api = {
   postponeClass: (id) => request(`/classes/${id}/postpone/`, { method: "POST" }), // ⛔ স্থগিত
   deleteClass: (id) => request(`/classes/${id}/`, { method: "DELETE" }),
 
+  // হাজিরা রিপোর্ট (মাসভিত্তিক) — উস্তাদ নিজের, শিক্ষার্থী নিজের, পরিচালক সবার + এডিট/মোছা
+  attendanceReport: (month) => request(`/attendance/?month=${encodeURIComponent(month)}`),
+  updateAttendance: (id, d) => request(`/attendance/${id}/`, { method: "PATCH", body: d }),
+  deleteAttendance: (id) => request(`/attendance/${id}/`, { method: "DELETE" }),
+
   // রুটিন
   routines: () => request("/routines/"),
   createRoutine: (d) => request("/routines/", { method: "POST", body: d }),

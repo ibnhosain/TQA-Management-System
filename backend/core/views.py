@@ -215,6 +215,18 @@ class RoutineViewSet(viewsets.ModelViewSet):
         return Response({"created": created})
 
 
+def _att_defaults(s):
+    """session থেকে denormalized স্ন্যাপশট — ৬০ দিন পর পুরনো ClassSession মুছে
+    গেলেও (SET_NULL) হাজিরা রেকর্ড কোন কোর্স/উস্তাদ/তারিখের ছিল তা ধরে রাখে"""
+    teacher = s.teacher or (s.course.teacher if s.course_id else None)
+    return {
+        "class_date": s.date,
+        "course_name": s.course.name if s.course_id else "",
+        "teacher_id": teacher.id if teacher else None,
+        "teacher_name": teacher.name_bn if teacher else "",
+    }
+
+
 class ClassSessionViewSet(viewsets.ModelViewSet):
     serializer_class = ClassSessionSerializer
     permission_classes = [ReadAllWriteAdmin]
@@ -239,7 +251,10 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def join(self, request, pk=None):  # জুমে জয়েন → নতুন সেগমেন্ট শুরু
-        att, _ = Attendance.objects.get_or_create(session=self.get_object(), user=request.user)
+        s = self.get_object()
+        att, _ = Attendance.objects.get_or_create(
+            session=s, user=request.user, defaults=_att_defaults(s)
+        )
         if att.segment_start is None:  # আগের সেগমেন্ট বন্ধ থাকলেই নতুন শুরু
             att.segment_start = timezone.now()
             att.save(update_fields=["segment_start"])
@@ -273,7 +288,9 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])
     def mark_attendance(self, request, pk=None):  # পরিচালকের ম্যানুয়াল হাজিরা (৪৫ মিনিটের কম হলেও)
         s = self.get_object()
-        att, _ = Attendance.objects.get_or_create(session=s, user_id=request.data["student_id"])
+        att, _ = Attendance.objects.get_or_create(
+            session=s, user_id=request.data["student_id"], defaults=_att_defaults(s)
+        )
         att.marked_present = bool(request.data.get("present", True))
         att.save(update_fields=["marked_present"])
         return Response(AttendanceSerializer(att).data)
@@ -293,6 +310,38 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
                 WaMessage.objects.create(to_name=st.guardian or st.name_bn, student=st,
                                          phone=st.phone, text=msg, reason="postpone")
         return Response({"status": "postponed"})
+
+
+class AttendanceViewSet(viewsets.ModelViewSet):
+    """হাজিরার তালিকা (মাসভিত্তিক রিপোর্ট) — ?month=YYYY-MM দিয়ে ফিল্টার।
+    উস্তাদ শুধু নিজের ক্লাসের, শিক্ষার্থী শুধু নিজের হাজিরা দেখতে পাবে;
+    পরিচালক সবার দেখতে ও একমাত্র তিনিই এডিট/মুছতে পারবেন। কখনো auto-delete
+    হয় না — শুধু পুরনো ClassSession (৬০ দিন) মুছলেও এই রেকর্ড টিকে থাকে।"""
+    serializer_class = AttendanceSerializer
+    http_method_names = ["get", "patch", "delete", "head", "options"]  # create নয় — join/mark_attendance দিয়েই হয়
+
+    def get_queryset(self):
+        u = self.request.user
+        qs = Attendance.objects.select_related("user").order_by("-class_date")
+        if u.role == "student":
+            qs = qs.filter(user=u)
+        elif u.role == "teacher":
+            qs = qs.filter(teacher_id=u.id)
+        elif u.role not in ("director", "admin"):
+            return qs.none()
+        month = self.request.query_params.get("month")  # "2026-07" ফরম্যাট প্রত্যাশিত
+        if month:
+            try:
+                y, m = int(month[:4]), int(month[5:7])
+                qs = qs.filter(class_date__year=y, class_date__month=m)
+            except (ValueError, IndexError):
+                pass
+        return qs
+
+    def get_permissions(self):
+        if self.action in ("update", "partial_update", "destroy"):
+            return [IsDirector()]
+        return [IsAuthenticated()]
 
 
 # ─────────────────────────── অ্যাসাইনমেন্ট ও পরীক্ষা ───────────────────────────
