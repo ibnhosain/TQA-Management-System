@@ -1019,6 +1019,7 @@ const SYL_CATEGORIES = [
   {
     key: "memorized_surah",
     label: "মুখস্থ সূরা",
+    labelEn: "Memorized Surah",
     icon: "📖",
     book: false,
     placeholder: "যেমন: সূরা ইখলাস",
@@ -1026,6 +1027,7 @@ const SYL_CATEGORIES = [
   {
     key: "memorized_hadith",
     label: "মুখস্থ হাদিস",
+    labelEn: "Memorized Hadith",
     icon: "📜",
     book: false,
     placeholder: "যেমন: ১ম হাদিস — নিয়ত",
@@ -1033,6 +1035,7 @@ const SYL_CATEGORIES = [
   {
     key: "qirat",
     label: "কিরাত",
+    labelEn: "Qirat",
     icon: "🕋",
     book: true,
     placeholder: "যেমন: কায়দা — লেসন ৪",
@@ -1040,6 +1043,7 @@ const SYL_CATEGORIES = [
   {
     key: "dua_masala",
     label: "দুআ/মাসআলা",
+    labelEn: "Dua/Masala",
     icon: "🤲",
     book: true,
     placeholder: "যেমন: খাবারের দুআ",
@@ -1047,6 +1051,7 @@ const SYL_CATEGORIES = [
   {
     key: "moral_story",
     label: "নৈতিক শিক্ষা/হাদিসের গল্প",
+    labelEn: "Moral Lesson/Hadith Story",
     icon: "🌟",
     book: true,
     placeholder: "যেমন: সততার গল্প",
@@ -2655,6 +2660,7 @@ function ClassesView({
 
 /* ═══════════════ লেকচার প্ল্যান — টিক/ক্রস (ফিচার ৩) ═══════════════ */
 function LecturePlan({ db, courses, user, refresh }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [sel, setSel] = useState(courses[0]?.id);
   const [form, setForm] = useState(null);
   const [lectures, setLectures] = useState([]);
@@ -2856,8 +2862,11 @@ function LecturePlan({ db, courses, user, refresh }) {
   const cov = covFromLectures();
   return (
     <Section
-      title="দৈনিক পাঠ পরিকল্পনা ও টপিক কভারেজ"
-      sub="পরিচালক দারস তৈরি করবেন · কভার করা বিষয় ✔ সবুজ · বাদ পড়া ✘ লাল — লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করবেন"
+      title={T("দৈনিক পাঠ পরিকল্পনা ও টপিক কভারেজ", "Daily Lesson Plan & Topic Coverage")}
+      sub={T(
+        "পরিচালক দারস তৈরি করবেন · কভার করা বিষয় ✔ সবুজ · বাদ পড়া ✘ লাল — লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করবেন",
+        "The director creates lessons · covered topics are ✔ green · missed ones are ✘ red",
+      )}
       action={isDir(user) && <Btn onClick={openNew}>+ দারস যোগ করুন</Btn>}
     >
       <div
@@ -2887,14 +2896,17 @@ function LecturePlan({ db, courses, user, refresh }) {
         <div style={{ flex: 1, minWidth: 180 }}>
           <div style={{ fontWeight: 800 }}>{course.name}</div>
           <div style={S.sub}>
-            উস্তাদ: {userById(course.teacherId || course.teacher)?.name || "—"}{" "}
-            · মোট দারস: {bn(lectures.length)}
+            {T("উস্তাদ", "Teacher")}:{" "}
+            {userById(course.teacherId || course.teacher)?.name || "—"}{" "}
+            · {T(`মোট দারস: ${bn(lectures.length)}`, `Total lessons: ${lectures.length}`)}
           </div>
         </div>
         <div style={{ minWidth: 200, flex: 1 }}>
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>
-            সিলেবাস অগ্রগতি — {bn(cov.pct)}% ({bn(cov.done)}/{bn(cov.total)}{" "}
-            টপিক)
+            {T(
+              `সিলেবাস অগ্রগতি — ${bn(cov.pct)}% (${bn(cov.done)}/${bn(cov.total)} টপিক)`,
+              `Syllabus progress — ${cov.pct}% (${cov.done}/${cov.total} topics)`,
+            )}
           </div>
           <div style={{ height: 10, background: C.cream, borderRadius: 99 }}>
             <div
@@ -2936,10 +2948,16 @@ function LecturePlan({ db, courses, user, refresh }) {
             padding: 28,
           }}
         >
-          📋 এই কোর্সের দৈনিক পাঠ পরিকল্পনা এখনো তৈরি হয়নি।
+          {T(
+            "📋 এই কোর্সের দৈনিক পাঠ পরিকল্পনা এখনো তৈরি হয়নি।",
+            "📋 The daily lesson plan for this course hasn't been created yet.",
+          )}
           {isDir(user)
             ? ' ওপরের "+ দারস যোগ করুন" বাটন দিয়ে শুরু করুন।'
-            : " পরিচালক তৈরি করলে এখানে দেখা যাবে ইনশাআল্লাহ।"}
+            : T(
+                " পরিচালক তৈরি করলে এখানে দেখা যাবে ইনশাআল্লাহ।",
+                " It will appear here once the director creates it, InshaAllah.",
+              )}
         </div>
       )}
       <div style={{ display: "grid", gap: 10 }}>
@@ -2970,7 +2988,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                 }}
               >
                 <div style={{ fontWeight: 800 }}>
-                  লেকচার {bn(lec.no)}: {lec.title}
+                  {T(`লেকচার ${bn(lec.no)}`, `Lecture ${lec.no}`)}: {lec.title}
                 </div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                   {lec.date && (
@@ -2993,15 +3011,17 @@ function LecturePlan({ db, courses, user, refresh }) {
                       ✔ পুরো লেকচার কভার
                     </Btn>
                   )}
-                  {st === "done" && <Tag>সম্পূর্ণ কভার ✔</Tag>}
+                  {st === "done" && (
+                    <Tag>{T("সম্পূর্ণ কভার ✔", "Fully covered ✔")}</Tag>
+                  )}
                   {st === "missed" && (
                     <Tag color={C.red} bg={C.redBg}>
-                      টপিক বাদ পড়েছে ✘
+                      {T("টপিক বাদ পড়েছে ✘", "Topic missed ✘")}
                     </Tag>
                   )}
                   {st === "partial" && (
                     <Tag color={C.gold} bg={C.amberBg}>
-                      আংশিক
+                      {T("আংশিক", "Partial")}
                     </Tag>
                   )}
                 </div>
@@ -11110,13 +11130,14 @@ function SyllabusView({ db, setDb, courses, user }) {
     );
   };
 
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const roleNote = isDir(user)
     ? 'প্রতিটি বিভাগে লিখে "+ সিলেবাস যোগ করুন" চাপলে পুরো ফরমটি এক সারি হিসেবে নিচে জমা হবে · যে কেউ প্রিন্ট/PDF করতে পারবে'
     : user.role === "admin"
       ? "সকল কোর্সের সিলেবাস (কেবল দেখা ও প্রিন্ট)"
       : user.role === "teacher"
         ? "আপনি যে কোর্সগুলোতে পড়ান তার সিলেবাস (দেখা ও প্রিন্ট)"
-        : "আপনি যে কোর্সে পড়েন তার সিলেবাস (দেখা ও প্রিন্ট)";
+        : "The syllabus for your course (view & print)";
 
   const GRID = {
     display: "grid",
@@ -11133,7 +11154,7 @@ function SyllabusView({ db, setDb, courses, user }) {
     null;
 
   return (
-    <Section title="কোর্স সিলেবাস" sub={roleNote}>
+    <Section title={T("কোর্স সিলেবাস", "Course Syllabus")} sub={roleNote}>
       {courseList.length === 0 && (
         <div
           style={{
@@ -11147,7 +11168,7 @@ function SyllabusView({ db, setDb, courses, user }) {
           {user.role === "teacher"
             ? "আপনি এখনো কোনো কোর্সে যুক্ত নন।"
             : user.role === "student"
-              ? "আপনি এখনো কোনো কোর্সে ভর্তি নন।"
+              ? "You are not enrolled in any course yet."
               : "এখনো কোনো কোর্স তৈরি হয়নি।"}
         </div>
       )}
@@ -11196,7 +11217,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                     }}
                   >
                     <span style={{ fontWeight: 800, fontSize: 16 }}>
-                      কোর্সের নাম:
+                      {T("কোর্সের নাম", "Course Name")}:
                     </span>
                     {courseList.length === 1 ? (
                       <span
@@ -11243,7 +11264,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                   </Btn>
                 )}
                 <Btn sm kind="soft" onClick={() => doPrint(course)}>
-                  🖨️ প্রিন্ট / PDF
+                  {T("🖨️ প্রিন্ট / PDF", "🖨️ Print / PDF")}
                 </Btn>
               </div>
 
@@ -11472,7 +11493,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                                   zIndex: 2,
                                 }}
                               >
-                                {cat.icon} {cat.label}
+                                {cat.icon} {T(cat.label, cat.labelEn)}
                                 <span
                                   style={{
                                     marginLeft: 6,
@@ -11527,7 +11548,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                                           >
                                             <span style={{ flex: 1 }}>
                                               <b style={{ color: C.muted }}>
-                                                {bn(i + 1)}.
+                                                {T(bn(i + 1), i + 1)}.
                                               </b>{" "}
                                               {s.book &&
                                               s.book !== "অন্যান্য" ? (
@@ -11546,10 +11567,10 @@ function SyllabusView({ db, setDb, courses, user }) {
                                                   }}
                                                 >
                                                   {s.pages
-                                                    ? ` · পৃ: ${s.pages}`
+                                                    ? T(` · পৃ: ${s.pages}`, ` · p: ${s.pages}`)
                                                     : ""}
                                                   {s.lines
-                                                    ? ` · লা: ${s.lines}`
+                                                    ? T(` · লা: ${s.lines}`, ` · ln: ${s.lines}`)
                                                     : ""}
                                                 </span>
                                               )}
