@@ -8955,7 +8955,15 @@ function RoutineView({ db, setDb, courses, user }) {
 }
 
 /* ═══════════════ ছুটির আবেদন — দরখাস্ত ফরমেট; এডমিন ফরওয়ার্ড, মঞ্জুর কেবল পরিচালক ═══════════════ */
+const LEAVE_TYPE_EN = {
+  অসুস্থতা: "Sickness",
+  সফর: "Travel",
+  "পারিবারিক প্রয়োজন": "Family Reasons",
+  পরীক্ষা: "Exam",
+  অন্যান্য: "Other",
+};
 function LeaveView({ db, setDb, user }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [show, setShow] = useState(false);
   const [f, setF] = useState({
     type: "অসুস্থতা",
@@ -8994,7 +9002,8 @@ function LeaveView({ db, setDb, user }) {
       ? leaves.filter((l) => String(l.userId) === String(user.id))
       : leaves;
   const submit = async () => {
-    if (!f.reason.trim()) return notice("ছুটির কারণ লিখুন।");
+    if (!f.reason.trim())
+      return notice(T("ছুটির কারণ লিখুন।", "Please write the reason for leave."));
     try {
       await api.applyLeave({
         leave_type: f.type,
@@ -9046,33 +9055,38 @@ function LeaveView({ db, setDb, user }) {
   const stTag = (s) =>
     s === "pending_admin" ? (
       <Tag color={"#a16207"} bg={C.amberBg}>
-        ⏳ এডমিনের কাছে
+        {T("⏳ এডমিনের কাছে", "⏳ With Admin")}
       </Tag>
     ) : s === "forwarded" ? (
       <Tag color={C.blue} bg={C.blueBg}>
-        📤 পরিচালকের কাছে
+        {T("📤 পরিচালকের কাছে", "📤 With Director")}
       </Tag>
     ) : s === "approved" ? (
-      <Tag>মঞ্জুর ✔</Tag>
+      <Tag>{T("মঞ্জুর ✔", "Approved ✔")}</Tag>
     ) : (
       <Tag color={C.red} bg={C.redBg}>
-        নামঞ্জুর ✘
+        {T("নামঞ্জুর ✘", "Rejected ✘")}
       </Tag>
     );
   return (
     <Section
-      title="ছুটির আবেদন"
-      sub="দরখাস্ত ফরম পূরণ করে জমা দিন — এডমিন দেখে পরিচালক বরাবর পাঠাবেন, মঞ্জুরের ক্ষমতা কেবল পরিচালকের"
+      title={T("ছুটির আবেদন", "Leave Application")}
+      sub={T(
+        "দরখাস্ত ফরম পূরণ করে জমা দিন — এডমিন দেখে পরিচালক বরাবর পাঠাবেন, মঞ্জুরের ক্ষমতা কেবল পরিচালকের",
+        "Fill out and submit the application form — the admin will forward it to the director, who alone can approve it",
+      )}
       action={
         canApply && (
-          <Btn onClick={() => setShow(true)}>✍️ ছুটির দরখাস্ত লিখুন</Btn>
+          <Btn onClick={() => setShow(true)}>
+            {T("✍️ ছুটির দরখাস্ত লিখুন", "✍️ Write Leave Application")}
+          </Btn>
         )
       }
     >
       <div style={{ display: "grid", gap: 10 }}>
         {list.length === 0 && (
           <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
-            কোনো ছুটির আবেদন নেই।
+            {T("কোনো ছুটির আবেদন নেই।", "No leave applications.")}
           </div>
         )}
         {list.map((l) => {
@@ -9101,15 +9115,23 @@ function LeaveView({ db, setDb, user }) {
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <b style={{ fontSize: 14 }}>{apName}</b>{" "}
                   <Tag color={C.blue} bg={C.blueBg}>
-                    {apRole === "student"
-                      ? "স্টুডেন্ট"
-                      : apRole === "teacher"
-                        ? "উস্তাদ/উস্তাদা"
-                        : "এডমিন"}
+                    {T(
+                      apRole === "student"
+                        ? "স্টুডেন্ট"
+                        : apRole === "teacher"
+                          ? "উস্তাদ/উস্তাদা"
+                          : "এডমিন",
+                      apRole === "student"
+                        ? "Student"
+                        : apRole === "teacher"
+                          ? "Teacher"
+                          : "Admin",
+                    )}
                   </Tag>
                   <div style={{ fontSize: 12.5, color: C.muted }}>
-                    {l.type} · {fmtDate(l.from)} — {fmtDate(l.to)} · আবেদন:{" "}
-                    {fmtDate(l.date)}
+                    {T(l.type, LEAVE_TYPE_EN[l.type] || l.type)} ·{" "}
+                    {fmtDate(l.from)} — {fmtDate(l.to)} ·{" "}
+                    {T("আবেদন", "Applied")}: {fmtDate(l.date)}
                   </div>
                 </div>
                 {stTag(l.status)}
@@ -9141,61 +9163,95 @@ function LeaveView({ db, setDb, user }) {
                   lineHeight: 1.8,
                 }}
               >
-                <div>তারিখ: {fmtDate(l.date)}</div>
-                <div>
-                  বরাবর,
-                  <br />
-                  পরিচালক মহোদয়,
-                  <br />
-                  তারবিয়াতুল কুরআন একাডেমি
-                </div>
-                <div style={{ margin: "6px 0" }}>
-                  <b>বিষয়: ছুটির আবেদন ({l.type})।</b>
-                </div>
-                <div>
-                  জনাব,
-                  <br />
-                  সবিনয় নিবেদন এই যে, আমি {apName}, আপনার প্রতিষ্ঠানের একজন{" "}
-                  {apRole === "student"
-                    ? "শিক্ষার্থী"
-                    : apRole === "teacher"
-                      ? "শিক্ষক"
-                      : "এডমিন"}
-                  । {l.reason} এমতাবস্থায়, {fmtDate(l.from)} থেকে{" "}
-                  {fmtDate(l.to)} পর্যন্ত ছুটি মঞ্জুর করতে আপনার সদয় মর্জি হয়।
-                </div>
-                <div style={{ marginTop: 6 }}>
-                  নিবেদক,
-                  <br />
-                  <b>{apName}</b>
-                </div>
+                {user.role === "student" ? (
+                  <>
+                    <div>Date: {fmtDate(l.date)}</div>
+                    <div>
+                      To,
+                      <br />
+                      The Director,
+                      <br />
+                      Tarbiyatul Quran Academy
+                    </div>
+                    <div style={{ margin: "6px 0" }}>
+                      <b>Subject: Application for Leave ({LEAVE_TYPE_EN[l.type] || l.type}).</b>
+                    </div>
+                    <div>
+                      Dear Sir,
+                      <br />
+                      I am {apName}, a {apRole === "student" ? "student" : apRole === "teacher" ? "teacher" : "admin"}{" "}
+                      of your institution. {l.reason} In light of this, I
+                      kindly request you to grant me leave from{" "}
+                      {fmtDate(l.from)} to {fmtDate(l.to)}.
+                    </div>
+                    <div style={{ marginTop: 6 }}>
+                      Sincerely,
+                      <br />
+                      <b>{apName}</b>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>তারিখ: {fmtDate(l.date)}</div>
+                    <div>
+                      বরাবর,
+                      <br />
+                      পরিচালক মহোদয়,
+                      <br />
+                      তারবিয়াতুল কুরআন একাডেমি
+                    </div>
+                    <div style={{ margin: "6px 0" }}>
+                      <b>বিষয়: ছুটির আবেদন ({l.type})।</b>
+                    </div>
+                    <div>
+                      জনাব,
+                      <br />
+                      সবিনয় নিবেদন এই যে, আমি {apName}, আপনার প্রতিষ্ঠানের একজন{" "}
+                      {apRole === "student"
+                        ? "শিক্ষার্থী"
+                        : apRole === "teacher"
+                          ? "শিক্ষক"
+                          : "এডমিন"}
+                      । {l.reason} এমতাবস্থায়, {fmtDate(l.from)} থেকে{" "}
+                      {fmtDate(l.to)} পর্যন্ত ছুটি মঞ্জুর করতে আপনার সদয় মর্জি হয়।
+                    </div>
+                    <div style={{ marginTop: 6 }}>
+                      নিবেদক,
+                      <br />
+                      <b>{apName}</b>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           );
         })}
       </div>
       {show && (
-        <Modal title="✍️ ছুটির দরখাস্ত" onClose={() => setShow(false)}>
+        <Modal
+          title={T("✍️ ছুটির দরখাস্ত", "✍️ Leave Application")}
+          onClose={() => setShow(false)}
+        >
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
           >
             <div>
-              <label style={S.label}>ছুটির ধরন</label>
+              <label style={S.label}>{T("ছুটির ধরন", "Leave Type")}</label>
               <select
                 style={S.input}
                 value={f.type}
                 onChange={(e) => setF({ ...f, type: e.target.value })}
               >
-                <option>অসুস্থতা</option>
-                <option>সফর</option>
-                <option>পারিবারিক প্রয়োজন</option>
-                <option>পরীক্ষা</option>
-                <option>অন্যান্য</option>
+                {Object.keys(LEAVE_TYPE_EN).map((k) => (
+                  <option key={k} value={k}>
+                    {T(k, LEAVE_TYPE_EN[k])}
+                  </option>
+                ))}
               </select>
             </div>
             <div></div>
             <div>
-              <label style={S.label}>কবে থেকে</label>
+              <label style={S.label}>{T("কবে থেকে", "From")}</label>
               <input
                 type="date"
                 style={S.input}
@@ -9204,7 +9260,7 @@ function LeaveView({ db, setDb, user }) {
               />
             </div>
             <div>
-              <label style={S.label}>কবে পর্যন্ত</label>
+              <label style={S.label}>{T("কবে পর্যন্ত", "To")}</label>
               <input
                 type="date"
                 style={S.input}
@@ -9214,13 +9270,16 @@ function LeaveView({ db, setDb, user }) {
             </div>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>কারণ / বিবরণ</label>
+            <label style={S.label}>{T("কারণ / বিবরণ", "Reason / Details")}</label>
             <textarea
               rows={3}
               style={{ ...S.input, resize: "vertical" }}
               value={f.reason}
               onChange={(e) => setF({ ...f, reason: e.target.value })}
-              placeholder="যেমন: পারিবারিক প্রয়োজনে গ্রামের বাড়ি যেতে হবে..."
+              placeholder={T(
+                "যেমন: পারিবারিক প্রয়োজনে গ্রামের বাড়ি যেতে হবে...",
+                "e.g. I need to visit my hometown for a family matter...",
+              )}
             />
           </div>
           <div
@@ -9235,23 +9294,39 @@ function LeaveView({ db, setDb, user }) {
             }}
           >
             <div style={{ fontWeight: 800, marginBottom: 4, color: C.gold }}>
-              দরখাস্তের প্রিভিউ:
+              {T("দরখাস্তের প্রিভিউ:", "Application Preview:")}
             </div>
-            বরাবর, পরিচালক মহোদয়, তারবিয়াতুল কুরআন একাডেমি
-            <br />
-            <b>বিষয়: ছুটির আবেদন ({f.type})।</b>
-            <br />
-            জনাব, সবিনয় নিবেদন এই যে, আমি {user.name}। {f.reason || "..."}{" "}
-            এমতাবস্থায়, {fmtDate(f.from)} থেকে {fmtDate(f.to)} পর্যন্ত ছুটি
-            মঞ্জুর করতে আপনার সদয় মর্জি হয়।
-            <br />
-            নিবেদক, <b>{user.name}</b>
+            {user.role === "student" ? (
+              <>
+                To, The Director, Tarbiyatul Quran Academy
+                <br />
+                <b>Subject: Application for Leave ({LEAVE_TYPE_EN[f.type] || f.type}).</b>
+                <br />
+                Dear Sir, I am {user.name}. {f.reason || "..."} In light of
+                this, I kindly request you to grant me leave from{" "}
+                {fmtDate(f.from)} to {fmtDate(f.to)}.
+                <br />
+                Sincerely, <b>{user.name}</b>
+              </>
+            ) : (
+              <>
+                বরাবর, পরিচালক মহোদয়, তারবিয়াতুল কুরআন একাডেমি
+                <br />
+                <b>বিষয়: ছুটির আবেদন ({f.type})।</b>
+                <br />
+                জনাব, সবিনয় নিবেদন এই যে, আমি {user.name}। {f.reason || "..."}{" "}
+                এমতাবস্থায়, {fmtDate(f.from)} থেকে {fmtDate(f.to)} পর্যন্ত ছুটি
+                মঞ্জুর করতে আপনার সদয় মর্জি হয়।
+                <br />
+                নিবেদক, <b>{user.name}</b>
+              </>
+            )}
           </div>
           <Btn
             style={{ marginTop: 14, width: "100%", justifyContent: "center" }}
             onClick={submit}
           >
-            দরখাস্ত জমা দিন
+            {T("দরখাস্ত জমা দিন", "Submit Application")}
           </Btn>
         </Modal>
       )}
@@ -9261,6 +9336,7 @@ function LeaveView({ db, setDb, user }) {
 
 /* ═══════════════ ভাউচার/রিসিট — পাঠানো রিসিট প্রাপকের পোর্টালে ═══════════════ */
 function MyReceiptsView({ db, user }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [receipts, setReceipts] = useState(
     (db.sentReceipts || []).filter(
       (x) => String(x.toUserId) === String(user.id),
@@ -9291,11 +9367,17 @@ function MyReceiptsView({ db, user }) {
 
   return (
     <Section
-      title="ভাউচার / রিসিট"
-      sub="একাডেমি থেকে আপনার জন্য পাঠানো রিসিট ও ভাউচার — দেখুন, প্রিন্ট বা PDF সেভ করুন"
+      title={T("ভাউচার / রিসিট", "Vouchers / Receipts")}
+      sub={T(
+        "একাডেমি থেকে আপনার জন্য পাঠানো রিসিট ও ভাউচার — দেখুন, প্রিন্ট বা PDF সেভ করুন",
+        "Receipts and vouchers sent to you by the academy — view, print, or save as PDF",
+      )}
     >
       <Table
-        head={["ধরন", "মাস/বিবরণ", "পরিমাণ", "তারিখ", "পাঠিয়েছেন", "দেখুন"]}
+        head={T(
+          ["ধরন", "মাস/বিবরণ", "পরিমাণ", "তারিখ", "পাঠিয়েছেন", "দেখুন"],
+          ["Type", "Month/Detail", "Amount", "Date", "Sent By", "View"],
+        )}
         rows={receipts.map((x) => [
           x.kind,
           x.month,
@@ -9308,10 +9390,10 @@ function MyReceiptsView({ db, user }) {
             kind="soft"
             onClick={() => printReceipt({ ...x, noSend: true }, user, x.kind)}
           >
-            👁 দেখুন / ডাউনলোড
+            {T("👁 দেখুন / ডাউনলোড", "👁 View / Download")}
           </Btn>,
         ])}
-        empty="এখনো কোনো রিসিট পাঠানো হয়নি"
+        empty={T("এখনো কোনো রিসিট পাঠানো হয়নি", "No receipts sent yet")}
       />
     </Section>
   );
