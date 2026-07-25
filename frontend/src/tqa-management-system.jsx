@@ -2025,8 +2025,15 @@ function ClassesView({
   const today = mine.filter(
     (k) => k.date === todayISO() && k.status !== "done",
   );
-  const upcoming = mine.filter((k) => k.date > todayISO());
-  const past = mine.filter((k) => k.status === "done" || k.date < todayISO());
+  // "আসন্ন" শুধু সামনের ৭ দিন, "বিগত" শুধু গত ৩ দিন — ডাটা মোছা হয় না (সার্ভারে/DB-তে সবই থাকে),
+  // শুধু এই তালিকা দুটো ছোট-পরিষ্কার রাখতে দেখানোর সীমা টানা হলো
+  const upcoming = mine.filter(
+    (k) => k.date > todayISO() && k.date <= addDays(7),
+  );
+  const past = mine.filter(
+    (k) =>
+      (k.status === "done" || k.date < todayISO()) && k.date >= addDays(-3),
+  );
 
   const join = (k) => {
     // জুম খোলে অ্যাংকর লিংকে (নিচে <a>); বাকি সব (presence/২৭-মিনিট/হাজিরা) LiveClassPanel সামলায়
@@ -2340,7 +2347,7 @@ function ClassesView({
           {today.map((k) => Row(k, user.role !== "admin" || true))}
         </div>
       </Section>
-      <Section title="আসন্ন ক্লাস">
+      <Section title="আসন্ন ক্লাস" sub="সামনের ৭ দিনের ক্লাস">
         <div style={{ display: "grid", gap: 10 }}>
           {upcoming.length === 0 ? (
             <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
@@ -2351,7 +2358,10 @@ function ClassesView({
           )}
         </div>
       </Section>
-      <Section title="বিগত ক্লাস">
+      <Section
+        title="বিগত ক্লাস"
+        sub="গত ৩ দিনের হিস্টরি — পুরনো ক্লাসের তথ্য ডাটাবেসে সংরক্ষিতই থাকে, শুধু এখানে কম দেখানো হয়"
+      >
         <div style={{ display: "grid", gap: 10 }}>
           {past.map((k) => Row(k, false))}
         </div>
