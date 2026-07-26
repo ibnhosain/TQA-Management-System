@@ -1817,8 +1817,15 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const segMin = Math.round(segSec / 60);
-  const total = (presence?.myMin || 0) + segMin;
+  // প্রতি ৬০ সেকেন্ডে যে মিনিটগুলো চেকপয়েন্টে সার্ভারে সেভ হয়ে গেছে (savedSecRef),
+  // সেগুলো presence.myMin (সার্ভারের মোট)-এ ইতিমধ্যেই যুক্ত আছে — তাই সেগমেন্টের
+  // পুরো সময় ফের যোগ করলে একই মিনিট দুবার গোনা (ডাবল-কাউন্ট) হয়ে যেত; শুধু
+  // এখনো-সেভ-না-হওয়া অংশটুকু যোগ করি
+  const notYetSavedMin = Math.max(
+    0,
+    Math.round((segSec - savedSecRef.current) / 60),
+  );
+  const total = (presence?.myMin || 0) + notYetSavedMin;
   const done = total >= NEED;
 
   // mode: "alarm" (২৭-মিনিট Zoom সীমা শেষ — রিজয়েন পপআপ দেখাবে), "manual"
