@@ -1728,6 +1728,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
   const [presence, setPresence] = useState(null);
   const [inMeeting, setInMeeting] = useState(true);
   const [rejoin, setRejoin] = useState(false);
+  const [showContinuePrompt, setShowContinuePrompt] = useState(false);
   const SEG = 27 * 60; // এক সেগমেন্ট = ২৭ মিনিট
   const NEED = 45; // মোট মিনিট → হাজিরা
   // "Leave & Save" বাটনে ক্লিক ভুলে গেলে/ট্যাব বন্ধ করে ফেললেও যেন হাজিরার সময়
@@ -1868,10 +1869,12 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
         return;
       }
       // অন্তত ৫ সেকেন্ড আগে ট্যাবটা hidden হয়েছিল মানে সত্যিই জুমে গিয়েছিলেন
-      // (হুট করে খুব দ্রুত ট্যাব বদলালে সেটাকে "জুম কেটে দেওয়া" ধরা হবে না)
+      // (হুট করে খুব দ্রুত ট্যাব বদলালে সেটাকে "জুম কেটে দেওয়া" ধরা হবে না) —
+      // কিন্তু সরাসরি ক্লাস শেষ করে দিই না (বাচ্চারা এমনিই টুকটাক ট্যাব বদলায়),
+      // বরং জিজ্ঞেস করি continue নাকি end — ভুলবশত হাজিরা কেটে না যায়
       if (hiddenAt && Date.now() - hiddenAt >= 5000 && inMeetingRef.current) {
         hiddenAt = null;
-        endSegment("finish");
+        setShowContinuePrompt(true);
       }
       hiddenAt = null;
     };
@@ -1894,6 +1897,75 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     }
     setInMeeting(true);
   };
+
+  // স্টুডেন্ট জুম থেকে ফিরে এসেছেন — সরাসরি ক্লাস শেষ না করে জিজ্ঞেস করি
+  if (showContinuePrompt)
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 250,
+          background: "rgba(18,63,40,.6)",
+          display: "grid",
+          placeItems: "center",
+          padding: 16,
+        }}
+      >
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 18,
+            maxWidth: 380,
+            width: "100%",
+            padding: 26,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 42 }}>🤔</div>
+          <div
+            style={{
+              fontWeight: 800,
+              fontSize: 18,
+              color: C.emerald,
+              marginTop: 6,
+            }}
+          >
+            Have you finished today's class?
+          </div>
+          <div
+            style={{
+              fontSize: 13.5,
+              color: C.text,
+              margin: "8px 0 20px",
+              lineHeight: 1.6,
+            }}
+          >
+            You've come back to this tab — do you want to continue the class,
+            or is it finished?
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Btn
+              kind="gold"
+              style={{ flex: 1, justifyContent: "center" }}
+              onClick={() => setShowContinuePrompt(false)}
+            >
+              ▶️ Continue Class
+            </Btn>
+            <Btn
+              kind="soft"
+              style={{ flex: 1, justifyContent: "center" }}
+              onClick={() => {
+                setShowContinuePrompt(false);
+                endSegment("finish");
+              }}
+            >
+              ✅ End Class
+            </Btn>
+          </div>
+        </div>
+      </div>
+    );
 
   if (rejoin)
     return (
