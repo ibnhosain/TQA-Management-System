@@ -1806,7 +1806,11 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
   const total = (presence?.myMin || 0) + segMin;
   const done = total >= NEED;
 
-  const endSegment = async (auto) => {
+  // mode: "alarm" (২৭-মিনিট Zoom সীমা শেষ — রিজয়েন পপআপ দেখাবে), "manual"
+  // (স্টুডেন্ট/উস্তাদ নিজে "বের হন" চেপেছেন — মাঝপথে বেরোনো, রেটিং পপআপ আসবে না),
+  // "finish" (ক্লাসের নির্ধারিত সময় (dur) শেষ — কোনো বাটন ছাড়াই অটো বের হয়ে
+  // রেটিং পপআপ দেখাবে)
+  const endSegment = async (mode) => {
     setInMeeting(false);
     // চেকপয়েন্টে ইতিমধ্যে সেভ হওয়া মিনিট বাদ দিয়ে শুধু বাকি (এখনো সেভ না হওয়া)
     // মিনিটটুকু পাঠাই — নইলে একই মিনিট দুবার গণনা (ডাবল-কাউন্ট) হয়ে যেত
@@ -1821,15 +1825,41 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
       }
       await refreshPresence();
     }
-    if (auto) {
+    if (mode === "alarm") {
       playAlarm();
       setRejoin(true);
-    } else onExit(true);
+    } else {
+      onExit(mode === "finish");
+    }
   };
+
+  // ক্লাসের নির্ধারিত সময় (dur মিনিট) শেষ হলে — কোনো বাটন চাপা ছাড়াই — প্যানেল
+  // অটো বন্ধ হয়ে "ক্লাস কেমন হলো" রেটিং পপআপ আসবে (স্টুডেন্টের ক্ষেত্রে)
+  const inMeetingRef = useRef(true);
+  useEffect(() => {
+    inMeetingRef.current = inMeeting;
+  }, [inMeeting]);
+  useEffect(() => {
+    const [y, mo, da] = String(k.date || "").split("-").map(Number);
+    const [hh, mm] = String(k.time || "00:00").split(":").map(Number);
+    const startUTC = Date.UTC(y, (mo || 1) - 1, da || 1, (hh || 0) - 6, mm || 0);
+    const endMillis = startUTC + (Number(k.dur) || 0) * 60000;
+    const msLeft = endMillis - Date.now();
+    if (msLeft <= 0) return;
+    const t = setTimeout(() => {
+      if (inMeetingRef.current) endSegment("finish");
+      else {
+        setRejoin(false);
+        onExit(true);
+      }
+    }, msLeft);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ২৭-মিনিট সেগমেন্ট শেষ → অটো লিভ + অ্যালার্ম
   useEffect(() => {
-    if (inMeeting && segSec >= SEG) endSegment(true);
+    if (inMeeting && segSec >= SEG) endSegment("alarm");
   }, [segSec]);
 
   const doRejoin = () => {
@@ -1955,7 +1985,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
         </span>
       )}
       <div style={{ marginTop: 6 }}>
-        <Btn sm kind="danger" onClick={() => endSegment(false)}>
+        <Btn sm kind="danger" onClick={() => endSegment("manual")}>
           {T("বের হন", "Exit")}
         </Btn>
         <span
