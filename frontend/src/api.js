@@ -130,6 +130,7 @@ export const api = {
     return request("/books/", { method: "POST", body: f, isForm: true });
   },
   addBookLink: (name, link) => request("/books/", { method: "POST", body: { name, link } }),  // Google Drive/লিংক — সাইজ সীমা নেই
+  updateBookName: (id, name) => request(`/books/${id}/`, { method: "PATCH", body: { name } }),  // পরিচালক বইয়ের নাম বদলাতে পারেন (যেমন ইংরেজি করতে)
   deleteBook: (id) => request(`/books/${id}/`, { method: "DELETE" }),
   syllabus: (courseId) => request(`/syllabus/?course=${courseId}`),
   addSyllabus: (d) => request("/syllabus/", { method: "POST", body: d }),

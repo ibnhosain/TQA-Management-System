@@ -12579,6 +12579,26 @@ function AcademicBooksView({ db, setDb, user, courses }) {
         }
       },
     );
+  // পরিচালক সরাসরি বইয়ের নাম বদলাতে পারেন (যেমন ইংরেজি নাম দিতে চাইলে) —
+  // ম্যানুয়াল ইংরেজি-অনুবাদ ম্যাপিং না রেখে সরাসরি ডাটা এডিটের অপশন
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const startRename = (b) => {
+    setEditingId(b.id);
+    setEditName(b.name);
+  };
+  const saveRename = async (b) => {
+    const newName = editName.trim();
+    if (!newName) return notice("বইয়ের নাম খালি রাখা যাবে না।");
+    if (newName === b.name) return setEditingId(null);
+    try {
+      await api.updateBookName(b.id, newName);
+      await loadData();
+    } catch (e) {
+      notice(`নাম বদলাতে ব্যর্থ: ${e?.data?.error || e?.message || "অজানা সমস্যা"}`);
+    }
+    setEditingId(null);
+  };
   /* Cache API: প্রথমবার backend থেকে ডাউনলোড করে cache এ রাখে,
      পরেরবার সরাসরি cache থেকে ডিভাইসের default reader এ খোলে */
   const openBook = async (b, setStatus) => {
@@ -12702,7 +12722,46 @@ function AcademicBooksView({ db, setDb, user, courses }) {
       }}
     >
       <div style={{ flex: 1, minWidth: 200 }}>
-        <BookLink b={b} />
+        {editingId === b.id ? (
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <input
+              autoFocus
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveRename(b);
+                if (e.key === "Escape") setEditingId(null);
+              }}
+              style={{ ...S.input, padding: "6px 8px", fontSize: 13.5 }}
+            />
+            <Btn sm onClick={() => saveRename(b)}>
+              ✔
+            </Btn>
+            <Btn sm kind="soft" onClick={() => setEditingId(null)}>
+              ✕
+            </Btn>
+          </div>
+        ) : (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <BookLink b={b} />
+            {isDir(user) && (
+              <button
+                onClick={() => startRename(b)}
+                title="বইয়ের নাম বদলান"
+                style={{
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  color: C.muted,
+                  padding: 0,
+                }}
+              >
+                ✏️
+              </button>
+            )}
+          </span>
+        )}
         <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3 }}>
           {b.isLink ? (
             <Tag color={C.blue} bg={C.blueBg}>
