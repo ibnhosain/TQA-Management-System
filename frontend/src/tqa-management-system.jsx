@@ -8520,6 +8520,37 @@ const toZoneDayTime = (jsDay, timeStr, ianaZone) => {
     time: `${hour}:${get("minute")}`,
   };
 };
+
+// নির্দিষ্ট তারিখের (routine না, বাস্তব ক্লাস instance) দিন-সময় — বাংলাদেশ সময় ধরে
+// সংরক্ষিত — কোনো টাইমজোনে কী তারিখ-সময় দাঁড়ায় তা বের করতে (তারিখও বদলাতে পারে)
+const toZoneFullDateTime = (dateISO, timeStr, ianaZone) => {
+  const [y, mo, da] = String(dateISO || "").split("-").map(Number);
+  const [hh, mm] = String(timeStr || "00:00").split(":").map(Number);
+  const utcMillis = Date.UTC(y, (mo || 1) - 1, da || 1, (hh || 0) - DHAKA_OFFSET_HOURS, mm || 0);
+  const d = new Date(utcMillis);
+  if (!ianaZone) {
+    return {
+      date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+      time: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
+    };
+  }
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: ianaZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const get = (t) => parts.find((p) => p.type === t)?.value;
+  let hour = get("hour");
+  if (hour === "24") hour = "00";
+  return {
+    date: `${get("year")}-${get("month")}-${get("day")}`,
+    time: `${hour}:${get("minute")}`,
+  };
+};
 // পরিচালক/এডমিনের জন্য প্রায়ই-দরকারি দেশ/শহরের তালিকা (এই একাডেমির বেশিরভাগ
 // প্রবাসী পরিবার যেসব দেশে থাকেন) — প্রয়োজনে সহজেই আরও যোগ করা যাবে
 const COMMON_ZONES = [
@@ -8564,6 +8595,9 @@ function RoutineView({ db, setDb, courses, user }) {
   const [students, setStudents] = useState([]);
   const [genBusy, setGenBusy] = useState(false);
   const [previewZone, setPreviewZone] = useState(""); // এডমিন/পরিচালক — অন্য টাইমজোনে "প্রিভিউ" (খালি মানে নিজের ডিভাইসের টাইমজোন)
+  // রুটিন তৈরি/এডিট ফর্মে — টিচার ও স্টুডেন্ট আলাদা আলাদা কোন দেশে থাকেন তা বেছে দিন-সময় ঠিক করার সময়ই যাচাই করার জন্য
+  const [formTeacherZone, setFormTeacherZone] = useState("Asia/Dhaka");
+  const [formStudentZone, setFormStudentZone] = useState("Asia/Dhaka");
   // এক ক্লিকে সব রুটিনের আগামী ৭ দিনের ক্লাস তৈরি → উস্তাদ/শিক্ষার্থীর পোর্টালে
   const genClassesNow = async () => {
     setGenBusy(true);
@@ -8762,7 +8796,7 @@ function RoutineView({ db, setDb, courses, user }) {
         )
       }
     >
-      <TeacherWiseBoard db={db} setDb={setDb} user={user} />
+      <TeacherWiseBoard db={db} setDb={setDb} user={user} previewZone={previewZone} />
       {routinesLoading && (
         <Loader text={T("রুটিন লোড হচ্ছে", "Loading routine")} />
       )}
@@ -9045,6 +9079,89 @@ function RoutineView({ db, setDb, courses, user }) {
                   .join(" · ")}
               </b>
               {" "}(অন্য টাইমজোনের দর্শকরা যার যার নিজের সময়ে দেখবেন)
+            </div>
+          )}
+          {/* দিন-সময় বাংলাদেশ সময় হিসেবেই সংরক্ষিত হয় — কিন্তু টিচার ও স্টুডেন্ট
+              আলাদা দেশে থাকলে রুটিন বানানোর সময়ই যাচাই করা যায় তাদের কাছে
+              এটা কোন দিন-কয়টায় পড়বে, যাতে ভুলবশত রাত/ভোরের সময় বসে না যায় */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 10,
+              marginTop: 10,
+            }}
+          >
+            <div>
+              <label style={S.label}>👨‍🏫 টিচারের টাইমজোন</label>
+              <select
+                value={formTeacherZone}
+                onChange={(e) => setFormTeacherZone(e.target.value)}
+                style={S.input}
+              >
+                {COMMON_ZONES.map((z) => (
+                  <option key={z.zone} value={z.zone}>
+                    {z.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={S.label}>🎓 স্টুডেন্টের টাইমজোন</label>
+              <select
+                value={formStudentZone}
+                onChange={(e) => setFormStudentZone(e.target.value)}
+                style={S.input}
+              >
+                {COMMON_ZONES.map((z) => (
+                  <option key={z.zone} value={z.zone}>
+                    {z.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {f.days.length > 0 && f.time && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "8px 12px",
+                borderRadius: 10,
+                background: C.greenBg,
+                fontSize: 12,
+                color: C.emerald,
+                display: "grid",
+                gap: 4,
+              }}
+            >
+              <div>
+                👨‍🏫 টিচার দেখবেন (
+                {COMMON_ZONES.find((z) => z.zone === formTeacherZone)?.label ||
+                  formTeacherZone}
+                ):{" "}
+                <b>
+                  {f.days
+                    .map((wd) => {
+                      const lt = toZoneDayTime(wd, f.time, formTeacherZone);
+                      return `${DAY_BN[lt.day]} ${lt.time}`;
+                    })
+                    .join(" · ")}
+                </b>
+              </div>
+              <div>
+                🎓 স্টুডেন্ট দেখবেন (
+                {COMMON_ZONES.find((z) => z.zone === formStudentZone)?.label ||
+                  formStudentZone}
+                ):{" "}
+                <b>
+                  {f.days
+                    .map((wd) => {
+                      const lt = toZoneDayTime(wd, f.time, formStudentZone);
+                      return `${DAY_BN[lt.day]} ${lt.time}`;
+                    })
+                    .join(" · ")}
+                </b>
+              </div>
             </div>
           )}
           <div style={{ marginTop: 10 }}>
@@ -10244,7 +10361,10 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
 }
 
 /* ═══════════════ উস্তাদ-ভিত্তিক বোর্ড — কার কাছে কে পড়ে, সামনের ক্লাস, স্থগিত করার ক্ষমতা ═══════════════ */
-function TeacherWiseBoard({ db, setDb, user }) {
+function TeacherWiseBoard({ db, setDb, user, previewZone }) {
+  const zoneLabel = previewZone
+    ? COMMON_ZONES.find((z) => z.zone === previewZone)?.label || previewZone
+    : null;
   const [allTeachers, setAllTeachers] = useState([]);
   const [sel, setSel] = useState(
     user.role === "teacher" ? user.id : allTeachers[0]?.id,
@@ -10416,7 +10536,17 @@ function TeacherWiseBoard({ db, setDb, user }) {
             }}
           >
             👥 <b>{studentNames || "—"}</b> — {c.name || r.course_name || "—"} ·{" "}
-            {(r.days || []).map((i) => DAY_BN[i]).join(", ")} · 🕐 {r.time}
+            {(r.days || [])
+              .map((i) => {
+                const lt = previewZone
+                  ? toZoneDayTime(i, r.time, previewZone)
+                  : toLocalDayTime(i, r.time);
+                return `${DAY_BN[lt.day]} ${lt.time}`;
+              })
+              .join(", ")}
+            {zoneLabel && (
+              <span style={{ color: C.muted }}> ({zoneLabel})</span>
+            )}
           </div>
         );
       })}
@@ -10460,8 +10590,15 @@ function TeacherWiseBoard({ db, setDb, user }) {
             }}
           >
             <span style={{ flex: 1, minWidth: 200 }}>
-              <b>{k.course_name || c.name || "—"}</b> · {fmtDate(k.date)} · 🕐{" "}
-              {k.time} · 👥 {studentNames}
+              <b>{k.course_name || c.name || "—"}</b> ·{" "}
+              {(() => {
+                const zdt = previewZone
+                  ? toZoneFullDateTime(k.date, k.time, previewZone)
+                  : { date: k.date, time: k.time };
+                return `${fmtDate(zdt.date)} · 🕐 ${zdt.time}`;
+              })()}
+              {zoneLabel && <span style={{ color: C.muted }}> ({zoneLabel})</span>}{" "}
+              · 👥 {studentNames}
             </span>
             {isAdm(user) && (
               <Btn sm kind="danger" onClick={() => postpone(k)}>
