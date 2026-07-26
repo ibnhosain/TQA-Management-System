@@ -8474,6 +8474,25 @@ const DAY_EN = [
 ]; // শিক্ষার্থীর ইংরেজি ভিউয়ের জন্য — একই getDay() ক্রম
 const WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5]; // শনি → শুক্র
 
+// রুটিনের দিন/সময় বাংলাদেশ সময় (Asia/Dhaka, UTC+6, DST নেই — তাই হিসাব সরল) হিসেবে
+// সংরক্ষিত ধরে প্রতিটি দর্শকের ডিভাইসের নিজস্ব টাইমজোন অনুযায়ী দিন ও সময় বের করে —
+// কোনো নতুন সেটিং/ডাটা লাগে না, ব্রাউজারই জানে সে কোথায়
+const DHAKA_OFFSET_HOURS = 6;
+const REF_SUNDAY_UTC = Date.UTC(2023, 0, 1); // ২০২৩-০১-০১ ছিল রবিবার (day 0)
+const toLocalDayTime = (jsDay, timeStr) => {
+  const [hh, mm] = String(timeStr || "00:00").split(":").map(Number);
+  const utcMillis =
+    REF_SUNDAY_UTC +
+    jsDay * 86400000 +
+    (hh - DHAKA_OFFSET_HOURS) * 3600000 +
+    (mm || 0) * 60000;
+  const d = new Date(utcMillis);
+  return {
+    day: d.getDay(),
+    time: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
+  };
+};
+
 function RoutineView({ db, setDb, courses, user }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const canEdit = isAdm(user);
@@ -8636,15 +8655,26 @@ function RoutineView({ db, setDb, courses, user }) {
   };
   const routinesLoading = apiRoutines === null; // এখনো লোড হচ্ছে
   const visible = apiRoutines || [];
+  // প্রতিটা রুটিনের প্রতিটা (বাংলাদেশ-সময়ে সংরক্ষিত) দিনকে দর্শকের local day+time-এ
+  // রূপান্তর করে সেই local day অনুযায়ী গ্রুপ করি — বিদেশে থাকা কেউ দেখলে সময় পার্থক্যে
+  // ভিন্ন দিনেও পড়তে পারে (যেমন রাতের ক্লাস অন্য টাইমজোনে সকালে/আগের দিনে দেখাতে পারে)
+  const localSchedule = {};
+  visible.forEach((r) => {
+    (r.days || []).forEach((storedDay) => {
+      const { day: localDay, time: localTime } = toLocalDayTime(storedDay, r.time);
+      if (!localSchedule[localDay]) localSchedule[localDay] = [];
+      localSchedule[localDay].push({ ...r, localTime });
+    });
+  });
   return (
     <Section
       title={T("ক্লাস রুটিন (স্থায়ী সাপ্তাহিক)", "Class Routine (Fixed Weekly)")}
       sub={
         canEdit
-          ? "কোন স্টুডেন্ট কোন উস্তাদের কাছে কোন বারে কোন সময়ে কোন কোর্সে পড়বে — সব সময়ের জন্য; এডিট কেবল এডমিনের হাতে"
+          ? "কোন স্টুডেন্ট কোন উস্তাদের কাছে কোন বারে কোন সময়ে কোন কোর্সে পড়বে — সব সময়ের জন্য; এডিট কেবল এডমিনের হাতে · সময়/দিন আপনার ডিভাইসের টাইমজোন অনুযায়ী দেখানো হচ্ছে"
           : T(
-              "আপনার স্থায়ী সাপ্তাহিক ক্লাসের সময়সূচি — তারিখ-সময় অনুযায়ী জয়েন অপশন অটো আসবে",
-              "Your fixed weekly class schedule — the join option will appear automatically at the right date and time",
+              "আপনার স্থায়ী সাপ্তাহিক ক্লাসের সময়সূচি — আপনার নিজের টাইমজোন অনুযায়ী দিন-সময় দেখানো হচ্ছে; জয়েন অপশন অটো আসবে",
+              "Your fixed weekly class schedule, shown in your own device's timezone — the join option will appear automatically at the right time",
             )
       }
       action={
@@ -8668,7 +8698,7 @@ function RoutineView({ db, setDb, courses, user }) {
       )}
       <div style={{ display: "grid", gap: 10 }}>
         {WEEK_ORDER.map((wd) => {
-          const items = visible.filter((r) => r.days.includes(wd));
+          const items = localSchedule[wd] || [];
           return (
             <div
               key={wd}
@@ -8731,7 +8761,7 @@ function RoutineView({ db, setDb, courses, user }) {
                             {r.kind}
                           </Tag>
                         )}{" "}
-                        🕐 {r.time} · {T(`${bn(r.dur)} মি`, `${r.dur} min`)} ·{" "}
+                        🕐 {r.localTime} · {T(`${bn(r.dur)} মি`, `${r.dur} min`)} ·{" "}
                         {r.teacherName || nameOf(r.teacherId || c.teacherId)}
                         {canEdit && studNames.length > 0 && (
                           <span style={{ color: C.muted }}>
