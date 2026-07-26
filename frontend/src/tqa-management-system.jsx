@@ -1847,27 +1847,36 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     }
   };
 
-  // ক্লাসের নির্ধারিত সময় (dur মিনিট) শেষ হলে — কোনো বাটন চাপা ছাড়াই — প্যানেল
-  // অটো বন্ধ হয়ে "ক্লাস কেমন হলো" রেটিং পপআপ আসবে (স্টুডেন্টের ক্ষেত্রে)
+  // জুম বাইরের অ্যাপ/ট্যাব — তাই "মিটিং শেষ হলো" এমন সরাসরি কোনো সিগন্যাল ব্রাউজার
+  // পায় না। তবে জুমে গেলে এই ট্যাব/উইন্ডো ব্যাকগ্রাউন্ডে চলে যায় (hidden), আর
+  // জুম থেকে বের হয়ে এই ট্যাবে ফিরে এলে আবার visible হয় — এটাই সবচেয়ে নির্ভরযোগ্য
+  // সংকেত যে স্টুডেন্ট জুম মিটিং কেটে দিয়েছেন। তাই কোনো বাটন চাপা ছাড়াই, জুম থেকে
+  // ফিরে এলেই অটো "ক্লাস কেমন হলো" রেটিং পপআপ চলে আসবে
   const inMeetingRef = useRef(true);
   useEffect(() => {
     inMeetingRef.current = inMeeting;
   }, [inMeeting]);
   useEffect(() => {
-    const [y, mo, da] = String(k.date || "").split("-").map(Number);
-    const [hh, mm] = String(k.time || "00:00").split(":").map(Number);
-    const startUTC = Date.UTC(y, (mo || 1) - 1, da || 1, (hh || 0) - 6, mm || 0);
-    const endMillis = startUTC + (Number(k.dur) || 0) * 60000;
-    const msLeft = endMillis - Date.now();
-    if (msLeft <= 0) return;
-    const t = setTimeout(() => {
-      if (inMeetingRef.current) endSegment("finish");
-      else {
-        setRejoin(false);
-        onExit(true);
+    // শুধু স্টুডেন্টের ক্ষেত্রে — উস্তাদ ক্লাস চলাকালীন সংক্ষিপ্ত সময়ের জন্য ট্যাব
+    // বদলালে (যেমন হোয়াটসঅ্যাপ চেক করতে) যেন ভুলবশত ক্লাস/উপস্থিতি ট্র্যাকিং বন্ধ
+    // না হয়ে যায় — শুধু স্টুডেন্টের জুম-থেকে-ফেরার সংকেতেই রেটিং পপআপ প্রাসঙ্গিক
+    if (user.role !== "student") return;
+    let hiddenAt = null;
+    const onVisibility = () => {
+      if (document.hidden) {
+        hiddenAt = Date.now();
+        return;
       }
-    }, msLeft);
-    return () => clearTimeout(t);
+      // অন্তত ৫ সেকেন্ড আগে ট্যাবটা hidden হয়েছিল মানে সত্যিই জুমে গিয়েছিলেন
+      // (হুট করে খুব দ্রুত ট্যাব বদলালে সেটাকে "জুম কেটে দেওয়া" ধরা হবে না)
+      if (hiddenAt && Date.now() - hiddenAt >= 5000 && inMeetingRef.current) {
+        hiddenAt = null;
+        endSegment("finish");
+      }
+      hiddenAt = null;
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
