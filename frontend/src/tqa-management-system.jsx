@@ -12427,8 +12427,17 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     "আকাঈদ ও ফিকহ (৯-১২ বছর)": "Aqaid and Fiqh (Ages 9-12)",
     "আকাঈদ ও ফিকহ (১২-১৭ বছর)": "Aqaid and Fiqh (Ages 12-17)",
   };
+  // ডাটাবেজ থেকে আসা নামে বাড়তি স্পেস/Unicode ভিন্নতা থাকলেও যেন মিলে যায় —
+  // trim + একাধিক স্পেস এক করা + Unicode NFC নরমালাইজেশন দিয়ে তুলনা করা হচ্ছে
+  const normBookName = (s) =>
+    String(s || "").normalize("NFC").trim().replace(/\s+/g, " ");
+  const BOOK_NAME_EN_NORM = Object.fromEntries(
+    Object.entries(BOOK_NAME_EN).map(([k, v]) => [normBookName(k), v]),
+  );
   const bookNameFor = (name) =>
-    user.role === "student" ? BOOK_NAME_EN[name] || name : name;
+    user.role === "student"
+      ? BOOK_NAME_EN_NORM[normBookName(name)] || name
+      : name;
   const [form, setForm] = useState(null); // {name, file, fileObj, courseIds:[]}
   const [books, setBooks] = useState(db.academicBooks || []);
   const [allCourses, setAllCourses] = useState(courses || []);
