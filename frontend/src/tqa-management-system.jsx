@@ -1698,9 +1698,27 @@ function Login({ onLogin }) {
 
 /* ═══════════════ ক্লাস ও জুম জয়েন (ফিচার ২ ও ৪) ═══════════════ */
 /* অ্যালার্মের মতো বিপ (Web Audio — বাহ্যিক ফাইল ছাড়া, CSP-নিরাপদ) */
+// একটাই AudioContext বানিয়ে রাখি — "জুমে জয়েন করুন" বাটনে ক্লিকের (আসল
+// ইউজার-গ্রেসচার) সময় unlockAudioForAlarm() দিয়ে এটা resume করা হয়, যাতে পরে
+// প্রোগ্রাম্যাটিকভাবে (২৭-মিনিট অ্যালার্মের সময়) বাজানো গেলেও মোবাইল ব্রাউজার
+// সাউন্ড ব্লক না করে
+let alarmAudioCtx = null;
+function unlockAudioForAlarm() {
+  try {
+    if (!alarmAudioCtx) {
+      alarmAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (alarmAudioCtx.state === "suspended") alarmAudioCtx.resume();
+  } catch {
+    /* উপেক্ষা */
+  }
+}
 function playAlarm() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx =
+      alarmAudioCtx ||
+      (alarmAudioCtx = new (window.AudioContext || window.webkitAudioContext)());
+    if (ctx.state === "suspended") ctx.resume();
     let t = ctx.currentTime;
     for (let i = 0; i < 4; i++) {
       const o = ctx.createOscillator();
@@ -1710,7 +1728,7 @@ function playAlarm() {
       o.type = "square";
       o.frequency.value = 880;
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.8, t + 0.02);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
       o.start(t);
       o.stop(t + 0.42);
@@ -1797,6 +1815,10 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
         await api.leaveClass(k.id, deltaMin);
         await api.joinClass(k.id);
         savedSecRef.current += deltaMin * 60;
+        // presence.myMin পরের ১২-সেকেন্ড পোলে আপডেট হওয়ার জন্য অপেক্ষা না করে
+        // এখনই যোগ করে দিই — নইলে savedSecRef বেড়ে যাওয়ায় "মোট" সংখ্যাটা কয়েক
+        // সেকেন্ডের জন্য থমকে/পিছিয়ে যেত (দুটো কাউন্টার একসাথে না চলার মতো দেখাত)
+        setPresence((p) => (p ? { ...p, myMin: (p.myMin || 0) + deltaMin } : p));
       } catch {
         /* উপেক্ষা — পরের চেকপয়েন্টে আবার চেষ্টা হবে */
       }
@@ -1848,8 +1870,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
       await refreshPresence();
     }
     if (mode === "alarm") {
-      playAlarm();
-      setRejoin(true);
+      setRejoin(true); // অ্যালার্ম বাজানো নিচের rejoin-effect হ্যান্ডেল করে (বারবার বাজতে থাকবে)
     } else {
       onExit(mode === "finish");
     }
@@ -1897,6 +1918,15 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
   useEffect(() => {
     if (inMeeting && segSec >= SEG) endSegment("alarm");
   }, [segSec]);
+
+  // রিজয়েন পপআপ থাকা অবস্থায় অ্যালার্ম বারবার বাজতে থাকবে (থামবে না) — যতক্ষণ
+  // না "আবার জয়েন করুন" বা "ক্লাস শেষ করুন" চেপে এটা বন্ধ করা হয়
+  useEffect(() => {
+    if (!rejoin) return;
+    playAlarm();
+    const iv = setInterval(playAlarm, 3000);
+    return () => clearInterval(iv);
+  }, [rejoin]);
 
   const doRejoin = () => {
     setRejoin(false);
@@ -2549,7 +2579,10 @@ function ClassesView({
               href={k.zoom}
               target="_blank"
               rel="noreferrer"
-              onClick={() => join(k)}
+              onClick={() => {
+                unlockAudioForAlarm(); // এই ক্লিকের সময়ই অডিও আনলক — পরে ২৭-মিনিট অ্যালার্ম মোবাইলেও বাজবে
+                join(k);
+              }}
               style={{ textDecoration: "none" }}
             >
               <Btn kind="gold">{T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}</Btn>

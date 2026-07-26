@@ -58,11 +58,12 @@ async function request(path, { method = "GET", body, isForm } = {}) {
       res = await doFetch();
     } catch (e) {
       // নেটওয়ার্ক এরর — নিরাপদ (GET/লগইন) রিকোয়েস্ট আবার চেষ্টা করি (বাকি POST দুবার হয়ে যাওয়া এড়াতে)
-      if (isSafeRetry && attempt < 3) { await sleep(1500 * (attempt + 1)); continue; }
+      // Neon DB কোল্ড-স্টার্টে কখনো ১৫-২০ সেকেন্ডও লাগে — তাই ৩ থেকে ৫ বার বাড়ানো হলো
+      if (isSafeRetry && attempt < 5) { await sleep(1500 * (attempt + 1)); continue; }
       throw e;
     }
     // 502/503/504 = সার্ভার এখনো জাগছে, রিকোয়েস্ট প্রসেসই হয়নি → সব মেথডেই আবার চেষ্টা নিরাপদ
-    if ([502, 503, 504].includes(res.status) && attempt < 3) { await sleep(1500 * (attempt + 1)); continue; }
+    if ([502, 503, 504].includes(res.status) && attempt < 5) { await sleep(1500 * (attempt + 1)); continue; }
     break;
   }
   if (res.status === 401 && refresh) {           // টোকেন মেয়াদোত্তীর্ণ → রিফ্রেশ
