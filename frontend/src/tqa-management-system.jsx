@@ -8478,11 +8478,23 @@ const WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5]; // শনি → শুক্র
 // সংরক্ষিত ধরে প্রতিটি দর্শকের ডিভাইসের নিজস্ব টাইমজোন অনুযায়ী দিন ও সময় বের করে —
 // কোনো নতুন সেটিং/ডাটা লাগে না, ব্রাউজারই জানে সে কোথায়
 const DHAKA_OFFSET_HOURS = 6;
-const REF_SUNDAY_UTC = Date.UTC(2023, 0, 1); // ২০২৩-০১-০১ ছিল রবিবার (day 0)
+// সপ্তাহের রবিবারের UTC millis বের করে — কিন্তু স্থির কোনো তারিখ (যেমন ২০২৩) ধরলে
+// DST থাকা দেশে (যেমন কানাডা/আমেরিকা) ভুল সময় দেখাতে পারে, কারণ শীতকাল-গ্রীষ্মকালে
+// UTC অফসেট আলাদা হয় — তাই সবসময় চলতি সপ্তাহের রবিবার ধরে হিসাব করি, যাতে
+// "সামনের ক্লাস"-এর প্রকৃত তারিখ-ভিত্তিক কনভার্শনের সাথে মিলে যায়
+const currentRefSundayUTC = () => {
+  const now = new Date();
+  const utcMidnightToday = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  );
+  return utcMidnightToday - now.getUTCDay() * 86400000;
+};
 const toLocalDayTime = (jsDay, timeStr) => {
   const [hh, mm] = String(timeStr || "00:00").split(":").map(Number);
   const utcMillis =
-    REF_SUNDAY_UTC +
+    currentRefSundayUTC() +
     jsDay * 86400000 +
     (hh - DHAKA_OFFSET_HOURS) * 3600000 +
     (mm || 0) * 60000;
@@ -8500,7 +8512,7 @@ const WD_ABBR_TO_NUM = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 
 const toZoneDayTime = (jsDay, timeStr, ianaZone) => {
   const [hh, mm] = String(timeStr || "00:00").split(":").map(Number);
   const utcMillis =
-    REF_SUNDAY_UTC +
+    currentRefSundayUTC() +
     jsDay * 86400000 +
     (hh - DHAKA_OFFSET_HOURS) * 3600000 +
     (mm || 0) * 60000;
