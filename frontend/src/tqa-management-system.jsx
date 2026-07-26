@@ -1862,24 +1862,27 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     // বদলালে (যেমন হোয়াটসঅ্যাপ চেক করতে) যেন ভুলবশত ক্লাস/উপস্থিতি ট্র্যাকিং বন্ধ
     // না হয়ে যায় — শুধু স্টুডেন্টের জুম-থেকে-ফেরার সংকেতেই রেটিং পপআপ প্রাসঙ্গিক
     if (user.role !== "student") return;
-    let hiddenAt = null;
-    const onVisibility = () => {
-      if (document.hidden) {
+    // কিছু মোবাইল ব্রাউজার/ওয়েবভিউতে visibilitychange/blur-focus ইভেন্ট সবসময়
+    // নির্ভরযোগ্যভাবে আসে না — তাই ইভেন্টের বদলে সরাসরি document.hidden প্রপার্টি
+    // পোল (poll) করি, যা প্রায় সব ব্রাউজারে ঠিকভাবে কাজ করে
+    let wasHidden = document.hidden;
+    let hiddenAt = document.hidden ? Date.now() : null;
+    const iv = setInterval(() => {
+      const isHidden = document.hidden;
+      if (isHidden && !wasHidden) {
         hiddenAt = Date.now();
-        return;
-      }
-      // অন্তত ৫ সেকেন্ড আগে ট্যাবটা hidden হয়েছিল মানে সত্যিই জুমে গিয়েছিলেন
-      // (হুট করে খুব দ্রুত ট্যাব বদলালে সেটাকে "জুম কেটে দেওয়া" ধরা হবে না) —
-      // কিন্তু সরাসরি ক্লাস শেষ করে দিই না (বাচ্চারা এমনিই টুকটাক ট্যাব বদলায়),
-      // বরং জিজ্ঞেস করি continue নাকি end — ভুলবশত হাজিরা কেটে না যায়
-      if (hiddenAt && Date.now() - hiddenAt >= 5000 && inMeetingRef.current) {
+      } else if (!isHidden && wasHidden) {
+        // অন্তত ৩ সেকেন্ড আগে ট্যাবটা hidden হয়েছিল মানে সত্যিই জুমে/অন্য
+        // অ্যাপে গিয়েছিলেন (হুট করে দ্রুত ট্যাব বদলালে ধরা হবে না) — কিন্তু
+        // সরাসরি ক্লাস শেষ করে দিই না, বরং continue নাকি end জিজ্ঞেস করি
+        if (hiddenAt && Date.now() - hiddenAt >= 3000 && inMeetingRef.current) {
+          setShowContinuePrompt(true);
+        }
         hiddenAt = null;
-        setShowContinuePrompt(true);
       }
-      hiddenAt = null;
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
+      wasHidden = isHidden;
+    }, 1200);
+    return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
