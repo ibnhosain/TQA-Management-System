@@ -8933,7 +8933,7 @@ function RoutineView({ db, setDb, courses, user }) {
             }}
           >
             <div>
-              <label style={S.label}>সময়</label>
+              <label style={S.label}>সময় (বাংলাদেশ সময় 🇧🇩)</label>
               <input
                 type="time"
                 style={S.input}
@@ -8951,6 +8951,32 @@ function RoutineView({ db, setDb, courses, user }) {
               />
             </div>
           </div>
+          {/* সতর্কতা: এডমিন যদি এই মুহূর্তে বিদেশে থাকেন, উপরের সময়টা সবসময়
+              বাংলাদেশ-সময় হিসেবেই সংরক্ষিত হবে — তাই তার নিজের বর্তমান
+              টাইমজোনে এটা আসলে কী দাঁড়ায় তার লাইভ প্রিভিউ দেখানো হলো */}
+          {f.days.length > 0 && f.time && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "8px 12px",
+                borderRadius: 10,
+                background: C.amberBg,
+                fontSize: 12,
+                color: "#a16207",
+              }}
+            >
+              🌍 আপনার এই মুহূর্তের টাইমজোনে এটা দাঁড়ায়:{" "}
+              <b>
+                {f.days
+                  .map((wd) => {
+                    const lt = toLocalDayTime(wd, f.time);
+                    return `${DAY_BN[lt.day]} ${lt.time}`;
+                  })
+                  .join(" · ")}
+              </b>
+              {" "}(অন্য টাইমজোনের দর্শকরা যার যার নিজের সময়ে দেখবেন)
+            </div>
+          )}
           <div style={{ marginTop: 10 }}>
             <label style={S.label}>জুম লিংক</label>
             <input
