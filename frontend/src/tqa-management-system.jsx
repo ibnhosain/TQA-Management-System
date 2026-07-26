@@ -8493,6 +8493,56 @@ const toLocalDayTime = (jsDay, timeStr) => {
   };
 };
 
+// পরিচালক/এডমিন — নিজে বাংলাদেশে থেকেও অন্য যেকোনো নির্দিষ্ট টাইমজোনে (যেমন কোনো
+// ছাত্র/উস্তাদ যেখানে আছেন) রুটিন কেমন দেখাবে তা যাচাই করতে পারেন এই হেল্পার দিয়ে —
+// Intl.DateTimeFormat ব্যবহার করায় DST (গ্রীষ্মকালীন সময়)ও সঠিকভাবে ধরা পড়ে
+const WD_ABBR_TO_NUM = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+const toZoneDayTime = (jsDay, timeStr, ianaZone) => {
+  const [hh, mm] = String(timeStr || "00:00").split(":").map(Number);
+  const utcMillis =
+    REF_SUNDAY_UTC +
+    jsDay * 86400000 +
+    (hh - DHAKA_OFFSET_HOURS) * 3600000 +
+    (mm || 0) * 60000;
+  const d = new Date(utcMillis);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: ianaZone,
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const get = (t) => parts.find((p) => p.type === t)?.value;
+  let hour = get("hour");
+  if (hour === "24") hour = "00"; // কিছু ব্রাউজার hour12:false-এও মধ্যরাতে "24" দেয়
+  return {
+    day: WD_ABBR_TO_NUM[get("weekday")],
+    time: `${hour}:${get("minute")}`,
+  };
+};
+// পরিচালক/এডমিনের জন্য প্রায়ই-দরকারি দেশ/শহরের তালিকা (এই একাডেমির বেশিরভাগ
+// প্রবাসী পরিবার যেসব দেশে থাকেন) — প্রয়োজনে সহজেই আরও যোগ করা যাবে
+const COMMON_ZONES = [
+  { label: "🇧🇩 বাংলাদেশ (Dhaka)", zone: "Asia/Dhaka" },
+  { label: "🇬🇧 যুক্তরাজ্য (London)", zone: "Europe/London" },
+  { label: "🇺🇸 আমেরিকা · পূর্ব (New York)", zone: "America/New_York" },
+  { label: "🇺🇸 আমেরিকা · কেন্দ্রীয় (Chicago)", zone: "America/Chicago" },
+  { label: "🇺🇸 আমেরিকা · পার্বত্য (Denver)", zone: "America/Denver" },
+  { label: "🇺🇸 আমেরিকা · পশ্চিম (Los Angeles)", zone: "America/Los_Angeles" },
+  { label: "🇨🇦 কানাডা · পূর্ব (Toronto)", zone: "America/Toronto" },
+  { label: "🇦🇺 অস্ট্রেলিয়া (Sydney)", zone: "Australia/Sydney" },
+  { label: "🇦🇪 সংযুক্ত আরব আমিরাত (Dubai)", zone: "Asia/Dubai" },
+  { label: "🇸🇦 সৌদি আরব (Riyadh)", zone: "Asia/Riyadh" },
+  { label: "🇶🇦 কাতার (Doha)", zone: "Asia/Qatar" },
+  { label: "🇰🇼 কুয়েত", zone: "Asia/Kuwait" },
+  { label: "🇲🇾 মালয়েশিয়া (Kuala Lumpur)", zone: "Asia/Kuala_Lumpur" },
+  { label: "🇸🇬 সিঙ্গাপুর", zone: "Asia/Singapore" },
+  { label: "🇩🇪 জার্মানি (Berlin)", zone: "Europe/Berlin" },
+  { label: "🇫🇷 ফ্রান্স (Paris)", zone: "Europe/Paris" },
+  { label: "🇮🇳 ভারত (Kolkata)", zone: "Asia/Kolkata" },
+  { label: "🇵🇰 পাকিস্তান (Karachi)", zone: "Asia/Karachi" },
+];
+
 function RoutineView({ db, setDb, courses, user }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const canEdit = isAdm(user);
@@ -8513,6 +8563,7 @@ function RoutineView({ db, setDb, courses, user }) {
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
   const [genBusy, setGenBusy] = useState(false);
+  const [previewZone, setPreviewZone] = useState(""); // এডমিন/পরিচালক — অন্য টাইমজোনে "প্রিভিউ" (খালি মানে নিজের ডিভাইসের টাইমজোন)
   // এক ক্লিকে সব রুটিনের আগামী ৭ দিনের ক্লাস তৈরি → উস্তাদ/শিক্ষার্থীর পোর্টালে
   const genClassesNow = async () => {
     setGenBusy(true);
@@ -8657,11 +8708,15 @@ function RoutineView({ db, setDb, courses, user }) {
   const visible = apiRoutines || [];
   // প্রতিটা রুটিনের প্রতিটা (বাংলাদেশ-সময়ে সংরক্ষিত) দিনকে দর্শকের local day+time-এ
   // রূপান্তর করে সেই local day অনুযায়ী গ্রুপ করি — বিদেশে থাকা কেউ দেখলে সময় পার্থক্যে
-  // ভিন্ন দিনেও পড়তে পারে (যেমন রাতের ক্লাস অন্য টাইমজোনে সকালে/আগের দিনে দেখাতে পারে)
+  // ভিন্ন দিনেও পড়তে পারে (যেমন রাতের ক্লাস অন্য টাইমজোনে সকালে/আগের দিনে দেখাতে পারে)।
+  // এডমিন/পরিচালক চাইলে নিজের ডিভাইসের বদলে নির্দিষ্ট অন্য একটা টাইমজোন বেছে "প্রিভিউ"
+  // করতে পারেন (previewZone) — যেমন কোনো ছাত্র/উস্তাদের দেশে তখন কী দিন-সময় দেখাচ্ছে তা যাচাই করতে
   const localSchedule = {};
   visible.forEach((r) => {
     (r.days || []).forEach((storedDay) => {
-      const { day: localDay, time: localTime } = toLocalDayTime(storedDay, r.time);
+      const { day: localDay, time: localTime } = previewZone
+        ? toZoneDayTime(storedDay, r.time, previewZone)
+        : toLocalDayTime(storedDay, r.time);
       if (!localSchedule[localDay]) localSchedule[localDay] = [];
       localSchedule[localDay].push({ ...r, localTime });
     });
@@ -8671,7 +8726,9 @@ function RoutineView({ db, setDb, courses, user }) {
       title={T("ক্লাস রুটিন (স্থায়ী সাপ্তাহিক)", "Class Routine (Fixed Weekly)")}
       sub={
         canEdit
-          ? "কোন স্টুডেন্ট কোন উস্তাদের কাছে কোন বারে কোন সময়ে কোন কোর্সে পড়বে — সব সময়ের জন্য; এডিট কেবল এডমিনের হাতে · সময়/দিন আপনার ডিভাইসের টাইমজোন অনুযায়ী দেখানো হচ্ছে"
+          ? previewZone
+            ? `প্রিভিউ চালু: ${COMMON_ZONES.find((z) => z.zone === previewZone)?.label || previewZone}-এর সময় অনুযায়ী দেখানো হচ্ছে (নিচের ড্রপডাউন থেকে বদলান/বন্ধ করুন)`
+            : "কোন স্টুডেন্ট কোন উস্তাদের কাছে কোন বারে কোন সময়ে কোন কোর্সে পড়বে — সব সময়ের জন্য; এডিট কেবল এডমিনের হাতে · সময়/দিন আপনার ডিভাইসের টাইমজোন অনুযায়ী দেখানো হচ্ছে"
           : T(
               "আপনার স্থায়ী সাপ্তাহিক ক্লাসের সময়সূচি — আপনার নিজের টাইমজোন অনুযায়ী দিন-সময় দেখানো হচ্ছে; জয়েন অপশন অটো আসবে",
               "Your fixed weekly class schedule, shown in your own device's timezone — the join option will appear automatically at the right time",
@@ -8679,7 +8736,20 @@ function RoutineView({ db, setDb, courses, user }) {
       }
       action={
         canEdit && (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <select
+              value={previewZone}
+              onChange={(e) => setPreviewZone(e.target.value)}
+              style={{ ...S.input, padding: "8px 10px", width: 200, fontSize: 12.5 }}
+              title="অন্য কোনো দেশের সময়ে রুটিন প্রিভিউ করুন"
+            >
+              <option value="">🌍 নিজের টাইমজোনে দেখুন</option>
+              {COMMON_ZONES.map((z) => (
+                <option key={z.zone} value={z.zone}>
+                  {z.label}
+                </option>
+              ))}
+            </select>
             <Btn
               kind="soft"
               onClick={genClassesNow}
