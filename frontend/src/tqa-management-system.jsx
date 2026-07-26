@@ -1925,6 +1925,23 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     if (!rejoin) return;
     playAlarm();
     const iv = setInterval(playAlarm, 3000);
+    // ট্যাব ব্যাকগ্রাউন্ডে থাকলে (ব্রাউজার বন্ধ না থাকলে) সিস্টেম নোটিফিকেশনও
+    // দেখাই — permission আগে "জুমে জয়েন করুন" ক্লিকের সময় চাওয়া হয়েছে
+    if (window.Notification && Notification.permission === "granted") {
+      try {
+        new Notification(
+          T("⏰ ২৭ মিনিট শেষ!", "⏰ 27 minutes are over!"),
+          {
+            body: T(
+              "জুম থেকে বের হয়ে আবার জয়েন করুন — ক্লাস চালিয়ে যেতে।",
+              'Please leave Zoom and tap "Join Again" to continue the class.',
+            ),
+          },
+        );
+      } catch {
+        /* উপেক্ষা */
+      }
+    }
     return () => clearInterval(iv);
   }, [rejoin]);
 
@@ -2581,6 +2598,11 @@ function ClassesView({
               rel="noreferrer"
               onClick={() => {
                 unlockAudioForAlarm(); // এই ক্লিকের সময়ই অডিও আনলক — পরে ২৭-মিনিট অ্যালার্ম মোবাইলেও বাজবে
+                // ট্যাব ব্যাকগ্রাউন্ডে চলে গেলেও (ব্রাউজার বন্ধ না করলে) রিজয়েনের
+                // সময় সিস্টেম নোটিফিকেশন দেখানোর জন্য পারমিশন চেয়ে রাখি
+                if (window.Notification && Notification.permission === "default") {
+                  Notification.requestPermission().catch(() => {});
+                }
                 join(k);
               }}
               style={{ textDecoration: "none" }}
