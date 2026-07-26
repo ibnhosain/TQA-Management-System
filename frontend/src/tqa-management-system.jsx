@@ -12402,6 +12402,33 @@ function SyllabusView({ db, setDb, courses, user }) {
 /* ═══════════════ একাডেমিক বইসমূহ — পরিচালক আপলোড করেন; যে যার কোর্সের বই দেখে ═══════════════ */
 function AcademicBooksView({ db, setDb, user, courses }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  // ডাটাবেজে বইয়ের আসল নাম (বাংলা) অপরিবর্তিত থাকে — পরিচালক/এডমিন/উস্তাদ সবসময়
+  // আসল নামই দেখেন; শুধু স্টুডেন্টের পোর্টালে দেখানোর জন্য এই ম্যাপিং দিয়ে ইংরেজি
+  // নাম দেখানো হয় (তালিকায় না থাকা নতুন বই হলে আসল নামই দেখাবে, কিছু বাদ পড়বে না)
+  const BOOK_NAME_EN = {
+    "নুজহাতুল ক্বারী": "Nuzhatul Qari",
+    "কায়দা ফর বিগেনার": "Qaida for Beginner",
+    "আকাঈদ ও ফিকহ ফর বিগেনার": "Aqaid and Fiqh for Beginner",
+    "আখলাক ফর বিগেনার এনড কায়দা": "Akhlaq for Beginner and Qaida",
+    "দুআ-মেনার্স ফর বিগেনার এনড কায়েদা কোর্স":
+      "Dua & Manners for Beginner and Qaida Course",
+    "প্রফেট স্টোরি ফর বিগেনার এন্ড কায়েদা কোর্স":
+      "Prophet Stories for Beginner and Qaida Course",
+    "নূরানী কায়েদা ফর কায়েদা কোর্স": "Noorani Qaida for Qaida Course",
+    "আকাঈদ ও ফিকহ ফর কায়েদা কোর্স": "Aqaid and Fiqh for Qaida Course",
+    "দুআ-মেনার্স ফর কায়দা কোর্স": "Dua & Manners for Qaida Course",
+    "সূরা মুখস্থ (বিগেনার)": "Surah Memorisation (Beginner)",
+    "হাদিস মুখস্থ (বিগেনার)": "Hadith Memorisation (Beginner)",
+    "সূরা মুখস্থ (কায়দা কোর্স)": "Surah Memorisation (Qaida Course)",
+    "হাদিস মূখস্থ (কায়দা কোর্স)": "Hadith Memorisation (Qaida Course)",
+    "তাজভীদ ফর কায়দা কোর্স": "Tajweed for Qaida Course",
+    "গল্পসহ হাদিস": "Hadith with Stories",
+    "তাজভীদ ও মাখরাজ": "Tajweed and Makhraj",
+    "আকাঈদ ও ফিকহ (৯-১২ বছর)": "Aqaid and Fiqh (Ages 9-12)",
+    "আকাঈদ ও ফিকহ (১২-১৭ বছর)": "Aqaid and Fiqh (Ages 12-17)",
+  };
+  const bookNameFor = (name) =>
+    user.role === "student" ? BOOK_NAME_EN[name] || name : name;
   const [form, setForm] = useState(null); // {name, file, fileObj, courseIds:[]}
   const [books, setBooks] = useState(db.academicBooks || []);
   const [allCourses, setAllCourses] = useState(courses || []);
@@ -12637,7 +12664,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
             : "Click to open — downloads once the first time, then opens directly from your device",
         )}
       >
-        {icon} {b.name}
+        {icon} {bookNameFor(b.name)}
         {msg && (
           <span
             style={{
