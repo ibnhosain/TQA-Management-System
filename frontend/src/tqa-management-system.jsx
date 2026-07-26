@@ -2612,7 +2612,7 @@ function ClassesView({
               {T("আজ কোনো ক্লাস নেই।", "No classes today.")}
             </div>
           )}
-          {today.map((k) => Row(k, user.role !== "admin" || true))}
+          {today.map((k) => Row(k, user.role === "teacher" || user.role === "student"))}
         </div>
       </Section>
       <Section
