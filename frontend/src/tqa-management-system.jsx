@@ -1716,6 +1716,14 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
   const [rejoin, setRejoin] = useState(false);
   const SEG = 27 * 60; // এক সেগমেন্ট = ২৭ মিনিট
   const NEED = 45; // মোট মিনিট → হাজিরা
+  // "Leave & Save" বাটনে ক্লিক ভুলে গেলে/ট্যাব বন্ধ করে ফেললেও যেন হাজিরার সময়
+  // না হারায় — প্রতি ৬০ সেকেন্ডে নিঃশব্দে ব্যাকগ্রাউন্ডে যতটুকু সময় জমেছে তা
+  // ব্যাকএন্ডে সেভ করে রাখি (ref ব্যবহার করছি যাতে interval-এ স্টেল ভ্যালু না আসে)
+  const segSecRef = useRef(0);
+  const savedSecRef = useRef(0);
+  useEffect(() => {
+    segSecRef.current = segSec;
+  }, [segSec]);
 
   const refreshPresence = async () => {
     if (!usingApi) {
@@ -1759,14 +1767,52 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     return () => clearInterval(iv);
   }, [inMeeting, bothIn]);
 
+  // প্রতি ৬০ সেকেন্ডে নিঃশব্দে হাজিরার জমে-থাকা মিনিট ব্যাকএন্ডে সেভ করে রাখি —
+  // "Leave & Save" বাটনে ক্লিক করতে ভুলে গেলে/ব্রাউজার ট্যাব বন্ধ হয়ে গেলেও এতে
+  // সর্বোচ্চ ৬০ সেকেন্ড ছাড়া বাকি সবটুকু সময় হাজিরায় গণ্য হয়ে যাবে
+  useEffect(() => {
+    if (!usingApi) return;
+    const iv = setInterval(async () => {
+      if (!inMeeting || !bothIn) return;
+      const deltaMin = Math.floor(
+        (segSecRef.current - savedSecRef.current) / 60,
+      );
+      if (deltaMin < 1) return;
+      try {
+        await api.leaveClass(k.id, deltaMin);
+        await api.joinClass(k.id);
+        savedSecRef.current += deltaMin * 60;
+      } catch {
+        /* উপেক্ষা — পরের চেকপয়েন্টে আবার চেষ্টা হবে */
+      }
+    }, 60000);
+    return () => clearInterval(iv);
+  }, [inMeeting, bothIn, usingApi, k.id]);
+
+  // প্যানেল হঠাৎ বন্ধ/সরিয়ে ফেললে (অন্য ভিউতে চলে গেলে) — যতটুকু সময় এখনো
+  // চেকপয়েন্টে সেভ হয়নি তা শেষবারের মতো ব্যাকগ্রাউন্ডে সেভ করার চেষ্টা
+  useEffect(() => {
+    return () => {
+      if (!usingApi) return;
+      const deltaMin = Math.floor(
+        (segSecRef.current - savedSecRef.current) / 60,
+      );
+      if (deltaMin >= 1) api.leaveClass(k.id, deltaMin).catch(() => {});
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const segMin = Math.round(segSec / 60);
   const total = (presence?.myMin || 0) + segMin;
   const done = total >= NEED;
 
   const endSegment = async (auto) => {
     setInMeeting(false);
-    const m = segMin;
+    // চেকপয়েন্টে ইতিমধ্যে সেভ হওয়া মিনিট বাদ দিয়ে শুধু বাকি (এখনো সেভ না হওয়া)
+    // মিনিটটুকু পাঠাই — নইলে একই মিনিট দুবার গণনা (ডাবল-কাউন্ট) হয়ে যেত
+    const m = Math.max(0, Math.round((segSec - savedSecRef.current) / 60));
     setSegSec(0);
+    savedSecRef.current = 0;
     if (usingApi) {
       try {
         await api.leaveClass(k.id, m);
@@ -1910,8 +1956,21 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
       )}
       <div style={{ marginTop: 6 }}>
         <Btn sm kind="danger" onClick={() => endSegment(false)}>
-          {T("সংরক্ষণ করে বের হন", "Leave & Save")}
+          {T("বের হন", "Exit")}
         </Btn>
+        <span
+          style={{
+            marginLeft: 8,
+            fontSize: 11,
+            color: C.muted,
+            fontWeight: 500,
+          }}
+        >
+          {T(
+            "(হাজিরা অটো সেভ হচ্ছে — আলাদা করে কিছু করতে হবে না)",
+            "(attendance saves automatically — no extra step needed)",
+          )}
+        </span>
       </div>
     </div>
   );
