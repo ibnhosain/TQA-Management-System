@@ -64,23 +64,26 @@ async function request(path, { method = "GET", body, isForm, timeoutMs } = {}) {
 
   // কোল্ড-স্টার্ট/সাময়িক সার্ভার সমস্যায় কয়েকবার চেষ্টা (Render ফ্রি প্ল্যান ঘুম থেকে জাগতে সময় নেয়)
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const isGet = method === "GET";
-  // লগইনও নিরাপদে রিট্রাই করা যায় (দুবার সফল হলেও ক্ষতি নেই, শুধু নতুন টোকেন) —
-  // কোল্ড-স্টার্টের সময় লগইনেই সবচেয়ে বেশি "সার্ভার সংযোগ নেই" এরর আসত, কারণ
-  // আগে শুধু GET রিট্রাই হতো, POST (লগইন) প্রথম চেষ্টাতেই ব্যর্থ হয়ে থেমে যেত
-  const isSafeRetry = isGet || path === "/auth/login";
+  // ⚠️ গুরুত্বপূর্ণ: POST (create) রিট্রাই করা নিরাপদ না — যদি সার্ভার আসলে রিকোয়েস্ট
+  // প্রসেস করে ফেলে (রুটিন/ক্লাস তৈরি হয়ে যায়) কিন্তু রেসপন্সটা গেটওয়ে-টাইমআউটে
+  // (502/503/504) হারিয়ে যায়, তাহলে রিট্রাই একই জিনিস আবার তৈরি করে ফেলবে —
+  // এটাই "রুটিন ডবল ডবল হয়ে যাচ্ছে" বাগের কারণ ছিল। GET/PATCH/PUT/DELETE
+  // idempotent (দুবার চালালেও একই ফলাফল), তাই এগুলোই শুধু রিট্রাই-নিরাপদ —
+  // + /auth/login (দুবার সফল হলেও ক্ষতি নেই, শুধু নতুন টোকেন)
+  const isSafeRetry =
+    ["GET", "PATCH", "PUT", "DELETE"].includes(method) || path === "/auth/login";
   let res;
   for (let attempt = 0; ; attempt++) {
     try {
       res = await doFetch();
     } catch (e) {
-      // নেটওয়ার্ক এরর — নিরাপদ (GET/লগইন) রিকোয়েস্ট আবার চেষ্টা করি (বাকি POST দুবার হয়ে যাওয়া এড়াতে)
+      // নেটওয়ার্ক এরর — শুধু নিরাপদ (idempotent) রিকোয়েস্ট আবার চেষ্টা করি
       // Neon DB কোল্ড-স্টার্টে কখনো ১৫-২০ সেকেন্ডও লাগে — তাই ৩ থেকে ৫ বার বাড়ানো হলো
       if (isSafeRetry && attempt < 5) { await sleep(1500 * (attempt + 1)); continue; }
       throw e;
     }
-    // 502/503/504 = সার্ভার এখনো জাগছে, রিকোয়েস্ট প্রসেসই হয়নি → সব মেথডেই আবার চেষ্টা নিরাপদ
-    if ([502, 503, 504].includes(res.status) && attempt < 5) { await sleep(1500 * (attempt + 1)); continue; }
+    // 502/503/504 = গেটওয়ে/সার্ভার সাময়িক সমস্যা — শুধু নিরাপদ (idempotent) মেথডেই রিট্রাই
+    if (isSafeRetry && [502, 503, 504].includes(res.status) && attempt < 5) { await sleep(1500 * (attempt + 1)); continue; }
     break;
   }
   if (res.status === 401 && refresh) {           // টোকেন মেয়াদোত্তীর্ণ → রিফ্রেশ
