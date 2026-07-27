@@ -33,24 +33,27 @@ export const logout = () => {
   store.removeItem("tqa_refresh");
 };
 
+// fetch()-এর নিজের কোনো টাইমআউট নেই — নেটওয়ার্ক গণ্ডগোলে (যেমন দুর্বল/অস্থির
+// সংযোগ) একটা রিকোয়েস্ট চিরকাল ঝুলে থাকতে পারত (লোডিং স্ক্রিন অনন্তকাল ঘুরতেই
+// থাকত) — তাই ২০ সেকেন্ড পর নিজে থেকে বাতিল করে দেওয়া এই হেল্পারটা সব fetch
+// কলেই (মূল রিকোয়েস্ট, টোকেন-রিফ্রেশ, ব্যাকআপ ডাউনলোড) ব্যবহার হয়
+const fetchWithTimeout = (url, opts = {}, ms = 20000) => {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(timer));
+};
+
 /* মূল রিকোয়েস্ট র‍্যাপার — JWT সংযুক্তি + মেয়াদ শেষে অটো-রিফ্রেশ */
 async function request(path, { method = "GET", body, isForm } = {}) {
-  // fetch()-এর নিজের কোনো টাইমআউট নেই — নেটওয়ার্ক গণ্ডগোলে (যেমন দুর্বল/অস্থির
-  // সংযোগ) একটা রিকোয়েস্ট চিরকাল ঝুলে থাকতে পারত, রিট্রাইও কখনো শুরু হতো না
-  // (লোডিং স্ক্রিন অনন্তকাল ঘুরতেই থাকত) — তাই ২০ সেকেন্ড পর নিজে থেকে বাতিল করে দিই
-  const doFetch = () => {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 20000);
-    return fetch(`${BASE}${path}`, {
+  const doFetch = () =>
+    fetchWithTimeout(`${BASE}${path}`, {
       method,
-      signal: ctrl.signal,
       headers: {
         ...(access ? { Authorization: `Bearer ${access}` } : {}),
         ...(body && !isForm ? { "Content-Type": "application/json" } : {}),
       },
       body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
-    }).finally(() => clearTimeout(timer));
-  };
+    });
 
   // কোল্ড-স্টার্ট/সাময়িক সার্ভার সমস্যায় কয়েকবার চেষ্টা (Render ফ্রি প্ল্যান ঘুম থেকে জাগতে সময় নেয়)
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -74,15 +77,20 @@ async function request(path, { method = "GET", body, isForm } = {}) {
     break;
   }
   if (res.status === 401 && refresh) {           // টোকেন মেয়াদোত্তীর্ণ → রিফ্রেশ
-    const r = await fetch(`${BASE}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh }),
-    });
-    if (r.ok) {
-      saveTokens((await r.json()).access, refresh);
-      res = await doFetch();
-    } else logout();
+    try {
+      const r = await fetchWithTimeout(`${BASE}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh }),
+      });
+      if (r.ok) {
+        saveTokens((await r.json()).access, refresh);
+        res = await doFetch();
+      } else logout();
+    } catch {
+      // নেটওয়ার্ক এরর/টাইমআউট — সেশন অক্ষত রেখেই ব্যর্থতা জানাই, লগআউট নয়
+      // (নইলে সাময়িক নেটওয়ার্ক গণ্ডগোলেই ভুলবশত লগআউট হয়ে যেত)
+    }
   }
   if (!res.ok) throw Object.assign(new Error("API error"), { status: res.status, data: await res.json().catch(() => ({})) });
   return res.status === 204 ? null : res.json();
@@ -237,9 +245,12 @@ export const api = {
 
 /** পরিচালকের সম্পূর্ণ ডেটা ব্যাকআপ — JSON ডাউনলোড */
 export async function downloadBackup() {
-  const res = await fetch(`${BASE}/export/`, {
-    headers: access ? { Authorization: `Bearer ${access}` } : {},
-  });
+  // পূর্ণ ডাটা এক্সপোর্ট স্বাভাবিক API কলের চেয়ে বেশি সময় নিতে পারে, তাই টাইমআউট বেশি (৬০s)
+  const res = await fetchWithTimeout(
+    `${BASE}/export/`,
+    { headers: access ? { Authorization: `Bearer ${access}` } : {} },
+    60000,
+  );
   if (!res.ok) throw new Error("ব্যাকআপ নামাতে ব্যর্থ হয়েছে");
   const blob = await res.blob();
   const today = new Date().toISOString().slice(0, 10);
