@@ -259,7 +259,10 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def today(self, request):  # লাইভ পপআপ + "আজকের ক্লাস"
-        qs = self.get_queryset().filter(date=date.today(), status="upcoming")
+        # date.today() সার্ভারের (UTC) তারিখ দেয়, বাংলাদেশ সময়ের নয় — মধ্যরাত থেকে
+        # ভোর ৬টার মধ্যে এটা "গতকাল" ধরে ফেলত (UTC তখনও আগের দিন) — তাই
+        # timezone.localtime() দিয়ে Asia/Dhaka অনুযায়ী প্রকৃত "আজ" বের করা হচ্ছে
+        qs = self.get_queryset().filter(date=timezone.localtime().date(), status="upcoming")
         return Response(self.get_serializer(qs, many=True).data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])

@@ -134,7 +134,9 @@ BN_DIGITS = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
 def generate_monthly_dues():
     """চলতি মাসের বকেয়া তৈরি (idempotent) — কতগুলো নতুন তৈরি হলো তা ফেরত দেয়।"""
     from .models import User, DueMonth
-    t = date.today()
+    # date.today() সার্ভারের (UTC) তারিখ দেয়, বাংলাদেশ সময়ের নয় — মাসের শুরুর
+    # দিকে মধ্যরাত-থেকে-ভোর৬টার মধ্যে চললে ভুল মাসও ধরে ফেলতে পারত
+    t = timezone.localtime().date()
     label = f"{BN_MONTHS[t.month - 1]} {str(t.year).translate(BN_DIGITS)}"
     created = 0
     for u in User.objects.filter(role__in=["student", "teacher"], is_active=True):
@@ -151,7 +153,10 @@ def generate_for_routine(r):
     from .models import ClassSession
     if not r.teacher_id or not r.course_id:
         return 0  # উস্তাদ/কোর্স ছাড়া ক্লাস তৈরি সম্ভব নয়
-    today = date.today()
+    # date.today() সার্ভারের (UTC) তারিখ দেয়, বাংলাদেশ সময়ের নয় — মধ্যরাত থেকে
+    # ভোর ৬টার মধ্যে cron চললে এটা "গতকাল" ধরে ক্লাস তৈরি করত (UTC তখনও আগের
+    # দিন), ফলে "আজকের ক্লাস" ভুল তারিখে তৈরি হয়ে টিচার/স্টুডেন্টের পোর্টালে দেখাত না
+    today = timezone.localtime().date()
     created = 0
     for off in range(7):
         d = today + timedelta(days=off)
@@ -193,6 +198,6 @@ def cleanup_old_classes():
     course_name/teacher_name/class_date আগে থেকেই আলাদাভাবে সংরক্ষিত (migration 0008),
     তাই মাসিক হাজিরা রিপোর্ট সবসময় সম্পূর্ণ থাকে। কতগুলো ClassSession মুছল তা ফেরত দেয়।"""
     from .models import ClassSession
-    cutoff = date.today() - timedelta(days=60)
+    cutoff = timezone.localtime().date() - timedelta(days=60)
     deleted, _ = ClassSession.objects.filter(date__lt=cutoff).delete()
     return deleted
