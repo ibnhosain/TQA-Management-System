@@ -35,25 +35,32 @@ export const logout = () => {
 
 // fetch()-এর নিজের কোনো টাইমআউট নেই — নেটওয়ার্ক গণ্ডগোলে (যেমন দুর্বল/অস্থির
 // সংযোগ) একটা রিকোয়েস্ট চিরকাল ঝুলে থাকতে পারত (লোডিং স্ক্রিন অনন্তকাল ঘুরতেই
-// থাকত) — তাই ২০ সেকেন্ড পর নিজে থেকে বাতিল করে দেওয়া এই হেল্পারটা সব fetch
-// কলেই (মূল রিকোয়েস্ট, টোকেন-রিফ্রেশ, ব্যাকআপ ডাউনলোড) ব্যবহার হয়
-const fetchWithTimeout = (url, opts = {}, ms = 20000) => {
+// থাকত) — তাই নির্দিষ্ট সময় পর নিজে থেকে বাতিল করে দেওয়া এই হেল্পারটা সব fetch
+// কলেই (মূল রিকোয়েস্ট, টোকেন-রিফ্রেশ, ব্যাকআপ ডাউনলোড) ব্যবহার হয়। ডিফল্ট ৩০s —
+// Neon কোল্ড-স্টার্টই একা ১৫-২০s নিতে পারে, তাই ২০s আগে অনেক বৈধ রিকোয়েস্টও
+// (যেমন "সব রুটিনের ক্লাস তৈরি করুন" — একাধিক রুটিন × ৭ দিন ধরে লুপ চালায়)
+// সময়মতো শেষ না হয়েই বাতিল/ব্যর্থ দেখাচ্ছিল
+const fetchWithTimeout = (url, opts = {}, ms = 30000) => {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(timer));
 };
 
 /* মূল রিকোয়েস্ট র‍্যাপার — JWT সংযুক্তি + মেয়াদ শেষে অটো-রিফ্রেশ */
-async function request(path, { method = "GET", body, isForm } = {}) {
+async function request(path, { method = "GET", body, isForm, timeoutMs } = {}) {
   const doFetch = () =>
-    fetchWithTimeout(`${BASE}${path}`, {
-      method,
-      headers: {
-        ...(access ? { Authorization: `Bearer ${access}` } : {}),
-        ...(body && !isForm ? { "Content-Type": "application/json" } : {}),
+    fetchWithTimeout(
+      `${BASE}${path}`,
+      {
+        method,
+        headers: {
+          ...(access ? { Authorization: `Bearer ${access}` } : {}),
+          ...(body && !isForm ? { "Content-Type": "application/json" } : {}),
+        },
+        body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
       },
-      body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
-    });
+      timeoutMs,
+    );
 
   // কোল্ড-স্টার্ট/সাময়িক সার্ভার সমস্যায় কয়েকবার চেষ্টা (Render ফ্রি প্ল্যান ঘুম থেকে জাগতে সময় নেয়)
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -134,7 +141,7 @@ export const api = {
   createRoutine: (d) => request("/routines/", { method: "POST", body: d }),
   updateRoutine: (id, d) => request(`/routines/${id}/`, { method: "PATCH", body: d }),
   deleteRoutine: (id) => request(`/routines/${id}/`, { method: "DELETE" }),
-  generateRoutineClasses: () => request("/routines/generate/", { method: "POST" }), // সব রুটিনের ক্লাস তৈরি → পোর্টালে
+  generateRoutineClasses: () => request("/routines/generate/", { method: "POST", timeoutMs: 60000 }), // সব রুটিনের ক্লাস তৈরি (একাধিক রুটিন × ৭ দিন লুপ — সময় বেশি লাগতে পারে)
 
   // কোর্স · বই · সিলেবাস · লেকচার
   courses: () => request("/courses/"),
@@ -194,7 +201,7 @@ export const api = {
   // ফি ও বেতন ও রিসিট
   myFees: () => request("/fees/"),
   myDues: () => request("/fees/dues/"),
-  generateMonthlyDues: () => request("/fees/generate_dues/", { method: "POST" }), // চলতি মাসের বকেয়া এখনই তৈরি (cron বন্ধ থাকলে ম্যানুয়াল)
+  generateMonthlyDues: () => request("/fees/generate_dues/", { method: "POST", timeoutMs: 60000 }), // চলতি মাসের বকেয়া এখনই তৈরি (cron বন্ধ থাকলে ম্যানুয়াল, সবার জন্য লুপ চালায়)
   payFee: ({ amount, month_label, method, trx_id, screenshot }) => {  // বিকাশ/নগদ/ব্যাংক + স্ক্রিনশট
     const f = new FormData();
     f.append("amount", amount); f.append("month_label", month_label);
