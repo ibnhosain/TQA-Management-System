@@ -13842,10 +13842,7 @@ export default function App() {
             alt="তারবিয়াতুল কুরআন একাডেমি"
             style={{ width: 56, height: 56, borderRadius: 14 }}
           />
-          <div style={{ marginTop: 10, fontWeight: 700 }}>সংযোগ করা হচ্ছে…</div>
-          <div style={{ marginTop: 4, fontSize: 12.5, color: "#6b7280" }}>
-            সার্ভার জেগে উঠছে, একটু অপেক্ষা করুন
-          </div>
+          <div style={{ marginTop: 10, fontWeight: 700 }}>লোড হচ্ছে…</div>
         </div>
       </div>
     );
