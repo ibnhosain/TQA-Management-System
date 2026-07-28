@@ -129,6 +129,7 @@ export const api = {
   editClass: (id, d) => request(`/classes/${id}/`, { method: "PATCH", body: d }),
   joinClass: (id) => request(`/classes/${id}/join/`, { method: "POST" }),       // নতুন সেগমেন্ট শুরু
   leaveClass: (id, minutes) => request(`/classes/${id}/leave/`, { method: "POST", body: minutes != null ? { minutes } : {} }), // সেগমেন্টের মিনিট যোগ
+  checkpointClass: (id, minutes) => request(`/classes/${id}/checkpoint/`, { method: "POST", body: { minutes } }), // ব্যাকগ্রাউন্ড অটো-সেভ — presence অক্ষুণ্ণ রেখে শুধু মিনিট যোগ
   classPresence: (id) => request(`/classes/${id}/presence/`),                   // কে এখন মিটিংয়ে (দুজন-জয়েন গেটিং)
   markAttendance: (id, student_id, present = true) => request(`/classes/${id}/mark_attendance/`, { method: "POST", body: { student_id, present } }), // পরিচালকের ম্যানুয়াল হাজিরা
   postponeClass: (id) => request(`/classes/${id}/postpone/`, { method: "POST" }), // ⛔ স্থগিত

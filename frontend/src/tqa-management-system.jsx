@@ -1812,8 +1812,11 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
       );
       if (deltaMin < 1) return;
       try {
-        await api.leaveClass(k.id, deltaMin);
-        await api.joinClass(k.id);
+        // leave+join (আগে ব্যবহৃত হতো) সাময়িকভাবে segment_start খালি করে দিত,
+        // ফলে অন্যপাশের প্রেজেন্স-পোল ঠিক তখন পড়লে ভুল করে "চলে গেছেন" ধরে
+        // তার কাউন্টার থামিয়ে দিতে পারত — checkpoint শুধু মিনিট যোগ করে,
+        // presence/segment_start-এ হাত দেয় না, তাই এই সমস্যা আর হবে না
+        await api.checkpointClass(k.id, deltaMin);
         savedSecRef.current += deltaMin * 60;
         // presence.myMin পরের ১২-সেকেন্ড পোলে আপডেট হওয়ার জন্য অপেক্ষা না করে
         // এখনই যোগ করে দিই — নইলে savedSecRef বেড়ে যাওয়ায় "মোট" সংখ্যাটা কয়েক

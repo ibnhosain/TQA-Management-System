@@ -290,6 +290,22 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         att.save(update_fields=["minutes", "segment_start", "left_at"])
         return Response(AttendanceSerializer(att).data)
 
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
+    def checkpoint(self, request, pk=None):
+        # প্রতি ৬০ সেকেন্ডে ব্যাকগ্রাউন্ডে হাজিরার মিনিট সেভ — leave+join (যা
+        # segment_start সাময়িকভাবে None করে দিত) ব্যবহার করলে অন্যপাশের প্রেজেন্স
+        # পোল সেই মুহূর্তে "চলে গেছেন" ভুল বুঝে তার কাউন্টার থামিয়ে দিতে পারত।
+        # এই এন্ডপয়েন্ট শুধু মিনিট যোগ করে, segment_start/left_at স্পর্শ করে না —
+        # তাই "উপস্থিত আছি" অবস্থা কখনো বিঘ্নিত হয় না
+        att = Attendance.objects.get(session=self.get_object(), user=request.user)
+        add = request.data.get("minutes")
+        try:
+            att.minutes += max(0, int(add))
+        except (TypeError, ValueError):
+            return Response({"error": "minutes আবশ্যক"}, status=400)
+        att.save(update_fields=["minutes"])
+        return Response(AttendanceSerializer(att).data)
+
     @action(detail=True, permission_classes=[IsAuthenticated])
     def presence(self, request, pk=None):  # কে এখন মিটিংয়ে আছে — দুজন-জয়েন গেটিং এর জন্য
         s = self.get_object()
