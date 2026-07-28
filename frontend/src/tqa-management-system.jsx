@@ -1752,11 +1752,18 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
   // "Leave & Save" বাটনে ক্লিক ভুলে গেলে/ট্যাব বন্ধ করে ফেললেও যেন হাজিরার সময়
   // না হারায় — প্রতি ৬০ সেকেন্ডে নিঃশব্দে ব্যাকগ্রাউন্ডে যতটুকু সময় জমেছে তা
   // ব্যাকএন্ডে সেভ করে রাখি (ref ব্যবহার করছি যাতে interval-এ স্টেল ভ্যালু না আসে)
-  const segSecRef = useRef(0);
   const savedSecRef = useRef(0);
-  useEffect(() => {
-    segSecRef.current = segSec;
-  }, [segSec]);
+  // সময় "গুনে" (setInterval-এ প্রতি সেকেন্ডে +1) রাখার বদলে timestamp থেকে হিসাব
+  // করা হয় — কারণ জুম আলাদা ট্যাবে খোলে বলে ক্লাস চলাকালীন এই ট্যাবটাই
+  // ব্রাউজারে ব্যাকগ্রাউন্ডে থাকে, আর ব্রাউজার ব্যাকগ্রাউন্ড ট্যাবের টাইমার
+  // নিজে থেকেই ধীর/বন্ধ করে দেয় — ফলে "গোনা" সেকেন্ড হারিয়ে/আটকে যেত। timestamp
+  // থেকে হিসাব করলে টাইমার থ্রটল হলেও পরের বার চেক করা মাত্র সঠিক সময়ই বেরোয়।
+  const accumulatedMsRef = useRef(0); // এই সেগমেন্টে "দুজনেই উপস্থিত" অবস্থায় ইতিমধ্যে জমে যাওয়া সময়
+  const activeSinceRef = useRef(null); // এখন bothIn true হলে কখন থেকে (timestamp), নইলে null
+  const computeSegSec = () => {
+    const extra = activeSinceRef.current ? Date.now() - activeSinceRef.current : 0;
+    return Math.floor((accumulatedMsRef.current + extra) / 1000);
+  };
 
   const refreshPresence = async () => {
     if (!usingApi) {
@@ -1792,42 +1799,74 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
 
   const bothIn = user.role === "teacher" ? !!presence?.sa : !!presence?.ta;
 
-  // টিক — শুধু দুজন উপস্থিত থাকলেই সময় গোনে (একজন অপেক্ষা করলে নয়)
+  // bothIn/inMeeting বদলালেই accumulatedMsRef/activeSinceRef হালনাগাদ করি —
+  // এটাই "সত্যিকারের" হিসাব, টাইমার-নির্ভর নয়
+  useEffect(() => {
+    if (inMeeting && bothIn) {
+      activeSinceRef.current = Date.now();
+    } else if (activeSinceRef.current) {
+      accumulatedMsRef.current += Date.now() - activeSinceRef.current;
+      activeSinceRef.current = null;
+      setSegSec(computeSegSec());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inMeeting, bothIn]);
+
+  // শুধু ডিসপ্লে রিফ্রেশ করার জন্য (প্রতি সেকেন্ডে) — ট্যাব ব্যাকগ্রাউন্ডে থাকলে
+  // ব্রাউজার এটা কম ঘন ঘন চালাবে, কিন্তু প্রতিবার computeSegSec() timestamp
+  // থেকে হিসাব করে বলে মান সবসময়ই সঠিক থাকে, কোনো সেকেন্ড হারায় না
   useEffect(() => {
     const iv = setInterval(() => {
-      if (inMeeting && bothIn) setSegSec((s) => s + 1);
+      if (inMeeting && bothIn) setSegSec(computeSegSec());
     }, 1000);
     return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inMeeting, bothIn]);
 
   // প্রতি ৬০ সেকেন্ডে নিঃশব্দে হাজিরার জমে-থাকা মিনিট ব্যাকএন্ডে সেভ করে রাখি —
   // "Leave & Save" বাটনে ক্লিক করতে ভুলে গেলে/ব্রাউজার ট্যাব বন্ধ হয়ে গেলেও এতে
   // সর্বোচ্চ ৬০ সেকেন্ড ছাড়া বাকি সবটুকু সময় হাজিরায় গণ্য হয়ে যাবে
+  const doCheckpoint = async () => {
+    if (!usingApi || !inMeetingRef.current) return;
+    const deltaMin = Math.floor((computeSegSec() - savedSecRef.current) / 60);
+    if (deltaMin < 1) return;
+    try {
+      // leave+join (আগে ব্যবহৃত হতো) সাময়িকভাবে segment_start খালি করে দিত,
+      // ফলে অন্যপাশের প্রেজেন্স-পোল ঠিক তখন পড়লে ভুল করে "চলে গেছেন" ধরে
+      // তার কাউন্টার থামিয়ে দিতে পারত — checkpoint শুধু মিনিট যোগ করে,
+      // presence/segment_start-এ হাত দেয় না, তাই এই সমস্যা আর হবে না
+      await api.checkpointClass(k.id, deltaMin);
+      savedSecRef.current += deltaMin * 60;
+      // presence.myMin পরের ১২-সেকেন্ড পোলে আপডেট হওয়ার জন্য অপেক্ষা না করে
+      // এখনই যোগ করে দিই — নইলে savedSecRef বেড়ে যাওয়ায় "মোট" সংখ্যাটা কয়েক
+      // সেকেন্ডের জন্য থমকে/পিছিয়ে যেত (দুটো কাউন্টার একসাথে না চলার মতো দেখাত)
+      setPresence((p) => (p ? { ...p, myMin: (p.myMin || 0) + deltaMin } : p));
+    } catch {
+      /* উপেক্ষা — পরের চেকপয়েন্টে আবার চেষ্টা হবে */
+    }
+  };
   useEffect(() => {
     if (!usingApi) return;
-    const iv = setInterval(async () => {
-      if (!inMeeting || !bothIn) return;
-      const deltaMin = Math.floor(
-        (segSecRef.current - savedSecRef.current) / 60,
-      );
-      if (deltaMin < 1) return;
-      try {
-        // leave+join (আগে ব্যবহৃত হতো) সাময়িকভাবে segment_start খালি করে দিত,
-        // ফলে অন্যপাশের প্রেজেন্স-পোল ঠিক তখন পড়লে ভুল করে "চলে গেছেন" ধরে
-        // তার কাউন্টার থামিয়ে দিতে পারত — checkpoint শুধু মিনিট যোগ করে,
-        // presence/segment_start-এ হাত দেয় না, তাই এই সমস্যা আর হবে না
-        await api.checkpointClass(k.id, deltaMin);
-        savedSecRef.current += deltaMin * 60;
-        // presence.myMin পরের ১২-সেকেন্ড পোলে আপডেট হওয়ার জন্য অপেক্ষা না করে
-        // এখনই যোগ করে দিই — নইলে savedSecRef বেড়ে যাওয়ায় "মোট" সংখ্যাটা কয়েক
-        // সেকেন্ডের জন্য থমকে/পিছিয়ে যেত (দুটো কাউন্টার একসাথে না চলার মতো দেখাত)
-        setPresence((p) => (p ? { ...p, myMin: (p.myMin || 0) + deltaMin } : p));
-      } catch {
-        /* উপেক্ষা — পরের চেকপয়েন্টে আবার চেষ্টা হবে */
-      }
+    const iv = setInterval(() => {
+      if (inMeeting && bothIn) doCheckpoint();
     }, 60000);
     return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inMeeting, bothIn, usingApi, k.id]);
+
+  // ট্যাব ব্যাকগ্রাউন্ডে থাকা অবস্থায় উপরের ৬০-সেকেন্ড ইন্টারভ্যালও ব্রাউজার
+  // থ্রটল করতে পারে (তখন সেভও দেরিতে হয়) — তাই ট্যাবে ফিরে এলেই (টিচার/স্টুডেন্ট
+  // দুজনের জন্যই) একবার সাথে সাথে চেকপয়েন্ট সেভের চেষ্টা করি
+  useEffect(() => {
+    let wasHidden = document.hidden;
+    const iv = setInterval(() => {
+      const isHidden = document.hidden;
+      if (!isHidden && wasHidden) doCheckpoint();
+      wasHidden = isHidden;
+    }, 2000);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // প্যানেল হঠাৎ বন্ধ/সরিয়ে ফেললে (অন্য ভিউতে চলে গেলে) — যতটুকু সময় এখনো
   // চেকপয়েন্টে সেভ হয়নি তা শেষবারের মতো ব্যাকগ্রাউন্ডে সেভ করার চেষ্টা
@@ -1835,7 +1874,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     return () => {
       if (!usingApi) return;
       const deltaMin = Math.floor(
-        (segSecRef.current - savedSecRef.current) / 60,
+        (computeSegSec() - savedSecRef.current) / 60,
       );
       if (deltaMin >= 1) api.leaveClass(k.id, deltaMin).catch(() => {});
     };
@@ -1848,7 +1887,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
   // এখনো-সেভ-না-হওয়া অংশটুকু যোগ করি
   const notYetSavedMin = Math.max(
     0,
-    Math.round((segSec - savedSecRef.current) / 60),
+    Math.round((computeSegSec() - savedSecRef.current) / 60),
   );
   const total = (presence?.myMin || 0) + notYetSavedMin;
   const done = total >= NEED;
@@ -1861,7 +1900,9 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     setInMeeting(false);
     // চেকপয়েন্টে ইতিমধ্যে সেভ হওয়া মিনিট বাদ দিয়ে শুধু বাকি (এখনো সেভ না হওয়া)
     // মিনিটটুকু পাঠাই — নইলে একই মিনিট দুবার গণনা (ডাবল-কাউন্ট) হয়ে যেত
-    const m = Math.max(0, Math.round((segSec - savedSecRef.current) / 60));
+    const m = Math.max(0, Math.round((computeSegSec() - savedSecRef.current) / 60));
+    activeSinceRef.current = null;
+    accumulatedMsRef.current = 0;
     setSegSec(0);
     savedSecRef.current = 0;
     if (usingApi) {
