@@ -5935,6 +5935,7 @@ function AccountsView({ db }) {
 /* ═══════════════ ওয়েবসাইট ফর্ম সাবমিশন (ফিচার ৮) ═══════════════ */
 function FormsView({ db, setDb }) {
   const [forms, setForms] = useState(db.forms || []);
+  const [busyId, setBusyId] = useState(null);
 
   useEffect(() => {
     api
@@ -5961,17 +5962,36 @@ function FormsView({ db, setDb }) {
       });
   }, []);
 
+  // "নতুন" থেকে "রিপ্লাই হয়েছে"-তে আনলে backend-এ প্রস্তুত WhatsApp বার্তা আসলেই
+  // পাঠানো হয় (আগে শুধু চিহ্নিত হতো, কোনো মেসেজ পাঠানো হতো না) — উল্টো দিকে
+  // (ভুলে চিহ্নিত হলে ফেরত) কোনো মেসেজ পাঠানোর দরকার নেই, শুধু ফ্ল্যাগ বদলায়
   const toggle = async (id) => {
     const f = forms.find((x) => x.id === id);
-    const newStatus = f?.status === "new" ? "replied" : "new";
-    try {
-      await api.replyAdmission(id, newStatus === "replied");
-    } catch {
-      /* ignore */
+    if (f?.status === "new") {
+      setBusyId(id);
+      try {
+        await api.sendAdmissionReply(id);
+        notice("✔ WhatsApp রিপ্লাই পাঠানো হয়েছে।");
+        setForms((prev) =>
+          prev.map((x) => (x.id === id ? { ...x, status: "replied" } : x)),
+        );
+      } catch (e) {
+        notice(
+          "রিপ্লাই পাঠাতে ব্যর্থ — " +
+            (e?.data?.error || e?.message || "যাচাই করুন"),
+        );
+      }
+      setBusyId(null);
+    } else {
+      try {
+        await api.replyAdmission(id, false);
+      } catch {
+        /* ignore */
+      }
+      setForms((prev) =>
+        prev.map((x) => (x.id === id ? { ...x, status: "new" } : x)),
+      );
     }
-    setForms((prev) =>
-      prev.map((x) => (x.id === id ? { ...x, status: newStatus } : x)),
-    );
   };
   return (
     <Section
@@ -6013,10 +6033,13 @@ function FormsView({ db, setDb }) {
               sm
               kind={f.status === "new" ? "primary" : "soft"}
               onClick={() => toggle(f.id)}
+              style={{ opacity: busyId === f.id ? 0.6 : 1 }}
             >
-              {f.status === "new"
-                ? "রিপ্লাই করা হয়েছে চিহ্নিত করুন"
-                : "✔ রিপ্লাই হয়েছে"}
+              {busyId === f.id
+                ? "⏳ পাঠানো হচ্ছে…"
+                : f.status === "new"
+                  ? "📲 WhatsApp রিপ্লাই পাঠান"
+                  : "✔ রিপ্লাই হয়েছে"}
             </Btn>
           </div>
         ))}

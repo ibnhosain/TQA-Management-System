@@ -228,6 +228,7 @@ export const api = {
   acceptAdmission: (id, opts) => request(`/admissions/${id}/accept/`, { method: "POST", body: opts }),
   rejectAdmission: (id) => request(`/admissions/${id}/reject/`, { method: "POST" }),
   replyAdmission: (id, replied) => request(`/admissions/${id}/`, { method: "PATCH", body: { replied } }),
+  sendAdmissionReply: (id) => request(`/admissions/${id}/send_reply/`, { method: "POST" }), // এক ক্লিকে প্রস্তুত WhatsApp রিপ্লাই পাঠায় ও replied=true করে
   leaves: () => request("/leaves/"),
   applyLeave: (d) => request("/leaves/", { method: "POST", body: d }),
   forwardLeave: (id) => request(`/leaves/${id}/forward/`, { method: "POST" }),
