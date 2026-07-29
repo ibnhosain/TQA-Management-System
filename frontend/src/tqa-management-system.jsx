@@ -6459,6 +6459,10 @@ function TeacherReportView({ db, setDb, courses, user }) {
   const [ratingSummary, setRatingSummary] = useState(null);
   const [allRatings, setAllRatings] = useState(db.ratings || []);
   const [salaries, setSalaries] = useState(db.teacherPayments || []);
+  // আগে এখানে stale mock db.attendance/db.classes/db.dueMonths ব্যবহার হতো —
+  // তাই হাজিরা, ক্লাস নেওয়ার সংখ্যা ও বকেয়া কখনো আসল ডাটা দেখাত না
+  const [attendance, setAttendance] = useState([]);
+  const [classes, setClasses] = useState([]);
 
   const tid = user.role === "teacher" ? user.id : sel || allTeachers[0]?.id;
   const t =
@@ -6466,12 +6470,12 @@ function TeacherReportView({ db, setDb, courses, user }) {
   const tCourses = courses.filter(
     (c) => String(c.teacherId || c.teacher) === String(tid),
   );
-  const att = db.attendance.filter((a) => String(a.userId) === String(tid));
+  const att = attendance.filter((a) => String(a.user) === String(tid));
   const present = att.filter((a) => (a.present ?? a.minutes >= 45)).length;
   const short = att.filter((a) => !(a.present ?? a.minutes >= 45)).length;
-  const taken = db.classes.filter(
+  const taken = classes.filter(
     (k) =>
-      tCourses.some((c) => String(c.id) === String(k.courseId)) &&
+      tCourses.some((c) => String(c.id) === String(k.course || k.courseId)) &&
       (k.status === "done" || k.date < todayISO()),
   ).length;
 
@@ -6504,7 +6508,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
   const pays = salaries.filter(
     (p) => String(p.teacher || p.teacherId) === String(tid),
   );
-  const dues = db.dueMonths?.[tid] || [];
+  const dues = t?.due_months || [];
 
   // কোনো মাসে ইতিমধ্যে আংশিক পেমেন্ট হয়ে থাকলে কত জমা পড়েছে তা হিসাব — যতক্ষণ
   // না সব মিলিয়ে পূর্ণ বেতনের সমান হয়, ততক্ষণ ব্যাকএন্ডে বকেয়া থেকেই যায়
@@ -6590,9 +6594,25 @@ function TeacherReportView({ db, setDb, courses, user }) {
       setSalaries(db.teacherPayments || []);
     }
   };
+  const loadAttendance = async () => {
+    try {
+      setAttendance(await api.attendanceReport());
+    } catch {
+      /* keep empty */
+    }
+  };
+  const loadClasses = async () => {
+    try {
+      setClasses(await api.classes());
+    } catch {
+      /* keep empty */
+    }
+  };
   useEffect(() => {
     loadTeachers();
     loadSalaries();
+    loadAttendance();
+    loadClasses();
   }, []);
   useEffect(() => {
     loadRatings();
