@@ -530,9 +530,12 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], permission_classes=[IsAdminLevel])
     def generate_dues(self, request):
         """চলতি মাসের বকেয়া এখনই তৈরি/নিশ্চিত করা (idempotent) — cron বন্ধ থাকলে
-        পরিচালক নিজে এক ক্লিকে চালাতে পারবেন।"""
+        পরিচালক নিজে এক ক্লিকে চালাতে পারবেন। "স্টুডেন্ট পেমেন্ট" পেজ থেকে
+        role="student" পাঠালে কেবল স্টুডেন্টদের বকেয়া তৈরি হয় (টিচারদের বাদ)।"""
         from .tasks import generate_monthly_dues
-        created = generate_monthly_dues()
+        role = request.data.get("role")
+        roles = [role] if role in ("student", "teacher") else None
+        created = generate_monthly_dues(roles=roles)
         return Response({"created": created})
 
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])

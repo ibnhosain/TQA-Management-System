@@ -131,15 +131,17 @@ BN_DIGITS = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
 
 
 @shared_task
-def generate_monthly_dues():
-    """চলতি মাসের বকেয়া তৈরি (idempotent) — কতগুলো নতুন তৈরি হলো তা ফেরত দেয়।"""
+def generate_monthly_dues(roles=None):
+    """চলতি মাসের বকেয়া তৈরি (idempotent) — কতগুলো নতুন তৈরি হলো তা ফেরত দেয়।
+    roles না দিলে ডিফল্টে student+teacher দুটোই (cron/হিসাব-নিকাশের বাটন);
+    "স্টুডেন্ট পেমেন্ট" পেজের বাটন শুধু roles=["student"] দিয়ে কল করে।"""
     from .models import User, DueMonth
     # date.today() সার্ভারের (UTC) তারিখ দেয়, বাংলাদেশ সময়ের নয় — মাসের শুরুর
     # দিকে মধ্যরাত-থেকে-ভোর৬টার মধ্যে চললে ভুল মাসও ধরে ফেলতে পারত
     t = timezone.localtime().date()
     label = f"{BN_MONTHS[t.month - 1]} {str(t.year).translate(BN_DIGITS)}"
     created = 0
-    for u in User.objects.filter(role__in=["student", "teacher"], is_active=True):
+    for u in User.objects.filter(role__in=(roles or ["student", "teacher"]), is_active=True):
         _, is_new = DueMonth.objects.get_or_create(user=u, month_label=label)
         if is_new:
             created += 1

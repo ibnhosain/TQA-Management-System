@@ -5716,8 +5716,7 @@ function ProgressView({ db, setDb, courses, user }) {
 }
 
 /* ═══════════════ হিসাব-নিকাশ (ফিচার ৯) ═══════════════ */
-function AccountsView({ db, setDb, user }) {
-  const [maker, setMaker] = useState(false);
+function AccountsView({ db }) {
   const [genDuesBusy, setGenDuesBusy] = useState(false);
   const [fees, setFees] = useState(db.feePayments || []);
   const [salaries, setSalaries] = useState(db.teacherPayments || []);
@@ -5794,6 +5793,9 @@ function AccountsView({ db, setDb, user }) {
   const expense = salaries.reduce((s, p) => s + (+p.amount || 0), 0);
   // কোনো মাসে ইতিমধ্যে আংশিক পেমেন্ট হয়ে থাকলে কত জমা পড়েছে তা হিসাব — যতক্ষণ
   // না সব মিলিয়ে পূর্ণ বেতনের সমান হয়, ততক্ষণ ব্যাকএন্ডে বকেয়া থেকেই যায়
+  // কোনো মাসে ইতিমধ্যে আংশিক পেমেন্ট হয়ে থাকলে কত জমা পড়েছে তা হিসাব — শুধু
+  // ভিউয়ের জন্য (স্ট্যাটাস দেখানো); এখান থেকে আর পেমেন্ট এডিট/তৈরি করা যায় না —
+  // পেমেন্ট দেওয়া ও রিসিট বানানো এখন "টিচার রিপোর্ট ও পেমেন্ট" পেজে
   const paidSoFar = (teacherId, month) =>
     salaries
       .filter(
@@ -5801,91 +5803,20 @@ function AccountsView({ db, setDb, user }) {
           String(p.teacherId) === String(teacherId) && (p.month || p.month_label) === month,
       )
       .reduce((s, p) => s + (+p.amount || 0), 0);
-  const [payAmounts, setPayAmounts] = useState({}); // প্রতি উস্তাদের জন্য ইনপুট করা (আংশিক হতে পারে) পরিমাণ
-  const [payModal, setPayModal] = useState(false);
-  const [pm, setPm] = useState({ teacherId: "", month: "", amount: "" });
-  const [pmBusy, setPmBusy] = useState(false);
-  const payTeacher = async (t, month, amount) => {
-    if (!month) return;
-    if (!amount || amount <= 0) return notice("সঠিক পরিমাণ দিন।");
-    try {
-      // আগে শুধু sendReceipt (নোটিফিকেশন/ভাউচার) কল হতো, আসল বেতন-পেমেন্ট রেকর্ড
-      // কখনো তৈরি হতো না — তাই বকেয়া কখনো সরত না, বাটনে চাপলে কিছুই বদলাত না
-      await api.payTeacherSalary({
-        teacher: t.id,
-        amount,
-        month_label: month,
-        method: "ব্যাংক",
-      });
-      await api.sendReceipt({
-        to_user: t.id,
-        kind: "বেতন পরিশোধ ভাউচার",
-        month_label: month,
-        amount,
-        method: "ব্যাংক",
-      });
-      setPayAmounts((prev) => ({ ...prev, [t.id]: "" }));
-      await loadData();
-    } catch {
-      setSalaries((prev) => [
-        ...prev,
-        {
-          id: uid(),
-          teacherId: t.id,
-          teacher_name: t.name,
-          amount,
-          month,
-          date: todayISO(),
-          method: "ব্যাংক",
-        },
-      ]);
-      // পূর্ণ বেতন শোধ হলে তবেই স্থানীয়ভাবে বকেয়া তালিকা থেকে সরাই (আংশিক হলে থেকে যাবে)
-      if (paidSoFar(t.id, month) + amount >= (t.salary || 0)) {
-        setDuesMap((prev) => ({
-          ...prev,
-          [String(t.id)]: (prev[String(t.id)] || []).filter((m) => m !== month),
-        }));
-      }
-    }
-  };
-  // যেকোনো উস্তাদের যেকোনো মাসের পেমেন্ট সরাসরি সম্পন্ন করার ছোট ফরম — নির্দিষ্ট
-  // মাসে আগে থেকে বকেয়া/অ্যাকশন না থাকলেও এখান থেকে সরাসরি পেমেন্ট করা যাবে
-  const pmTeacher = teachers.find((t) => String(t.id) === String(pm.teacherId));
-  const pmMonthLabel = pm.month ? monthLabelBn(pm.month) : "";
-  const pmRemaining = pmTeacher
-    ? Math.max(0, (pmTeacher.salary || 0) - (pmMonthLabel ? paidSoFar(pmTeacher.id, pmMonthLabel) : 0))
-    : 0;
-  const submitPayModal = async () => {
-    if (!pmTeacher) return notice("উস্তাদ বেছে নিন।");
-    if (!pm.month) return notice("মাস ও সাল বেছে নিন।");
-    const amount = pm.amount ? +pm.amount : pmRemaining;
-    if (!amount || amount <= 0) return notice("সঠিক পরিমাণ দিন।");
-    setPmBusy(true);
-    await payTeacher(pmTeacher, pmMonthLabel, amount);
-    setPmBusy(false);
-    setPayModal(false);
-    setPm({ teacherId: "", month: "", amount: "" });
-  };
   return (
     <Section
       title="হিসাব-নিকাশ"
-      sub="আয় (স্টুডেন্ট ফি) · ব্যয় (উস্তাদদের বেতন) · বকেয়া"
+      sub="আয় (স্টুডেন্ট ফি) · ব্যয় (উস্তাদদের বেতন) · বকেয়া — শুধু তথ্য দেখার জন্য"
       action={
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Btn
-            kind="soft"
-            onClick={genDuesNow}
-            style={{ opacity: genDuesBusy ? 0.6 : 1 }}
-          >
-            {genDuesBusy ? "⏳ তৈরি হচ্ছে…" : "🔄 এই মাসের বকেয়া তৈরি করুন"}
-          </Btn>
-          <Btn kind="gold" onClick={() => setMaker(true)}>
-            🧾 রিসিট বানান
-          </Btn>
-        </div>
+        <Btn
+          kind="soft"
+          onClick={genDuesNow}
+          style={{ opacity: genDuesBusy ? 0.6 : 1 }}
+        >
+          {genDuesBusy ? "⏳ তৈরি হচ্ছে…" : "🔄 এই মাসের বকেয়া তৈরি করুন"}
+        </Btn>
       }
     >
-      {maker && <ReceiptMaker user={user} onClose={() => setMaker(false)} />}
       <div
         style={{
           display: "grid",
@@ -5913,23 +5844,11 @@ function AccountsView({ db, setDb, user }) {
         />
       </div>
       <div style={{ ...S.card, marginBottom: 14 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 8,
-            marginBottom: 10,
-          }}
-        >
-          <div style={{ fontWeight: 800 }}>👳 উস্তাদদের বেতন</div>
-          <Btn kind="gold" sm onClick={() => setPayModal(true)}>
-            💵 পেমেন্ট সম্পন্ন করুন
-          </Btn>
+        <div style={{ fontWeight: 800, marginBottom: 10 }}>
+          👳 উস্তাদদের বেতন
         </div>
         <Table
-          head={["নাম", "মাসিক বেতন", "বকেয়া মাস", "অ্যাকশন"]}
+          head={["নাম", "মাসিক বেতন", "বকেয়া মাস"]}
           rows={teachers.map((t) => {
             const dues = duesMap[String(t.id)] || db.dueMonths?.[t.id] || [];
             const month = dues[0];
@@ -5949,100 +5868,10 @@ function AccountsView({ db, setDb, user }) {
               ) : (
                 <Tag key="d">পরিশোধিত ✔</Tag>
               ),
-              dues.length ? (
-                <div key="b" style={{ display: "flex", gap: 6 }}>
-                  <input
-                    type="number"
-                    style={{ ...S.input, width: 90, padding: "6px 8px" }}
-                    placeholder={`${remaining}`}
-                    value={payAmounts[t.id] ?? ""}
-                    onChange={(e) =>
-                      setPayAmounts((prev) => ({ ...prev, [t.id]: e.target.value }))
-                    }
-                  />
-                  <Btn
-                    sm
-                    kind="gold"
-                    onClick={() =>
-                      payTeacher(
-                        t,
-                        month,
-                        +(payAmounts[t.id] || remaining),
-                      )
-                    }
-                  >
-                    পেমেন্ট দিন
-                  </Btn>
-                </div>
-              ) : (
-                "—"
-              ),
             ];
           })}
         />
       </div>
-      {payModal && (
-        <Modal
-          title="উস্তাদের পেমেন্ট সম্পন্ন করুন"
-          onClose={() => setPayModal(false)}
-        >
-          <div>
-            <label style={S.label}>উস্তাদ</label>
-            <select
-              style={S.input}
-              value={pm.teacherId}
-              onChange={(e) => setPm({ ...pm, teacherId: e.target.value })}
-            >
-              <option value="">বেছে নিন</option>
-              {teachers.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>মাসিক বেতন</label>
-            <div
-              style={{
-                ...S.input,
-                background: C.cream,
-                fontWeight: 800,
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              ৳{bn((pmTeacher?.salary || 0).toLocaleString("en"))}
-            </div>
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>কোন মাসের পেমেন্ট</label>
-            <input
-              type="month"
-              style={S.input}
-              value={pm.month}
-              onChange={(e) => setPm({ ...pm, month: e.target.value })}
-            />
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>কত পরিশোধ করছেন (ফাঁকা রাখলে ফুল পেমেন্ট ধরা হবে)</label>
-            <input
-              type="number"
-              style={S.input}
-              value={pm.amount}
-              onChange={(e) => setPm({ ...pm, amount: e.target.value })}
-              placeholder={pmTeacher && pm.month ? `${pmRemaining}` : ""}
-            />
-          </div>
-          <Btn
-            style={{ marginTop: 14, width: "100%", justifyContent: "center" }}
-            kind="gold"
-            onClick={submitPayModal}
-          >
-            {pmBusy ? "⏳ সেভ হচ্ছে…" : "✔ পেমেন্ট দিন"}
-          </Btn>
-        </Modal>
-      )}
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
           📤 বেতন পরিশোধের ইতিহাস
@@ -6645,6 +6474,60 @@ function TeacherReportView({ db, setDb, courses, user }) {
   );
   const dues = db.dueMonths?.[tid] || [];
 
+  // কোনো মাসে ইতিমধ্যে আংশিক পেমেন্ট হয়ে থাকলে কত জমা পড়েছে তা হিসাব — যতক্ষণ
+  // না সব মিলিয়ে পূর্ণ বেতনের সমান হয়, ততক্ষণ ব্যাকএন্ডে বকেয়া থেকেই যায়
+  const paidSoFar = (teacherId, month) =>
+    salaries
+      .filter(
+        (p) =>
+          String(p.teacher || p.teacherId) === String(teacherId) &&
+          (p.month_label || p.month) === month,
+      )
+      .reduce((s, p) => s + (+p.amount || 0), 0);
+  const [maker, setMaker] = useState(false);
+  const [payModal, setPayModal] = useState(false);
+  const [pm, setPm] = useState({ teacherId: "", month: "", amount: "" });
+  const [pmBusy, setPmBusy] = useState(false);
+  const payTeacher = async (teacher, month, amount) => {
+    if (!month) return;
+    if (!amount || amount <= 0) return notice("সঠিক পরিমাণ দিন।");
+    try {
+      await api.payTeacherSalary({
+        teacher: teacher.id,
+        amount,
+        month_label: month,
+        method: "ব্যাংক",
+      });
+      await api.sendReceipt({
+        to_user: teacher.id,
+        kind: "বেতন পরিশোধ ভাউচার",
+        month_label: month,
+        amount,
+        method: "ব্যাংক",
+      });
+      await loadSalaries();
+    } catch (e) {
+      notice("পেমেন্ট সেভ করতে ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+    }
+  };
+  const pmTeacher = allTeachers.find((x) => String(x.id) === String(pm.teacherId));
+  const pmSalary = pmTeacher?.monthly_salary || pmTeacher?.salary || 0;
+  const pmMonthLabel = pm.month ? monthLabelBn(pm.month) : "";
+  const pmRemaining = pmTeacher
+    ? Math.max(0, pmSalary - (pmMonthLabel ? paidSoFar(pmTeacher.id, pmMonthLabel) : 0))
+    : 0;
+  const submitPayModal = async () => {
+    if (!pmTeacher) return notice("উস্তাদ বেছে নিন।");
+    if (!pm.month) return notice("মাস ও সাল বেছে নিন।");
+    const amount = pm.amount ? +pm.amount : pmRemaining;
+    if (!amount || amount <= 0) return notice("সঠিক পরিমাণ দিন।");
+    setPmBusy(true);
+    await payTeacher(pmTeacher, pmMonthLabel, amount);
+    setPmBusy(false);
+    setPayModal(false);
+    setPm({ teacherId: "", month: "", amount: "" });
+  };
+
   const loadTeachers = async () => {
     try {
       const data = await api.allUsers();
@@ -6686,7 +6569,88 @@ function TeacherReportView({ db, setDb, courses, user }) {
     <Section
       title="টিচার রিপোর্ট ও পেমেন্ট"
       sub="উপস্থিতি · ক্লাসের মান (স্টুডেন্ট মূল্যায়ন) · বেতন — চিহ্নিত করে দেখানো হয়েছে"
+      action={
+        isAdm(user) && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Btn kind="soft" onClick={() => setMaker(true)}>
+              🧾 রিসিট বানান
+            </Btn>
+            <Btn
+              kind="gold"
+              onClick={() => {
+                setPm((prev) => ({ ...prev, teacherId: String(tid) }));
+                setPayModal(true);
+              }}
+            >
+              💵 পেমেন্ট সম্পন্ন করুন
+            </Btn>
+          </div>
+        )
+      }
     >
+      {maker && <ReceiptMaker user={user} onClose={() => setMaker(false)} />}
+      {payModal && (
+        <Modal
+          title="উস্তাদের পেমেন্ট সম্পন্ন করুন"
+          onClose={() => setPayModal(false)}
+        >
+          <div>
+            <label style={S.label}>উস্তাদ</label>
+            <select
+              style={S.input}
+              value={pm.teacherId}
+              onChange={(e) => setPm({ ...pm, teacherId: e.target.value })}
+            >
+              <option value="">বেছে নিন</option>
+              {allTeachers.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>মাসিক বেতন</label>
+            <div
+              style={{
+                ...S.input,
+                background: C.cream,
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              ৳{bn(pmSalary.toLocaleString("en"))}
+            </div>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>কোন মাসের পেমেন্ট</label>
+            <input
+              type="month"
+              style={S.input}
+              value={pm.month}
+              onChange={(e) => setPm({ ...pm, month: e.target.value })}
+            />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>কত পরিশোধ করছেন (ফাঁকা রাখলে ফুল পেমেন্ট ধরা হবে)</label>
+            <input
+              type="number"
+              style={S.input}
+              value={pm.amount}
+              onChange={(e) => setPm({ ...pm, amount: e.target.value })}
+              placeholder={pmTeacher && pm.month ? `${pmRemaining}` : ""}
+            />
+          </div>
+          <Btn
+            style={{ marginTop: 14, width: "100%", justifyContent: "center" }}
+            kind="gold"
+            onClick={submitPayModal}
+          >
+            {pmBusy ? "⏳ সেভ হচ্ছে…" : "✔ পেমেন্ট দিন"}
+          </Btn>
+        </Modal>
+      )}
       {isAdm(user) && (
         <div
           style={{
@@ -8679,6 +8643,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
     method: "নগদ",
   });
   const [mpBusy, setMpBusy] = useState(false);
+  const [genDuesBusy, setGenDuesBusy] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -8790,14 +8755,36 @@ function DirectorPaymentsView({ db, setDb, user }) {
       "সবার রিমাইন্ডার মেসেজ কপি হয়েছে ✔ — WhatsApp গ্রুপ বা ব্রডকাস্ট লিস্টে পেস্ট করে পাঠিয়ে দিন।",
     );
   };
+  // এখানকার বাটন শুধু স্টুডেন্টদের বকেয়া তৈরি করে (roles=["student"]) — উস্তাদদের
+  // বকেয়া তৈরি হয় "হিসাব-নিকাশ" পেজের বাটন থেকে, দুটো আলাদা রাখা হয়েছে
+  const genDuesNow = async () => {
+    setGenDuesBusy(true);
+    try {
+      const r = await api.generateMonthlyDues("student");
+      notice(`✔ চলতি মাসের স্টুডেন্ট বকেয়া তৈরি হয়েছে — ${bn(r.created)}টি নতুন যোগ হলো`);
+      await loadData();
+    } catch (e) {
+      notice("বকেয়া তৈরি ব্যর্থ — " + (e?.message || "যাচাই করুন"));
+    }
+    setGenDuesBusy(false);
+  };
   return (
     <Section
       title="স্টুডেন্ট পেমেন্ট"
       sub="কে পেমেন্ট করেছে, কার বাকি — মিলিয়ে ভেরিফাই করুন (ভেরিফাই কেবল পরিচালকই করতে পারেন)"
       action={
-        <Btn kind="gold" onClick={() => setMaker(true)}>
-          🧾 রিসিট বানান
-        </Btn>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Btn
+            kind="soft"
+            onClick={genDuesNow}
+            style={{ opacity: genDuesBusy ? 0.6 : 1 }}
+          >
+            {genDuesBusy ? "⏳ তৈরি হচ্ছে…" : "🔄 এই মাসের বকেয়া তৈরি করুন"}
+          </Btn>
+          <Btn kind="gold" onClick={() => setMaker(true)}>
+            🧾 রিসিট বানান
+          </Btn>
+        </div>
       }
     >
       {maker && <ReceiptMaker user={user} onClose={() => setMaker(false)} />}
