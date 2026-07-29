@@ -127,14 +127,16 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
     # Brute-force ঠেকাতে rate limiting:
-    # লগইন না করা অবস্থায় (যেমন: login চেষ্টা) মিনিটে সর্বোচ্চ ২০ বার,
+    # লগইন না করা অবস্থায় (যেমন: login চেষ্টা) মিনিটে সর্বোচ্চ ২০০ বার (আগে ২০ ছিল —
+    # স্বাভাবিক ব্যবহারকারী বারবার রিফ্রেশ/লগইন করলেও যেন কখনো আটকে না যান, শুধু
+    # bot দিয়ে স্বয়ংক্রিয় পাসওয়ার্ড-অনুমান কিছুটা ঠেকানোর জন্য সীমা রাখা হলো),
     # লগইন করা user মিনিটে ২৪০ বার — স্বাভাবিক ব্যবহারে কেউ টেরও পাবে না
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "20/min",
+        "anon": "200/min",
         "user": "240/min",
     },
 }
