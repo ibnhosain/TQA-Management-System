@@ -206,6 +206,7 @@ export const api = {
   myFees: () => request("/fees/"),
   myDues: () => request("/fees/dues/"),
   generateMonthlyDues: () => request("/fees/generate_dues/", { method: "POST", timeoutMs: 60000 }), // চলতি মাসের বকেয়া এখনই তৈরি (cron বন্ধ থাকলে ম্যানুয়াল, সবার জন্য লুপ চালায়)
+  waiveDue: (user_id, month_label) => request("/fees/waive_due/", { method: "POST", body: { user_id, month_label } }), // পরিচালক নির্দিষ্ট মাসের বকেয়া মওকুফ করে সরিয়ে দিতে পারেন
   payFee: ({ amount, month_label, method, trx_id, screenshot }) => {  // বিকাশ/নগদ/ব্যাংক + স্ক্রিনশট
     const f = new FormData();
     f.append("amount", amount); f.append("month_label", month_label);

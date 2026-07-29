@@ -496,6 +496,15 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
             qs = DueMonth.objects.none()
         return Response(DueMonthSerializer(qs, many=True).data)
 
+    @action(detail=False, methods=["post"], permission_classes=[IsDirector])
+    def waive_due(self, request):  # পরিচালক কোনো নির্দিষ্ট মাসের বকেয়া মওকুফ করে সরিয়ে দিতে পারেন
+        user_id = request.data.get("user_id")
+        month_label = request.data.get("month_label")
+        if not user_id or not month_label:
+            return Response({"error": "user_id ও month_label আবশ্যক"}, status=400)
+        deleted, _ = DueMonth.objects.filter(user_id=user_id, month_label=month_label).delete()
+        return Response({"deleted": deleted})
+
     @action(detail=False, methods=["post"], permission_classes=[IsAdminLevel])
     def generate_dues(self, request):
         """চলতি মাসের বকেয়া এখনই তৈরি/নিশ্চিত করা (idempotent) — cron বন্ধ থাকলে

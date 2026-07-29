@@ -10114,6 +10114,31 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   const waHi = (s) =>
     `Assalamu Alaikum wa Rahmatullah. Respected ${s.guardian || "Guardian"}, we are reaching out to you from Tarbiyatul Quran Academy regarding ${s.name}. JazakAllahu Khairan fid-Darayn.`;
 
+  // পরিচালক কোনো নির্দিষ্ট মাসের বকেয়া মওকুফ করে বকেয়া তালিকা থেকে সরিয়ে দিতে পারেন
+  const waiveDue = (studentId, monthLabel) =>
+    askConfirm(
+      `"${monthLabel}" মাসের বকেয়া মওকুফ করবেন? এটা বকেয়ার তালিকা থেকে সরে যাবে।`,
+      async () => {
+        try {
+          await api.waiveDue(studentId, monthLabel);
+        } catch {
+          return notice("মওকুফ করতে ব্যর্থ — সার্ভার সংযোগ যাচাই করুন।");
+        }
+        const strip = (arr) => (arr || []).filter((m) => m !== monthLabel);
+        setStudents((prev) =>
+          prev.map((x) =>
+            x.id === studentId ? { ...x, dues: strip(x.dues) } : x,
+          ),
+        );
+        setDetail((prev) =>
+          prev && prev.id === studentId
+            ? { ...prev, dues: strip(prev.dues) }
+            : prev,
+        );
+        notice(`✔ "${monthLabel}" মাসের বকেয়া মওকুফ করা হয়েছে।`);
+      },
+    );
+
   const saveEdit = async () => {
     if (!edit.name || !edit.user) return notice("নাম ও আইডি দিন।");
     setSaving(true);
@@ -10255,9 +10280,37 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           >
             ফি স্টেটাস:{" "}
             {dues.length ? (
-              <Tag color={C.red} bg={C.redBg}>
-                বকেয়া: {dues.join(", ")}
-              </Tag>
+              <span
+                style={{
+                  display: "inline-flex",
+                  gap: 6,
+                  flexWrap: "wrap",
+                  verticalAlign: "middle",
+                }}
+              >
+                {dues.map((m) => (
+                  <Tag key={m} color={C.red} bg={C.redBg}>
+                    বকেয়া: {m}
+                    {isDir(user) && (
+                      <button
+                        onClick={() => waiveDue(s.id, m)}
+                        title="এই মাসের বকেয়া মওকুফ করুন"
+                        style={{
+                          marginLeft: 6,
+                          border: "none",
+                          background: "none",
+                          cursor: "pointer",
+                          color: "inherit",
+                          fontWeight: 800,
+                          padding: 0,
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </Tag>
+                ))}
+              </span>
             ) : (
               <Tag>পরিশোধিত ✔</Tag>
             )}
