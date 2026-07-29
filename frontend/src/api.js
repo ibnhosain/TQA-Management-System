@@ -259,12 +259,23 @@ export const api = {
 
 /** পরিচালকের সম্পূর্ণ ডেটা ব্যাকআপ — JSON ডাউনলোড */
 export async function downloadBackup() {
-  // পূর্ণ ডাটা এক্সপোর্ট স্বাভাবিক API কলের চেয়ে বেশি সময় নিতে পারে, তাই টাইমআউট বেশি (৬০s)
-  const res = await fetchWithTimeout(
-    `${BASE}/export/`,
-    { headers: access ? { Authorization: `Bearer ${access}` } : {} },
-    60000,
-  );
+  // পূর্ণ ডাটা এক্সপোর্ট (সব ইউজার/কোর্স/ফি/উপস্থিতি ইত্যাদি) স্বাভাবিক API কলের
+  // চেয়ে অনেক বেশি সময় নিতে পারে, তাই টাইমআউট আরও বাড়ানো হলো (১২০s)
+  let res;
+  try {
+    res = await fetchWithTimeout(
+      `${BASE}/export/`,
+      { headers: access ? { Authorization: `Bearer ${access}` } : {} },
+      120000,
+    );
+  } catch (e) {
+    // AbortController টাইমআউটে ব্রাউজারের raw বার্তা ("signal is aborted
+    // without reason") সরাসরি দেখানোর বদলে বোধগম্য বাংলা মেসেজ দেখাই
+    if (e?.name === "AbortError" || /aborted/i.test(e?.message || "")) {
+      throw new Error("ব্যাকআপ তৈরি করতে সময় বেশি লাগছে — একটু পরে আবার চেষ্টা করুন।");
+    }
+    throw new Error("ব্যাকআপ নামাতে ব্যর্থ হয়েছে — সার্ভার সংযোগ যাচাই করুন।");
+  }
   if (!res.ok) throw new Error("ব্যাকআপ নামাতে ব্যর্থ হয়েছে");
   const blob = await res.blob();
   const today = new Date().toISOString().slice(0, 10);
