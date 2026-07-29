@@ -11,27 +11,27 @@ class UserSerializer(serializers.ModelSerializer):
     # Frontend "name" ও "sub" নামে খোঁজে — তাই name_bn/sub_title এর alias:
     name = serializers.CharField(source="name_bn", required=False)
     sub = serializers.CharField(source="sub_title", required=False, allow_blank=True)
+    due_months = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ["id", "username", "role", "name", "name_bn", "sub", "sub_title",
                   "phone", "country", "guardian", "email", "monthly_fee",
-                  "monthly_salary", "class_days", "can_fix_cross"]
+                  "monthly_salary", "class_days", "can_fix_cross", "due_months"]
+
+    def get_due_months(self, obj):
+        # .values_list()-এর বদলে .all() ইটারেট — prefetch_related("due_months") এর ক্যাশ
+        # ব্যবহার হয়, নইলে প্রতি ব্যবহারকারীতে আলাদা কোয়েরি হতো (N+1)
+        return [d.month_label for d in obj.due_months.all()]
 
 
 class UserAdminSerializer(UserSerializer):
     """কেবল পরিচালকের জন্য — পাসওয়ার্ড সেট/রিসেট + দেখা-যায় কপি (কিছুই আড়াল নয়)"""
     password = serializers.CharField(write_only=True, required=False)
     plain_password = serializers.CharField(read_only=True)  # পরিচালক দেখতে পারবেন
-    due_months = serializers.SerializerMethodField()
 
     class Meta(UserSerializer.Meta):
-        fields = UserSerializer.Meta.fields + ["password", "plain_password", "due_months"]
-
-    def get_due_months(self, obj):
-        # .values_list()-এর বদলে .all() ইটারেট — prefetch_related("due_months") এর ক্যাশ
-        # ব্যবহার হয়, নইলে প্রতি ব্যবহারকারীতে আলাদা কোয়েরি হতো (N+1)
-        return [d.month_label for d in obj.due_months.all()]
+        fields = UserSerializer.Meta.fields + ["password", "plain_password"]
 
     def create(self, validated):
         from .utils import make_password_str

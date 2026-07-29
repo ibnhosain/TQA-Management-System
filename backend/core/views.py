@@ -53,7 +53,9 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, permission_classes=[IsAdminLevel])
     def teachers(self, request):  # ক্লাস/রুটিনে উস্তাদ assign করতে — এডমিনও দরকার (পাসওয়ার্ড ছাড়া)
-        qs = User.objects.filter(role="teacher")
+        # prefetch_related("due_months") → UserSerializer.get_due_months প্রতি উস্তাদে
+        # আলাদা কোয়েরি না করে prefetch cache ব্যবহার করে (N+1 এড়ায়)
+        qs = User.objects.filter(role="teacher").prefetch_related("due_months")
         return Response(UserSerializer(qs, many=True).data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])

@@ -8279,11 +8279,22 @@ function StudentPaymentsView({ db, setDb, user }) {
 
 /* ═══════════════ রিসিট বানানোর টুল — যে কারো জন্য PDF রিসিট/ভাউচার ═══════════════ */
 function ReceiptMaker({ onClose, user }) {
-  const people = isDir(user)
-    ? USERS.filter((u) => u.role !== "director")
-    : USERS.filter((u) => u.role === "student"); // এডমিন কেবল স্টুডেন্ট দেখবেন
+  // আগে mock USERS থেকে তালিকা আসত (আসল ছাত্র/উস্তাদ দেখাতো না) — এখন সরাসরি API থেকে
+  const [students, setStudents] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  useEffect(() => {
+    api
+      .allStudents()
+      .then((d) => setStudents(d.map(adaptPerson)))
+      .catch(() => {});
+    if (isDir(user))
+      api
+        .allTeachers()
+        .then((d) => setTeachers(d.map(adaptPerson)))
+        .catch(() => {});
+  }, []);
   const [f, setF] = useState({
-    who: USERS.find((u) => u.role === "student")?.id || "custom",
+    who: "custom",
     custom: "",
     kind: "ফি পরিশোধ রিসিট",
     month: "",
@@ -8291,9 +8302,20 @@ function ReceiptMaker({ onClose, user }) {
     method: "বিকাশ",
     date: todayISO(),
   });
+  // মাসিক ফি/ভর্তি/অনুদান হলে স্টুডেন্ট তালিকা, বেতন হলে উস্তাদ তালিকা
+  const people = f.kind === "বেতন পরিশোধ ভাউচার" ? teachers : students;
+  // কাইন্ড বদলালে বা তালিকা লোড হলে আগের বাছাই অবৈধ হয়ে গেলে প্রথম জনকে বেছে দিই
+  useEffect(() => {
+    if (!people.some((p) => String(p.id) === String(f.who))) {
+      setF((prev) => ({ ...prev, who: people[0]?.id ?? "custom" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [people]);
   const make = () => {
     const person =
-      f.who === "custom" ? { name: f.custom.trim() } : userById(f.who);
+      f.who === "custom"
+        ? { name: f.custom.trim() }
+        : people.find((p) => String(p.id) === String(f.who)) || {};
     if (!person.name) return notice("নাম দিন।");
     if (!f.amount || +f.amount <= 0) return notice("সঠিক পরিমাণ দিন।");
     printReceipt(
@@ -8332,13 +8354,7 @@ function ReceiptMaker({ onClose, user }) {
         >
           {people.map((u) => (
             <option key={u.id} value={u.id}>
-              {u.name} (
-              {u.role === "student"
-                ? "স্টুডেন্ট"
-                : u.role === "teacher"
-                  ? "উস্তাদ"
-                  : "এডমিন"}
-              )
+              {u.name} ({f.kind === "বেতন পরিশোধ ভাউচার" ? "উস্তাদ" : "স্টুডেন্ট"})
             </option>
           ))}
           <option value="custom">✏️ অন্য কেউ — নিজে লিখুন</option>
@@ -10061,6 +10077,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           phone: s.phone,
           email: s.email,
           days: s.class_days || [],
+          dues: s.due_months || [], // বকেয়া মাসের তালিকা — "বিস্তারিত"-এ ফি স্টেটাস দেখাতে
         })),
       );
     } catch {
@@ -10194,7 +10211,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         ? r.studentIds.includes(s.id)
         : (courseById(COURSES, r.courseId).studentIds || []).includes(s.id),
     );
-    const dues = db.dueMonths[s.id] || [];
+    const dues = s.dues || [];
     const inf = (k, v) => (
       <div
         style={{
