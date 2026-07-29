@@ -13655,14 +13655,57 @@ function AcademicBooksView({ db, setDb, user, courses }) {
 /* ═══════════════ ওভারভিউ ড্যাশবোর্ড ═══════════════ */
 function Overview({ db, courses, user, goTo }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
-  const todayClasses = db.classes.filter(
-    (k) =>
-      k.date === todayISO() &&
-      k.status !== "done" &&
-      courseById(courses, k.courseId).id,
-  );
-  const income = db.feePayments.reduce((s, p) => s + p.amount, 0);
-  const newForms = db.forms.filter((f) => f.status === "new").length;
+  // আগে এখানে stale mock db.classes/db.feePayments/db.forms/db.admissions/
+  // db.ratings/db.assignments/db.notices ব্যবহার হতো — লগইনের পরের প্রথম
+  // পেজ (ড্যাশবোর্ড) হওয়ায় প্রভাব সবচেয়ে বেশি ছিল; এখন সরাসরি API থেকে লোড হয়
+  const [todayClasses, setTodayClasses] = useState([]);
+  const [income, setIncome] = useState(0);
+  const [admissionsPending, setAdmissionsPending] = useState(0);
+  const [newForms, setNewForms] = useState(0);
+  const [assignmentsCount, setAssignmentsCount] = useState(0);
+  const [teacherRating, setTeacherRating] = useState({ avg: 0, count: 0 });
+  const [recentNotices, setRecentNotices] = useState(db.notices || []);
+  useEffect(() => {
+    let cancelled = false;
+    api.todayClasses().then((d) => !cancelled && setTodayClasses(d)).catch(() => {});
+    api.notices().then((d) => !cancelled && setRecentNotices(d)).catch(() => {});
+    if (isAdm(user)) {
+      Promise.all([api.myFees(), api.admissions()])
+        .then(([fees, admissions]) => {
+          if (cancelled) return;
+          setIncome(fees.reduce((s, p) => s + (+p.amount || 0), 0));
+          setAdmissionsPending(admissions.filter((a) => a.status === "pending").length);
+          setNewForms(
+            admissions.filter(
+              (a) => (a.kind === "trial" || a.kind === "contact") && !a.replied,
+            ).length,
+          );
+        })
+        .catch(() => {});
+    }
+    if (user.role === "teacher") {
+      api
+        .teacherRatingSummary(user.id)
+        .then((s) => !cancelled && setTeacherRating({ avg: s.avg || 0, count: s.count || 0 }))
+        .catch(() => {});
+    }
+    if (user.role !== "admin") {
+      api
+        .assignments()
+        .then(
+          (d) =>
+            !cancelled &&
+            setAssignmentsCount(
+              d.filter((a) => courseById(courses, a.course || a.courseId).id).length,
+            ),
+        )
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user.id]);
   const missedTopics = courses
     .flatMap((c) => (c.lectures || []).flatMap((l) => l.topics || []))
     .filter((t) => t.covered === false).length;
@@ -13759,29 +13802,20 @@ function Overview({ db, courses, user, goTo }) {
           <Stat
             icon="🎓"
             label="ভর্তি আবেদন"
-            value={bn(
-              db.admissions.filter((a) => a.status === "pending").length,
-            )}
+            value={bn(admissionsPending)}
             accent={C.gold}
             note="অপেক্ষমাণ"
           />
         )}
-        {user.role === "teacher" &&
-          (() => {
-            const rs = db.ratings.filter((r) => r.teacherId === user.id);
-            const av = rs.length
-              ? (rs.reduce((s, r) => s + r.stars, 0) / rs.length).toFixed(1)
-              : "—";
-            return (
-              <Stat
-                icon="🌟"
-                label="ক্লাসের মান"
-                value={`★ ${bn(av)}`}
-                accent={C.gold}
-                note={`${bn(rs.length)}টি মূল্যায়ন`}
-              />
-            );
-          })()}
+        {user.role === "teacher" && (
+          <Stat
+            icon="🌟"
+            label="ক্লাসের মান"
+            value={`★ ${bn(teacherRating.count ? teacherRating.avg.toFixed(1) : "—")}`}
+            accent={C.gold}
+            note={`${bn(teacherRating.count)}টি মূল্যায়ন`}
+          />
+        )}
         {isAdm(user) && (
           <Stat
             icon="📨"
@@ -13795,15 +13829,7 @@ function Overview({ db, courses, user, goTo }) {
           <Stat
             icon="📝"
             label={T("অ্যাসাইনমেন্ট", "Assignments")}
-            value={T(
-              bn(
-                db.assignments.filter(
-                  (a) => courseById(courses, a.courseId).id,
-                ).length,
-              ),
-              db.assignments.filter((a) => courseById(courses, a.courseId).id)
-                .length,
-            )}
+            value={T(bn(assignmentsCount), assignmentsCount)}
             accent={C.gold}
           />
         )}
@@ -13835,8 +13861,8 @@ function Overview({ db, courses, user, goTo }) {
             </div>
           )}
           {todayClasses.map((k) => {
-            const c = courseById(courses, k.courseId);
-            const lec = c.lectures?.[k.lectureNo - 1];
+            const c = courseById(courses, k.course || k.courseId);
+            const lec = c.lectures?.[(k.lecture_no || k.lectureNo) - 1];
             return (
               <div
                 key={k.id}
@@ -13856,16 +13882,20 @@ function Overview({ db, courses, user, goTo }) {
                   <div style={{ fontWeight: 800 }}>
                     {c.name} — {k.time}
                   </div>
-                  <div style={{ fontSize: 12.5, color: C.muted }}>
-                    {T(
-                      `লেকচার ${bn(k.lectureNo)}: ${lec?.title}`,
-                      `Lecture ${k.lectureNo}: ${lec?.title}`,
-                    )}
-                  </div>
-                  <div style={{ fontSize: 12, color: C.muted }}>
-                    {T("আজকের টপিক", "Today's topics")}:{" "}
-                    {lec?.topics.map((t) => t.text).join(" · ")}
-                  </div>
+                  {lec && (
+                    <div style={{ fontSize: 12.5, color: C.muted }}>
+                      {T(
+                        `লেকচার ${bn(k.lecture_no || k.lectureNo)}: ${lec.title}`,
+                        `Lecture ${k.lecture_no || k.lectureNo}: ${lec.title}`,
+                      )}
+                    </div>
+                  )}
+                  {lec?.topics?.length > 0 && (
+                    <div style={{ fontSize: 12, color: C.muted }}>
+                      {T("আজকের টপিক", "Today's topics")}:{" "}
+                      {lec.topics.map((t) => t.text).join(" · ")}
+                    </div>
+                  )}
                 </div>
                 <Btn kind="gold" onClick={() => goTo("classes")}>
                   {T("ক্লাসে যান →", "Go to class →")}
@@ -13884,7 +13914,7 @@ function Overview({ db, courses, user, goTo }) {
         }
       >
         <div style={{ display: "grid", gap: 8 }}>
-          {db.notices.slice(0, 2).map((n) => (
+          {recentNotices.slice(0, 2).map((n) => (
             <div key={n.id} style={{ ...S.card, padding: 14 }}>
               <b style={{ fontSize: 13.5 }}>📌 {n.title}</b>
               <div style={{ fontSize: 12.5, color: C.muted }}>{n.body}</div>
