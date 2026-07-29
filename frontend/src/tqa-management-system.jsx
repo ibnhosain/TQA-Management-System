@@ -289,10 +289,13 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
   const doWhatsApp = () => {
     doDownload();
     const cleanPhone = String(person.phone).replace(/[^\d]/g, "");
+    const hadith =
+      "بارك الله لك في أهلك ومالك، إنما جزاء السلف الوفاء والحمد\n" +
+      '"May Allah bless your family and your wealth. Indeed, the reward for fulfilling an obligation is faithfulness and gratitude." — Hadith';
     const text =
       kind === "বেতন পরিশোধ ভাউচার"
-        ? `Assalamu Alaikum Warahmatullahi Wabarakatuh,\n\nDear ${person.name || "Ustadh/Ustadha"},\n\nThis is to confirm that your salary payment for "${p.month || "—"}" has been completed. Please find the voucher attached below.\n\n"And [remember] when your Lord proclaimed, 'If you are grateful, I will surely increase you [in favor].'" — Surah Ibrahim, 14:7\n\nJazakAllahu Khairan for your dedication and service.\n— Tarbiyatul Quran Academy`
-        : `Assalamu Alaikum Warahmatullahi Wabarakatuh,\n\nDear Guardian,\n\nWe are pleased to confirm that ${person.name || "your child"}'s fee payment for "${p.month || "—"}" has been received and verified. Please find the receipt attached below.\n\n"And [remember] when your Lord proclaimed, 'If you are grateful, I will surely increase you [in favor].'" — Surah Ibrahim, 14:7\n\nJazakAllahu Khairan for your continued trust and support.\n— Tarbiyatul Quran Academy`;
+        ? `Assalamu Alaikum Warahmatullahi Wabarakatuh,\n\nDear ${person.name || "Ustadh/Ustadha"},\n\nThis is to confirm that your salary payment for "${p.month || "—"}" has been completed. Please find the voucher attached below.\n\n${hadith}\n\nJazakAllahu Khairan for your dedication and service.\n— Tarbiyatul Quran Academy`
+        : `Assalamu Alaikum Warahmatullahi Wabarakatuh,\n\nDear Guardian,\n\nWe are pleased to confirm that ${person.name || "your child"}'s fee payment for "${p.month || "—"}" has been received and verified. Please find the receipt attached below.\n\n${hadith}\n\nJazakAllahu Khairan for your continued trust and support.\n— Tarbiyatul Quran Academy`;
     window.open(
       `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`,
       "_blank",
