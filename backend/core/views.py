@@ -1,7 +1,7 @@
 """TQA-MS — DRF ViewSets ও workflow actions (অ্যাপ: core)"""
 import json
 from datetime import date
-from django.db.models import Q, Avg, Count
+from django.db.models import Q, Avg, Count, Sum
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import viewsets, status
@@ -561,9 +561,16 @@ class TeacherPaymentViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         return [IsDirector()] if self.action in ("create", "update", "destroy") else [IsAuthenticated()]
 
-    def perform_create(self, serializer):  # বেতন পরিশোধ হলে সেই মাসের বকেয়া বাদ দেওয়া
+    def perform_create(self, serializer):
+        # আংশিক পেমেন্টও রেকর্ড করা যায় — সেই মাসের সব পেমেন্ট মিলিয়ে পূর্ণ
+        # মাসিক বেতনের সমান/বেশি না হওয়া পর্যন্ত বকেয়া বাদ যাবে না, যাতে
+        # "কত পেয়েছেন, কত বাকি" সঠিকভাবে দেখানো যায়
         pay = serializer.save()
-        DueMonth.objects.filter(user=pay.teacher, month_label=pay.month_label).delete()
+        total_paid = TeacherPayment.objects.filter(
+            teacher=pay.teacher, month_label=pay.month_label,
+        ).aggregate(total=Sum("amount"))["total"] or 0
+        if total_paid >= (pay.teacher.monthly_salary or 0):
+            DueMonth.objects.filter(user=pay.teacher, month_label=pay.month_label).delete()
 
 
 class SentReceiptViewSet(viewsets.ModelViewSet):

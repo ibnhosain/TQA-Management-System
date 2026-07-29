@@ -5806,14 +5806,22 @@ function AccountsView({ db, setDb, user }) {
   };
   const income = fees.reduce((s, p) => s + (+p.amount || 0), 0);
   const expense = salaries.reduce((s, p) => s + (+p.amount || 0), 0);
-  const payTeacher = async (t) => {
-    const dues = duesMap[String(t.id)] || db.dueMonths?.[t.id] || [];
-    const month = dues[0];
+  // কোনো মাসে ইতিমধ্যে আংশিক পেমেন্ট হয়ে থাকলে কত জমা পড়েছে তা হিসাব — যতক্ষণ
+  // না সব মিলিয়ে পূর্ণ বেতনের সমান হয়, ততক্ষণ ব্যাকএন্ডে বকেয়া থেকেই যায়
+  const paidSoFar = (teacherId, month) =>
+    salaries
+      .filter(
+        (p) =>
+          String(p.teacherId) === String(teacherId) && (p.month || p.month_label) === month,
+      )
+      .reduce((s, p) => s + (+p.amount || 0), 0);
+  const [payAmounts, setPayAmounts] = useState({}); // প্রতি উস্তাদের জন্য ইনপুট করা (আংশিক হতে পারে) পরিমাণ
+  const payTeacher = async (t, month, amount) => {
     if (!month) return;
+    if (!amount || amount <= 0) return notice("সঠিক পরিমাণ দিন।");
     try {
       // আগে শুধু sendReceipt (নোটিফিকেশন/ভাউচার) কল হতো, আসল বেতন-পেমেন্ট রেকর্ড
       // কখনো তৈরি হতো না — তাই বকেয়া কখনো সরত না, বাটনে চাপলে কিছুই বদলাত না
-      const amount = t.salary || t.monthly_salary;
       await api.payTeacherSalary({
         teacher: t.id,
         amount,
@@ -5827,6 +5835,7 @@ function AccountsView({ db, setDb, user }) {
         amount,
         method: "ব্যাংক",
       });
+      setPayAmounts((prev) => ({ ...prev, [t.id]: "" }));
       await loadData();
     } catch {
       setSalaries((prev) => [
@@ -5835,16 +5844,19 @@ function AccountsView({ db, setDb, user }) {
           id: uid(),
           teacherId: t.id,
           teacher_name: t.name,
-          amount: t.salary,
+          amount,
           month,
           date: todayISO(),
           method: "ব্যাংক",
         },
       ]);
-      setDuesMap((prev) => ({
-        ...prev,
-        [String(t.id)]: (prev[String(t.id)] || []).slice(1),
-      }));
+      // পূর্ণ বেতন শোধ হলে তবেই স্থানীয়ভাবে বকেয়া তালিকা থেকে সরাই (আংশিক হলে থেকে যাবে)
+      if (paidSoFar(t.id, month) + amount >= (t.salary || 0)) {
+        setDuesMap((prev) => ({
+          ...prev,
+          [String(t.id)]: (prev[String(t.id)] || []).filter((m) => m !== month),
+        }));
+      }
     }
   };
   return (
@@ -5901,20 +5913,48 @@ function AccountsView({ db, setDb, user }) {
           head={["নাম", "মাসিক বেতন", "বকেয়া মাস", "অ্যাকশন"]}
           rows={teachers.map((t) => {
             const dues = duesMap[String(t.id)] || db.dueMonths?.[t.id] || [];
+            const month = dues[0];
+            const salary = t.salary || t.monthly_salary || 0;
+            const paid = month ? paidSoFar(t.id, month) : 0;
+            const remaining = Math.max(0, salary - paid);
             return [
               t.name,
-              `৳${bn((t.salary || t.monthly_salary || 0).toLocaleString("en"))}`,
+              `৳${bn(salary.toLocaleString("en"))}`,
               dues.length ? (
                 <Tag key="d" color={C.red} bg={C.redBg}>
-                  {dues.join(", ")}
+                  {month}
+                  {paid > 0
+                    ? ` — ৳${bn(paid.toLocaleString("en"))} পেয়েছেন, ৳${bn(remaining.toLocaleString("en"))} বাকি`
+                    : ""}
                 </Tag>
               ) : (
                 <Tag key="d">পরিশোধিত ✔</Tag>
               ),
               dues.length ? (
-                <Btn key="b" sm kind="gold" onClick={() => payTeacher(t)}>
-                  পেমেন্ট দিন
-                </Btn>
+                <div key="b" style={{ display: "flex", gap: 6 }}>
+                  <input
+                    type="number"
+                    style={{ ...S.input, width: 90, padding: "6px 8px" }}
+                    placeholder={`${remaining}`}
+                    value={payAmounts[t.id] ?? ""}
+                    onChange={(e) =>
+                      setPayAmounts((prev) => ({ ...prev, [t.id]: e.target.value }))
+                    }
+                  />
+                  <Btn
+                    sm
+                    kind="gold"
+                    onClick={() =>
+                      payTeacher(
+                        t,
+                        month,
+                        +(payAmounts[t.id] || remaining),
+                      )
+                    }
+                  >
+                    পেমেন্ট দিন
+                  </Btn>
+                </div>
               ) : (
                 "—"
               ),
