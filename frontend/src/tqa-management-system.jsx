@@ -283,7 +283,9 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
   // ছবি প্রথমে ডাউনলোড হবে, তারপর সেই স্টুডেন্টের WhatsApp চ্যাট খুলে যাবে
   // (WhatsApp-এর নিরাপত্তা-সীমাবদ্ধতার কারণে ছবিটা সয়ংক্রিয়ভাবে সংযুক্ত করা যায় না —
   // ডাউনলোড হওয়া ছবিটা চ্যাটে গিয়ে একবার সংযুক্ত করে দিতে হবে)
-  const canWhatsApp = kind === "ফি পরিশোধ রিসিট" && !!person.phone;
+  const canWhatsApp =
+    (kind === "ফি পরিশোধ রিসিট" || kind === "বেতন পরিশোধ ভাউচার") &&
+    !!person.phone;
   const doWhatsApp = () => {
     doDownload();
     const cleanPhone = String(person.phone).replace(/[^\d]/g, "");
@@ -5731,6 +5733,7 @@ function AccountsView({ db, setDb, user }) {
             id: u.id,
             name: u.name || u.name_bn,
             salary: u.monthly_salary || u.salary || 0,
+            phone: u.phone,
             role: "teacher",
           })),
       );
@@ -5894,8 +5897,9 @@ function AccountsView({ db, setDb, user }) {
         <Table
           head={["উস্তাদ", "মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "ভাউচার"]}
           rows={salaries.map((p) => {
-            const tName =
-              p.teacher_name || userById(p.teacherId || p.teacher)?.name || "—";
+            const tId = p.teacherId || p.teacher;
+            const tRec = teachers.find((t) => String(t.id) === String(tId));
+            const tName = p.teacher_name || tRec?.name || userById(tId)?.name || "—";
             return [
               tName,
               p.month || p.month_label,
@@ -5914,7 +5918,7 @@ function AccountsView({ db, setDb, user }) {
                       date: fmtDateEn(p.paid_at || p.date),
                       method: methodEn(p.method),
                     },
-                    { name: tName },
+                    { name: tName, phone: tRec?.phone },
                     "বেতন পরিশোধ ভাউচার",
                   )
                 }
