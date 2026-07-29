@@ -215,6 +215,7 @@ export const api = {
     return request("/fees/", { method: "POST", body: f, isForm: true });
   },
   verifyFee: (id) => request(`/fees/${id}/verify/`, { method: "POST" }),  // কেবল পরিচালক
+  deleteFee: (id) => request(`/fees/${id}/`, { method: "DELETE" }),  // ভুল/ডুপ্লিকেট পেমেন্ট মুছা — কেবল পরিচালক
   recordPayment: (d) => request("/fees/record_payment/", { method: "POST", body: d }), // পরিচালক/এডমিন সরাসরি যেকোনো স্টুডেন্টের যেকোনো মাসের পেমেন্ট "পরিশোধিত" হিসেবে সেভ করেন
   salaries: () => request("/salaries/"),
   payTeacherSalary: (d) => request("/salaries/", { method: "POST", body: d }), // বেতন পরিশোধের আসল রেকর্ড — সেই মাসের বকেয়া অটো বাদ যায়

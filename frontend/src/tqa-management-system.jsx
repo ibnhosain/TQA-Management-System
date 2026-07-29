@@ -9184,7 +9184,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
           ✅ ভেরিফাইড পেমেন্টসমূহ
         </div>
         <Table
-          head={["স্টুডেন্ট", "মাস", "পরিমাণ", "মাধ্যম", "তারিখ", "স্ট্যাটাস"]}
+          head={["স্টুডেন্ট", "মাস", "পরিমাণ", "মাধ্যম", "তারিখ", "স্ট্যাটাস", ""]}
           rows={verified.map((p) => {
             const s = studentById(p.studentId);
             return [
@@ -9194,6 +9194,29 @@ function DirectorPaymentsView({ db, setDb, user }) {
               p.method,
               fmtDate(p.date),
               <Tag key="s">✅ ভেরিফাইড</Tag>,
+              <Btn
+                key="d"
+                sm
+                kind="danger"
+                onClick={() =>
+                  askConfirm(
+                    `${p.studentName || s.name}-এর "${p.month}" মাসের এই পেমেন্ট রেকর্ডটা মুছে ফেলবেন? ভুল/ডুপ্লিকেট এন্ট্রি হলেই শুধু মুছুন — অন্য কোনো ভেরিফাইড পেমেন্ট না থাকলে ওই মাসের বকেয়া আবার ফিরে আসবে।`,
+                    async () => {
+                      try {
+                        await api.deleteFee(p.id);
+                        await loadData();
+                        notice("✔ পেমেন্ট রেকর্ড মুছে ফেলা হয়েছে।");
+                      } catch (e) {
+                        notice(
+                          "মুছতে ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"),
+                        );
+                      }
+                    },
+                  )
+                }
+              >
+                🗑️ মুছুন
+              </Btn>,
             ];
           })}
         />

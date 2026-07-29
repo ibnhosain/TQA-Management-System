@@ -479,11 +479,29 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
             return qs
         return FeePayment.objects.none()
 
+    def get_permissions(self):
+        # ভুল/ডুপ্লিকেট পেমেন্ট মুছা কেবল পরিচালকের এখতিয়ার — আর্থিক রেকর্ড
+        if self.action == "destroy":
+            return [IsDirector()]
+        return [IsAuthenticated()]
+
     def perform_create(self, serializer):  # স্টুডেন্টের "এখনই পেমেন্ট" → pending
         pay = serializer.save(student=self.request.user, status="pending")
         DueMonth.objects.filter(user=pay.student, month_label=pay.month_label).delete()
         notify(f"{pay.student.name_bn} — {pay.month_label} মাসের ফি পরিশোধ করেছে, "
                f"পরিচালকের ভেরিফাই বাকি।", admins())
+
+    def perform_destroy(self, instance):
+        # ভুলবশত/ডুপ্লিকেট যোগ হওয়া পেমেন্ট রেকর্ড মোছার পর, ওই মাসের আর কোনো
+        # ভেরিফাইড পেমেন্ট না থাকলে বকেয়া (DueMonth) আবার সঠিকভাবে ফিরিয়ে আনা হয়
+        # (একাধিক পেমেন্টের একটা ডুপ্লিকেট হলে বাকিটা থেকেই যায়, তখন বকেয়া ফেরত আসে না)
+        student, month_label = instance.student, instance.month_label
+        instance.delete()
+        still_paid = FeePayment.objects.filter(
+            student=student, month_label=month_label, status="verified",
+        ).exists()
+        if not still_paid:
+            DueMonth.objects.get_or_create(user=student, month_label=month_label)
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def dues(self, request):  # বকেয়া মাসের তালিকা — স্টুডেন্ট নিজের, পরিচালক সবার
