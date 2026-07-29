@@ -8531,6 +8531,10 @@ function ReceiptMaker({ onClose, user }) {
     method: "বিকাশ",
     date: todayISO(),
   });
+  // মাসিক ফি/বেতন রিসিটে মাস ক্যালেন্ডার থেকে বাছাই হয় (backend-এর DueMonth
+  // লেবেলের সাথে ফরম্যাট মেলাতে) — ভর্তি/অনুদান/অন্যান্যতে যেকোনো বিবরণ লেখা যায়
+  const isMonthKind = f.kind === "ফি পরিশোধ রিসিট" || f.kind === "বেতন পরিশোধ ভাউচার";
+  const monthDisplay = isMonthKind ? (f.month ? monthLabelBn(f.month) : "") : f.month;
   // মাসিক ফি/ভর্তি/অনুদান হলে স্টুডেন্ট তালিকা, বেতন হলে উস্তাদ তালিকা
   const people = f.kind === "বেতন পরিশোধ ভাউচার" ? teachers : students;
   // কাইন্ড বদলালে বা তালিকা লোড হলে আগের বাছাই অবৈধ হয়ে গেলে প্রথম জনকে বেছে দিই
@@ -8550,7 +8554,7 @@ function ReceiptMaker({ onClose, user }) {
     printReceipt(
       {
         id: uid(),
-        month: f.month || "—",
+        month: monthDisplay || "—",
         amount: +f.amount,
         currency: f.currency,
         method: methodEn(f.method),
@@ -8567,7 +8571,7 @@ function ReceiptMaker({ onClose, user }) {
       <select
         style={S.input}
         value={f.kind}
-        onChange={(e) => setF({ ...f, kind: e.target.value })}
+        onChange={(e) => setF({ ...f, kind: e.target.value, month: "" })}
       >
         <option>ফি পরিশোধ রিসিট</option>
         {isDir(user) && <option>বেতন পরিশোধ ভাউচার</option>}
@@ -8609,13 +8613,22 @@ function ReceiptMaker({ onClose, user }) {
         }}
       >
         <div>
-          <label style={S.label}>মাস / বিবরণ</label>
-          <input
-            style={S.input}
-            value={f.month}
-            onChange={(e) => setF({ ...f, month: e.target.value })}
-            placeholder="যেমন: জুন ২০২৬"
-          />
+          <label style={S.label}>{isMonthKind ? "মাস ও সাল" : "মাস / বিবরণ"}</label>
+          {isMonthKind ? (
+            <input
+              type="month"
+              style={S.input}
+              value={f.month}
+              onChange={(e) => setF({ ...f, month: e.target.value })}
+            />
+          ) : (
+            <input
+              style={S.input}
+              value={f.month}
+              onChange={(e) => setF({ ...f, month: e.target.value })}
+              placeholder="যেমন: ভর্তি ফি"
+            />
+          )}
         </div>
         <div>
           <label style={S.label}>পরিমাণ</label>
