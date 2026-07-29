@@ -44,6 +44,20 @@ const fmtDate = (iso) => {
     return `${d.getDate()} ${MONTHS_EN_FULL[d.getMonth()]} ${d.getFullYear()}`;
   return `${bn(d.getDate())} ${MONTHS_BN_FULL[d.getMonth()]} ${bn(d.getFullYear())}`;
 };
+// রিসিট/ভাউচার সবসময় ইংরেজিতে থাকে (যে বানাচ্ছেন তার ভাষা নির্বিশেষে) — তাই
+// viewer-নির্ভর fmtDate() ব্যবহার না করে আলাদা এই হেল্পার
+const fmtDateEn = (iso) => {
+  const d = new Date(iso + "T00:00:00");
+  return `${d.getDate()} ${MONTHS_EN_FULL[d.getMonth()]} ${d.getFullYear()}`;
+};
+// পেমেন্ট মাধ্যম রিসিটে সবসময় ইংরেজিতে দেখাতে — না মিললে মূল লেখাটাই ফেরত
+const METHOD_EN = {
+  "বিকাশ": "bKash",
+  "নগদ": "Nagad",
+  "ব্যাংক ট্রান্সফার": "Bank Transfer",
+  "নগদ গ্রহণ (অফিস)": "Cash (Office)",
+};
+const methodEn = (m) => METHOD_EN[m] || m;
 const addDays = (n) => {
   const d = new Date();
   d.setDate(d.getDate() + n);
@@ -5482,7 +5496,7 @@ function ProgressView({ db, setDb, courses, user }) {
                 kind="soft"
                 onClick={() =>
                   printReceipt(
-                    { ...p, date: fmtDate(p.date) },
+                    { ...p, date: fmtDateEn(p.date), method: methodEn(p.method) },
                     st,
                     "ফি পরিশোধ রিসিট",
                   )
@@ -5823,7 +5837,8 @@ function AccountsView({ db, setDb, user }) {
                     {
                       ...p,
                       month: p.month || p.month_label,
-                      date: fmtDate(p.paid_at || p.date),
+                      date: fmtDateEn(p.paid_at || p.date),
+                      method: methodEn(p.method),
                     },
                     { name: tName },
                     "বেতন পরিশোধ ভাউচার",
@@ -6694,7 +6709,8 @@ function TeacherReportView({ db, setDb, courses, user }) {
                     {
                       ...p,
                       month: p.month_label || p.month,
-                      date: fmtDate(p.paid_at || p.date),
+                      date: fmtDateEn(p.paid_at || p.date),
+                      method: methodEn(p.method),
                     },
                     t,
                     "বেতন পরিশোধ ভাউচার",
@@ -8071,7 +8087,7 @@ function StudentPaymentsView({ db, setDb, user }) {
               title="View / download receipt"
               onClick={() =>
                 printReceipt(
-                  { ...p, date: fmtDate(p.date) },
+                  { ...p, date: fmtDateEn(p.date), method: methodEn(p.method) },
                   user,
                   "ফি পরিশোধ রিসিট",
                 )
@@ -8325,8 +8341,8 @@ function ReceiptMaker({ onClose, user }) {
         month: f.month || "—",
         amount: +f.amount,
         currency: f.currency,
-        method: f.method,
-        date: fmtDate(f.date),
+        method: methodEn(f.method),
+        date: fmtDateEn(f.date),
         status: "verified",
       },
       person,
@@ -8746,7 +8762,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
                 kind="soft"
                 onClick={() =>
                   printReceipt(
-                    { ...p, date: fmtDate(p.date) },
+                    { ...p, date: fmtDateEn(p.date), method: methodEn(p.method) },
                     { name: p.studentName || s.name },
                     "ফি পরিশোধ রিসিট",
                   )
@@ -9922,6 +9938,7 @@ function MyReceiptsView({ db, user }) {
             amount: r.amount,
             method: r.method,
             date: r.sent_at ? fmtDate(r.sent_at) : r.date || todayISO(),
+            rawDate: r.sent_at || r.date || todayISO(), // রিসিট ডকুমেন্টে সবসময় ইংরেজি তারিখ দেখাতে (তালিকার ভাষা-নির্ভর তারিখের বাইরে)
             sentBy: r.sent_by_name || r.sentBy || "—",
           })),
         );
@@ -9954,7 +9971,18 @@ function MyReceiptsView({ db, user }) {
             key="v"
             sm
             kind="soft"
-            onClick={() => printReceipt({ ...x, noSend: true }, user, x.kind)}
+            onClick={() =>
+              printReceipt(
+                {
+                  ...x,
+                  date: fmtDateEn(x.rawDate),
+                  method: methodEn(x.method),
+                  noSend: true,
+                },
+                user,
+                x.kind,
+              )
+            }
           >
             {T("👁 দেখুন / ডাউনলোড", "👁 View / Download")}
           </Btn>,
