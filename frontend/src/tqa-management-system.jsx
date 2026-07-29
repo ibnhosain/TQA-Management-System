@@ -7236,6 +7236,55 @@ function ManageView({ db, setDb, refresh }) {
     loadUsers();
   }, []);
 
+  // বিস্তারিত রিপোর্ট মডালের জন্য আসল ডেটা — আগে এখানে stale mock db/COURSES
+  // ব্যবহার হতো (কোর্স/পেমেন্ট/হাজিরা কখনো দেখাত না বা আপডেট হতো না), তাই
+  // AccountsView/ProgressView-এর মতোই সরাসরি API থেকে লোড করা হচ্ছে
+  const [rCourses, setRCourses] = useState([]);
+  const [rFees, setRFees] = useState([]);
+  const [rSalaries, setRSalaries] = useState([]);
+  const [rDuesMap, setRDuesMap] = useState({});
+  const [rAttendance, setRAttendance] = useState([]);
+  const [rRatings, setRRatings] = useState([]);
+  const [rExams, setRExams] = useState([]);
+  const loadReportData = async () => {
+    try {
+      const [coursesData, feesData, salData, duesData, attData, ratingsData, examsData] =
+        await Promise.all([
+          api.courses(),
+          api.myFees(),
+          api.salaries(),
+          api.myDues(),
+          api.attendanceReport(),
+          api.ratings(),
+          api.exams(),
+        ]);
+      setRCourses(coursesData);
+      setRFees(feesData);
+      setRSalaries(salData);
+      const dm = {};
+      duesData.forEach((d) => {
+        const k = String(d.user || d.userId);
+        if (!dm[k]) dm[k] = [];
+        dm[k].push(d.month_label || d.month);
+      });
+      setRDuesMap(dm);
+      setRAttendance(attData);
+      setRRatings(ratingsData);
+      setRExams(
+        examsData.map((e) => ({
+          ...e,
+          total: e.total_marks || e.total,
+          marks: e.results || e.marks || {},
+        })),
+      );
+    } catch {
+      /* keep mock */
+    }
+  };
+  useEffect(() => {
+    loadReportData();
+  }, []);
+
   const openEdit = (u) => {
     // পরিচালক যেকোনো ইউজারের আইডি/পাসওয়ার্ড/নাম/ফি এডিট করতে পারবেন
     setEditId(u.id);
@@ -7382,24 +7431,25 @@ function ManageView({ db, setDb, refresh }) {
 
   /* এক ব্যবহারকারীর বিস্তারিত রিপোর্ট — পরিচালক সব দেখেন */
   const UserReport = ({ u }) => {
-    const att = db.attendance.filter((a) => a.userId === u.id);
+    const uid2 = String(u.id);
+    const att = rAttendance.filter((a) => String(a.user) === uid2);
     const present = att.filter((a) => (a.present ?? a.minutes >= 45)).length,
       missed = att.length - present;
-    const ratingsGiven = db.ratings.filter((r) => r.studentId === u.id);
-    const ratingsGot = db.ratings.filter((r) => r.teacherId === u.id);
+    const ratingsGiven = rRatings.filter((r) => String(r.student) === uid2);
+    const ratingsGot = rRatings.filter((r) => String(r.teacher) === uid2);
     const avg = ratingsGot.length
       ? (
           ratingsGot.reduce((s, r) => s + r.stars, 0) / ratingsGot.length
         ).toFixed(1)
       : null;
-    const paid = db.feePayments.filter((p) => p.studentId === u.id);
-    const tPaid = db.teacherPayments.filter((p) => p.teacherId === u.id);
-    const dues = db.dueMonths[u.id] || [];
-    const exams = db.exams.filter((e) => e.marks[u.id] != null);
+    const paid = rFees.filter((p) => String(p.student) === uid2);
+    const tPaid = rSalaries.filter((p) => String(p.teacher) === uid2);
+    const dues = rDuesMap[uid2] || [];
+    const exams = rExams.filter((e) => e.marks && e.marks[uid2] != null);
     const cs =
       u.role === "teacher"
-        ? COURSES.filter((c) => c.teacherId === u.id)
-        : COURSES.filter((c) => c.studentIds.includes(u.id));
+        ? rCourses.filter((c) => String(c.teacher) === uid2)
+        : rCourses.filter((c) => (c.students || []).some((x) => String(x) === uid2));
     return (
       <Modal
         title={`বিস্তারিত রিপোর্ট — ${u.name}`}
@@ -7485,7 +7535,7 @@ function ManageView({ db, setDb, refresh }) {
               <Stat
                 icon="💰"
                 label="ফি দিয়েছে"
-                value={`৳${bn(paid.reduce((s, p) => s + p.amount, 0).toLocaleString("en"))}`}
+                value={`৳${bn(paid.reduce((s, p) => s + (+p.amount || 0), 0).toLocaleString("en"))}`}
                 accent={C.gold}
               />
             )}
@@ -7507,7 +7557,7 @@ function ManageView({ db, setDb, refresh }) {
               head={["পরীক্ষা", "মার্ক"]}
               rows={exams.map((e) => [
                 e.title,
-                `${bn(e.marks[u.id])}/${bn(e.total)}`,
+                `${bn(e.marks[uid2])}/${bn(e.total)}`,
               ])}
             />
           </>
@@ -7522,10 +7572,10 @@ function ManageView({ db, setDb, refresh }) {
             <Table
               head={["উস্তাদ", "রেটিং", "মন্তব্য", "তারিখ"]}
               rows={ratingsGiven.map((r) => [
-                userById(r.teacherId).name,
+                allUsers.find((x) => String(x.id) === String(r.teacher))?.name || "—",
                 "★".repeat(r.stars),
                 r.comment || "—",
-                fmtDate(r.date),
+                fmtDate(r.rated_at),
               ])}
             />
           </>
@@ -7540,10 +7590,10 @@ function ManageView({ db, setDb, refresh }) {
             <Table
               head={["স্টুডেন্ট", "রেটিং", "মন্তব্য", "তারিখ"]}
               rows={ratingsGot.map((r) => [
-                userById(r.studentId).name,
+                allUsers.find((x) => String(x.id) === String(r.student))?.name || "—",
                 "★".repeat(r.stars),
                 r.comment || "—",
-                fmtDate(r.date),
+                fmtDate(r.rated_at),
               ])}
             />
           </>
@@ -7558,9 +7608,9 @@ function ManageView({ db, setDb, refresh }) {
             <Table
               head={["মাস", "পরিমাণ", "তারিখ"]}
               rows={tPaid.map((p) => [
-                p.month,
-                `৳${bn((p.amount || 0).toLocaleString("en"))}`,
-                fmtDate(p.date),
+                p.month_label,
+                `৳${bn((+p.amount || 0).toLocaleString("en"))}`,
+                fmtDate(p.paid_at),
               ])}
               empty="এখনো পেমেন্ট হয়নি"
             />
@@ -7576,8 +7626,8 @@ function ManageView({ db, setDb, refresh }) {
             <Table
               head={["মাস", "পরিমাণ", "মাধ্যম", "অবস্থা"]}
               rows={paid.map((p) => [
-                p.month,
-                `৳${bn((p.amount || 0).toLocaleString("en"))}`,
+                p.month_label,
+                `৳${bn((+p.amount || 0).toLocaleString("en"))}`,
                 p.method,
                 p.status === "pending" ? "যাচাই বাকি" : "যাচাইকৃত ✔",
               ])}
