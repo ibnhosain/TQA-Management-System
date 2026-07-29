@@ -6882,11 +6882,9 @@ function TeacherReportView({ db, setDb, courses, user }) {
           <Table
             head={["কোর্স", "তারিখ", "উপস্থিতি", "অবস্থা"]}
             rows={att.map((a) => {
-              const k = db.classes.find((x) => x.id === a.classId);
-              const c = k ? courseById(COURSES, k.courseId) : {};
               return [
-                c.name || "—",
-                k ? fmtDate(k.date) : "—",
+                a.course_name || "—",
+                a.class_date ? fmtDate(a.class_date) : "—",
                 `${bn(a.minutes)} মিনিট`,
                 (a.present ?? a.minutes >= 45) ? (
                   <Tag key="t">উপস্থিত ✔</Tag>
@@ -8053,7 +8051,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
             </div>
           )}
           <div style={{ fontSize: 12.5, color: "#cfe6d8", marginBottom: 16 }}>
-            🕐 {k.time} · {T("উস্তাদ", "Teacher")}: {userById(course.teacherId).name}
+            🕐 {k.time} · {T("উস্তাদ", "Teacher")}: {course.teacher_name || userById(course.teacherId || course.teacher).name}
           </div>
           <a
             href={k.zoom}
@@ -14356,27 +14354,45 @@ export default function App() {
     </>
   );
 
-  // স্টুডেন্ট পোর্টাল খুললেই শিডিউল অনুযায়ী চলমান ক্লাসের ফুল-পেজ পপআপ
+  // স্টুডেন্ট পোর্টাল খুললেই শিডিউল অনুযায়ী চলমান ক্লাসের ফুল-পেজ পপআপ — আগে এখানে
+  // stale mock db.classes ব্যবহার হতো (একবারই, লগইনের সময়) বলে সরাসরি অ্যাডমিন
+  // UI থেকে তৈরি করা কোনো ক্লাসের জন্যই এই পপআপ কখনো আসত না; এখন সরাসরি
+  // /classes/today/ (backend-এই ছাত্রের নিজের ক্লাসে ফিল্টার করা) থেকে লোড হয়,
+  // প্রতি ৬০ সেকেন্ডে আবার চেক হয় যাতে পোর্টাল খোলা রাখলেও ক্লাস শুরু হলে পপআপ আসে
   useEffect(() => {
     if (!user || user.role !== "student") {
       setLivePopup(null);
       return;
     }
-    const now = new Date();
-    const cur = now.getHours() * 60 + now.getMinutes();
-    const k = db.classes.find((kk) => {
-      if (
-        kk.date !== todayISO() ||
-        kk.status === "done" ||
-        kk.status === "postponed"
-      )
-        return false;
-      if (!itemVisible(kk, user)) return false;
-      const [h, m] = kk.time.split(":").map(Number);
-      const st = h * 60 + m;
-      return cur >= st - 15 && cur <= st + (kk.dur || 60); // শুরুর ১৫ মিনিট আগে থেকে শেষ পর্যন্ত "চলমান"
-    });
-    setLivePopup(k || null);
+    const checkLive = async () => {
+      try {
+        const classes = await api.todayClasses();
+        const now = new Date();
+        const cur = now.getHours() * 60 + now.getMinutes();
+        const kk = classes.find((c) => {
+          const [h, m] = c.time.split(":").map(Number);
+          const st = h * 60 + m;
+          return cur >= st - 15 && cur <= st + (c.duration_min || 60); // শুরুর ১৫ মিনিট আগে থেকে শেষ পর্যন্ত "চলমান"
+        });
+        setLivePopup(
+          kk
+            ? {
+                ...kk,
+                courseId: kk.course,
+                teacherId: kk.teacher,
+                zoom: kk.zoom_link,
+                lectureNo: kk.lecture_no,
+                dur: kk.duration_min,
+              }
+            : null,
+        );
+      } catch {
+        /* নেটওয়ার্ক ব্যর্থ হলে চুপচাপ — পরের ৬০s-এ আবার চেষ্টা হবে */
+      }
+    };
+    checkLive();
+    const iv = setInterval(checkLive, 60000);
+    return () => clearInterval(iv);
   }, [user]);
 
   const [apiNotifs, setApiNotifs] = useState(null);
