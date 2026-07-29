@@ -246,7 +246,10 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
   const [done, setDone] = useState(false);
   if (!r) return null;
   const { p, person, kind } = r;
-  const canSend = !!person.id && !p.noSend;
+  // স্টুডেন্টের ফি রিসিট আর পোর্টালে "সেন্ড" করা হয় না — স্টুডেন্ট পোর্টালে শুধু
+  // পেমেন্ট হিস্টরি (কোন মাস পরিশোধ, কোনটা বাকি) দেখানো হবে, আলাদা রিসিট ফাইল না।
+  // পরিচালক/এডমিন এখন শুধু ডাউনলোড করে নিজে WhatsApp-এ পাঠাবেন।
+  const canSend = !!person.id && !p.noSend && kind !== "ফি পরিশোধ রিসিট";
   // PNG হিসেবে সেইভ — HTML ফাইলের বদলে, যাতে WhatsApp-এ সরাসরি ছবি হিসেবে সহজে পাঠানো যায়
   // (html2canvas শুধু এই মুহূর্তেই ডাউনলোড হয় — dynamic import, তাই মূল বান্ডেলের সাইজ বাড়ে না)
   const doDownload = async () => {
@@ -478,9 +481,9 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
         >
           <Btn
             style={{ flex: 1.4, justifyContent: "center" }}
-            onClick={() => setAsk(true)}
+            onClick={() => (canSend ? setAsk(true) : doDownload())}
           >
-            ⬇️ ডাউনলোড / সেন্ড
+            {canSend ? "⬇️ ডাউনলোড / সেন্ড" : "⬇️ ডাউনলোড (PNG)"}
           </Btn>
           <Btn
             kind="soft"
@@ -8516,6 +8519,12 @@ function DirectorPaymentsView({ db, setDb, user }) {
   const [fees, setFees] = useState(db.feePayments);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [mp, setMp] = useState({
+    studentId: "",
+    month: "",
+    method: "নগদ",
+  });
+  const [mpBusy, setMpBusy] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -8579,6 +8588,34 @@ function DirectorPaymentsView({ db, setDb, user }) {
     }
   };
   const studentById = (id) => students.find((s) => s.id === id) || userById(id);
+
+  // পরিচালক/এডমিন সরাসরি যেকোনো স্টুডেন্টের যেকোনো মাসের (সামনে বা পিছনের) পেমেন্ট
+  // "পরিশোধিত" হিসেবে সরাসরি সেভ করতে পারেন — স্টুডেন্টের নিজে জমা দেওয়ার অপেক্ষা ছাড়াই
+  const markPaid = async () => {
+    const st = students.find((s) => String(s.id) === String(mp.studentId));
+    if (!st) return notice("স্টুডেন্ট বেছে নিন।");
+    if (!mp.month.trim()) return notice("মাস লিখুন (যেমন: জুলাই ২০২৬)।");
+    setMpBusy(true);
+    try {
+      await api.recordPayment({
+        student_id: st.id,
+        month_label: mp.month.trim(),
+        amount: st.fee || 0,
+        method: mp.method
+          .toLowerCase()
+          .replace("বিকাশ", "bkash")
+          .replace("নগদ গ্রহণ (অফিস)", "cash")
+          .replace("নগদ", "nagad")
+          .replace("ব্যাংক ট্রান্সফার", "bank"),
+      });
+      notice(`✔ ${st.name}-এর "${mp.month}" মাসের পেমেন্ট পরিশোধিত হিসেবে সেভ হয়েছে।`);
+      setMp((prev) => ({ ...prev, month: "" }));
+      await loadData();
+    } catch (e) {
+      notice("সেভ করতে ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+    }
+    setMpBusy(false);
+  };
   const dueStudents = students.filter((s) => (s.dueMonths || []).length > 0);
   const waMsg = (s) => {
     const dues = s.dueMonths || db.dueMonths[s.id] || [];
@@ -8629,6 +8666,75 @@ function DirectorPaymentsView({ db, setDb, user }) {
           value={`${bn(dueStudents.length)} জন`}
           accent={C.red}
         />
+      </div>
+      <div
+        style={{
+          ...S.card,
+          marginBottom: 14,
+          borderLeft: `4px solid ${C.green}`,
+        }}
+      >
+        <div style={{ fontWeight: 800, marginBottom: 10 }}>
+          ✅ যেকোনো মাসের পেমেন্ট সরাসরি সম্পন্ন করুন
+        </div>
+        <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
+          স্টুডেন্ট নিজে জমা না দিলেও, যেকোনো (সামনের বা পিছনের) মাসের পেমেন্ট
+          এখান থেকে সরাসরি "পরিশোধিত" হিসেবে সেভ করতে পারবেন — সেই মাসের বকেয়া
+          থাকলে তা অটো সরে যাবে।
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1.4fr 1fr 1fr auto",
+            gap: 8,
+            alignItems: "end",
+          }}
+        >
+          <div>
+            <label style={S.label}>স্টুডেন্ট</label>
+            <select
+              style={S.input}
+              value={mp.studentId}
+              onChange={(e) => setMp({ ...mp, studentId: e.target.value })}
+            >
+              <option value="">বেছে নিন</option>
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={S.label}>মাস</label>
+            <input
+              style={S.input}
+              value={mp.month}
+              onChange={(e) => setMp({ ...mp, month: e.target.value })}
+              placeholder="যেমন: জুলাই ২০২৬"
+            />
+          </div>
+          <div>
+            <label style={S.label}>মাধ্যম</label>
+            <select
+              style={S.input}
+              value={mp.method}
+              onChange={(e) => setMp({ ...mp, method: e.target.value })}
+            >
+              <option>নগদ</option>
+              <option>বিকাশ</option>
+              <option>ব্যাংক ট্রান্সফার</option>
+              <option>নগদ গ্রহণ (অফিস)</option>
+            </select>
+          </div>
+          <Btn
+            kind="gold"
+            onClick={markPaid}
+            style={{ opacity: mpBusy ? 0.6 : 1 }}
+          >
+            {mpBusy ? "⏳ সেভ হচ্ছে…" : "✔ সম্পন্ন করুন"}
+          </Btn>
+        </div>
       </div>
       <div
         style={{
@@ -13669,7 +13775,9 @@ const NAV = [
     icon: "🧾",
     label: "ভাউচার/রিসিট",
     labelEn: "Vouchers/Receipts",
-    roles: ["admin", "teacher", "student"],
+    // স্টুডেন্টের পোর্টালে আলাদা রিসিট ফাইল দেখানো হয় না — শুধু পেমেন্ট হিস্টরি
+    // ("পেমেন্ট" মেনু); admin/teacher (নিজের বেতন-ভাউচার) এর জন্য এটা থেকে যায়
+    roles: ["admin", "teacher"],
   },
   {
     id: "leaves",

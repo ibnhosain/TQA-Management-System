@@ -496,6 +496,28 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
             qs = DueMonth.objects.none()
         return Response(DueMonthSerializer(qs, many=True).data)
 
+    @action(detail=False, methods=["post"], permission_classes=[IsAdminLevel])
+    def record_payment(self, request):
+        # পরিচালক/এডমিন সরাসরি যেকোনো স্টুডেন্টের যেকোনো মাসের (আগের/পরের) পেমেন্ট
+        # সরাসরি "পরিশোধিত" হিসেবে সেভ করতে পারেন — স্টুডেন্টের নিজে জমা দেওয়া ও
+        # ভেরিফাই করার অপেক্ষা ছাড়াই
+        student_id = request.data.get("student_id")
+        month_label = request.data.get("month_label")
+        amount = request.data.get("amount")
+        method = request.data.get("method", "cash")  # FeePayment.METHODS কোড ("bkash"/"nagad"/"bank"/"cash"/"other")
+        if not student_id or not month_label or not amount:
+            return Response({"error": "student_id, month_label, amount আবশ্যক"}, status=400)
+        try:
+            student = User.objects.get(pk=student_id, role="student")
+        except User.DoesNotExist:
+            return Response({"error": "স্টুডেন্ট পাওয়া যায়নি"}, status=404)
+        pay = FeePayment.objects.create(
+            student=student, amount=amount, month_label=month_label,
+            method=method, status="verified",
+        )
+        DueMonth.objects.filter(user=student, month_label=month_label).delete()
+        return Response(FeePaymentSerializer(pay).data, status=201)
+
     @action(detail=False, methods=["post"], permission_classes=[IsDirector])
     def waive_due(self, request):  # পরিচালক কোনো নির্দিষ্ট মাসের বকেয়া মওকুফ করে সরিয়ে দিতে পারেন
         user_id = request.data.get("user_id")
