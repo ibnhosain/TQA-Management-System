@@ -279,6 +279,20 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
     }
     setAsk(false);
   };
+  // স্টুডেন্টের ফি রিসিট পোর্টালে না পাঠিয়ে সরাসরি WhatsApp-এ পাঠানোর অপশন —
+  // ছবি প্রথমে ডাউনলোড হবে, তারপর সেই স্টুডেন্টের WhatsApp চ্যাট খুলে যাবে
+  // (WhatsApp-এর নিরাপত্তা-সীমাবদ্ধতার কারণে ছবিটা সয়ংক্রিয়ভাবে সংযুক্ত করা যায় না —
+  // ডাউনলোড হওয়া ছবিটা চ্যাটে গিয়ে একবার সংযুক্ত করে দিতে হবে)
+  const canWhatsApp = kind === "ফি পরিশোধ রিসিট" && !!person.phone;
+  const doWhatsApp = () => {
+    doDownload();
+    const cleanPhone = String(person.phone).replace(/[^\d]/g, "");
+    const text = `Assalamu Alaikum, here is the receipt for ${person.name || "your"}'s "${p.month || "—"}" fee payment. Please find the receipt image just downloaded — attach it here.`;
+    window.open(
+      `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`,
+      "_blank",
+    );
+  };
   const doSend = async () => {
     if (!canSend) return;
     // আগে এখানে শুধু mock db আপডেট হতো, আসল ব্যাকএন্ডে কখনো সেভ হতো না —
@@ -480,11 +494,20 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
           style={{ display: "flex", gap: 8, marginTop: 12 }}
         >
           <Btn
-            style={{ flex: 1.4, justifyContent: "center" }}
+            style={{ flex: 1.2, justifyContent: "center" }}
             onClick={() => (canSend ? setAsk(true) : doDownload())}
           >
             {canSend ? "⬇️ ডাউনলোড / সেন্ড" : "⬇️ ডাউনলোড (PNG)"}
           </Btn>
+          {canWhatsApp && (
+            <Btn
+              kind="gold"
+              style={{ flex: 1.2, justifyContent: "center" }}
+              onClick={doWhatsApp}
+            >
+              📲 WhatsApp-এ পাঠান
+            </Btn>
+          )}
           <Btn
             kind="soft"
             style={{ flex: 1, justifyContent: "center" }}
@@ -5257,6 +5280,7 @@ function ProgressView({ db, setDb, courses, user }) {
             name: s.name || s.name_bn,
             sub: s.sub || s.sub_title,
             fee: s.monthly_fee || s.fee,
+            phone: s.phone,
             role: "student",
           })),
         );
@@ -8910,7 +8934,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
                 onClick={() =>
                   printReceipt(
                     { ...p, date: fmtDateEn(p.date), method: methodEn(p.method) },
-                    { name: p.studentName || s.name },
+                    { name: p.studentName || s.name, phone: s.phone },
                     "ফি পরিশোধ রিসিট",
                   )
                 }
