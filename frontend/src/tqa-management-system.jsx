@@ -5802,6 +5802,9 @@ function AccountsView({ db, setDb, user }) {
       )
       .reduce((s, p) => s + (+p.amount || 0), 0);
   const [payAmounts, setPayAmounts] = useState({}); // প্রতি উস্তাদের জন্য ইনপুট করা (আংশিক হতে পারে) পরিমাণ
+  const [payModal, setPayModal] = useState(false);
+  const [pm, setPm] = useState({ teacherId: "", month: "", amount: "" });
+  const [pmBusy, setPmBusy] = useState(false);
   const payTeacher = async (t, month, amount) => {
     if (!month) return;
     if (!amount || amount <= 0) return notice("সঠিক পরিমাণ দিন।");
@@ -5844,6 +5847,24 @@ function AccountsView({ db, setDb, user }) {
         }));
       }
     }
+  };
+  // যেকোনো উস্তাদের যেকোনো মাসের পেমেন্ট সরাসরি সম্পন্ন করার ছোট ফরম — নির্দিষ্ট
+  // মাসে আগে থেকে বকেয়া/অ্যাকশন না থাকলেও এখান থেকে সরাসরি পেমেন্ট করা যাবে
+  const pmTeacher = teachers.find((t) => String(t.id) === String(pm.teacherId));
+  const pmMonthLabel = pm.month ? monthLabelBn(pm.month) : "";
+  const pmRemaining = pmTeacher
+    ? Math.max(0, (pmTeacher.salary || 0) - (pmMonthLabel ? paidSoFar(pmTeacher.id, pmMonthLabel) : 0))
+    : 0;
+  const submitPayModal = async () => {
+    if (!pmTeacher) return notice("উস্তাদ বেছে নিন।");
+    if (!pm.month) return notice("মাস ও সাল বেছে নিন।");
+    const amount = pm.amount ? +pm.amount : pmRemaining;
+    if (!amount || amount <= 0) return notice("সঠিক পরিমাণ দিন।");
+    setPmBusy(true);
+    await payTeacher(pmTeacher, pmMonthLabel, amount);
+    setPmBusy(false);
+    setPayModal(false);
+    setPm({ teacherId: "", month: "", amount: "" });
   };
   return (
     <Section
@@ -5892,8 +5913,20 @@ function AccountsView({ db, setDb, user }) {
         />
       </div>
       <div style={{ ...S.card, marginBottom: 14 }}>
-        <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          👳 উস্তাদদের বেতন
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 8,
+            marginBottom: 10,
+          }}
+        >
+          <div style={{ fontWeight: 800 }}>👳 উস্তাদদের বেতন</div>
+          <Btn kind="gold" sm onClick={() => setPayModal(true)}>
+            💵 পেমেন্ট সম্পন্ন করুন
+          </Btn>
         </div>
         <Table
           head={["নাম", "মাসিক বেতন", "বকেয়া মাস", "অ্যাকশন"]}
@@ -5948,6 +5981,68 @@ function AccountsView({ db, setDb, user }) {
           })}
         />
       </div>
+      {payModal && (
+        <Modal
+          title="উস্তাদের পেমেন্ট সম্পন্ন করুন"
+          onClose={() => setPayModal(false)}
+        >
+          <div>
+            <label style={S.label}>উস্তাদ</label>
+            <select
+              style={S.input}
+              value={pm.teacherId}
+              onChange={(e) => setPm({ ...pm, teacherId: e.target.value })}
+            >
+              <option value="">বেছে নিন</option>
+              {teachers.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>মাসিক বেতন</label>
+            <div
+              style={{
+                ...S.input,
+                background: C.cream,
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              ৳{bn((pmTeacher?.salary || 0).toLocaleString("en"))}
+            </div>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>কোন মাসের পেমেন্ট</label>
+            <input
+              type="month"
+              style={S.input}
+              value={pm.month}
+              onChange={(e) => setPm({ ...pm, month: e.target.value })}
+            />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>কত পরিশোধ করছেন (ফাঁকা রাখলে ফুল পেমেন্ট ধরা হবে)</label>
+            <input
+              type="number"
+              style={S.input}
+              value={pm.amount}
+              onChange={(e) => setPm({ ...pm, amount: e.target.value })}
+              placeholder={pmTeacher && pm.month ? `${pmRemaining}` : ""}
+            />
+          </div>
+          <Btn
+            style={{ marginTop: 14, width: "100%", justifyContent: "center" }}
+            kind="gold"
+            onClick={submitPayModal}
+          >
+            {pmBusy ? "⏳ সেভ হচ্ছে…" : "✔ পেমেন্ট দিন"}
+          </Btn>
+        </Modal>
+      )}
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
           📤 বেতন পরিশোধের ইতিহাস
