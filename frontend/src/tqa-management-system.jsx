@@ -76,7 +76,7 @@ const receiptHTML = (
   person,
   kind,
   no,
-) => `<!DOCTYPE html><html lang="bn"><head><meta charset="utf-8"><title>${kind} — TQA-${no}</title>
+) => `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>${kind} — TQA-${no}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap');
 body{font-family:'Hind Siliguri',sans-serif;margin:0;padding:28px;background:#f4f6f4;color:#1a1f2e}
@@ -96,21 +96,21 @@ body{font-family:'Hind Siliguri',sans-serif;margin:0;padding:28px;background:#f4
 @media print{.pr{display:none}body{background:#fff;padding:0}}
 </style></head><body>
 <div class="v">
-<div class="h"><div class="ar">تربية القرآن</div><h1>তারবিয়াতুল কুরআন একাডেমি</h1><div class="s">tarbiyatulquran.org · WhatsApp: +880 140 249 9027</div></div>
+<div class="h"><div class="ar">تربية القرآن</div><h1>Tarbiyatul Quran Academy</h1><div class="s">tarbiyatulquran.org · WhatsApp: +880 140 249 9027</div></div>
 <div class="k">${kind}</div>
 <div class="b">
-<div class="r"><span>রিসিট নং</span><b>TQA-${no}</b></div>
-<div class="r"><span>${kind.includes("বেতন") ? "উস্তাদ/উস্তাদা" : "নাম"}</span><b>${person.name || ""}</b></div>
-<div class="r"><span>মাস / বিবরণ</span><b>${p.month || "—"}</b></div>
-<div class="r"><span>পরিশোধের তারিখ</span><b>${p.date || ""}</b></div>
-<div class="r"><span>মাধ্যম</span><b>${p.method || "—"}</b></div>
-<div class="r"><span>অবস্থা</span><b>${p.status === "pending" ? "যাচাইয়ের অপেক্ষায়" : "পরিশোধিত ✔"}</b></div>
-<div class="amt"><div class="t">পরিমাণ</div><div class="n">৳ ${Number(p.amount || 0).toLocaleString("en")}</div></div>
-<div class="sg"><div>গ্রহীতার স্বাক্ষর</div><div>পরিচালক / হিসাবরক্ষক</div></div>
+<div class="r"><span>Receipt No.</span><b>TQA-${no}</b></div>
+<div class="r"><span>${kind.includes("বেতন") ? "Teacher" : "Name"}</span><b>${person.name || ""}</b></div>
+<div class="r"><span>Month / Description</span><b>${p.month || "—"}</b></div>
+<div class="r"><span>Payment Date</span><b>${p.date || ""}</b></div>
+<div class="r"><span>Method</span><b>${p.method || "—"}</b></div>
+<div class="r"><span>Status</span><b>${p.status === "pending" ? "Awaiting Verification" : "Paid ✔"}</b></div>
+<div class="amt"><div class="t">Amount</div><div class="n">${p.currency || "৳"} ${Number(p.amount || 0).toLocaleString("en")}</div></div>
+<div class="sg"><div>Recipient's Signature</div><div>Director / Accountant</div></div>
 </div>
-<div class="f">এটি কম্পিউটারে তৈরি রসিদ — জাযাকুমুল্লাহু খাইরান</div>
+<div class="f">This is a computer-generated receipt — JazakAllahu Khairan</div>
 </div>
-<button class="pr" onclick="window.print()">🖨️ প্রিন্ট / PDF সেভ করুন</button>
+<button class="pr" onclick="window.print()">🖨️ Print / Save as PDF</button>
 </body></html>`;
 
 /* 📜 কোর্স সিলেবাস — প্রিন্টযোগ্য ডকুমেন্ট (PDF-এর মতো পাশাপাশি ৫ কলাম, যে কেউ প্রিন্ট/PDF করতে পারবে) */
@@ -360,17 +360,17 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
             {kind}
           </div>
           <div style={{ padding: "20px 26px" }}>
-            {row("রিসিট নং", `TQA-${no}`)}
+            {row("Receipt No.", `TQA-${no}`)}
             {row(
-              kind.includes("বেতন") ? "উস্তাদ/উস্তাদা" : "নাম",
+              kind.includes("বেতন") ? "Teacher" : "Name",
               person.name || "",
             )}
-            {row("মাস / বিবরণ", p.month || "—")}
-            {row("পরিশোধের তারিখ", p.date || "")}
-            {row("মাধ্যম", p.method || "—")}
+            {row("Month / Description", p.month || "—")}
+            {row("Payment Date", p.date || "")}
+            {row("Method", p.method || "—")}
             {row(
-              "অবস্থা",
-              p.status === "pending" ? "যাচাইয়ের অপেক্ষায় ⏳" : "পরিশোধিত ✔",
+              "Status",
+              p.status === "pending" ? "Awaiting Verification ⏳" : "Paid ✔",
             )}
             <div
               style={{
@@ -382,9 +382,9 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
                 margin: "16px 0",
               }}
             >
-              <div style={{ fontSize: 12, color: C.muted }}>পরিমাণ</div>
+              <div style={{ fontSize: 12, color: C.muted }}>Amount</div>
               <div style={{ fontSize: 26, fontWeight: 800, color: C.emerald }}>
-                ৳ {bn(Number(p.amount || 0).toLocaleString("en"))}
+                {p.currency || "৳"} {Number(p.amount || 0).toLocaleString("en")}
               </div>
             </div>
             <div
@@ -404,7 +404,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
                   textAlign: "center",
                 }}
               >
-                গ্রহীতার স্বাক্ষর
+                Recipient's Signature
               </div>
               <div
                 style={{
@@ -414,7 +414,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
                   textAlign: "center",
                 }}
               >
-                পরিচালক / হিসাবরক্ষক
+                Director / Accountant
               </div>
             </div>
           </div>
@@ -427,7 +427,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
               borderTop: `1px solid ${C.line}`,
             }}
           >
-            এটি কম্পিউটারে তৈরি রসিদ — জাযাকুমুল্লাহু খাইরান
+            This is a computer-generated receipt — JazakAllahu Khairan
           </div>
         </div>
         <div
@@ -8299,6 +8299,7 @@ function ReceiptMaker({ onClose, user }) {
     kind: "ফি পরিশোধ রিসিট",
     month: "",
     amount: "",
+    currency: "৳",
     method: "বিকাশ",
     date: todayISO(),
   });
@@ -8323,6 +8324,7 @@ function ReceiptMaker({ onClose, user }) {
         id: uid(),
         month: f.month || "—",
         amount: +f.amount,
+        currency: f.currency,
         method: f.method,
         date: fmtDate(f.date),
         status: "verified",
@@ -8388,13 +8390,24 @@ function ReceiptMaker({ onClose, user }) {
           />
         </div>
         <div>
-          <label style={S.label}>পরিমাণ (৳)</label>
-          <input
-            type="number"
-            style={S.input}
-            value={f.amount}
-            onChange={(e) => setF({ ...f, amount: e.target.value })}
-          />
+          <label style={S.label}>পরিমাণ</label>
+          <div style={{ display: "flex", gap: 6 }}>
+            <select
+              style={{ ...S.input, width: 78, flexShrink: 0 }}
+              value={f.currency}
+              onChange={(e) => setF({ ...f, currency: e.target.value })}
+              title="মুদ্রা"
+            >
+              <option value="৳">৳ টাকা</option>
+              <option value="$">$ ডলার</option>
+            </select>
+            <input
+              type="number"
+              style={S.input}
+              value={f.amount}
+              onChange={(e) => setF({ ...f, amount: e.target.value })}
+            />
+          </div>
         </div>
         <div>
           <label style={S.label}>মাধ্যম</label>
