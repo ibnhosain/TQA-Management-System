@@ -14106,10 +14106,6 @@ export default function App() {
   const [, force] = useState(0);
   const refresh = () => force((x) => x + 1);
   const [apiCourses, setApiCourses] = useState([]);
-  const apiCoursesRef = useRef([]);
-  useEffect(() => {
-    apiCoursesRef.current = apiCourses;
-  }, [apiCourses]);
   // পেজ রিফ্রেশের পর সংরক্ষিত টোকেন থাকলে সেশন ফিরিয়ে আনি — শুধু রিফ্রেশ দিলে আর লগআউট হবে না
   useEffect(() => {
     // ওয়েবসাইটের "Login" (?role=...) থেকে এলে সবসময় পাসওয়ার্ড ফর্ম দেখাই —
@@ -14200,7 +14196,6 @@ export default function App() {
         }));
         if (alive) {
           setApiCourses(base);
-          apiCoursesRef.current = base;
         } // আগে কোর্স দেখাই, তারপর লেকচার যুক্ত হয়
         // প্রতি কোর্সের লেকচার+টপিক এনে যুক্ত করি — অগ্রগতি বার, "বাদ পড়া টপিক" ও "আজকের দারস" সঠিক দেখাতে
         const lecLists = await Promise.all(
@@ -14214,7 +14209,6 @@ export default function App() {
         const adapted = base.map((c, i) => ({ ...c, lectures: lecLists[i] }));
         if (alive) {
           setApiCourses(adapted);
-          apiCoursesRef.current = adapted;
         }
       })
       .catch(() => {});
@@ -14268,47 +14262,6 @@ export default function App() {
       }
     });
   }, [db.waOutbox, db.waConfig]);
-  // ক্লাস শুরুর ৫ মিনিট আগে: ইন-অ্যাপ নোটিফিকেশন + অভিভাবকের WhatsApp মেসেজ অটো-প্রস্তুত
-  useEffect(() => {
-    const iv = setInterval(() => {
-      const now = new Date();
-      const cur = now.getHours() * 60 + now.getMinutes();
-      setDb((d) => {
-        let changed = false;
-        let outbox = d.waOutbox || [];
-        let notifs = d.notifications;
-        const classes = d.classes.map((k) => {
-          if (k.date !== todayISO() || k.status !== "upcoming" || k.notified5)
-            return k;
-          const [h, m] = k.time.split(":").map(Number);
-          const st = h * 60 + m;
-          if (cur < st - 5 || cur > st + 5) return k;
-          changed = true;
-          const c = courseById(apiCoursesRef.current, k.courseId);
-          const studs =
-            (k.studentIds && k.studentIds.length
-              ? k.studentIds
-              : c.studentIds) || [];
-          outbox = [...waGuardianMsgs(k, c, "reminder"), ...outbox];
-          notifs = [
-            {
-              id: uid(),
-              for: [k.teacherId || c.teacherId, ...studs, "admin1", "dir1"],
-              text: `⏰ ${c.name} ক্লাস ${k.time}-এ শুরু হচ্ছে (৫ মিনিটের মধ্যে)! অভিভাবকের WhatsApp মেসেজ প্রস্তুত হয়ে আউটবক্সে গেছে।`,
-              date: todayISO(),
-              read: false,
-            },
-            ...notifs,
-          ];
-          return { ...k, notified5: true };
-        });
-        return changed
-          ? { ...d, classes, waOutbox: outbox, notifications: notifs }
-          : d;
-      });
-    }, 15000);
-    return () => clearInterval(iv);
-  }, []);
   const [confirmReq, setConfirmReq] = useState(null);
   const [toast, setToast] = useState(null);
   useEffect(() => {
