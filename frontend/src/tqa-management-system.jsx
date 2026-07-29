@@ -279,25 +279,39 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
     }
     setAsk(false);
   };
-  // স্টুডেন্টের ফি রিসিট পোর্টালে না পাঠিয়ে সরাসরি WhatsApp-এ পাঠানোর অপশন —
-  // ছবি প্রথমে ডাউনলোড হবে, তারপর সেই স্টুডেন্টের WhatsApp চ্যাট খুলে যাবে
-  // (WhatsApp-এর নিরাপত্তা-সীমাবদ্ধতার কারণে ছবিটা সয়ংক্রিয়ভাবে সংযুক্ত করা যায় না —
-  // ডাউনলোড হওয়া ছবিটা চ্যাটে গিয়ে একবার সংযুক্ত করে দিতে হবে)
-  const canWhatsApp =
-    (kind === "ফি পরিশোধ রিসিট" || kind === "বেতন পরিশোধ ভাউচার") &&
-    !!person.phone;
-  const doWhatsApp = () => {
-    doDownload();
-    const cleanPhone = String(person.phone).replace(/[^\d]/g, "");
+  // স্টুডেন্টের/উস্তাদের ফি রিসিট বা বেতন ভাউচার পোর্টালে না পাঠিয়ে সরাসরি
+  // WhatsApp বা ইমেইলে পাঠানোর অপশন — ছবি প্রথমে ডাউনলোড হবে, তারপর সেই
+  // ব্যক্তির WhatsApp চ্যাট/ইমেইল কম্পোজ খুলে যাবে (নিরাপত্তা-সীমাবদ্ধতার কারণে
+  // ছবিটা সয়ংক্রিয়ভাবে সংযুক্ত করা যায় না — ডাউনলোড হওয়া ছবিটা একবার নিজে
+  // সংযুক্ত করে দিতে হবে)
+  const isReceiptKind =
+    kind === "ফি পরিশোধ রিসিট" || kind === "বেতন পরিশোধ ভাউচার";
+  const canWhatsApp = isReceiptKind && !!person.phone;
+  const canEmail = isReceiptKind && !!person.email;
+  const confirmMessage = () => {
     const hadith =
       "بارك الله لك في أهلك ومالك، إنما جزاء السلف الوفاء والحمد\n" +
       '"May Allah bless your family and your wealth. Indeed, the reward for fulfilling an obligation is faithfulness and gratitude." — Hadith';
-    const text =
-      kind === "বেতন পরিশোধ ভাউচার"
-        ? `Assalamu Alaikum Warahmatullahi Wabarakatuh,\n\nDear ${person.name || "Ustadh/Ustadha"},\n\nThis is to confirm that your salary payment for "${p.month || "—"}" has been completed. Please find the voucher attached below.\n\n${hadith}\n\nJazakAllahu Khairan for your dedication and service.\n— Tarbiyatul Quran Academy`
-        : `Assalamu Alaikum Warahmatullahi Wabarakatuh,\n\nDear Guardian,\n\nWe are pleased to confirm that ${person.name || "your child"}'s fee payment for "${p.month || "—"}" has been received and verified. Please find the receipt attached below.\n\n${hadith}\n\nJazakAllahu Khairan for your continued trust and support.\n— Tarbiyatul Quran Academy`;
+    return kind === "বেতন পরিশোধ ভাউচার"
+      ? `Assalamu Alaikum Warahmatullahi Wabarakatuh,\n\nDear ${person.name || "Ustadh/Ustadha"},\n\nThis is to confirm that your salary payment for "${p.month || "—"}" has been completed. Please find the voucher attached below.\n\n${hadith}\n\nJazakAllahu Khairan for your dedication and service.\n— Tarbiyatul Quran Academy`
+      : `Assalamu Alaikum Warahmatullahi Wabarakatuh,\n\nDear Guardian,\n\nWe are pleased to confirm that ${person.name || "your child"}'s fee payment for "${p.month || "—"}" has been received and verified. Please find the receipt attached below.\n\n${hadith}\n\nJazakAllahu Khairan for your continued trust and support.\n— Tarbiyatul Quran Academy`;
+  };
+  const doWhatsApp = () => {
+    doDownload();
+    const cleanPhone = String(person.phone).replace(/[^\d]/g, "");
     window.open(
-      `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`,
+      `https://wa.me/${cleanPhone}?text=${encodeURIComponent(confirmMessage())}`,
+      "_blank",
+    );
+  };
+  const doEmail = () => {
+    doDownload();
+    const subject =
+      kind === "বেতন পরিশোধ ভাউচার"
+        ? `Salary Voucher — ${p.month || ""}`
+        : `Fee Payment Receipt — ${p.month || ""}`;
+    window.open(
+      `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(person.email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(confirmMessage())}`,
       "_blank",
     );
   };
@@ -499,7 +513,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
         </div>
         <div
           className="tqa-receipt-actions"
-          style={{ display: "flex", gap: 8, marginTop: 12 }}
+          style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}
         >
           <Btn
             style={{ flex: 1.2, justifyContent: "center" }}
@@ -514,6 +528,15 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
               onClick={doWhatsApp}
             >
               📲 WhatsApp-এ পাঠান
+            </Btn>
+          )}
+          {canEmail && (
+            <Btn
+              kind="gold"
+              style={{ flex: 1.2, justifyContent: "center" }}
+              onClick={doEmail}
+            >
+              📧 ইমেইলে পাঠান
             </Btn>
           )}
           <Btn
@@ -1203,6 +1226,7 @@ const adaptPerson = (u) => ({
   name: u.name || u.name_bn,
   sub: u.sub || u.sub_title || "",
   phone: u.phone || "",
+  email: u.email || "",
 });
 /* API Routine → ফ্রন্টএন্ড shape */
 const adaptRoutine = (r) => ({
@@ -5289,6 +5313,7 @@ function ProgressView({ db, setDb, courses, user }) {
             sub: s.sub || s.sub_title,
             fee: s.monthly_fee || s.fee,
             phone: s.phone,
+            email: s.email,
             role: "student",
           })),
         );
@@ -5740,6 +5765,7 @@ function AccountsView({ db, setDb, user }) {
             name: u.name || u.name_bn,
             salary: u.monthly_salary || u.salary || 0,
             phone: u.phone,
+            email: u.email,
             role: "teacher",
           })),
       );
@@ -5924,7 +5950,7 @@ function AccountsView({ db, setDb, user }) {
                       date: fmtDateEn(p.paid_at || p.date),
                       method: methodEn(p.method),
                     },
-                    { name: tName, phone: tRec?.phone },
+                    { name: tName, phone: tRec?.phone, email: tRec?.email },
                     "বেতন পরিশোধ ভাউচার",
                   )
                 }
@@ -8590,6 +8616,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
           fee: s.monthly_fee,
           guardian: s.guardian,
           phone: s.phone,
+          email: s.email,
           dueMonths: s.due_months || [],
         })),
       );
@@ -8944,7 +8971,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
                 onClick={() =>
                   printReceipt(
                     { ...p, date: fmtDateEn(p.date), method: methodEn(p.method) },
-                    { name: p.studentName || s.name, phone: s.phone },
+                    { name: p.studentName || s.name, phone: s.phone, email: s.email },
                     "ফি পরিশোধ রিসিট",
                   )
                 }
