@@ -5344,8 +5344,11 @@ function ProgressView({ db, setDb, courses, user }) {
   const paid = myFees.reduce((s, p) => s + (+p.amount || 0), 0);
   const dueMonths = duesMap[selId] || db.dueMonths?.[sel] || [];
   const due = dueMonths.length * (st?.monthly_fee || st?.fee || 0);
-  const makeups = (db.makeups || []).filter(
-    (m) => String(m.studentId) === selId,
+  // "মেকআপ ক্লাস" আলাদা কোনো ফিচার/এন্ডপয়েন্ট নয় — kind="makeup" দিয়ে সিডিউল
+  // করা একটা সাধারণ ক্লাস; আগে stale mock db.makeups (সবসময় খালি) থেকে আসত,
+  // এখন ইতিমধ্যে লোড করা sessions থেকেই বের করা হচ্ছে
+  const makeups = (sessions || []).filter(
+    (k) => k.kind === "makeup" && (k.students || []).some((x) => String(x) === selId),
   );
   const exams = examList.filter((e) => e.marks && e.marks[sel] != null);
   const recordPay = async () => {
@@ -5693,17 +5696,16 @@ function ProgressView({ db, setDb, courses, user }) {
           </div>
           <Table
             head={T(
-              ["কোর্স", "কারণ", "তারিখ ও সময়", "অবস্থা"],
-              ["Course", "Reason", "Date & Time", "Status"],
+              ["কোর্স", "তারিখ ও সময়", "অবস্থা"],
+              ["Course", "Date & Time", "Status"],
             )}
             rows={makeups.map((m) => [
-              courseById(courses, m.courseId).name,
-              m.reason,
+              courseById(courses, m.course || m.courseId).name,
               `${fmtDate(m.date)} · ${m.time}`,
               <Tag key="t" color={C.blue} bg={C.blueBg}>
                 {T(
-                  m.status === "scheduled" ? "নির্ধারিত" : "সম্পন্ন",
-                  m.status === "scheduled" ? "Scheduled" : "Completed",
+                  m.status === "done" ? "সম্পন্ন" : m.status === "postponed" ? "স্থগিত" : "নির্ধারিত",
+                  m.status === "done" ? "Completed" : m.status === "postponed" ? "Postponed" : "Scheduled",
                 )}
               </Tag>,
             ])}
