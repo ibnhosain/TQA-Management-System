@@ -1419,6 +1419,15 @@ function Login({ onLogin }) {
     } catch (e) {
       if (e?.status === 401 || e?.message?.includes("401")) {
         setErr(T("ভুল আইডি বা পাসওয়ার্ড!", "Incorrect ID or password!"));
+      } else if (e?.status === 429) {
+        // নিরাপত্তার জন্য মিনিটে সর্বোচ্চ ২০ বার লগইন চেষ্টার সীমা (brute-force ঠেকাতে) —
+        // এটা সার্ভার-ডাউন নয়, শুধু সাময়িক সীমা; আগে ভুলভাবে "সংযোগ নেই" দেখাত
+        setErr(
+          T(
+            "অনেকবার চেষ্টা হয়েছে — নিরাপত্তার জন্য সাময়িকভাবে আটকানো হয়েছে। ১ মিনিট অপেক্ষা করে আবার চেষ্টা করুন।",
+            "Too many attempts — temporarily blocked for security. Please wait 1 minute and try again.",
+          ),
+        );
       } else {
         setErr(
           T(
