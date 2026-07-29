@@ -5676,6 +5676,7 @@ function AccountsView({ db, setDb, user }) {
   const [fees, setFees] = useState(db.feePayments || []);
   const [salaries, setSalaries] = useState(db.teacherPayments || []);
   const [teachers, setTeachers] = useState([]);
+  const [students, setStudents] = useState([]);
   const [duesMap, setDuesMap] = useState(db.dueMonths || {});
 
   const loadData = async () => {
@@ -5704,6 +5705,15 @@ function AccountsView({ db, setDb, user }) {
             name: u.name || u.name_bn,
             salary: u.monthly_salary || u.salary || 0,
             role: "teacher",
+          })),
+      );
+      setStudents(
+        usersData
+          .filter((u) => u.role === "student")
+          .map((u) => ({
+            id: u.id,
+            name: u.name || u.name_bn,
+            fee: u.monthly_fee || 0,
           })),
       );
       const dm = {};
@@ -5895,22 +5905,16 @@ function AccountsView({ db, setDb, user }) {
         </div>
         <Table
           head={["স্টুডেন্ট", "মাসিক ফি", "বকেয়া মাস", "বকেয়া টাকা"]}
-          rows={Object.entries(duesMap)
-            .filter(([, months]) => months.length > 0)
-            .map(([sid, months]) => {
-              const feeData = fees.find(
-                (p) => String(p.student || p.studentId) === sid,
-              );
-              const monthlyFee = feeData?.amount || 0;
-              const name =
-                USERS.find((u) => String(u.id) === sid)?.name ||
-                "স্টুডেন্ট " + sid;
+          rows={students
+            .filter((s) => (duesMap[String(s.id)] || []).length > 0)
+            .map((s) => {
+              const months = duesMap[String(s.id)] || [];
               return [
-                name,
-                `৳${bn(monthlyFee.toLocaleString("en"))}`,
+                s.name,
+                `৳${bn((s.fee || 0).toLocaleString("en"))}`,
                 months.join(", "),
                 <Tag key="t" color={C.red} bg={C.redBg}>
-                  ৳{bn((months.length * monthlyFee).toLocaleString("en"))}
+                  ৳{bn((months.length * (s.fee || 0)).toLocaleString("en"))}
                 </Tag>,
               ];
             })}
