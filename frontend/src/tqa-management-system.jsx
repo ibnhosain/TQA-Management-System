@@ -6214,6 +6214,53 @@ function NoticesView({ db, setDb, user }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [show, setShow] = useState(false);
   const [f, setF] = useState({ title: "", body: "" });
+  const [notices, setNotices] = useState(db.notices || []);
+  const [busy, setBusy] = useState(false);
+
+  // আগে এখানে শুধু stale mock db.notices দেখানো হতো আর প্রকাশ/মুছার বাটন
+  // শুধু লোকাল স্টেটে বদলাত (সার্ভারে কিছুই সেভ হতো না, রিফ্রেশে হারিয়ে যেত,
+  // অন্য কেউ কখনো দেখতে পেত না) — এখন সরাসরি /notices/ থেকে লোড হয়
+  const loadNotices = async () => {
+    try {
+      const data = await api.notices();
+      setNotices(data.map((n) => ({ id: n.id, title: n.title, body: n.body, date: n.created_at })));
+    } catch {
+      /* keep mock */
+    }
+  };
+  useEffect(() => {
+    loadNotices();
+  }, []);
+
+  const publish = async () => {
+    if (!f.title.trim() || !f.body.trim()) return notice("শিরোনাম ও বিস্তারিত দিন।");
+    setBusy(true);
+    try {
+      await api.createNotice({ title: f.title.trim(), body: f.body.trim() });
+      await loadNotices();
+      setShow(false);
+      setF({ title: "", body: "" });
+    } catch {
+      setDb((d) => ({
+        ...d,
+        notices: [{ id: uid(), ...f, date: todayISO() }, ...d.notices],
+      }));
+      setNotices((prev) => [{ id: uid(), ...f, date: todayISO() }, ...prev]);
+      setShow(false);
+      setF({ title: "", body: "" });
+    }
+    setBusy(false);
+  };
+  const remove = async (id) => {
+    try {
+      await api.deleteNotice(id);
+      await loadNotices();
+    } catch {
+      setDb((d) => ({ ...d, notices: d.notices.filter((x) => x.id !== id) }));
+      setNotices((prev) => prev.filter((x) => x.id !== id));
+    }
+  };
+
   return (
     <Section
       title={T("নোটিশ বোর্ড", "Notice Board")}
@@ -6222,7 +6269,7 @@ function NoticesView({ db, setDb, user }) {
       }
     >
       <div style={{ display: "grid", gap: 10 }}>
-        {db.notices.map((n) => (
+        {notices.map((n) => (
           <div
             key={n.id}
             style={{
@@ -6241,16 +6288,7 @@ function NoticesView({ db, setDb, user }) {
             >
               <span>📌 {n.title}</span>
               {isDir(user) && (
-                <Btn
-                  sm
-                  kind="danger"
-                  onClick={() =>
-                    setDb((d) => ({
-                      ...d,
-                      notices: d.notices.filter((x) => x.id !== n.id),
-                    }))
-                  }
-                >
+                <Btn sm kind="danger" onClick={() => remove(n.id)}>
                   মুছুন
                 </Btn>
               )}
@@ -6280,16 +6318,10 @@ function NoticesView({ db, setDb, user }) {
             />
           </div>
           <Btn
-            style={{ marginTop: 16, width: "100%", justifyContent: "center" }}
-            onClick={() => {
-              setDb((d) => ({
-                ...d,
-                notices: [{ id: uid(), ...f, date: todayISO() }, ...d.notices],
-              }));
-              setShow(false);
-            }}
+            style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: busy ? 0.6 : 1 }}
+            onClick={publish}
           >
-            প্রকাশ করুন
+            {busy ? "⏳ প্রকাশ হচ্ছে…" : "প্রকাশ করুন"}
           </Btn>
         </Modal>
       )}

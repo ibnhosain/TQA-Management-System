@@ -238,6 +238,8 @@ export const api = {
   rateClass: (d) => request("/ratings/", { method: "POST", body: d }),
   teacherRatingSummary: (teacherId) => request(`/ratings/teacher_summary/?teacher=${teacherId}`),
   notices: () => request("/notices/"),
+  createNotice: (d) => request("/notices/", { method: "POST", body: d }),
+  deleteNotice: (id) => request(`/notices/${id}/`, { method: "DELETE" }),
   notifications: () => request("/notifications/"),
   markAllRead: () => request("/notifications/mark_all_read/", { method: "POST" }),
   waOutbox: () => request("/wa-messages/"),
