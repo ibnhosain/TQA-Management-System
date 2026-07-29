@@ -247,18 +247,33 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
   if (!r) return null;
   const { p, person, kind } = r;
   const canSend = !!person.id && !p.noSend;
-  const doDownload = () => {
+  // PNG হিসেবে সেইভ — HTML ফাইলের বদলে, যাতে WhatsApp-এ সরাসরি ছবি হিসেবে সহজে পাঠানো যায়
+  // (html2canvas শুধু এই মুহূর্তেই ডাউনলোড হয় — dynamic import, তাই মূল বান্ডেলের সাইজ বাড়ে না)
+  const doDownload = async () => {
     const no2 = (p.id || uid()).slice(0, 6).toUpperCase();
-    const blob = new Blob([receiptHTML(p, person, kind, no2)], {
-      type: "text/html;charset=utf-8",
-    });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `TQA-receipt-${no2}.html`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    const node = document.getElementById("tqa-receipt");
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const canvas = await html2canvas(node, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+      });
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          notice("রিসিট ছবি তৈরি করতে ব্যর্থ হয়েছে।");
+          return;
+        }
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `TQA-receipt-${no2}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      }, "image/png");
+    } catch {
+      notice("রিসিট ছবি তৈরি করতে ব্যর্থ হয়েছে — আবার চেষ্টা করুন।");
+    }
     setAsk(false);
   };
   const doSend = () => {
@@ -470,8 +485,8 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
             marginTop: 8,
           }}
         >
-          ⬇️ ডাউনলোড করলে রিসিট ফাইলটি সেভ হবে — ফাইলটি খুললেই PDF হিসেবে সেভ
-          করা যাবে
+          ⬇️ ডাউনলোড করলে রিসিটটি ছবি (PNG) হিসেবে সেভ হবে — সরাসরি WhatsApp-এ
+          পাঠানো যাবে
         </div>
       </div>
       {ask && (
@@ -509,7 +524,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
             </div>
             <div style={{ display: "grid", gap: 8 }}>
               <Btn style={{ justifyContent: "center" }} onClick={doDownload}>
-                ⬇️ ডাউনলোড — রিসিট ফাইল সেভ হবে
+                ⬇️ ডাউনলোড — ছবি (PNG) হিসেবে সেভ হবে
               </Btn>
               <Btn
                 kind="gold"
