@@ -5557,8 +5557,8 @@ function ProgressView({ db, setDb, courses, user }) {
           </div>
           <Table
             head={T(
-              ["মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "অবস্থা", "রিসিট"],
-              ["Month", "Amount", "Date", "Method", "Status", "Receipt"],
+              ["মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "অবস্থা"],
+              ["Month", "Amount", "Date", "Method", "Status"],
             )}
             rows={myFees.map((p) => [
               p.month,
@@ -5578,20 +5578,6 @@ function ProgressView({ db, setDb, courses, user }) {
               ) : (
                 <Tag key="t">{T("যাচাইকৃত ✔", "Verified ✔")}</Tag>
               ),
-              <Btn
-                key="r"
-                sm
-                kind="soft"
-                onClick={() =>
-                  printReceipt(
-                    { ...p, date: fmtDateEn(p.date), method: methodEn(p.method) },
-                    st,
-                    "ফি পরিশোধ রিসিট",
-                  )
-                }
-              >
-                🧾 PDF
-              </Btn>,
             ])}
             empty={T("কোনো পেমেন্ট নেই", "No payments yet")}
           />
@@ -5967,36 +5953,28 @@ function AccountsView({ db, setDb, user }) {
           📤 বেতন পরিশোধের ইতিহাস
         </div>
         <Table
-          head={["উস্তাদ", "মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "ভাউচার"]}
+          head={["উস্তাদ", "মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "স্ট্যাটাস"]}
           rows={salaries.map((p) => {
             const tId = p.teacherId || p.teacher;
             const tRec = teachers.find((t) => String(t.id) === String(tId));
             const tName = p.teacher_name || tRec?.name || userById(tId)?.name || "—";
+            const monthLbl = p.month || p.month_label;
+            const salary = tRec?.salary || 0;
+            const totalPaid = paidSoFar(tId, monthLbl);
+            const remaining = Math.max(0, salary - totalPaid);
             return [
               tName,
-              p.month || p.month_label,
+              monthLbl,
               `৳${bn((+p.amount || 0).toLocaleString("en"))}`,
               fmtDate(p.paid_at || p.date),
               p.method,
-              <Btn
-                key="r"
-                sm
-                kind="soft"
-                onClick={() =>
-                  printReceipt(
-                    {
-                      ...p,
-                      month: p.month || p.month_label,
-                      date: fmtDateEn(p.paid_at || p.date),
-                      method: methodEn(p.method),
-                    },
-                    { name: tName, phone: tRec?.phone, email: tRec?.email },
-                    "বেতন পরিশোধ ভাউচার",
-                  )
-                }
-              >
-                🧾 PDF
-              </Btn>,
+              remaining > 0 ? (
+                <Tag key="s" color={C.gold} bg={C.amberBg}>
+                  ⚠️ আংশিক — ৳{bn(remaining.toLocaleString("en"))} বাকি
+                </Tag>
+              ) : (
+                <Tag key="s">✅ ভেরিফাইড</Tag>
+              ),
             ];
           })}
           empty="কোনো পেমেন্ট ইতিহাস নেই"
@@ -6838,32 +6816,28 @@ function TeacherReportView({ db, setDb, courses, user }) {
             </div>
           </div>
           <Table
-            head={["মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "ভাউচার"]}
-            rows={pays.map((p) => [
-              p.month_label || p.month,
-              `৳${bn((p.amount || 0).toLocaleString("en"))}`,
-              fmtDate(p.paid_at || p.date),
-              p.method,
-              <Btn
-                key="r"
-                sm
-                kind="soft"
-                onClick={() =>
-                  printReceipt(
-                    {
-                      ...p,
-                      month: p.month_label || p.month,
-                      date: fmtDateEn(p.paid_at || p.date),
-                      method: methodEn(p.method),
-                    },
-                    t,
-                    "বেতন পরিশোধ ভাউচার",
-                  )
-                }
-              >
-                🧾 PDF
-              </Btn>,
-            ])}
+            head={["মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "স্ট্যাটাস"]}
+            rows={pays.map((p) => {
+              const monthLbl = p.month_label || p.month;
+              const salary = t.monthly_salary || t.salary || 0;
+              const totalPaid = pays
+                .filter((x) => (x.month_label || x.month) === monthLbl)
+                .reduce((s, x) => s + (+x.amount || 0), 0);
+              const remaining = Math.max(0, salary - totalPaid);
+              return [
+                monthLbl,
+                `৳${bn((p.amount || 0).toLocaleString("en"))}`,
+                fmtDate(p.paid_at || p.date),
+                p.method,
+                remaining > 0 ? (
+                  <Tag key="s" color={C.gold} bg={C.amberBg}>
+                    ⚠️ আংশিক — ৳{bn(remaining.toLocaleString("en"))} বাকি
+                  </Tag>
+                ) : (
+                  <Tag key="s">✅ ভেরিফাইড</Tag>
+                ),
+              ];
+            })}
             empty="এখনো কোনো পেমেন্ট হয়নি"
           />
         </div>
@@ -8185,7 +8159,7 @@ function StudentPaymentsView({ db, setDb, user }) {
           📜 Payment History
         </div>
         <Table
-          head={["Month", "Amount", "Date", "Method", "Status", "Receipt"]}
+          head={["Month", "Amount", "Date", "Method", "Status"]}
           rows={paid.map((p) => [
             p.month,
             `৳${p.amount.toLocaleString("en")}`,
@@ -8224,21 +8198,6 @@ function StudentPaymentsView({ db, setDb, user }) {
                 ✔ Verified
               </span>
             ),
-            <Btn
-              key="eye"
-              sm
-              kind="soft"
-              title="View / download receipt"
-              onClick={() =>
-                printReceipt(
-                  { ...p, date: fmtDateEn(p.date), method: methodEn(p.method) },
-                  user,
-                  "ফি পরিশোধ রিসিট",
-                )
-              }
-            >
-              👁 View
-            </Btn>,
           ])}
           empty="No payments yet"
         />
@@ -8695,12 +8654,13 @@ function DirectorPaymentsView({ db, setDb, user }) {
   const markPaid = async () => {
     const st = students.find((s) => String(s.id) === String(mp.studentId));
     if (!st) return notice("স্টুডেন্ট বেছে নিন।");
-    if (!mp.month.trim()) return notice("মাস লিখুন (যেমন: জুলাই ২০২৬)।");
+    if (!mp.month) return notice("মাস ও সাল বেছে নিন।");
+    const label = monthLabelBn(mp.month); // "2026-07" → "জুলাই ২০২৬" — backend-এর DueMonth লেবেলের সাথে হুবহু মিলতে হবে, নইলে বকেয়া মুছবে না
     setMpBusy(true);
     try {
       await api.recordPayment({
         student_id: st.id,
-        month_label: mp.month.trim(),
+        month_label: label,
         amount: st.fee || 0,
         method: mp.method
           .toLowerCase()
@@ -8709,7 +8669,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
           .replace("নগদ", "nagad")
           .replace("ব্যাংক ট্রান্সফার", "bank"),
       });
-      notice(`✔ ${st.name}-এর "${mp.month}" মাসের পেমেন্ট পরিশোধিত হিসেবে সেভ হয়েছে।`);
+      notice(`✔ ${st.name}-এর "${label}" মাসের পেমেন্ট পরিশোধিত হিসেবে সেভ হয়েছে।`);
       setMp((prev) => ({ ...prev, month: "" }));
       await loadData();
     } catch (e) {
@@ -8807,12 +8767,12 @@ function DirectorPaymentsView({ db, setDb, user }) {
             </select>
           </div>
           <div>
-            <label style={S.label}>মাস</label>
+            <label style={S.label}>মাস ও সাল</label>
             <input
+              type="month"
               style={S.input}
               value={mp.month}
               onChange={(e) => setMp({ ...mp, month: e.target.value })}
-              placeholder="যেমন: জুলাই ২০২৬"
             />
           </div>
           <div>
@@ -8995,7 +8955,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
           ✅ ভেরিফাইড পেমেন্টসমূহ
         </div>
         <Table
-          head={["স্টুডেন্ট", "মাস", "পরিমাণ", "মাধ্যম", "তারিখ", "রিসিট"]}
+          head={["স্টুডেন্ট", "মাস", "পরিমাণ", "মাধ্যম", "তারিখ", "স্ট্যাটাস"]}
           rows={verified.map((p) => {
             const s = studentById(p.studentId);
             return [
@@ -9004,20 +8964,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
               `৳${bn(p.amount.toLocaleString("en"))}`,
               p.method,
               fmtDate(p.date),
-              <Btn
-                key="r"
-                sm
-                kind="soft"
-                onClick={() =>
-                  printReceipt(
-                    { ...p, date: fmtDateEn(p.date), method: methodEn(p.method) },
-                    { name: p.studentName || s.name, phone: s.phone, email: s.email },
-                    "ফি পরিশোধ রিসিট",
-                  )
-                }
-              >
-                🧾 PDF
-              </Btn>,
+              <Tag key="s">✅ ভেরিফাইড</Tag>,
             ];
           })}
         />
