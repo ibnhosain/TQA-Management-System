@@ -10320,7 +10320,29 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           }}
         >
           {inf("বাবা/অভিভাবকের নাম", s.guardian)}
-          {inf("ইমেইল", s.email)}
+          {s.email ? (
+            <div
+              style={{
+                padding: "8px 10px",
+                background: C.cream,
+                borderRadius: 10,
+                fontSize: 13,
+              }}
+            >
+              ইমেইল:{" "}
+              <a
+                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(s.email)}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: C.emerald, fontWeight: 700 }}
+                title="জিমেইলে নতুন মেইল লিখুন"
+              >
+                {s.email}
+              </a>
+            </div>
+          ) : (
+            inf("ইমেইল", s.email)
+          )}
           {inf("দেশ", s.country)}
           {inf("WhatsApp", s.phone ? "+" + s.phone : "—")}
           {inf("আইডি", s.user)}
