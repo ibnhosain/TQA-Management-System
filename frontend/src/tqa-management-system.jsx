@@ -276,36 +276,49 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
     }
     setAsk(false);
   };
-  const doSend = () => {
+  const doSend = async () => {
     if (!canSend) return;
-    setDb((d) => ({
-      ...d,
-      sentReceipts: [
-        {
-          id: uid(),
-          toUserId: person.id,
-          kind,
-          month: p.month,
-          amount: p.amount,
-          method: p.method,
-          date: p.date,
-          status: p.status || "verified",
-          sentBy: sender ? `${sender.name}` : "",
-          sentDate: todayISO(),
-        },
-        ...(d.sentReceipts || []),
-      ],
-      notifications: [
-        {
-          id: uid(),
-          for: [person.id],
-          text: `🧾 আপনার পোর্টালে একটি "${kind}" পাঠানো হয়েছে — "ভাউচার/রিসিট" মেনুতে দেখুন।`,
-          date: todayISO(),
-          read: false,
-        },
-        ...d.notifications,
-      ],
-    }));
+    // আগে এখানে শুধু mock db আপডেট হতো, আসল ব্যাকএন্ডে কখনো সেভ হতো না —
+    // তাই স্টুডেন্ট নিজের ডিভাইসে/সেশনে "ভাউচার/রিসিট" পেজে গিয়ে কিছুই দেখতে
+    // পেতেন না (আসল API-কল এখানে কখনো করা হয়নি)
+    try {
+      await api.sendReceipt({
+        to_user: person.id,
+        kind,
+        month_label: p.month,
+        amount: p.amount,
+        method: p.method,
+      });
+    } catch {
+      setDb((d) => ({
+        ...d,
+        sentReceipts: [
+          {
+            id: uid(),
+            toUserId: person.id,
+            kind,
+            month: p.month,
+            amount: p.amount,
+            method: p.method,
+            date: p.date,
+            status: p.status || "verified",
+            sentBy: sender ? `${sender.name}` : "",
+            sentDate: todayISO(),
+          },
+          ...(d.sentReceipts || []),
+        ],
+        notifications: [
+          {
+            id: uid(),
+            for: [person.id],
+            text: `🧾 আপনার পোর্টালে একটি "${kind}" পাঠানো হয়েছে — "ভাউচার/রিসিট" মেনুতে দেখুন।`,
+            date: todayISO(),
+            read: false,
+          },
+          ...d.notifications,
+        ],
+      }));
+    }
     setAsk(false);
     setDone(true);
   };
