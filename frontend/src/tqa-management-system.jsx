@@ -5739,11 +5739,20 @@ function AccountsView({ db, setDb, user }) {
     const month = dues[0];
     if (!month) return;
     try {
+      // আগে শুধু sendReceipt (নোটিফিকেশন/ভাউচার) কল হতো, আসল বেতন-পেমেন্ট রেকর্ড
+      // কখনো তৈরি হতো না — তাই বকেয়া কখনো সরত না, বাটনে চাপলে কিছুই বদলাত না
+      const amount = t.salary || t.monthly_salary;
+      await api.payTeacherSalary({
+        teacher: t.id,
+        amount,
+        month_label: month,
+        method: "ব্যাংক",
+      });
       await api.sendReceipt({
         to_user: t.id,
         kind: "বেতন পরিশোধ ভাউচার",
         month_label: month,
-        amount: t.salary || t.monthly_salary,
+        amount,
         method: "ব্যাংক",
       });
       await loadData();

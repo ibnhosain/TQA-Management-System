@@ -539,6 +539,10 @@ class TeacherPaymentViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         return [IsDirector()] if self.action in ("create", "update", "destroy") else [IsAuthenticated()]
 
+    def perform_create(self, serializer):  # বেতন পরিশোধ হলে সেই মাসের বকেয়া বাদ দেওয়া
+        pay = serializer.save()
+        DueMonth.objects.filter(user=pay.teacher, month_label=pay.month_label).delete()
+
 
 class SentReceiptViewSet(viewsets.ModelViewSet):
     serializer_class = SentReceiptSerializer

@@ -216,6 +216,7 @@ export const api = {
   },
   verifyFee: (id) => request(`/fees/${id}/verify/`, { method: "POST" }),  // কেবল পরিচালক
   salaries: () => request("/salaries/"),
+  payTeacherSalary: (d) => request("/salaries/", { method: "POST", body: d }), // বেতন পরিশোধের আসল রেকর্ড — সেই মাসের বকেয়া অটো বাদ যায়
   myReceipts: () => request("/receipts/"),
   sendReceipt: (d) => request("/receipts/", { method: "POST", body: d }),
 
