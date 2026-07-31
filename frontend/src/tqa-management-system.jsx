@@ -26,7 +26,14 @@ const C = {
 };
 
 const bn = (n) => String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
-const todayISO = () => new Date().toISOString().slice(0, 10);
+// toISOString() সবসময় UTC তারিখ দেয়, ব্যবহারকারীর লোকাল তারিখ নয় — মধ্যরাত থেকে
+// ভোর ৬টার মধ্যে (বাংলাদেশ সময়, UTC+৬) এটা "আজ"-কে ভুলভাবে "গতকাল" ধরে ফেলত, ফলে
+// ভোরের ক্লাস (যেমন ফজরের পর কুরআন ক্লাস) "আজকের ক্লাস"-এ দেখাত না — যদিও ব্যাকএন্ডে
+// ক্লাসটা সঠিক তারিখেই তৈরি হয়েছিল। এখন ব্রাউজারের লোকাল তারিখ ব্যবহার করা হচ্ছে।
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 // লগইন করা ব্যবহারকারীর ভাষা — App-এর রেন্ডারের শুরুতেই সেট হয় (student → "en")।
 // fmtDate ৫০+ জায়গায় ব্যবহৃত; প্রতিটি call site বদলানোর বদলে এখানেই একবার ঠিক করা হলো।
 let CURRENT_LANG = "bn";
@@ -61,7 +68,7 @@ const methodEn = (m) => METHOD_EN[m] || m;
 const addDays = (n) => {
   const d = new Date();
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 const MONTHS_BN = [
   "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
@@ -3678,7 +3685,10 @@ function LecturePlan({ db, courses, user, refresh }) {
 function AttendanceView({ user }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const isDirector = user.role === "director" || user.role === "admin";
-  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7)); // "２０２６-０７" ফরম্যাটে না — plain "YYYY-MM"
+  const [month, setMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; // লোকাল তারিখ — UTC toISOString() নয়
+  });
   const [rows, setRows] = useState(null); // null = লোড হচ্ছে
 
   const load = async () => {
@@ -9467,7 +9477,7 @@ function RoutineView({ db, setDb, courses, user }) {
   const plusDays = (iso, n) => {
     const d = new Date(iso + "T00:00:00");
     d.setDate(d.getDate() + n);
-    return d.toISOString().slice(0, 10);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
   const toggleDay = (i) =>
     setF({
@@ -9478,7 +9488,7 @@ function RoutineView({ db, setDb, courses, user }) {
     const d = new Date();
     const diff = (wd - d.getDay() + 7) % 7;
     d.setDate(d.getDate() + diff);
-    return d.toISOString().slice(0, 10);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
   const genClasses = (rid, ff, students) =>
     ff.days.flatMap((wd) =>
