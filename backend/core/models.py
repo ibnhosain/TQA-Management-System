@@ -185,8 +185,9 @@ class Attendance(models.Model):
         return self.segment_start is not None
 
     @property
-    def present(self):    # ৪৫-মিনিট নিয়ম, অথবা পরিচালকের ম্যানুয়াল হাজিরা
-        return self.marked_present or self.minutes >= 45
+    def present(self):    # প্রকৃত নিয়ম ২০-মিনিট, অথবা পরিচালকের ম্যানুয়াল হাজিরা — পোর্টালে
+        # সতর্ক করতে এখনো "৪৫+ মিনিট" লেখা থাকে যাতে কেউ ইচ্ছা করে কম সময় না থাকেন
+        return self.marked_present or self.minutes >= 20
 
 
 # ─────────────────────────── অ্যাসাইনমেন্ট ও পরীক্ষা ───────────────────────────

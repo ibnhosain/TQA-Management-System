@@ -3739,15 +3739,18 @@ function AttendanceView({ user }) {
     }),
   );
 
+  // ঠিক কত মিনিট ক্লাস করেছে তা শুধু পরিচালক/এডমিন/উস্তাদ দেখবেন — স্টুডেন্ট শুধু
+  // উপস্থিত/অনুপস্থিত দেখবে (পোর্টালে "৪৫+ মিনিট" সতর্কবার্তা অক্ষতই থাকছে)
+  const showMinutes = user.role !== "student";
   const exportExcel = () => {
     if (!rows || !rows.length) return notice("এই মাসে কোনো হাজিরা রেকর্ড নেই।");
-    const head = ["নাম", "কোর্স", "উস্তাদ", "তারিখ", "মিনিট", "অবস্থা"];
+    const head = ["নাম", "কোর্স", "উস্তাদ", "তারিখ", ...(showMinutes ? ["মিনিট"] : []), "অবস্থা"];
     const body = rows.map((r) => [
       r.user_name || "—",
       r.course_name || "—",
       r.teacher_name || "—",
       r.class_date ? fmtDate(r.class_date) : "—",
-      r.minutes ?? 0,
+      ...(showMinutes ? [r.minutes ?? 0] : []),
       r.present ? "উপস্থিত" : "অনুপস্থিত",
     ]);
     const csv = [head, ...body]
@@ -3771,7 +3774,7 @@ function AttendanceView({ user }) {
     const body = rows
       .map(
         (r) =>
-          `<tr><td>${esc(r.user_name)}</td><td>${esc(r.course_name)}</td><td>${esc(r.teacher_name)}</td><td>${r.class_date ? fmtDate(r.class_date) : "—"}</td><td>${bn(r.minutes ?? 0)}</td><td>${r.present ? "উপস্থিত ✔" : "অনুপস্থিত ✘"}</td></tr>`,
+          `<tr><td>${esc(r.user_name)}</td><td>${esc(r.course_name)}</td><td>${esc(r.teacher_name)}</td><td>${r.class_date ? fmtDate(r.class_date) : "—"}</td>${showMinutes ? `<td>${bn(r.minutes ?? 0)}</td>` : ""}<td>${r.present ? "উপস্থিত ✔" : "অনুপস্থিত ✘"}</td></tr>`,
       )
       .join("");
     const html = `<!doctype html><html lang="bn"><head><meta charset="utf-8"><title>হাজিরা রিপোর্ট — ${monthLabel}</title>
@@ -3787,7 +3790,7 @@ th{background:#eef5f0}
 </style></head><body>
 <h1>তারবিয়াতুল কুরআন একাডেমী — হাজিরা রিপোর্ট</h1>
 <div class="s">${monthLabel}</div>
-<table><tr><th>নাম</th><th>কোর্স</th><th>উস্তাদ</th><th>তারিখ</th><th>মিনিট</th><th>অবস্থা</th></tr>${body}</table>
+<table><tr><th>নাম</th><th>কোর্স</th><th>উস্তাদ</th><th>তারিখ</th>${showMinutes ? "<th>মিনিট</th>" : ""}<th>অবস্থা</th></tr>${body}</table>
 <button class="pr" onclick="window.print()">🖨️ প্রিন্ট / PDF সেভ করুন</button>
 </body></html>`;
     openPrintDoc(html, `হাজিরা-রিপোর্ট-${month}.html`);
@@ -3810,7 +3813,7 @@ th{background:#eef5f0}
     T("কোর্স", "Course"),
     T("উস্তাদ", "Teacher"),
     T("তারিখ", "Date"),
-    T("মিনিট", "Minutes"),
+    ...(showMinutes ? [T("মিনিট", "Minutes")] : []),
     T("অবস্থা", "Status"),
     ...(isDirector ? ["অ্যাকশন"] : []),
   ];
@@ -3819,7 +3822,7 @@ th{background:#eef5f0}
     r.course_name || "—",
     r.teacher_name || "—",
     r.class_date ? fmtDate(r.class_date) : "—",
-    T(`${bn(r.minutes ?? 0)} মিনিট`, `${r.minutes ?? 0} min`),
+    ...(showMinutes ? [T(`${bn(r.minutes ?? 0)} মিনিট`, `${r.minutes ?? 0} min`)] : []),
     r.present ? (
       <Tag key="t">{T("উপস্থিত ✔", "Present ✔")}</Tag>
     ) : (
