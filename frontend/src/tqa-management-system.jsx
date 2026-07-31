@@ -3055,6 +3055,252 @@ function ClassesView({
   );
 }
 
+/* ═══════════════ ইনস্ট্যান্ট ক্লাস — পরিচালক/এডমিন যখন-তখন এককালীন ক্লাস তৈরি করে
+   সাথে সাথে টিচার ও স্টুডেন্টের পোর্টালে জয়েন অপশন পাঠাতে পারবেন ═══════════════ */
+function InstantClassView({ courses, user }) {
+  const [teachers, setTeachers] = useState([]);
+  const [students, setStudents] = useState([]);
+  useEffect(() => {
+    api.allTeachers().then((d) => setTeachers(d.map(adaptPerson))).catch(() => {});
+    api.allStudents().then((d) => setStudents(d.map(adaptPerson))).catch(() => {});
+  }, []);
+
+  const blankForm = () => ({
+    kind: "মেকআপ ক্লাস",
+    courseId: courses[0]?.id,
+    teacherId: courses[0]?.teacherId,
+    studentIds: [],
+    date: todayISO(),
+    time: "17:00",
+    dur: 60,
+    lectureNo: 1,
+    zoom: "https://zoom.us/j/",
+    req: "",
+  });
+  const [f, setF] = useState(blankForm);
+  const [previewZone, setPreviewZone] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [created, setCreated] = useState(null); // সদ্য তৈরি হওয়া ক্লাস — নিচে নোটিফাই বাটন দেখাতে
+
+  const preview = previewZone ? toZoneFullDateTime(f.date, f.time, previewZone) : null;
+
+  const create = async () => {
+    if (!f.courseId || !f.teacherId) return notice("কোর্স ও উস্তাদ বেছে নিন।");
+    if (!f.zoom.trim()) return notice("জুম লিংক দিন।");
+    setBusy(true);
+    try {
+      const c = courseById(courses, f.courseId);
+      const targetStudents = f.studentIds.length ? f.studentIds : c.studentIds || [];
+      const res = await api.scheduleClass(classPayload(f, targetStudents));
+      setCreated({ ...res, courseName: c.name });
+      setF(blankForm());
+      setPreviewZone("");
+      notice("✔ ক্লাস শিডিউল হয়েছে — সময় হলে টিচার ও স্টুডেন্টের পোর্টালে জয়েন অপশন আসবে।");
+    } catch (e) {
+      notice("ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+    }
+    setBusy(false);
+  };
+
+  const notifyCreated = () => {
+    if (!created) return;
+    const teacher = teachers.find((t) => String(t.id) === String(created.teacher));
+    const studentTargets = (created.students || [])
+      .map((id) => students.find((s) => String(s.id) === String(id)))
+      .filter((s) => s && s.phone);
+    const targets = [...(teacher && teacher.phone ? [teacher] : []), ...studentTargets];
+    if (!targets.length) return notice("এই ক্লাসের টিচার/শিক্ষার্থীর কোনো ফোন নম্বর পাওয়া যায়নি।");
+    targets.forEach((p, i) => {
+      const text =
+        `Assalamu Alaikum Warahmatullah,\n\n` +
+        `Dear ${p.name},\n\n` +
+        `This is a reminder that you have a class today — "${created.courseName}" at ${(created.time || "").slice(0, 5)}.\n\n` +
+        `*Please join on time insaallah.*\n\n` +
+        `Jazakallahu Khairan Fid-darayn.\n— Tarbiyatul Quran Academy.`;
+      const phone = p.phone.replace(/[^\d]/g, "");
+      setTimeout(
+        () => window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank"),
+        i * 400,
+      );
+    });
+    notice(`✔ ${bn(targets.length)} জনকে WhatsApp পাঠানো হচ্ছে`);
+  };
+
+  return (
+    <Section
+      title="⚡ ইনস্ট্যান্ট ক্লাস"
+      sub="যখন-তখন যেকোনো ক্লাস (মেকআপ/সাপোর্ট/রিকভারি/ট্রায়াল/নিয়মিত) সাথে সাথে তৈরি করুন — তারিখ-সময় অনুযায়ী টিচার ও স্টুডেন্টের পোর্টালে জয়েন অপশন অটো চলে যাবে"
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div>
+          <label style={S.label}>ক্লাসের ধরন</label>
+          <select
+            style={S.input}
+            value={f.kind}
+            onChange={(e) => setF({ ...f, kind: e.target.value })}
+          >
+            {CLASS_KINDS.map((x) => (
+              <option key={x}>{x}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={S.label}>কোর্স</label>
+          <select
+            style={S.input}
+            value={f.courseId || ""}
+            onChange={(e) => {
+              const c = courseById(courses, e.target.value);
+              setF({ ...f, courseId: e.target.value, teacherId: c.teacherId || f.teacherId });
+            }}
+          >
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <label style={S.label}>উস্তাদ/উস্তাদা — কার জন্য তৈরি হবে</label>
+        <select
+          style={S.input}
+          value={f.teacherId || ""}
+          onChange={(e) => setF({ ...f, teacherId: e.target.value })}
+        >
+          {teachers.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name} {t.sub ? `(${t.sub})` : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <label style={S.label}>
+          শিক্ষার্থী বাছাই করুন — এক এক করে ({bn(f.studentIds.length)} জন নির্বাচিত;
+          কাউকে না বাছলে কোর্সের সবাই)
+        </label>
+        <StudentPicker
+          selected={f.studentIds}
+          people={students}
+          onToggle={(id) =>
+            setF({
+              ...f,
+              studentIds: f.studentIds.includes(id)
+                ? f.studentIds.filter((x) => x !== id)
+                : [...f.studentIds, id],
+            })
+          }
+        />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
+        <div>
+          <label style={S.label}>তারিখ</label>
+          <input
+            type="date"
+            style={S.input}
+            value={f.date}
+            onChange={(e) => setF({ ...f, date: e.target.value })}
+          />
+        </div>
+        <div>
+          <label style={S.label}>সময় (বাংলাদেশ সময় অনুযায়ী লিখুন)</label>
+          <input
+            type="time"
+            style={S.input}
+            value={f.time}
+            onChange={(e) => setF({ ...f, time: e.target.value })}
+          />
+        </div>
+        <div>
+          <label style={S.label}>সময়কাল (মিনিট)</label>
+          <input
+            type="number"
+            style={S.input}
+            value={f.dur}
+            onChange={(e) => setF({ ...f, dur: e.target.value })}
+          />
+        </div>
+        <div>
+          <label style={S.label}>লেকচার নং (ঐচ্ছিক)</label>
+          <input
+            type="number"
+            min="1"
+            style={S.input}
+            value={f.lectureNo}
+            onChange={(e) => setF({ ...f, lectureNo: e.target.value })}
+          />
+        </div>
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <label style={S.label}>🌍 টাইমজোন প্রিভিউ (ঐচ্ছিক — বিদেশে থাকা কাউকে জানাতে সুবিধার জন্য)</label>
+        <select
+          style={S.input}
+          value={previewZone}
+          onChange={(e) => setPreviewZone(e.target.value)}
+        >
+          <option value="">— বাছাই করুন —</option>
+          {COMMON_ZONES.map((z) => (
+            <option key={z.zone} value={z.zone}>
+              {z.label}
+            </option>
+          ))}
+        </select>
+        {preview && (
+          <div style={{ marginTop: 6, fontSize: 12.5, color: C.muted }}>
+            {COMMON_ZONES.find((z) => z.zone === previewZone)?.label}-এর সময় অনুযায়ী:{" "}
+            <b>{fmtDate(preview.date)} · {preview.time}</b>
+          </div>
+        )}
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <label style={S.label}>জুম লিংক</label>
+        <input
+          style={S.input}
+          value={f.zoom}
+          onChange={(e) => setF({ ...f, zoom: e.target.value })}
+        />
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <label style={S.label}>অভিভাবকের রিকোয়ারমেন্ট (ঐচ্ছিক)</label>
+        <textarea
+          rows={2}
+          style={{ ...S.input, resize: "vertical" }}
+          value={f.req}
+          onChange={(e) => setF({ ...f, req: e.target.value })}
+          placeholder="যেমন: তিলাওয়াতের ভুলগুলোতে বেশি জোর দেবেন..."
+        />
+      </div>
+      <Btn
+        style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: busy ? 0.6 : 1 }}
+        onClick={create}
+      >
+        {busy ? "⏳ তৈরি হচ্ছে…" : "⚡ এখনই ক্লাস তৈরি করুন"}
+      </Btn>
+      {created && (
+        <div
+          style={{
+            marginTop: 14,
+            padding: "12px 14px",
+            borderRadius: 12,
+            background: C.greenBg,
+            border: `1.5px solid ${C.green}`,
+          }}
+        >
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>
+            ✔ তৈরি হয়েছে — {created.courseName} · {fmtDate(created.date)} ·{" "}
+            {(created.time || "").slice(0, 5)}
+          </div>
+          <Btn kind="gold" onClick={notifyCreated}>
+            📨 টিচার ও স্টুডেন্টকে এখনই WhatsApp-এ জানান
+          </Btn>
+        </div>
+      )}
+    </Section>
+  );
+}
+
 /* ═══════════════ লেকচার প্ল্যান — টিক/ক্রস (ফিচার ৩) ═══════════════ */
 function LecturePlan({ db, courses, user, refresh }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
@@ -14023,6 +14269,13 @@ const NAV = [
     roles: ["director", "admin", "teacher", "student"],
   },
   {
+    id: "instantclass",
+    icon: "⚡",
+    label: "ইনস্ট্যান্ট ক্লাস",
+    labelEn: "Instant Class",
+    roles: ["director", "admin"],
+  },
+  {
     id: "routine",
     icon: "📅",
     label: "ক্লাস রুটিন",
@@ -14867,6 +15120,9 @@ export default function App() {
               autoJoinId={autoJoinId}
               onAutoJoinConsumed={() => setAutoJoinId(null)}
             />
+          )}
+          {view === "instantclass" && isAdm(user) && (
+            <InstantClassView courses={courses} user={user} />
           )}
           {view === "routine" && <RoutineView {...props} />}
           {view === "lectures" && <LecturePlan {...props} />}
