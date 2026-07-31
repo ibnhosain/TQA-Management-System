@@ -3865,9 +3865,11 @@ th{background:#eef5f0}
           <Btn sm kind="soft" onClick={printReport}>
             {T("🖨️ প্রিন্ট", "🖨️ Print")}
           </Btn>
-          <Btn sm kind="soft" onClick={sendWhatsApp}>
-            📱 WhatsApp
-          </Btn>
+          {isAdm(user) && (
+            <Btn sm kind="soft" onClick={sendWhatsApp}>
+              📱 WhatsApp
+            </Btn>
+          )}
         </div>
       }
     >
