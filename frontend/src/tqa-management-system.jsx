@@ -2497,22 +2497,30 @@ function ClassesView({
     // জুম খোলে অ্যাংকর লিংকে (নিচে <a>); বাকি সব (presence/২৭-মিনিট/হাজিরা) LiveClassPanel সামলায়
     setJoined({ classId: k.id });
   };
-  // এডমিন/পরিচালক → আজকের ক্লাসের শিক্ষার্থীকে জয়েন-করার নিয়ম জানিয়ে WhatsApp (ইংরেজি, ইসলামিক টোন)
-  const notifyStudents = (k, c, kStudents) => {
-    const targets = kStudents
+  // এডমিন/পরিচালক → আজকের ক্লাসের টিচার ও শিক্ষার্থী উভয়কে জয়েন-করার রিমাইন্ডার
+  // WhatsApp (ইংরেজি, ইসলামিক টোন) — একই বাটনে একসাথে দুজনকেই পাঠানো হয়
+  const notifyAll = (k, c, kStudents) => {
+    const teacher = teachers.find(
+      (t) => String(t.id) === String(k.teacherId || c.teacherId),
+    );
+    const studentTargets = kStudents
       .map((id) => students.find((s) => String(s.id) === String(id)))
       .filter((s) => s && s.phone);
+    const targets = [
+      ...(teacher && teacher.phone ? [teacher] : []),
+      ...studentTargets,
+    ];
     if (!targets.length)
-      return notice("এই ক্লাসের শিক্ষার্থীর ফোন নম্বর পাওয়া যায়নি।");
+      return notice("এই ক্লাসের টিচার/শিক্ষার্থীর কোনো ফোন নম্বর পাওয়া যায়নি।");
     const courseName = c.name || k.courseName || "your class";
-    targets.forEach((s, i) => {
+    targets.forEach((p, i) => {
       const text =
         `Assalamu Alaikum Warahmatullah,\n\n` +
-        `Dear ${s.name},\n\n` +
+        `Dear ${p.name},\n\n` +
         `This is a reminder that you have a class today — "${courseName}" at ${k.time}.\n\n` +
         `*Please join on time insaallah.*\n\n` +
         `Jazakallahu Khairan Fid-darayn.\n— Tarbiyatul Quran Academy.`;
-      const phone = s.phone.replace(/[^\d]/g, "");
+      const phone = p.phone.replace(/[^\d]/g, "");
       setTimeout(
         () =>
           window.open(
@@ -2522,7 +2530,7 @@ function ClassesView({
         i * 400,
       );
     });
-    notice(`✔ ${bn(targets.length)} জন শিক্ষার্থীকে WhatsApp পাঠানো হচ্ছে`);
+    notice(`✔ ${bn(targets.length)} জনকে WhatsApp পাঠানো হচ্ছে`);
   };
   // প্যানেল থেকে বেরোলে (Leave & Save / End Class) — স্টুডেন্ট হলে রেটিং পপআপ
   const onPanelExit = (finished) => {
@@ -2671,7 +2679,7 @@ function ClassesView({
     setEditId(k.id);
     setShow(true);
   };
-  const Row = (k, joinable) => {
+  const Row = (k, joinable, isToday = false) => {
     const c = courseById(courses, k.courseId);
     const lec = c.lectures?.[k.lectureNo - 1];
     const kStudents =
@@ -2770,13 +2778,13 @@ function ClassesView({
               <Btn kind="gold">{T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}</Btn>
             </a>
           )}
-          {joinable && isAdm(user) && k.status !== "postponed" && (
+          {isToday && isAdm(user) && k.status !== "postponed" && (
             <Btn
               sm
               kind="soft"
-              onClick={() => notifyStudents(k, c, kStudents)}
+              onClick={() => notifyAll(k, c, kStudents)}
             >
-              📨 স্টুডেন্টকে জানান
+              📨 টিচার ও স্টুডেন্টকে জানান
             </Btn>
           )}
           {isDir(user) && !isJoined && (
@@ -2834,7 +2842,7 @@ function ClassesView({
               {T("আজ কোনো ক্লাস নেই।", "No classes today.")}
             </div>
           )}
-          {today.map((k) => Row(k, user.role === "teacher" || user.role === "student"))}
+          {today.map((k) => Row(k, user.role === "teacher" || user.role === "student", true))}
         </div>
       </Section>
       <Section
