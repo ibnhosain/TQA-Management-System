@@ -3373,6 +3373,17 @@ function PostponedClassesView({ user }) {
   const filtered = month ? classes.filter((k) => (k.date || "").startsWith(month)) : classes;
   const sorted = [...filtered].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
 
+  const remove = (k) => {
+    askConfirm("এই স্থগিত ক্লাসের রেকর্ডটা স্থায়ীভাবে মুছে ফেলবেন?", async () => {
+      try {
+        await api.deleteClass(k.id);
+        await load();
+      } catch (e) {
+        notice("মুছতে ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+      }
+    });
+  };
+
   // ছাত্র অনুযায়ী মাসভিত্তিক এক্সেল এক্সপোর্ট — কেবল পরিচালক (এডমিনও না, অন্য কেউ না)
   const exportExcel = () => {
     if (!sorted.length) return notice("কোনো স্থগিত ক্লাস নেই।");
@@ -3433,6 +3444,7 @@ function PostponedClassesView({ user }) {
             T("উস্তাদ", "Teacher"),
             T("তারিখ", "Date"),
             T("সময়", "Time"),
+            ...(isDir(user) ? [""] : []),
           ]}
           rows={sorted.map((k) => [
             (k.student_names && k.student_names.join(", ")) || "—",
@@ -3440,6 +3452,13 @@ function PostponedClassesView({ user }) {
             k.teacher_name || "—",
             fmtDate(k.date),
             (k.time || "").slice(0, 5),
+            ...(isDir(user)
+              ? [
+                  <Btn key="d" sm kind="danger" onClick={() => remove(k)}>
+                    🗑️ মুছুন
+                  </Btn>,
+                ]
+              : []),
           ])}
           empty={T("কোনো স্থগিত ক্লাস নেই", "No postponed classes")}
         />
