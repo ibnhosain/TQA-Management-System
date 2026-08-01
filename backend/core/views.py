@@ -260,10 +260,12 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_update(self, serializer):
-        # "সম্পন্ন" চিহ্নিত করা (বা ফেরত "আসন্ন" করা) কেবল পরিচালকের এখতিয়ার —
-        # এডমিন ক্লাসের অন্য তথ্য (সময়/জুম লিংক ইত্যাদি) এডিট করতে পারবেন, কিন্তু status না
+        # আজকের ক্লাস "সম্পন্ন" চিহ্নিত করা এডমিন+পরিচালক দুজনেই পারবেন — কিন্তু
+        # বিগত (পুরনো) ক্লাসের স্ট্যাটাস সংশোধন কেবল পরিচালকের এখতিয়ার, এডমিন না
         if "status" in self.request.data and self.request.user.role != "director":
-            raise PermissionDenied("ক্লাসের স্ট্যাটাস (সম্পন্ন/আসন্ন) বদলানো কেবল পরিচালকের এখতিয়ার")
+            is_today = serializer.instance.date == timezone.localtime().date()
+            if not is_today:
+                raise PermissionDenied("আজকের ক্লাস ছাড়া অন্য কোনো ক্লাসের স্ট্যাটাস বদলানো কেবল পরিচালকের এখতিয়ার")
         serializer.save()
 
     @action(detail=False, permission_classes=[IsAuthenticated])

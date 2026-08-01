@@ -2841,8 +2841,10 @@ function ClassesView({
             // "বিগত"-এ চলে যাওয়ার পরও status="upcoming"-ই থেকে যায় — তখন সেটাকে
             // "আসন্ন" (যা এখন আর সত্যি না) না বলে "অসম্পন্ন" দেখানো হচ্ছে
             const incomplete = k.status === "upcoming" && k.date < todayISO();
-            if (!joinable && k.date <= todayISO() && isDir(user) && k.status !== "postponed") {
-              // শুধু পরিচালকই "সম্পন্ন" চিহ্নিত করতে পারবেন, এডমিনও না
+            // আজকের ক্লাস "সম্পন্ন" চিহ্নিত করা এডমিন+পরিচালক দুজনেই পারবেন, কিন্তু
+            // বিগত (পুরনো) ক্লাসের স্ট্যাটাস সংশোধন কেবল পরিচালকের এখতিয়ার
+            const canEditStatus = k.date === todayISO() ? isAdm(user) : isDir(user);
+            if (!joinable && k.date <= todayISO() && canEditStatus && k.status !== "postponed") {
               return (
                 <select
                   style={{ ...S.input, width: "auto", padding: "6px 10px", fontSize: 12.5 }}
