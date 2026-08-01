@@ -239,6 +239,9 @@ export const api = {
   ratings: () => request("/ratings/"),
   rateClass: (d) => request("/ratings/", { method: "POST", body: d }),
   teacherRatingSummary: (teacherId) => request(`/ratings/teacher_summary/?teacher=${teacherId}`),
+  studentRemarks: (studentId) => request(`/remarks/?student=${studentId}`), // টিচারের মন্তব্য — নির্দিষ্ট স্টুডেন্টের (না দিলে নিজের, স্টুডেন্ট হলে)
+  addStudentRemark: (student, text) => request("/remarks/", { method: "POST", body: { student, text } }),
+  myRemarks: () => request("/remarks/"), // স্টুডেন্ট নিজের সব মন্তব্য
   notices: () => request("/notices/"),
   createNotice: (d) => request("/notices/", { method: "POST", body: d }),
   deleteNotice: (id) => request(`/notices/${id}/`, { method: "DELETE" }),

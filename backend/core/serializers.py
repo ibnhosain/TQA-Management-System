@@ -3,8 +3,8 @@ from rest_framework import serializers
 from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
                      Routine, ClassSession, Attendance, Question, Assignment, Exam,
                      Submission, ExamResult, FeePayment, DueMonth, TeacherPayment,
-                     SentReceipt, Admission, LeaveRequest, Rating, Notice, Notification,
-                     WaMessage, LibraryBook)
+                     SentReceipt, Admission, LeaveRequest, Rating, StudentRemark, Notice,
+                     Notification, WaMessage, LibraryBook)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -310,6 +310,15 @@ class RatingAnonymousSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rating
         fields = ["id", "stars", "rated_at", "course"]
+
+
+class StudentRemarkSerializer(serializers.ModelSerializer):
+    teacher_name = serializers.CharField(source="teacher.name_bn", read_only=True)
+
+    class Meta:
+        model = StudentRemark
+        fields = ["id", "student", "teacher", "teacher_name", "text", "created_at"]
+        read_only_fields = ["teacher"]
 
 
 class NoticeSerializer(serializers.ModelSerializer):

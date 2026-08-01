@@ -357,6 +357,18 @@ class Rating(models.Model):
         unique_together = [("session", "student")]
 
 
+class StudentRemark(models.Model):
+    """টিচারের মন্তব্য — স্টুডেন্টের ব্যাপারে (পারফরম্যান্স/আচরণ ইত্যাদি), স্টুডেন্টের
+    পোর্টালে সবচেয়ে সাম্প্রতিকটা দেখায়; একাধিক মন্তব্য জমা থাকে (ইতিহাস হিসেবে)"""
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="remarks_received")
+    teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="remarks_given")
+    text = models.TextField()
+    created_at = models.DateField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+
 # ─────────────────────────── নোটিশ, নোটিফিকেশন, WhatsApp ───────────────────────────
 class Notice(models.Model):
     title = models.CharField(max_length=200)

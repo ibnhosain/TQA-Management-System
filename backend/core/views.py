@@ -14,8 +14,8 @@ from rest_framework.response import Response
 from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
                      Routine, ClassSession, Attendance, Assignment, Exam, Submission,
                      ExamResult, FeePayment, DueMonth, TeacherPayment, SentReceipt,
-                     Admission, LeaveRequest, Rating, Notice, Notification, WaMessage,
-                     LibraryBook)
+                     Admission, LeaveRequest, Rating, StudentRemark, Notice, Notification,
+                     WaMessage, LibraryBook)
 from .serializers import *
 from .permissions import (IsDirector, IsAdminLevel, IsTeacherOrAdminLevel,
                           ReadAllWriteAdmin, ReadAllWriteDirector)
@@ -797,6 +797,31 @@ class RatingViewSet(viewsets.ModelViewSet):
             "count": qs.count(),
             "distribution": {s: qs.filter(stars=s).count() for s in range(5, 0, -1)},
         })
+
+
+class StudentRemarkViewSet(viewsets.ModelViewSet):
+    """টিচারের মন্তব্য — স্টুডেন্টের ব্যাপারে। স্টুডেন্ট শুধু নিজেরটা দেখে, লেখা/মোছা
+    কেবল টিচার-লেভেল (টিচার/এডমিন/পরিচালক)"""
+    serializer_class = StudentRemarkSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        u = self.request.user
+        qs = StudentRemark.objects.select_related("teacher", "student")
+        if u.role == "student":
+            qs = qs.filter(student=u)
+        student_id = self.request.query_params.get("student")
+        if student_id:
+            qs = qs.filter(student_id=student_id)
+        return qs
+
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            return [IsTeacherOrAdminLevel()]
+        return [IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        serializer.save(teacher=self.request.user)
 
 
 # ─────────────────────────── নোটিশ, নোটিফিকেশন, WhatsApp ───────────────────────────
