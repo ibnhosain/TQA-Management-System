@@ -14333,7 +14333,7 @@ function Overview({ db, courses, user, goTo }) {
         )}
         {user.role === "student" && (
           <Stat
-            icon="💳"
+            icon={hasDue ? "⚠️" : "💳"}
             label={T("পেমেন্ট", "Payment")}
             value={
               hasDue ? T("বাকি", "Due") : T("সম্পন্ন ✔", "Paid ✔")
