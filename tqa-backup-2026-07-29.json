@@ -1,0 +1,2449 @@
+{
+  "exported_at": "2026-07-29T02:27:39.270110+00:00",
+  "users": [
+    {
+      "model": "core.user",
+      "pk": 7,
+      "fields": {
+        "password": "pbkdf2_sha256$1000000$9pvaHY5wvMuyquhqj5RDeu$DOdXTT0Zkk2wlxLtu635gVhNR4VokGlfm/Jh0Ocv/Dc=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "choudhurylupa17@gmail.com",
+        "first_name": "",
+        "last_name": "",
+        "email": "choudhurylupa17@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2026-07-25T14:48:55.360Z",
+        "role": "student",
+        "name_bn": "Saif Hossain",
+        "sub_title": "",
+        "phone": "13476970981",
+        "country": "United States",
+        "guardian": "Sajjad Hossain",
+        "monthly_fee": 3500,
+        "monthly_salary": 0,
+        "class_days": [
+          1,
+          6,
+          0
+        ],
+        "plain_password": "choudhurylupa17@gmail.com",
+        "can_fix_cross": false,
+        "groups": [],
+        "user_permissions": []
+      }
+    },
+    {
+      "model": "core.user",
+      "pk": 3,
+      "fields": {
+        "password": "pbkdf2_sha256$1000000$jMJgrRWQm0w19CxWBv36uj$wZlunxQgq6cQ+eoLMNIo9It43oA7W/mbFMmi4pCCno0=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "tarbiyatulquranacademy@gmail.com",
+        "first_name": "",
+        "last_name": "",
+        "email": "",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2026-06-15T00:17:02.573Z",
+        "role": "admin",
+        "name_bn": "আলেমা খাদিজা মাবরুরা",
+        "sub_title": "উস্তাদ/উস্তাদা",
+        "phone": "",
+        "country": "",
+        "guardian": "",
+        "monthly_fee": 0,
+        "monthly_salary": 10000,
+        "class_days": [],
+        "plain_password": "tarbiyatulquranacademy@gmail.com",
+        "can_fix_cross": false,
+        "groups": [],
+        "user_permissions": []
+      }
+    },
+    {
+      "model": "core.user",
+      "pk": 5,
+      "fields": {
+        "password": "pbkdf2_sha256$1000000$3OGAUQ0FRqQJvVaOz0Sl1P$hJimsYc3NCuCPpvIrRXZYBxnnkRRHY2FNZpaOnBWJAE=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "ibnhosain014@gmail.com",
+        "first_name": "",
+        "last_name": "",
+        "email": "",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2026-07-09T04:45:02.223Z",
+        "role": "teacher",
+        "name_bn": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "sub_title": "উস্তাদ/উস্তাদা",
+        "phone": "",
+        "country": "",
+        "guardian": "",
+        "monthly_fee": 0,
+        "monthly_salary": 10000,
+        "class_days": [],
+        "plain_password": "ibnhosain014@gmail.com",
+        "can_fix_cross": false,
+        "groups": [],
+        "user_permissions": []
+      }
+    },
+    {
+      "model": "core.user",
+      "pk": 2,
+      "fields": {
+        "password": "pbkdf2_sha256$1000000$5CnkQQ7H1EZcvr4KGjBDNl$zPy/vR6WGj+V0hh/ryz4iUWSrEnntBQQ3bOnOd2OaAU=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "fahimatasnim12@gmail.com",
+        "first_name": "",
+        "last_name": "",
+        "email": "",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2026-06-15T00:14:40.349Z",
+        "role": "teacher",
+        "name_bn": "আলেমা ফাহিমা তাসনীম",
+        "sub_title": "উস্তাদ/উস্তাদা",
+        "phone": "",
+        "country": "",
+        "guardian": "",
+        "monthly_fee": 0,
+        "monthly_salary": 10000,
+        "class_days": [],
+        "plain_password": "fahimatasnim12@gmail.com",
+        "can_fix_cross": false,
+        "groups": [],
+        "user_permissions": []
+      }
+    },
+    {
+      "model": "core.user",
+      "pk": 6,
+      "fields": {
+        "password": "pbkdf2_sha256$1000000$MQCWp0qswxgkT7SC2dEXb0$IpG1WxTj6potMT0lG1mm+diTGg3Ve7iXoEgE9+W25HU=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "nihalnaushadyt@gmail.com",
+        "first_name": "",
+        "last_name": "",
+        "email": "nihalnaushadyt@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2026-07-09T16:20:21.721Z",
+        "role": "student",
+        "name_bn": "Naushad Nihal",
+        "sub_title": "নতুন স্টুডেন্ট",
+        "phone": "19292756199",
+        "country": "United States",
+        "guardian": "Shohel",
+        "monthly_fee": 7000,
+        "monthly_salary": 0,
+        "class_days": [
+          4,
+          3,
+          2,
+          1,
+          0,
+          6
+        ],
+        "plain_password": "nihalnaushadyt@gmail.com",
+        "can_fix_cross": false,
+        "groups": [],
+        "user_permissions": []
+      }
+    },
+    {
+      "model": "core.user",
+      "pk": 8,
+      "fields": {
+        "password": "pbkdf2_sha256$1000000$vACU5XRiMlucw1YTKKMAwv$ib6aXFVcGBOvbY0DbyJrt/VDUSaDlzLu9aasI6yQa+M=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "sarowarc09@gmail.com",
+        "first_name": "",
+        "last_name": "",
+        "email": "sarowarc09@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2026-07-26T14:46:43.370Z",
+        "role": "student",
+        "name_bn": "Sarowar Chowdhury",
+        "sub_title": "",
+        "phone": "117742758612",
+        "country": "United States",
+        "guardian": "Md Chowdhury",
+        "monthly_fee": 3500,
+        "monthly_salary": 0,
+        "class_days": [
+          0,
+          1,
+          2
+        ],
+        "plain_password": "sarowarc09@gmail.com",
+        "can_fix_cross": false,
+        "groups": [],
+        "user_permissions": []
+      }
+    }
+  ],
+  "courses": [
+    {
+      "model": "core.course",
+      "pk": 6,
+      "fields": {
+        "name": "Noorani Qaida",
+        "teacher": 3,
+        "color": "#c9962a",
+        "is_active": true,
+        "students": [],
+        "books": [
+          9,
+          11,
+          12,
+          13,
+          14,
+          15,
+          19,
+          20,
+          21
+        ]
+      }
+    },
+    {
+      "model": "core.course",
+      "pk": 7,
+      "fields": {
+        "name": "Pre-Quran Reading",
+        "teacher": 5,
+        "color": "#2e6fa3",
+        "is_active": true,
+        "students": [],
+        "books": [
+          21,
+          22,
+          23
+        ]
+      }
+    },
+    {
+      "model": "core.course",
+      "pk": 9,
+      "fields": {
+        "name": "Quran with Tajweed",
+        "teacher": 5,
+        "color": "#0f766e",
+        "is_active": true,
+        "students": [],
+        "books": [
+          22,
+          23,
+          24,
+          25
+        ]
+      }
+    },
+    {
+      "model": "core.course",
+      "pk": 8,
+      "fields": {
+        "name": "Quran Reading",
+        "teacher": 5,
+        "color": "#0f766e",
+        "is_active": true,
+        "students": [
+          6
+        ],
+        "books": [
+          22,
+          23,
+          24,
+          25
+        ]
+      }
+    },
+    {
+      "model": "core.course",
+      "pk": 5,
+      "fields": {
+        "name": "Easy Noorani Qaida",
+        "teacher": 2,
+        "color": "#1a5c3a",
+        "is_active": true,
+        "students": [
+          7
+        ],
+        "books": [
+          6,
+          8,
+          9,
+          11,
+          12,
+          16,
+          18
+        ]
+      }
+    },
+    {
+      "model": "core.course",
+      "pk": 10,
+      "fields": {
+        "name": "Hifz Support (Memorisation)",
+        "teacher": 5,
+        "color": "#c2410c",
+        "is_active": true,
+        "students": [
+          8
+        ],
+        "books": [
+          22,
+          23,
+          24,
+          25
+        ]
+      }
+    }
+  ],
+  "academic_books": [
+    {
+      "model": "core.academicbook",
+      "pk": 5,
+      "fields": {
+        "name": "Nuzhat Ul qari",
+        "file": "https://res.cloudinary.com/dsae9ko1u/raw/upload/v1783436381/tqa-books/nujhatul-kari_egi4v0.pdf",
+        "created_at": "2026-07-07"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 6,
+      "fields": {
+        "name": "Qaida for Beginners",
+        "file": "https://drive.google.com/file/d/1jGgbwTMW0-O9pONlfdHlFTk1gz1ZGZFs/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 8,
+      "fields": {
+        "name": "Aqeedah & Fiqh for Beginners",
+        "file": "https://drive.google.com/file/d/18JbpCwTG38zKaUcHCklBNCKGOZlUfH9w/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 9,
+      "fields": {
+        "name": "Akhlaq for Beginners and Qaida Course",
+        "file": "https://drive.google.com/file/d/1LSklKw22VmBXXaoOH-va1s8vjXmOE9xs/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 11,
+      "fields": {
+        "name": "Dua and Manners for Beginners & Qaida Course",
+        "file": "https://drive.google.com/file/d/17du3F9wybZTXxnyEUIWlAAhGkqZDltBO/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 24,
+      "fields": {
+        "name": "Aqeedah and Fiqh (Ages 9-12)",
+        "file": "https://drive.google.com/file/d/1ZVde_Iyfu4OdizYewH4uBshlInK2OlH_/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 12,
+      "fields": {
+        "name": "Prophet Stories  for Beginners and Qaida Course",
+        "file": "https://drive.google.com/drive/folders/1giuMN9GBF1ZsbP5LF6T9v27NG8D4FydP?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 13,
+      "fields": {
+        "name": "Noorani Qaida for the Qaida Course",
+        "file": "https://drive.google.com/file/d/125_irVXRYQnlctbGtqlG_iFaKzZLEupx/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 14,
+      "fields": {
+        "name": "Aqeedah & Fiqh for the Qaida Course",
+        "file": "https://drive.google.com/file/d/1W6fX9Xm39Pe-U4IYbse94Y19ZofsUxf0/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 15,
+      "fields": {
+        "name": "Dua and Manners for the Qaida Course",
+        "file": "https://drive.google.com/drive/folders/1SgaCsoHjzT27vIj_pScqXAtYrgBAV7oI?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 16,
+      "fields": {
+        "name": "Surah Memorization (Beginners)",
+        "file": "https://drive.google.com/file/d/1-6vcZZz1ClagopX2N-jil-nyOAnrGk7H/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 18,
+      "fields": {
+        "name": "Hadith Memorization (Beginners)",
+        "file": "https://drive.google.com/file/d/1G1WKy8tqAHTAKT_xp90IEIgeJeH15yTL/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 19,
+      "fields": {
+        "name": "Surah Memorization for the Qaida Course",
+        "file": "https://drive.google.com/file/d/1MiBDHMhcv4_MhLGs9Z0Q4I6_z2NnnCHB/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 20,
+      "fields": {
+        "name": "Hadith Memorization for the Qaida Course",
+        "file": "https://drive.google.com/file/d/1WYzMyxFvOFkxuibH2_wMo1xvBE8C6pmL/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 21,
+      "fields": {
+        "name": "Tajweed for the Qaida Course",
+        "file": "https://drive.google.com/file/d/1qTbvlfUEou7SkNejJ9kH5ODSaeVF_Dl1/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 22,
+      "fields": {
+        "name": "Hadith with Stories",
+        "file": "https://drive.google.com/file/d/16jxnqSMElth02Mtv9si2NOAMpFDE3A6v/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 23,
+      "fields": {
+        "name": "Tajweed and Makhraj",
+        "file": "https://drive.google.com/drive/folders/1cW01Y3Ulia5o8ilSDuC7DVJIN6geVwe7?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    },
+    {
+      "model": "core.academicbook",
+      "pk": 25,
+      "fields": {
+        "name": "Aqeedah and Fiqh (Ages 12-17)",
+        "file": "https://drive.google.com/file/d/1V7OCmpXIw8FaPqKZ7jJxBWTf4iHUonaE/view?usp=sharing",
+        "created_at": "2026-07-09"
+      }
+    }
+  ],
+  "library_books": [],
+  "admissions": [
+    {
+      "model": "core.admission",
+      "pk": 1,
+      "fields": {
+        "kind": "trial",
+        "name": "Faridur Rahman",
+        "age": 7,
+        "guardian": "Faridur Rahman",
+        "country": "United States (USA)",
+        "contact": "01402499027",
+        "email": "",
+        "course_name": "Noorani Qaida",
+        "preferred_time": "usa",
+        "message": "",
+        "payment_method": "",
+        "trx_id": "",
+        "screenshot": "",
+        "replied": true,
+        "status": "rejected",
+        "forwarded_to_director": false,
+        "created_student": null,
+        "applied_at": "2026-06-22"
+      }
+    },
+    {
+      "model": "core.admission",
+      "pk": 2,
+      "fields": {
+        "kind": "enroll",
+        "name": "Faridur Rahman",
+        "age": 7,
+        "guardian": "asraqf",
+        "country": "United States (USA)",
+        "contact": "01402499027",
+        "email": "",
+        "course_name": "Easy Noorani Qaida",
+        "preferred_time": "",
+        "message": "",
+        "payment_method": "Islami Bank",
+        "trx_id": "utr5475ryt",
+        "screenshot": "",
+        "replied": false,
+        "status": "rejected",
+        "forwarded_to_director": false,
+        "created_student": null,
+        "applied_at": "2026-06-23"
+      }
+    },
+    {
+      "model": "core.admission",
+      "pk": 3,
+      "fields": {
+        "kind": "enroll",
+        "name": "আল-হিকমাহ্ ইনস্টিটিউট",
+        "age": 7,
+        "guardian": "asraqf",
+        "country": "Canada",
+        "contact": "01402499027",
+        "email": "",
+        "course_name": "Easy Noorani Qaida",
+        "preferred_time": "usa",
+        "message": "",
+        "payment_method": "Islami Bank",
+        "trx_id": "utr5475ryt",
+        "screenshot": "",
+        "replied": false,
+        "status": "rejected",
+        "forwarded_to_director": false,
+        "created_student": null,
+        "applied_at": "2026-06-27"
+      }
+    },
+    {
+      "model": "core.admission",
+      "pk": 5,
+      "fields": {
+        "kind": "contact",
+        "name": "David Pavel",
+        "age": null,
+        "guardian": "",
+        "country": "United States (USA)",
+        "contact": "david@domainlions.net",
+        "email": "david@domainlions.net",
+        "course_name": "",
+        "preferred_time": "",
+        "message": "To whom it may concern at tarbiyatulquran.org,\n\nWe are writing to let you know that tarbiyatulquran.com is currently on the market. As the owner of tarbiyatulquran.org, we thought you might be interested in acquiring tarbiyatulquran.com to complete your online presence.\n\nDetails about tarbiyatulquran.com (including how to submit an offer) are available here:\n\nhttps://domainlions.net/domains/tarbiyatulquran.com?id=oyak\n\nIf you are not interested, please consider this a one-time notification.\n \nKind regards,\nDavid Pavel\nDomain Acquisition Team, Domain Lions LLC",
+        "payment_method": "",
+        "trx_id": "",
+        "screenshot": "",
+        "replied": true,
+        "status": "rejected",
+        "forwarded_to_director": false,
+        "created_student": null,
+        "applied_at": "2026-06-30"
+      }
+    },
+    {
+      "model": "core.admission",
+      "pk": 4,
+      "fields": {
+        "kind": "trial",
+        "name": "Faridur Rahman",
+        "age": 7,
+        "guardian": "Faridur Rahman",
+        "country": "France",
+        "contact": "01402499027",
+        "email": "",
+        "course_name": "Noorani Qaida (Beginner)",
+        "preferred_time": "usa",
+        "message": "",
+        "payment_method": "",
+        "trx_id": "",
+        "screenshot": "",
+        "replied": true,
+        "status": "rejected",
+        "forwarded_to_director": false,
+        "created_student": null,
+        "applied_at": "2026-06-27"
+      }
+    },
+    {
+      "model": "core.admission",
+      "pk": 8,
+      "fields": {
+        "kind": "enroll",
+        "name": "Saif Hossain",
+        "age": 5,
+        "guardian": "Lupa Choudhury",
+        "country": "United States (USA)",
+        "contact": "3476970981",
+        "email": "",
+        "course_name": "Easy Noorani Qaida",
+        "preferred_time": "Friday, Saturday and Sunday at 6pm",
+        "message": "",
+        "payment_method": "bKash",
+        "trx_id": "R31050795320",
+        "screenshot": "",
+        "replied": false,
+        "status": "accepted",
+        "forwarded_to_director": false,
+        "created_student": null,
+        "applied_at": "2026-07-29"
+      }
+    },
+    {
+      "model": "core.admission",
+      "pk": 6,
+      "fields": {
+        "kind": "trial",
+        "name": "MH Mahdi",
+        "age": null,
+        "guardian": "MH Mahdi",
+        "country": "অন্যান্য",
+        "contact": "০১৩২২০৩৭৫৬৩",
+        "email": "",
+        "course_name": "সহজ নুরানী কায়দা",
+        "preferred_time": "৮টা থেকে ১১টা",
+        "message": "হ্যা",
+        "payment_method": "",
+        "trx_id": "",
+        "screenshot": "",
+        "replied": true,
+        "status": "rejected",
+        "forwarded_to_director": false,
+        "created_student": null,
+        "applied_at": "2026-07-17"
+      }
+    },
+    {
+      "model": "core.admission",
+      "pk": 7,
+      "fields": {
+        "kind": "trial",
+        "name": "mustakim",
+        "age": 23,
+        "guardian": "mustakim",
+        "country": "Canada",
+        "contact": "01402499027",
+        "email": "",
+        "course_name": "Hifz Support",
+        "preferred_time": "usa",
+        "message": "ami kicho pari na new kaida suro korbo",
+        "payment_method": "",
+        "trx_id": "",
+        "screenshot": "",
+        "replied": true,
+        "status": "rejected",
+        "forwarded_to_director": false,
+        "created_student": null,
+        "applied_at": "2026-07-17"
+      }
+    }
+  ],
+  "fee_payments": [],
+  "due_months": [
+    {
+      "model": "core.duemonth",
+      "pk": 2,
+      "fields": {
+        "user": 3,
+        "month_label": "জুলাই ২০২৬"
+      }
+    },
+    {
+      "model": "core.duemonth",
+      "pk": 4,
+      "fields": {
+        "user": 6,
+        "month_label": "জুলাই ২০২৬"
+      }
+    },
+    {
+      "model": "core.duemonth",
+      "pk": 6,
+      "fields": {
+        "user": 7,
+        "month_label": "জুলাই ২০২৬"
+      }
+    },
+    {
+      "model": "core.duemonth",
+      "pk": 7,
+      "fields": {
+        "user": 8,
+        "month_label": "জুলাই ২০২৬"
+      }
+    },
+    {
+      "model": "core.duemonth",
+      "pk": 11,
+      "fields": {
+        "user": 5,
+        "month_label": "জুলাই ২০২৬"
+      }
+    },
+    {
+      "model": "core.duemonth",
+      "pk": 12,
+      "fields": {
+        "user": 2,
+        "month_label": "জুলাই ২০২৬"
+      }
+    }
+  ],
+  "teacher_payments": [
+    {
+      "model": "core.teacherpayment",
+      "pk": 1,
+      "fields": {
+        "teacher": 5,
+        "amount": 10000,
+        "month_label": "জুলাই ২০২৬",
+        "method": "ব্যাংক",
+        "paid_at": "2026-07-29"
+      }
+    },
+    {
+      "model": "core.teacherpayment",
+      "pk": 2,
+      "fields": {
+        "teacher": 2,
+        "amount": 10000,
+        "month_label": "জুলাই ২০২৬",
+        "method": "ব্যাংক",
+        "paid_at": "2026-07-29"
+      }
+    }
+  ],
+  "sent_receipts": [
+    {
+      "model": "core.sentreceipt",
+      "pk": 1,
+      "fields": {
+        "to_user": 5,
+        "kind": "বেতন পরিশোধ ভাউচার",
+        "month_label": "জুলাই ২০২৬",
+        "amount": 10000,
+        "method": "ব্যাংক",
+        "sent_by": 1,
+        "sent_at": "2026-07-29"
+      }
+    },
+    {
+      "model": "core.sentreceipt",
+      "pk": 2,
+      "fields": {
+        "to_user": 5,
+        "kind": "বেতন পরিশোধ ভাউচার",
+        "month_label": "জুলাই ২০২৬",
+        "amount": 10000,
+        "method": "ব্যাংক",
+        "sent_by": 1,
+        "sent_at": "2026-07-29"
+      }
+    },
+    {
+      "model": "core.sentreceipt",
+      "pk": 3,
+      "fields": {
+        "to_user": 5,
+        "kind": "বেতন পরিশোধ ভাউচার",
+        "month_label": "জুলাই ২০২৬",
+        "amount": 10000,
+        "method": "ব্যাংক",
+        "sent_by": 1,
+        "sent_at": "2026-07-29"
+      }
+    },
+    {
+      "model": "core.sentreceipt",
+      "pk": 4,
+      "fields": {
+        "to_user": 5,
+        "kind": "বেতন পরিশোধ ভাউচার",
+        "month_label": "জুলাই ২০২৬",
+        "amount": 10000,
+        "method": "ব্যাংক",
+        "sent_by": 1,
+        "sent_at": "2026-07-29"
+      }
+    },
+    {
+      "model": "core.sentreceipt",
+      "pk": 5,
+      "fields": {
+        "to_user": 2,
+        "kind": "বেতন পরিশোধ ভাউচার",
+        "month_label": "জুলাই ২০২৬",
+        "amount": 10000,
+        "method": "ব্যাংক",
+        "sent_by": 1,
+        "sent_at": "2026-07-29"
+      }
+    },
+    {
+      "model": "core.sentreceipt",
+      "pk": 6,
+      "fields": {
+        "to_user": 3,
+        "kind": "বেতন পরিশোধ ভাউচার",
+        "month_label": "জুলাই ২০২৬",
+        "amount": 10000,
+        "method": "ব্যাংক",
+        "sent_by": 1,
+        "sent_at": "2026-07-29"
+      }
+    },
+    {
+      "model": "core.sentreceipt",
+      "pk": 7,
+      "fields": {
+        "to_user": 5,
+        "kind": "বেতন পরিশোধ ভাউচার",
+        "month_label": "জুলাই ২০২৬",
+        "amount": 10000,
+        "method": "ব্যাংক",
+        "sent_by": 1,
+        "sent_at": "2026-07-29"
+      }
+    },
+    {
+      "model": "core.sentreceipt",
+      "pk": 8,
+      "fields": {
+        "to_user": 5,
+        "kind": "বেতন পরিশোধ ভাউচার",
+        "month_label": "জুলাই ২০২৬",
+        "amount": 10000,
+        "method": "ব্যাংক",
+        "sent_by": 1,
+        "sent_at": "2026-07-29"
+      }
+    },
+    {
+      "model": "core.sentreceipt",
+      "pk": 9,
+      "fields": {
+        "to_user": 5,
+        "kind": "বেতন পরিশোধ ভাউচার",
+        "month_label": "জুলাই ২০২৬",
+        "amount": 10000,
+        "method": "ব্যাংক",
+        "sent_by": 1,
+        "sent_at": "2026-07-29"
+      }
+    },
+    {
+      "model": "core.sentreceipt",
+      "pk": 10,
+      "fields": {
+        "to_user": 5,
+        "kind": "বেতন পরিশোধ ভাউচার",
+        "month_label": "জুলাই ২০২৬",
+        "amount": 10000,
+        "method": "ব্যাংক",
+        "sent_by": 1,
+        "sent_at": "2026-07-29"
+      }
+    },
+    {
+      "model": "core.sentreceipt",
+      "pk": 11,
+      "fields": {
+        "to_user": 2,
+        "kind": "বেতন পরিশোধ ভাউচার",
+        "month_label": "জুলাই ২০২৬",
+        "amount": 10000,
+        "method": "ব্যাংক",
+        "sent_by": 1,
+        "sent_at": "2026-07-29"
+      }
+    }
+  ],
+  "notices": [],
+  "leave_requests": [],
+  "assignments": [],
+  "exams": [],
+  "exam_results": [],
+  "class_sessions": [
+    {
+      "model": "core.classsession",
+      "pk": 25,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": null,
+        "date": "2026-07-14",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": true,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 7,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-14",
+        "time": "22:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "postponed",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 1,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-14",
+        "time": "22:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "postponed",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 20,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-15",
+        "time": "17:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://zoom.us/j/8801402499027",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "postponed",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 26,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": null,
+        "date": "2026-07-15",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": true,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 38,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": null,
+        "date": "2026-07-15",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": true,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 32,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-15",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": true,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 14,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-15",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "postponed",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 2,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-15",
+        "time": "22:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": true,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 8,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-15",
+        "time": "22:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "postponed",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 21,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-16",
+        "time": "17:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://zoom.us/j/8801402499027",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "postponed",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 33,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-16",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": true,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 39,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": null,
+        "date": "2026-07-16",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": true,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 15,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-16",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "postponed",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 27,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": null,
+        "date": "2026-07-16",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": true,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 9,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-16",
+        "time": "22:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "postponed",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 3,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-16",
+        "time": "22:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": true,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 22,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-18",
+        "time": "17:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://zoom.us/j/8801402499027",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": true,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 40,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": null,
+        "date": "2026-07-18",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 28,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": null,
+        "date": "2026-07-18",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 34,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-18",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 16,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-18",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 4,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-18",
+        "time": "22:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 10,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-18",
+        "time": "22:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 23,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-19",
+        "time": "17:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://zoom.us/j/8801402499027",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 17,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-19",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 29,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": null,
+        "date": "2026-07-19",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 41,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": null,
+        "date": "2026-07-19",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 35,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-19",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 11,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-19",
+        "time": "22:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 5,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-19",
+        "time": "22:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 24,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-20",
+        "time": "17:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://zoom.us/j/8801402499027",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 18,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-20",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 42,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": null,
+        "date": "2026-07-20",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 36,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-20",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 30,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": null,
+        "date": "2026-07-20",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 6,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-20",
+        "time": "22:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 12,
+      "fields": {
+        "course": 8,
+        "teacher": 2,
+        "routine": null,
+        "date": "2026-07-20",
+        "time": "22:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 43,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-21",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 44,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-22",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 45,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-23",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 46,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-25",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 54,
+      "fields": {
+        "course": 10,
+        "teacher": 5,
+        "routine": null,
+        "date": "2026-07-26",
+        "time": "20:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          8
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 47,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-26",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 56,
+      "fields": {
+        "course": 10,
+        "teacher": 5,
+        "routine": 9,
+        "date": "2026-07-27",
+        "time": "17:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          8
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 48,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-27",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 57,
+      "fields": {
+        "course": 10,
+        "teacher": 5,
+        "routine": 9,
+        "date": "2026-07-28",
+        "time": "17:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          8
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 49,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-28",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 50,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-29",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 51,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-07-30",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 68,
+      "fields": {
+        "course": 5,
+        "teacher": 2,
+        "routine": 12,
+        "date": "2026-08-01",
+        "time": "04:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/7228483809?pwd=8XaGaRNQvsx4LI9cwu3SQvl58zgHaW.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          7
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 53,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-08-01",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 69,
+      "fields": {
+        "course": 5,
+        "teacher": 2,
+        "routine": 12,
+        "date": "2026-08-02",
+        "time": "04:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/7228483809?pwd=8XaGaRNQvsx4LI9cwu3SQvl58zgHaW.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          7
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 59,
+      "fields": {
+        "course": 10,
+        "teacher": 5,
+        "routine": 9,
+        "date": "2026-08-02",
+        "time": "17:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          8
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 58,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-08-02",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 72,
+      "fields": {
+        "course": 5,
+        "teacher": 2,
+        "routine": 12,
+        "date": "2026-08-03",
+        "time": "04:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/7228483809?pwd=8XaGaRNQvsx4LI9cwu3SQvl58zgHaW.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          7
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 71,
+      "fields": {
+        "course": 10,
+        "teacher": 5,
+        "routine": 9,
+        "date": "2026-08-03",
+        "time": "17:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          8
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 70,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-08-03",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 74,
+      "fields": {
+        "course": 10,
+        "teacher": 5,
+        "routine": 9,
+        "date": "2026-08-04",
+        "time": "17:00:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          8
+        ]
+      }
+    },
+    {
+      "model": "core.classsession",
+      "pk": 73,
+      "fields": {
+        "course": 8,
+        "teacher": 5,
+        "routine": 6,
+        "date": "2026-08-04",
+        "time": "21:30:00",
+        "duration_min": 60,
+        "zoom_link": "https://us05web.zoom.us/j/6330452315?pwd=pDZNC63So9V51811ZcbyRTw94mV5F4.1",
+        "lecture_no": 1,
+        "kind": "regular",
+        "guardian_requirement": "",
+        "status": "upcoming",
+        "reminder_sent": false,
+        "students": [
+          6
+        ]
+      }
+    }
+  ],
+  "attendance": [
+    {
+      "model": "core.attendance",
+      "pk": 7,
+      "fields": {
+        "session": 54,
+        "user": 8,
+        "course_name": "Hifz Support (Memorisation)",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-26",
+        "joined_at": "2026-07-26T14:57:30.553Z",
+        "left_at": null,
+        "minutes": 0,
+        "segment_start": "2026-07-26T14:57:31.187Z",
+        "marked_present": true
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 10,
+      "fields": {
+        "session": 56,
+        "user": 5,
+        "course_name": "Hifz Support (Memorisation)",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-27",
+        "joined_at": "2026-07-27T14:36:05.154Z",
+        "left_at": "2026-07-27T15:06:25.368Z",
+        "minutes": 6,
+        "segment_start": "2026-07-27T15:06:29.871Z",
+        "marked_present": false
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 12,
+      "fields": {
+        "session": 48,
+        "user": 5,
+        "course_name": "Quran Reading",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-27",
+        "joined_at": "2026-07-27T15:32:00.298Z",
+        "left_at": null,
+        "minutes": 0,
+        "segment_start": "2026-07-27T15:32:00.990Z",
+        "marked_present": false
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 3,
+      "fields": {
+        "session": 47,
+        "user": 6,
+        "course_name": "Quran Reading",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-26",
+        "joined_at": "2026-07-26T10:37:04.024Z",
+        "left_at": "2026-07-26T12:11:36.493Z",
+        "minutes": 0,
+        "segment_start": "2026-07-26T15:44:35.380Z",
+        "marked_present": true
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 11,
+      "fields": {
+        "session": 56,
+        "user": 8,
+        "course_name": "Hifz Support (Memorisation)",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-27",
+        "joined_at": "2026-07-27T14:38:02.866Z",
+        "left_at": null,
+        "minutes": 0,
+        "segment_start": "2026-07-27T14:38:03.511Z",
+        "marked_present": true
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 2,
+      "fields": {
+        "session": 46,
+        "user": 6,
+        "course_name": "Quran Reading",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-25",
+        "joined_at": "2026-07-25T09:04:09.828Z",
+        "left_at": "2026-07-25T09:04:29.087Z",
+        "minutes": 0,
+        "segment_start": null,
+        "marked_present": false
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 1,
+      "fields": {
+        "session": 46,
+        "user": 1,
+        "course_name": "Quran Reading",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-25",
+        "joined_at": "2026-07-25T06:19:57.269Z",
+        "left_at": "2026-07-25T14:41:18.092Z",
+        "minutes": 0,
+        "segment_start": null,
+        "marked_present": false
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 17,
+      "fields": {
+        "session": 48,
+        "user": 6,
+        "course_name": "Quran Reading",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-27",
+        "joined_at": "2026-07-29T01:39:33.755Z",
+        "left_at": null,
+        "minutes": 0,
+        "segment_start": null,
+        "marked_present": true
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 14,
+      "fields": {
+        "session": 57,
+        "user": 8,
+        "course_name": "Hifz Support (Memorisation)",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-28",
+        "joined_at": "2026-07-28T14:37:00.534Z",
+        "left_at": null,
+        "minutes": 0,
+        "segment_start": "2026-07-28T14:37:01.200Z",
+        "marked_present": true
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 16,
+      "fields": {
+        "session": 49,
+        "user": 6,
+        "course_name": "Quran Reading",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-28",
+        "joined_at": "2026-07-28T15:42:12.787Z",
+        "left_at": null,
+        "minutes": 1,
+        "segment_start": "2026-07-28T15:42:13.457Z",
+        "marked_present": true
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 8,
+      "fields": {
+        "session": 54,
+        "user": 5,
+        "course_name": "Hifz Support (Memorisation)",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-26",
+        "joined_at": "2026-07-26T15:01:08.818Z",
+        "left_at": "2026-07-26T15:30:14.610Z",
+        "minutes": 21,
+        "segment_start": "2026-07-26T15:30:16.359Z",
+        "marked_present": false
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 4,
+      "fields": {
+        "session": 47,
+        "user": 1,
+        "course_name": "Quran Reading",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-26",
+        "joined_at": "2026-07-26T11:42:47.723Z",
+        "left_at": "2026-07-26T11:51:27.235Z",
+        "minutes": 0,
+        "segment_start": null,
+        "marked_present": false
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 9,
+      "fields": {
+        "session": 47,
+        "user": 5,
+        "course_name": "Quran Reading",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-26",
+        "joined_at": "2026-07-26T15:45:36.144Z",
+        "left_at": "2026-07-26T16:16:39.766Z",
+        "minutes": 28,
+        "segment_start": null,
+        "marked_present": false
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 5,
+      "fields": {
+        "session": null,
+        "user": 1,
+        "course_name": "Hifz Support (Memorisation)",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-26",
+        "joined_at": "2026-07-26T14:53:34.138Z",
+        "left_at": null,
+        "minutes": 0,
+        "segment_start": "2026-07-26T14:53:34.814Z",
+        "marked_present": false
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 6,
+      "fields": {
+        "session": 54,
+        "user": 1,
+        "course_name": "Hifz Support (Memorisation)",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-26",
+        "joined_at": "2026-07-26T14:55:30.258Z",
+        "left_at": null,
+        "minutes": 0,
+        "segment_start": "2026-07-26T14:55:30.926Z",
+        "marked_present": false
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 13,
+      "fields": {
+        "session": 57,
+        "user": 5,
+        "course_name": "Hifz Support (Memorisation)",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-28",
+        "joined_at": "2026-07-28T14:29:34.827Z",
+        "left_at": "2026-07-28T15:29:07.700Z",
+        "minutes": 7,
+        "segment_start": null,
+        "marked_present": false
+      }
+    },
+    {
+      "model": "core.attendance",
+      "pk": 15,
+      "fields": {
+        "session": 49,
+        "user": 5,
+        "course_name": "Quran Reading",
+        "teacher_name": "হাফেজ মাওলনা  মুফতী ফরীদুর রহমান",
+        "teacher_id": 5,
+        "class_date": "2026-07-28",
+        "joined_at": "2026-07-28T15:30:42.221Z",
+        "left_at": null,
+        "minutes": 0,
+        "segment_start": "2026-07-28T15:30:42.904Z",
+        "marked_present": false
+      }
+    }
+  ],
+  "ratings": []
+}
