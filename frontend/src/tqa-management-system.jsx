@@ -3065,18 +3065,24 @@ function InstantClassView({ courses, user }) {
     api.allStudents().then((d) => setStudents(d.map(adaptPerson))).catch(() => {});
   }, []);
 
-  const blankForm = () => ({
-    kind: "মেকআপ ক্লাস",
-    courseId: courses[0]?.id,
-    teacherId: courses[0]?.teacherId,
-    studentIds: [],
-    date: todayISO(),
-    time: "17:00",
-    dur: 60,
-    lectureNo: 1,
-    zoom: "https://zoom.us/j/",
-    req: "",
-  });
+  // ইমার্জেন্সি ক্লাসের জন্য এই পেজ — তাই ডিফল্ট সময় এখন-ই (ঠিক করে দেওয়ার দরকার
+  // নেই), আজকের তারিখেই তৈরি হলে জয়েন অপশন সাথে সাথেই পোর্টালে চলে যায় —
+  // শিডিউল করা সময়ের জন্য অপেক্ষা করতে হয় না
+  const blankForm = () => {
+    const now = new Date();
+    return {
+      kind: "মেকআপ ক্লাস",
+      courseId: courses[0]?.id,
+      teacherId: courses[0]?.teacherId,
+      studentIds: [],
+      date: todayISO(),
+      time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+      dur: 60,
+      lectureNo: 1,
+      zoom: "https://zoom.us/j/",
+      req: "",
+    };
+  };
   const [f, setF] = useState(blankForm);
   const [previewZone, setPreviewZone] = useState("");
   const [busy, setBusy] = useState(false);
@@ -3129,7 +3135,7 @@ function InstantClassView({ courses, user }) {
   return (
     <Section
       title="⚡ ইনস্ট্যান্ট ক্লাস"
-      sub="যখন-তখন যেকোনো ক্লাস (মেকআপ/সাপোর্ট/রিকভারি/ট্রায়াল/নিয়মিত) সাথে সাথে তৈরি করুন — তারিখ-সময় অনুযায়ী টিচার ও স্টুডেন্টের পোর্টালে জয়েন অপশন অটো চলে যাবে"
+      sub="ইমার্জেন্সি/হঠাৎ প্রয়োজনীয় ক্লাসের জন্য — আজকের তারিখে তৈরি করলে অপেক্ষা করতে হয় না, তৈরি হওয়ার সাথে সাথেই টিচার ও স্টুডেন্টের পোর্টালে জয়েন অপশন চলে যায়"
     >
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
