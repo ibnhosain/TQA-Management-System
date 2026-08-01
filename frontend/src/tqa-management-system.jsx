@@ -14176,6 +14176,8 @@ function Overview({ db, courses, user, goTo }) {
   const [assignmentsCount, setAssignmentsCount] = useState(0);
   const [teacherRating, setTeacherRating] = useState({ avg: 0, count: 0 });
   const [recentNotices, setRecentNotices] = useState(db.notices || []);
+  const [completedThisMonth, setCompletedThisMonth] = useState(0);
+  const [hasDue, setHasDue] = useState(false);
   useEffect(() => {
     let cancelled = false;
     api.todayClasses().then((d) => !cancelled && setTodayClasses(d)).catch(() => {});
@@ -14210,6 +14212,23 @@ function Overview({ db, courses, user, goTo }) {
               d.filter((a) => courseById(courses, a.course || a.courseId).id).length,
             ),
         )
+        .catch(() => {});
+    }
+    if (user.role === "student") {
+      const ym = todayISO().slice(0, 7); // "YYYY-MM" — চলতি মাস
+      api
+        .attendanceReport()
+        .then(
+          (d) =>
+            !cancelled &&
+            setCompletedThisMonth(
+              d.filter((a) => a.present && (a.class_date || "").startsWith(ym)).length,
+            ),
+        )
+        .catch(() => {});
+      api
+        .myDues()
+        .then((d) => !cancelled && setHasDue(d.length > 0))
         .catch(() => {});
     }
     return () => {
@@ -14301,6 +14320,27 @@ function Overview({ db, courses, user, goTo }) {
           value={T(bn(courses.length), courses.length)}
           accent={C.blue}
         />
+        {user.role === "student" && (
+          <Stat
+            icon="✅"
+            label={T(
+              `${MONTHS_BN_FULL[new Date().getMonth()]}-এ সম্পন্ন ক্লাস`,
+              `Classes Completed in ${MONTHS_EN_FULL[new Date().getMonth()]}`,
+            )}
+            value={T(bn(completedThisMonth), completedThisMonth)}
+            accent={C.emerald}
+          />
+        )}
+        {user.role === "student" && (
+          <Stat
+            icon="💳"
+            label={T("পেমেন্ট", "Payment")}
+            value={
+              hasDue ? T("বাকি", "Due") : T("সম্পন্ন ✔", "Paid ✔")
+            }
+            accent={hasDue ? C.red : C.emerald}
+          />
+        )}
         {isAdm(user) && (
           <Stat
             icon="💰"
