@@ -2586,6 +2586,29 @@ function ClassesView({
     }
     setDb((d) => ({ ...d, classes: d.classes.filter((k) => k.id !== id) }));
   };
+  // পরিচালক/এডমিন কেবল আজকের ক্লাসকেই "সম্পন্ন" চিহ্নিত করতে পারবেন — চিহ্নিত হলে
+  // ক্লাসটা "আজকের ক্লাস" তালিকা থেকে সরে "বিগত"-এ চলে যাবে (today ফিল্টার status!=="done")
+  const setStatus = async (k, status) => {
+    try {
+      await api.editClass(k.id, { status });
+      await loadClasses();
+    } catch (e) {
+      notice("আপডেট ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+    }
+  };
+  const postponeOne = (k) => {
+    askConfirm(
+      "ক্লাসটি স্থগিত করবেন? উস্তাদ, স্টুডেন্ট সবার পোর্টালে সাথে সাথে আপডেট হবে।",
+      async () => {
+        try {
+          await api.postponeClass(k.id);
+          await loadClasses();
+        } catch (e) {
+          notice("ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+        }
+      },
+    );
+  };
   const addClass = async () => {
     const c = courseById(courses, f.courseId);
     const students = f.studentIds.length ? f.studentIds : c.studentIds || []; // কাউকে না বাছলে কোর্সের সবাই
@@ -2802,18 +2825,35 @@ function ClassesView({
               মুছুন
             </Btn>
           )}
+          {k.date > todayISO() && k.status === "upcoming" && isAdm(user) && (
+            <Btn sm kind="danger" onClick={() => postponeOne(k)}>
+              ⛔ স্থগিত করুন
+            </Btn>
+          )}
           {k.status === "postponed" && (
             <Tag color={C.red} bg={C.redBg}>
               {T("⛔ স্থগিত", "⛔ Postponed")}
             </Tag>
           )}
-          {!joinable && k.status !== "postponed" && (
-            <Tag
-              color={k.status === "done" ? C.green : C.blue}
-              bg={k.status === "done" ? C.greenBg : C.blueBg}
+          {!joinable && isToday && isAdm(user) && k.status !== "postponed" ? (
+            <select
+              style={{ ...S.input, width: "auto", padding: "6px 10px", fontSize: 12.5 }}
+              value={k.status}
+              onChange={(e) => setStatus(k, e.target.value)}
             >
-              {k.status === "done" ? T("সম্পন্ন", "Done") : T("আসন্ন", "Upcoming")}
-            </Tag>
+              <option value="upcoming">{T("আসন্ন", "Upcoming")}</option>
+              <option value="done">{T("সম্পন্ন", "Done")}</option>
+            </select>
+          ) : (
+            !joinable &&
+            k.status !== "postponed" && (
+              <Tag
+                color={k.status === "done" ? C.green : C.blue}
+                bg={k.status === "done" ? C.greenBg : C.blueBg}
+              >
+                {k.status === "done" ? T("সম্পন্ন", "Done") : T("আসন্ন", "Upcoming")}
+              </Tag>
+            )
           )}
         </div>
       </div>
@@ -3302,6 +3342,107 @@ function InstantClassView({ courses, user }) {
             📨 টিচার ও স্টুডেন্টকে এখনই WhatsApp-এ জানান
           </Btn>
         </div>
+      )}
+    </Section>
+  );
+}
+
+/* ═══════════════ স্থগিত ক্লাস — director/admin সব দেখেন, teacher/student শুধু
+   নিজের কোর্স অনুযায়ী (backend আগেই role অনুযায়ী ফিল্টার করে) ═══════════════ */
+function PostponedClassesView({ user }) {
+  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [month, setMonth] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await api.classes();
+      setClasses(data.filter((k) => k.status === "postponed"));
+    } catch {
+      setClasses([]);
+    }
+    setLoading(false);
+  };
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const filtered = month ? classes.filter((k) => (k.date || "").startsWith(month)) : classes;
+  const sorted = [...filtered].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+
+  // ছাত্র অনুযায়ী মাসভিত্তিক এক্সেল এক্সপোর্ট — কেবল পরিচালক (এডমিনও না, অন্য কেউ না)
+  const exportExcel = () => {
+    if (!sorted.length) return notice("কোনো স্থগিত ক্লাস নেই।");
+    const head = ["শিক্ষার্থী", "কোর্স", "উস্তাদ", "তারিখ", "সময়"];
+    const body = sorted.flatMap((k) => {
+      const names = k.student_names && k.student_names.length ? k.student_names : ["—"];
+      return names.map((n) => [
+        n,
+        k.course_name || "—",
+        k.teacher_name || "—",
+        fmtDate(k.date),
+        (k.time || "").slice(0, 5),
+      ]);
+    });
+    const csv = [head, ...body]
+      .map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\r\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }); // BOM — Excel-এ বাংলা যেন না ভাঙে
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `স্থগিত-ক্লাস-${month || "সব"}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  };
+
+  return (
+    <Section
+      title={T("⛔ স্থগিত ক্লাস", "⛔ Postponed Classes")}
+      sub={T(
+        "অসুস্থতা বা অন্য কারণে স্থগিত হওয়া ক্লাসের তালিকা",
+        "List of classes postponed due to illness or other reasons",
+      )}
+      action={
+        isDir(user) && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              style={{ ...S.input, padding: "8px 10px", width: 160 }}
+            />
+            <Btn sm kind="soft" onClick={exportExcel}>
+              📊 Excel
+            </Btn>
+          </div>
+        )
+      }
+    >
+      {loading ? (
+        <Loader text={T("লোড হচ্ছে", "Loading")} />
+      ) : (
+        <Table
+          head={[
+            T("শিক্ষার্থী", "Student"),
+            T("কোর্স", "Course"),
+            T("উস্তাদ", "Teacher"),
+            T("তারিখ", "Date"),
+            T("সময়", "Time"),
+          ]}
+          rows={sorted.map((k) => [
+            (k.student_names && k.student_names.join(", ")) || "—",
+            k.course_name || "—",
+            k.teacher_name || "—",
+            fmtDate(k.date),
+            (k.time || "").slice(0, 5),
+          ])}
+          empty={T("কোনো স্থগিত ক্লাস নেই", "No postponed classes")}
+        />
       )}
     </Section>
   );
@@ -14282,6 +14423,13 @@ const NAV = [
     roles: ["director", "admin"],
   },
   {
+    id: "postponed",
+    icon: "⛔",
+    label: "স্থগিত ক্লাস",
+    labelEn: "Postponed Classes",
+    roles: ["director", "admin", "teacher", "student"],
+  },
+  {
     id: "routine",
     icon: "📅",
     label: "ক্লাস রুটিন",
@@ -15130,6 +15278,7 @@ export default function App() {
           {view === "instantclass" && isAdm(user) && (
             <InstantClassView courses={courses} user={user} />
           )}
+          {view === "postponed" && <PostponedClassesView user={user} />}
           {view === "routine" && <RoutineView {...props} />}
           {view === "lectures" && <LecturePlan {...props} />}
           {view === "syllabus" && <SyllabusView {...props} />}
