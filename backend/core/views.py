@@ -259,6 +259,13 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
             return qs.filter(students=u)
         return qs
 
+    def perform_update(self, serializer):
+        # "সম্পন্ন" চিহ্নিত করা (বা ফেরত "আসন্ন" করা) কেবল পরিচালকের এখতিয়ার —
+        # এডমিন ক্লাসের অন্য তথ্য (সময়/জুম লিংক ইত্যাদি) এডিট করতে পারবেন, কিন্তু status না
+        if "status" in self.request.data and self.request.user.role != "director":
+            raise PermissionDenied("ক্লাসের স্ট্যাটাস (সম্পন্ন/আসন্ন) বদলানো কেবল পরিচালকের এখতিয়ার")
+        serializer.save()
+
     @action(detail=False, permission_classes=[IsAuthenticated])
     def today(self, request):  # লাইভ পপআপ + "আজকের ক্লাস"
         # date.today() সার্ভারের (UTC) তারিখ দেয়, বাংলাদেশ সময়ের নয় — মধ্যরাত থেকে

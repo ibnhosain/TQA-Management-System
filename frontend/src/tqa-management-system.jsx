@@ -2836,26 +2836,42 @@ function ClassesView({
               {T("⛔ স্থগিত", "⛔ Postponed")}
             </Tag>
           )}
-          {!joinable && k.date <= todayISO() && isAdm(user) && k.status !== "postponed" ? (
-            <select
-              style={{ ...S.input, width: "auto", padding: "6px 10px", fontSize: 12.5 }}
-              value={k.status}
-              onChange={(e) => setStatus(k, e.target.value)}
-            >
-              <option value="upcoming">{T("আসন্ন", "Upcoming")}</option>
-              <option value="done">{T("সম্পন্ন", "Done")}</option>
-            </select>
-          ) : (
-            !joinable &&
-            k.status !== "postponed" && (
-              <Tag
-                color={k.status === "done" ? C.green : C.blue}
-                bg={k.status === "done" ? C.greenBg : C.blueBg}
-              >
-                {k.status === "done" ? T("সম্পন্ন", "Done") : T("আসন্ন", "Upcoming")}
-              </Tag>
-            )
-          )}
+          {(() => {
+            // আজকের ক্লাস এডমিন/পরিচালক কেউ "সম্পন্ন" চিহ্নিত না করলে সময় পার হয়ে
+            // "বিগত"-এ চলে যাওয়ার পরও status="upcoming"-ই থেকে যায় — তখন সেটাকে
+            // "আসন্ন" (যা এখন আর সত্যি না) না বলে "অসম্পন্ন" দেখানো হচ্ছে
+            const incomplete = k.status === "upcoming" && k.date < todayISO();
+            if (!joinable && k.date <= todayISO() && isDir(user) && k.status !== "postponed") {
+              // শুধু পরিচালকই "সম্পন্ন" চিহ্নিত করতে পারবেন, এডমিনও না
+              return (
+                <select
+                  style={{ ...S.input, width: "auto", padding: "6px 10px", fontSize: 12.5 }}
+                  value={k.status}
+                  onChange={(e) => setStatus(k, e.target.value)}
+                >
+                  <option value="upcoming">
+                    {incomplete ? T("অসম্পন্ন", "Incomplete") : T("আসন্ন", "Upcoming")}
+                  </option>
+                  <option value="done">{T("সম্পন্ন", "Done")}</option>
+                </select>
+              );
+            }
+            if (!joinable && k.status !== "postponed") {
+              return (
+                <Tag
+                  color={k.status === "done" ? C.green : incomplete ? C.red : C.blue}
+                  bg={k.status === "done" ? C.greenBg : incomplete ? C.redBg : C.blueBg}
+                >
+                  {k.status === "done"
+                    ? T("সম্পন্ন", "Done")
+                    : incomplete
+                      ? T("অসম্পন্ন", "Incomplete")
+                      : T("আসন্ন", "Upcoming")}
+                </Tag>
+              );
+            }
+            return null;
+          })()}
         </div>
       </div>
     );
