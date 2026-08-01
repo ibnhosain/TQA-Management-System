@@ -2586,8 +2586,9 @@ function ClassesView({
     }
     setDb((d) => ({ ...d, classes: d.classes.filter((k) => k.id !== id) }));
   };
-  // পরিচালক/এডমিন কেবল আজকের ক্লাসকেই "সম্পন্ন" চিহ্নিত করতে পারবেন — চিহ্নিত হলে
-  // ক্লাসটা "আজকের ক্লাস" তালিকা থেকে সরে "বিগত"-এ চলে যাবে (today ফিল্টার status!=="done")
+  // পরিচালক/এডমিন আজকের ও বিগত ক্লাসকে "সম্পন্ন" চিহ্নিত করতে পারবেন (ভবিষ্যতের
+  // "আসন্ন" ক্লাস নয়) — আজকের ক্লাস "সম্পন্ন" করলে তা "আজকের ক্লাস" তালিকা থেকে
+  // সরে "বিগত"-এ চলে যাবে (today ফিল্টার status!=="done")
   const setStatus = async (k, status) => {
     try {
       await api.editClass(k.id, { status });
@@ -2835,7 +2836,7 @@ function ClassesView({
               {T("⛔ স্থগিত", "⛔ Postponed")}
             </Tag>
           )}
-          {!joinable && isToday && isAdm(user) && k.status !== "postponed" ? (
+          {!joinable && k.date <= todayISO() && isAdm(user) && k.status !== "postponed" ? (
             <select
               style={{ ...S.input, width: "auto", padding: "6px 10px", fontSize: 12.5 }}
               value={k.status}
