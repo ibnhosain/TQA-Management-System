@@ -1325,6 +1325,104 @@ const coverageOf = (course) => {
   };
 };
 
+/* এক-ক্লিকে অ্যাপ ইনস্টল করার ব্যানার — লগইন পেজের উপরে দেখায়। Android/Windows/
+   Mac-এ Chrome/Edge হলে beforeinstallprompt ইভেন্ট থাকলে সরাসরি ব্রাউজারের আসল
+   "Install" পপআপ দেখায় (এক ক্লিকেই ইনস্টল)। iOS Safari-তে এই ইভেন্ট কখনো আসে না
+   (Apple-এর সীমাবদ্ধতা, প্রোগ্রাম্যাটিকভাবে ইনস্টল করানোর কোনো উপায় নেই) — তাই
+   সেখানে "Add to Home Screen" এর স্পষ্ট নির্দেশনা দেখানো হয়। অলরেডি ইনস্টল করা
+   থাকলে (standalone mode) কিছুই দেখায় না। */
+function InstallBanner({ lang }) {
+  const T = (bn, en) => (lang === "en" ? en : bn);
+  const [ready, setReady] = useState(!!window.__tqaInstallEvent);
+  const [dismissed, setDismissed] = useState(
+    () => sessionStorage.getItem("tqa_install_dismissed") === "1",
+  );
+  useEffect(() => {
+    const handler = () => setReady(true);
+    window.addEventListener("tqa-install-ready", handler);
+    return () => window.removeEventListener("tqa-install-ready", handler);
+  }, []);
+  const isStandalone =
+    (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+    window.navigator.standalone;
+  const ua = navigator.userAgent || "";
+  const isIOS =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);
+  if (isStandalone || dismissed) return null;
+  if (!ready && !isIOS) return null; // অন্য ব্রাউজারে ইনস্টল-সাপোর্ট না থাকলে কিছুই দেখাই না
+
+  const dismiss = () => {
+    sessionStorage.setItem("tqa_install_dismissed", "1");
+    setDismissed(true);
+  };
+  const install = async () => {
+    const evt = window.__tqaInstallEvent;
+    if (!evt) return;
+    evt.prompt();
+    try {
+      await evt.userChoice;
+    } catch {
+      /* উপেক্ষা */
+    }
+    window.__tqaInstallEvent = null;
+    dismiss();
+  };
+
+  return (
+    <div
+      style={{
+        ...S.card,
+        marginBottom: 14,
+        border: `1.5px solid ${C.gold}`,
+        background: C.amberBg,
+        textAlign: "center",
+        padding: 18,
+      }}
+    >
+      <div style={{ fontSize: 30 }}>📲</div>
+      {ready ? (
+        <>
+          <div style={{ fontWeight: 800, margin: "6px 0 10px", fontSize: 15 }}>
+            {T("এই ডিভাইসে অ্যাপ ইনস্টল করুন", "Install the app on this device")}
+          </div>
+          <Btn kind="gold" onClick={install}>
+            {T("⬇️ ইনস্টল করুন", "⬇️ Install App")}
+          </Btn>
+        </>
+      ) : (
+        <>
+          <div style={{ fontWeight: 800, margin: "6px 0 4px", fontSize: 15 }}>
+            {T("Add to Home Screen", "Add to Home Screen")}
+          </div>
+          <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
+            {T(
+              'নিচের শেয়ার বাটনে (□↑) ট্যাপ করুন, তারপর "Add to Home Screen" চাপুন',
+              'Tap the Share button (□↑) below, then tap "Add to Home Screen"',
+            )}
+          </div>
+        </>
+      )}
+      <div style={{ marginTop: 8 }}>
+        <button
+          onClick={dismiss}
+          style={{
+            fontSize: 11.5,
+            color: C.muted,
+            background: "none",
+            border: "none",
+            textDecoration: "underline",
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          {T("বাদ দিন", "Skip")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════ লগইন ═══════════════ */
 function Login({ onLogin }) {
   /* ভূমিকার তালিকা — কার্ড হিসেবে দেখানো হয় */
@@ -1463,6 +1561,7 @@ function Login({ onLogin }) {
         .tqaRoleCard:hover .tqaRoleArrow{color:${C.emerald};transform:translateX(3px)}
       `}</style>
       <div style={{ width: "100%", maxWidth: 480 }}>
+        <InstallBanner lang={role === "student" ? "en" : "bn"} />
         <div
           style={{
             background: "rgba(255,255,255,.97)",
