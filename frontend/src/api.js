@@ -247,6 +247,20 @@ export const api = {
   deleteNotice: (id) => request(`/notices/${id}/`, { method: "DELETE" }),
   notifications: () => request("/notifications/"),
   markAllRead: () => request("/notifications/mark_all_read/", { method: "POST" }),
+
+  // Web Push (PWA) — ব্রাউজার/ট্যাব বন্ধ থাকলেও নোটিফিকেশন পাঠাতে
+  vapidPublicKey: () => request("/push/vapid-public-key/"),
+  subscribePush: (sub) =>
+    request("/push-subscriptions/", {
+      method: "POST",
+      body: {
+        endpoint: sub.endpoint,
+        p256dh: sub.p256dh,
+        auth: sub.auth,
+      },
+    }),
+  unsubscribePush: (endpoint) =>
+    request("/push-subscriptions/unsubscribe/", { method: "POST", body: { endpoint } }),
   waOutbox: () => request("/wa-messages/"),
   waSendNow: (id) => request(`/wa-messages/${id}/send_now/`, { method: "POST" }),
 

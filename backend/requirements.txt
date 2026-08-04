@@ -22,3 +22,6 @@ requests>=2.31              # Twilio/Meta WhatsApp API কল
 
 # Cloudinary — সরাসরি uploader হিসেবে (storage backend ছাড়া)
 cloudinary>=1.36
+
+# Web Push নোটিফিকেশন — ব্রাউজার/ট্যাব বন্ধ থাকলেও অ্যালার্ট পাঠাতে (PWA)
+pywebpush>=2.0

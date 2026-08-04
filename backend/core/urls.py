@@ -9,6 +9,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from . import views
 from .auth import FlexTokenObtainPairView
 from . import cron
+from . import push
 
 router = DefaultRouter()
 router.register("users", views.UserViewSet, basename="users")
@@ -32,6 +33,7 @@ router.register("notices", views.NoticeViewSet)
 router.register("notifications", views.NotificationViewSet, basename="notifications")
 router.register("wa-messages", views.WaMessageViewSet)
 router.register("library-books", views.LibraryBookViewSet)
+router.register("push-subscriptions", views.PushSubscriptionViewSet, basename="push-subscriptions")
 
 urlpatterns = [
     path("auth/login", FlexTokenObtainPairView.as_view()),  # আইডি/ইমেইল/ফোন — যেকোনোটা দিয়ে
@@ -44,5 +46,7 @@ urlpatterns = [
     path("cron/monthly/", cron.cron_monthly),
     # পরিচালক সব ডেটা ডাউনলোড করতে পারবেন — JSON ব্যাকআপ
     path("export/", views.export_all_data),
+    # Web Push পাবলিক কী — ফ্রন্টএন্ড PushManager.subscribe()-এ ব্যবহার করে
+    path("push/vapid-public-key/", lambda r: JsonResponse({"key": push.public_key_b64()})),
     path("", include(router.urls)),
 ]

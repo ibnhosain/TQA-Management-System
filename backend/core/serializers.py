@@ -4,7 +4,7 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      Routine, ClassSession, Attendance, Question, Assignment, Exam,
                      Submission, ExamResult, FeePayment, DueMonth, TeacherPayment,
                      SentReceipt, Admission, LeaveRequest, Rating, StudentRemark, Notice,
-                     Notification, WaMessage, LibraryBook)
+                     Notification, PushSubscription, WaMessage, LibraryBook)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -339,6 +339,12 @@ class NotificationSerializer(serializers.ModelSerializer):
         # .all() ইটারেট করে পাইথনে মেলানো — prefetch_related("read_by") ব্যবহার হয়।
         u = self.context["request"].user
         return any(ru.pk == u.pk for ru in obj.read_by.all())
+
+
+class PushSubscriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PushSubscription
+        fields = ["id", "endpoint", "p256dh", "auth", "created_at"]
 
 
 class WaMessageSerializer(serializers.ModelSerializer):

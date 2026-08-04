@@ -15,7 +15,7 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      Routine, ClassSession, Attendance, Assignment, Exam, Submission,
                      ExamResult, FeePayment, DueMonth, TeacherPayment, SentReceipt,
                      Admission, LeaveRequest, Rating, StudentRemark, Notice, Notification,
-                     WaMessage, LibraryBook)
+                     PushSubscription, WaMessage, LibraryBook)
 from .serializers import *
 from .permissions import (IsDirector, IsAdminLevel, IsTeacherOrAdminLevel,
                           ReadAllWriteAdmin, ReadAllWriteDirector)
@@ -24,6 +24,11 @@ from .permissions import (IsDirector, IsAdminLevel, IsTeacherOrAdminLevel,
 def notify(text, users):
     n = Notification.objects.create(text=text)
     n.recipients.set(users)
+    from .push import send_push
+    try:
+        send_push(users, "তারবিয়াতুল কুরআন একাডেমি", text)
+    except Exception:
+        pass  # পুশ ব্যর্থ হলেও ইন-অ্যাপ নোটিফিকেশন যেন আটকে না যায়
     return n
 
 
@@ -871,6 +876,38 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     def mark_all_read(self, request):
         for n in self.get_queryset():
             n.read_by.add(request.user)
+        return Response({"ok": True})
+
+
+class PushSubscriptionViewSet(viewsets.ModelViewSet):
+    """ব্রাউজার Web Push সাবস্ক্রিপশন সেভ/মুছা — অ্যাপ ইনস্টল/নোটিফিকেশন পারমিশন
+    দেওয়ার সময় ফ্রন্টএন্ড থেকে ডাকা হয়"""
+    serializer_class = PushSubscriptionSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ["post", "delete", "head", "options"]
+
+    def get_queryset(self):
+        return PushSubscription.objects.filter(user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        endpoint = request.data.get("endpoint")
+        if not endpoint:
+            return Response({"error": "endpoint আবশ্যক"}, status=400)
+        sub, _ = PushSubscription.objects.update_or_create(
+            endpoint=endpoint,
+            defaults={
+                "user": request.user,
+                "p256dh": request.data.get("p256dh", ""),
+                "auth": request.data.get("auth", ""),
+            },
+        )
+        return Response(PushSubscriptionSerializer(sub).data, status=201)
+
+    @action(detail=False, methods=["post"])
+    def unsubscribe(self, request):
+        endpoint = request.data.get("endpoint")
+        if endpoint:
+            PushSubscription.objects.filter(endpoint=endpoint, user=request.user).delete()
         return Response({"ok": True})
 
 

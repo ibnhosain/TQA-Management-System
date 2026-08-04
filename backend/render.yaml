@@ -34,4 +34,6 @@ services:
         sync: false    # পরিচালকের পাসওয়ার্ড — Render dashboard এ বসান
       - key: DIRECTOR_NAME
         sync: false    # পরিচালকের নাম বাংলায়
+      - key: VAPID_PRIVATE_KEY
+        sync: false    # Web Push (PWA নোটিফিকেশন) — একবার তৈরি করে Render dashboard-এ বসান, স্থায়ী
 # Render এর built-in database বাদ — Neon ব্যবহার করুন (কখনো expire হয় না)

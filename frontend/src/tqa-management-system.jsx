@@ -1812,6 +1812,51 @@ function Login({ onLogin }) {
   );
 }
 
+/* ═══════════════ Web Push (PWA) — ব্রাউজার/ট্যাব বন্ধ থাকলেও নোটিফিকেশন ═══════════════ */
+const urlBase64ToUint8Array = (base64) => {
+  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
+  const base64safe = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64safe);
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+};
+// ইউজারের সরাসরি ক্লিকে (নোটিফিকেশন-পারমিশন ব্রাউজার-গ্রেসচার ছাড়া চাইলে
+// উপেক্ষা/ব্লক করে) ডাকা হয় — সার্ভিস ওয়ার্কার রেজিস্টার + পারমিশন চাওয়া +
+// পুশ-সাবস্ক্রিপশন ব্যাকএন্ডে সেভ, সব এক ফাংশনে
+async function enablePushNotifications() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    notice("এই ব্রাউজারে পুশ নোটিফিকেশন সাপোর্ট নেই।");
+    return false;
+  }
+  try {
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") {
+      notice("নোটিফিকেশনের অনুমতি দেওয়া হয়নি।");
+      return false;
+    }
+    const { key } = await api.vapidPublicKey();
+    if (!key) return false; // সার্ভারে VAPID কনফিগার করা না থাকলে চুপচাপ থেমে যায়
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(key),
+      });
+    }
+    const raw = sub.toJSON();
+    await api.subscribePush({
+      endpoint: raw.endpoint,
+      p256dh: raw.keys.p256dh,
+      auth: raw.keys.auth,
+    });
+    notice("✔ এই ডিভাইসে নোটিফিকেশন চালু হয়েছে।");
+    return true;
+  } catch {
+    notice("নোটিফিকেশন চালু করতে ব্যর্থ — একটু পর আবার চেষ্টা করুন।");
+    return false;
+  }
+}
+
 /* ═══════════════ ক্লাস ও জুম জয়েন (ফিচার ২ ও ৪) ═══════════════ */
 /* অ্যালার্মের মতো বিপ (Web Audio — বাহ্যিক ফাইল ছাড়া, CSP-নিরাপদ) */
 // একটাই AudioContext বানিয়ে রাখি — "জুমে জয়েন করুন" বাটনে ক্লিকের (আসল
@@ -14324,6 +14369,14 @@ function Overview({ db, courses, user, goTo }) {
   const [recentNotices, setRecentNotices] = useState(db.notices || []);
   const [completedThisMonth, setCompletedThisMonth] = useState(0);
   const [hasDue, setHasDue] = useState(false);
+  // নোটিফিকেশন এখনো চালু করা হয়নি এমন ডিভাইসেই একবার ব্যানারটা দেখাবে
+  const [showPushBanner, setShowPushBanner] = useState(
+    () =>
+      typeof Notification !== "undefined" &&
+      Notification.permission === "default" &&
+      "serviceWorker" in navigator &&
+      !sessionStorage.getItem("tqa_push_dismissed"),
+  );
   useEffect(() => {
     let cancelled = false;
     api.todayClasses().then((d) => !cancelled && setTodayClasses(d)).catch(() => {});
@@ -14395,6 +14448,48 @@ function Overview({ db, courses, user, goTo }) {
           : `Assalamu Alaikum, ${user.name.split(" ")[0]}`;
   return (
     <>
+      {showPushBanner && (
+        <div
+          style={{
+            ...S.card,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 14,
+            border: `1.5px solid ${C.gold}`,
+            background: C.amberBg,
+          }}
+        >
+          <div style={{ fontSize: 24 }}>🔔</div>
+          <div style={{ flex: 1, minWidth: 200, fontSize: 13 }}>
+            {T(
+              "এই ডিভাইসে নোটিফিকেশন চালু করুন — অ্যাপ বন্ধ থাকলেও ক্লাস/পেমেন্ট/জরুরি খবর সাথে সাথে জানতে পারবেন।",
+              "Enable notifications on this device — get instant alerts for classes, payments, and important updates even when the app is closed.",
+            )}
+          </div>
+          <Btn
+            sm
+            kind="gold"
+            onClick={async () => {
+              const ok = await enablePushNotifications();
+              if (ok) setShowPushBanner(false);
+            }}
+          >
+            {T("🔔 চালু করুন", "🔔 Enable")}
+          </Btn>
+          <Btn
+            sm
+            kind="ghost"
+            onClick={() => {
+              sessionStorage.setItem("tqa_push_dismissed", "1");
+              setShowPushBanner(false);
+            }}
+          >
+            {T("বাদ দিন", "Dismiss")}
+          </Btn>
+        </div>
+      )}
       <div
         style={{
           background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`,

@@ -389,6 +389,16 @@ class Notification(models.Model):
         ordering = ["-created_at"]
 
 
+class PushSubscription(models.Model):
+    """ব্রাউজার Web Push সাবস্ক্রিপশন — ফোন/পিসিতে অ্যাপ ইনস্টল/পারমিশন দিলে
+    ট্যাব/ব্রাউজার বন্ধ থাকা অবস্থাতেও নোটিফিকেশন পাঠানো যায়"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="push_subscriptions")
+    endpoint = models.URLField(max_length=500, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class WaMessage(models.Model):
     """WhatsApp আউটবক্স — Celery টাস্ক Twilio/Meta API দিয়ে পাঠাবে"""
     REASONS = [("reminder", "৫ মিনিট রিমাইন্ডার"), ("postpone", "ক্লাস স্থগিত"), ("fee", "ফি রিমাইন্ডার")]
