@@ -240,6 +240,29 @@ def _att_defaults(s):
     }
 
 
+def _sync_mutual_presence(s):
+    """উস্তাদ ও অন্তত একজন স্টুডেন্ট একই সময়ে (দুজনেই) মিটিংয়ে থাকলে সাথে সাথেই
+    উভয়ের হাজিরা 'সম্পন্ন' মার্ক করে — এরপর কেউ কতক্ষণ থাকলেন তা আর হাজিরার
+    জন্য গুরুত্বপূর্ণ না, শুধু জয়েন হওয়াটাই যথেষ্ট (পোর্টালে সতর্কতার জন্য এখনো
+    "৪৫+ মিনিট" লেখা থাকে, কিন্তু বাস্তবে এই মিনিটের হিসাব আর গণনা হয় না)"""
+    teacher_id = s.teacher_id or (s.course.teacher_id if s.course_id else None)
+    if not teacher_id:
+        return
+    rows = list(Attendance.objects.filter(session=s))
+    teacher_row = next((r for r in rows if r.user_id == teacher_id), None)
+    teacher_active = bool(teacher_row and teacher_row.segment_start is not None)
+    student_rows_active = [
+        r for r in rows if r.user_id != teacher_id and r.segment_start is not None
+    ]
+    if not (teacher_active and student_rows_active):
+        return
+    to_mark = [r.id for r in student_rows_active if not r.marked_present]
+    if teacher_row and not teacher_row.marked_present:
+        to_mark.append(teacher_row.id)
+    if to_mark:
+        Attendance.objects.filter(id__in=to_mark).update(marked_present=True)
+
+
 class ClassSessionViewSet(viewsets.ModelViewSet):
     serializer_class = ClassSessionSerializer
     permission_classes = [ReadAllWriteAdmin]
@@ -285,6 +308,8 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         if att.segment_start is None:  # আগের সেগমেন্ট বন্ধ থাকলেই নতুন শুরু
             att.segment_start = timezone.now()
             att.save(update_fields=["segment_start"])
+        _sync_mutual_presence(s)  # উস্তাদ+স্টুডেন্ট দুজনেই থাকলে সাথে সাথেই হাজিরা 'সম্পন্ন'
+        att.refresh_from_db()
         return Response(AttendanceSerializer(att).data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
@@ -320,6 +345,7 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
     @action(detail=True, permission_classes=[IsAuthenticated])
     def presence(self, request, pk=None):  # কে এখন মিটিংয়ে আছে — দুজন-জয়েন গেটিং এর জন্য
         s = self.get_object()
+        _sync_mutual_presence(s)  # নিরাপত্তা-জাল — join-এর সময় কোনোভাবে মিস হলেও এখানে ধরা পড়বে
         teacher_id = s.teacher_id or (s.course.teacher_id if s.course_id else None)
         rows = Attendance.objects.filter(session=s).select_related("user")
         return Response({

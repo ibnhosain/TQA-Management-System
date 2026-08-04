@@ -1836,7 +1836,8 @@ function playAlarm() {
       (alarmAudioCtx = new (window.AudioContext || window.webkitAudioContext)());
     if (ctx.state === "suspended") ctx.resume();
     let t = ctx.currentTime;
-    for (let i = 0; i < 4; i++) {
+    // আগে ৪টা বিপ ছিল, এখন ৭টা (জোরালো, বেশিক্ষণ ধরে বাজবে) — যাতে সহজে হাতছাড়া না হয়
+    for (let i = 0; i < 7; i++) {
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.connect(g);
@@ -1844,14 +1845,21 @@ function playAlarm() {
       o.type = "square";
       o.frequency.value = 880;
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.8, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.9, t + 0.02);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
       o.start(t);
       o.stop(t + 0.42);
-      t += 0.55;
+      t += 0.5;
     }
   } catch {
     /* সাউন্ড ব্লক হলে উপেক্ষা */
+  }
+  // মোবাইলে (Android — iOS Safari সাপোর্ট করে না) কম্পন দিয়েও সতর্ক করা —
+  // ট্যাব ব্যাকগ্রাউন্ডে থাকলেও সাধারণত কাজ করে
+  try {
+    if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
+  } catch {
+    /* উপেক্ষা */
   }
 }
 
@@ -1863,8 +1871,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
   const [inMeeting, setInMeeting] = useState(true);
   const [rejoin, setRejoin] = useState(false);
   const [showContinuePrompt, setShowContinuePrompt] = useState(false);
-  const SEG = 27 * 60; // এক সেগমেন্ট = ২৭ মিনিট
-  const NEED = 45; // মোট মিনিট → হাজিরা
+  const SEG = 27 * 60; // এক সেগমেন্ট = ২৭ মিনিট (রিমাইন্ডার অ্যালার্মের জন্য — হাজিরা এখন জয়েন করা মাত্রই নিশ্চিত হয়, মিনিট গোনার দরকার নেই)
   // "Leave & Save" বাটনে ক্লিক ভুলে গেলে/ট্যাব বন্ধ করে ফেললেও যেন হাজিরার সময়
   // না হারায় — প্রতি ৬০ সেকেন্ডে নিঃশব্দে ব্যাকগ্রাউন্ডে যতটুকু সময় জমেছে তা
   // ব্যাকএন্ডে সেভ করে রাখি (ref ব্যবহার করছি যাতে interval-এ স্টেল ভ্যালু না আসে)
@@ -1883,7 +1890,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
 
   const refreshPresence = async () => {
     if (!usingApi) {
-      setPresence((p) => ({ ta: true, sa: true, myMin: p?.myMin || 0 }));
+      setPresence((p) => ({ ta: true, sa: true, myMin: p?.myMin || 0, myPresent: true }));
       return;
     }
     try {
@@ -1895,6 +1902,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
         ta: p.teacher_active,
         sa: p.any_student_active,
         myMin: me?.minutes || 0,
+        myPresent: !!me?.present, // উস্তাদ+স্টুডেন্ট দুজনেই জয়েন করা মাত্র backend এটা true করে দেয়
       });
     } catch {
       /* উপেক্ষা */
@@ -2006,7 +2014,11 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     Math.round((computeSegSec() - savedSecRef.current) / 60),
   );
   const total = (presence?.myMin || 0) + notYetSavedMin;
-  const done = total >= NEED;
+  // উস্তাদ+স্টুডেন্ট দুজনেই একসাথে জয়েন করা মাত্রই হাজিরা 'সম্পন্ন' হয়ে যায় (backend
+  // থেকে present ফ্ল্যাগ আসে) — আর ৪৫ মিনিট থাকার দরকার নেই, শুধু জয়েন হলেই যথেষ্ট।
+  // পোর্টালে সতর্কতার জন্য এখনো "৪৫+ মিনিট" লেখাই থাকছে যাতে কেউ ইচ্ছা করে
+  // দু-মিনিট থেকেই বেরিয়ে যাওয়াকে স্বাভাবিক না ভাবেন।
+  const done = !!presence?.myPresent;
 
   // mode: "alarm" (২৭-মিনিট Zoom সীমা শেষ — রিজয়েন পপআপ দেখাবে), "manual"
   // (স্টুডেন্ট/উস্তাদ নিজে "বের হন" চেপেছেন — মাঝপথে বেরোনো, রেটিং পপআপ আসবে না),
@@ -2080,29 +2092,36 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
   }, [segSec]);
 
   // রিজয়েন পপআপ থাকা অবস্থায় অ্যালার্ম বারবার বাজতে থাকবে (থামবে না) — যতক্ষণ
-  // না "আবার জয়েন করুন" বা "ক্লাস শেষ করুন" চেপে এটা বন্ধ করা হয়
-  useEffect(() => {
-    if (!rejoin) return;
-    playAlarm();
-    const iv = setInterval(playAlarm, 3000);
-    // ট্যাব ব্যাকগ্রাউন্ডে থাকলে (ব্রাউজার বন্ধ না থাকলে) সিস্টেম নোটিফিকেশনও
-    // দেখাই — permission আগে "জুমে জয়েন করুন" ক্লিকের সময় চাওয়া হয়েছে
+  // না "আবার জয়েন করুন" বা "ক্লাস শেষ করুন" চেপে এটা বন্ধ করা হয়। আগে ৩ সেকেন্ড
+  // পরপর শুধু সাউন্ড বাজত আর নোটিফিকেশন একবারই দেখাত — এখন আরও ঘন ঘন (২ সেকেন্ড)
+  // এবং প্রতি বার নোটিফিকেশনও নতুন করে দেখায় (renotify) যাতে ফোনে আবার কাঁপুনি/শব্দ হয়
+  const notifyRejoin = () => {
     if (window.Notification && Notification.permission === "granted") {
       try {
-        new Notification(
-          T("⏰ ২৭ মিনিট শেষ!", "⏰ 27 minutes are over!"),
-          {
-            body: T(
-              "জুম থেকে বের হয়ে আবার জয়েন করুন — ক্লাস চালিয়ে যেতে।",
-              'Please leave Zoom and tap "Join Again" to continue the class.',
-            ),
-          },
-        );
+        new Notification(T("⏰ ২৭ মিনিট শেষ!", "⏰ 27 minutes are over!"), {
+          body: T(
+            "জুম থেকে বের হয়ে আবার জয়েন করুন — ক্লাস চালিয়ে যেতে।",
+            'Please leave Zoom and tap "Join Again" to continue the class.',
+          ),
+          tag: "tqa-rejoin-alarm",
+          renotify: true,
+          requireInteraction: true,
+        });
       } catch {
         /* উপেক্ষা */
       }
     }
+  };
+  useEffect(() => {
+    if (!rejoin) return;
+    playAlarm();
+    notifyRejoin();
+    const iv = setInterval(() => {
+      playAlarm();
+      notifyRejoin();
+    }, 2000);
     return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rejoin]);
 
   const doRejoin = () => {
@@ -2240,13 +2259,10 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
             }}
           >
             {done
-              ? T(
-                  "✓ হাজিরা সম্পূর্ণ হয়েছে (৪৫+ মিনিট)।",
-                  "✓ Attendance is complete (45+ minutes).",
-                )
+              ? T("✓ হাজিরা নিশ্চিত হয়ে গেছে।", "✓ Attendance is confirmed.")
               : T(
-                  `এখন পর্যন্ত মোট ${total}/৪৫ মিনিট — সম্পূর্ণ করতে আবার জয়েন করুন।`,
-                  `Total ${total}/45 minutes so far — join again to complete.`,
+                  "হাজিরা নিশ্চিত করতে আবার জয়েন করুন।",
+                  "Join again to confirm attendance.",
                 )}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -2283,36 +2299,19 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
         </span>
       ) : (
         <span style={{ fontWeight: 800, color: done ? C.green : C.gold }}>
-          {user.role === "student" ? (
-            <>
-              ⏱️ {Math.floor(segSec / 60)}/27 min · Total {total}/{NEED} min{" "}
-              {done ? "✓ Attendance confirmed" : ""}
-            </>
-          ) : (
-            <>
-              ⏱️ {bn(Math.floor(segSec / 60))}/{bn(27)} মিনিট · মোট{" "}
-              {bn(total)}/{bn(NEED)} মিনিট {done ? "✓ হাজিরা নিশ্চিত" : ""}
-            </>
+          {done
+            ? T("✓ হাজিরা নিশ্চিত হয়েছে", "✓ Attendance confirmed")
+            : T("হাজিরা নিশ্চিত হচ্ছে…", "Confirming attendance…")}{" "}
+          {T(
+            `· পরবর্তী রিমাইন্ডার ${bn(Math.max(0, 27 - Math.floor(segSec / 60)))} মিনিট পর`,
+            `· Next reminder in ${Math.max(0, 27 - Math.floor(segSec / 60))} min`,
           )}
         </span>
       )}
       <div style={{ marginTop: 6 }}>
         <Btn sm kind="danger" onClick={() => endSegment("manual")}>
-          {T("বের হন", "Exit")}
+          {T("ক্লাস শেষ করুন", "End Class")}
         </Btn>
-        <span
-          style={{
-            marginLeft: 8,
-            fontSize: 11,
-            color: C.muted,
-            fontWeight: 500,
-          }}
-        >
-          {T(
-            "(হাজিরা অটো সেভ হচ্ছে — আলাদা করে কিছু করতে হবে না)",
-            "(attendance saves automatically — no extra step needed)",
-          )}
-        </span>
       </div>
     </div>
   );
