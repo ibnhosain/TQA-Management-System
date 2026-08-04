@@ -10003,8 +10003,9 @@ const COMMON_ZONES = [
   { label: "🇵🇰 পাকিস্তান (Karachi)", zone: "Asia/Karachi" },
 ];
 
-/* ছোট ইনলাইন উইজেট — টিচার একজন স্টুডেন্টের ব্যাপারে মন্তব্য যোগ করেন (ইংরেজিতে
-   লিখলে স্টুডেন্ট পোর্টালে সরাসরি সেভাবেই দেখাবে — আলাদা কোনো অনুবাদ হয় না) */
+/* ছোট বাটন — স্টুডেন্টের নামের পাশে বসে, ক্লিক করলে মন্তব্য লেখার পপআপ (Modal)
+   খোলে (ইংরেজিতে লিখলে স্টুডেন্ট পোর্টালে সরাসরি সেভাবেই দেখাবে — আলাদা কোনো
+   অনুবাদ হয় না) */
 function RemarkBox({ studentId, studentName }) {
   const [open, setOpen] = useState(false);
   const [list, setList] = useState([]);
@@ -10030,32 +10031,36 @@ function RemarkBox({ studentId, studentName }) {
     setBusy(false);
   };
   return (
-    <div>
-      <Btn sm kind="ghost" onClick={() => setOpen((v) => !v)}>
-        💬 {studentName} — মন্তব্য
-      </Btn>
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        title="মন্তব্য"
+        style={{
+          border: "none",
+          background: "none",
+          cursor: "pointer",
+          fontSize: 13,
+          padding: 0,
+          lineHeight: 1,
+        }}
+      >
+        💬
+      </button>
       {open && (
-        <div
-          style={{
-            marginTop: 6,
-            padding: 10,
-            borderRadius: 10,
-            background: C.cream,
-          }}
-        >
+        <Modal title={`💬 মন্তব্য — ${studentName}`} onClose={() => setOpen(false)}>
           {list.length > 0 && (
-            <div style={{ marginBottom: 8, display: "grid", gap: 6 }}>
+            <div style={{ marginBottom: 10, display: "grid", gap: 6 }}>
               {list.map((r) => (
                 <div
                   key={r.id}
                   style={{
-                    fontSize: 12,
-                    padding: "6px 8px",
-                    background: "#fff",
+                    fontSize: 12.5,
+                    padding: "8px 10px",
+                    background: C.cream,
                     borderRadius: 8,
                   }}
                 >
-                  <div style={{ color: C.muted, marginBottom: 2 }}>
+                  <div style={{ color: C.muted, marginBottom: 3, fontSize: 11.5 }}>
                     {r.teacher_name} · {fmtDate(r.created_at)}
                   </div>
                   {r.text}
@@ -10063,24 +10068,24 @@ function RemarkBox({ studentId, studentName }) {
               ))}
             </div>
           )}
+          <label style={S.label}>নতুন মন্তব্য</label>
           <textarea
-            rows={2}
-            style={{ ...S.input, resize: "vertical", fontSize: 12.5 }}
+            rows={3}
+            style={{ ...S.input, resize: "vertical" }}
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="স্টুডেন্টের ব্যাপারে মন্তব্য লিখুন (ইংরেজিতে লিখুন — স্টুডেন্ট পোর্টালে সরাসরি এভাবেই দেখাবে)"
           />
           <Btn
-            sm
             kind="gold"
-            style={{ marginTop: 6, opacity: busy ? 0.6 : 1 }}
+            style={{ marginTop: 10, width: "100%", justifyContent: "center", opacity: busy ? 0.6 : 1 }}
             onClick={submit}
           >
             {busy ? "⏳ সেভ হচ্ছে…" : "+ মন্তব্য যোগ করুন"}
           </Btn>
-        </div>
+        </Modal>
       )}
-    </div>
+    </>
   );
 }
 
@@ -12022,21 +12027,6 @@ function TeacherWiseBoard({ db, setDb, user, previewZone }) {
       String(r.teacherId || courseById(COURSES, r.courseId)?.teacherId) ===
       String(tid),
   );
-  // টিচার নিজে যাদের পড়ান তাদের অনন্য তালিকা — নিজের রুটিন থেকেই বের করা (admin-only
-  // /users/students/ এন্ডপয়েন্ট ছাড়াই), মন্তব্য যোগ করার উইজেটে ব্যবহারের জন্য
-  const myStudentsList = (() => {
-    const m = new Map();
-    myRoutines.forEach((r) => {
-      const ids = r.studentIds || r.students || [];
-      const names = r.studentNames && r.studentNames.length ? r.studentNames : null;
-      ids.forEach((sid, i) => {
-        if (!m.has(String(sid))) {
-          m.set(String(sid), (names && names[i]) || userById(sid)?.name || `স্টুডেন্ট ${sid}`);
-        }
-      });
-    });
-    return [...m.entries()].map(([id, name]) => ({ id, name }));
-  })();
   const upcoming = upcomingAll
     .filter(
       (k) =>
@@ -12131,12 +12121,10 @@ function TeacherWiseBoard({ db, setDb, user, previewZone }) {
       {myRoutines.map((r) => {
         const c = courseById(COURSES, r.courseId || r.course);
         const studs = r.studentIds || r.students || c.studentIds || [];
-        const studentNames =
+        const names =
           r.studentNames && r.studentNames.length
-            ? r.studentNames.join(", ")
-            : studs
-                .map((s) => userById(s)?.name || "স্টুডেন্ট " + s)
-                .join(", ");
+            ? r.studentNames
+            : studs.map((s) => userById(s)?.name || "স্টুডেন্ট " + s);
         return (
           <div
             key={r.id}
@@ -12148,7 +12136,19 @@ function TeacherWiseBoard({ db, setDb, user, previewZone }) {
               fontSize: 12.5,
             }}
           >
-            👥 <b>{studentNames || "—"}</b> — {c.name || r.course_name || "—"} ·{" "}
+            👥{" "}
+            {studs.length ? (
+              studs.map((sid, i) => (
+                <span key={sid} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                  <b>{names[i] || "স্টুডেন্ট " + sid}</b>
+                  <RemarkBox studentId={sid} studentName={names[i] || "স্টুডেন্ট " + sid} />
+                  {i < studs.length - 1 ? <span>,&nbsp;</span> : null}
+                </span>
+              ))
+            ) : (
+              <b>—</b>
+            )}{" "}
+            — {c.name || r.course_name || "—"} ·{" "}
             {(r.days || [])
               .map((i) => {
                 const lt = previewZone
@@ -12163,25 +12163,6 @@ function TeacherWiseBoard({ db, setDb, user, previewZone }) {
           </div>
         );
       })}
-      {myStudentsList.length > 0 && (
-        <>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              margin: "10px 0 6px",
-              color: C.emerald,
-            }}
-          >
-            💬 স্টুডেন্টদের সম্পর্কে মন্তব্য:
-          </div>
-          <div style={{ display: "grid", gap: 4, marginBottom: 6 }}>
-            {myStudentsList.map((s) => (
-              <RemarkBox key={s.id} studentId={s.id} studentName={s.name} />
-            ))}
-          </div>
-        </>
-      )}
       <div
         style={{
           fontSize: 13,
