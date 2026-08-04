@@ -6,7 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Search engine কে index করতে নিষেধ — এটা internal app -->
     <meta name="robots" content="noindex, nofollow" />
-    <!-- PWA — ফোন/আইপ্যাড/পিসিতে ইনস্টল করা যায়, নোটিফিকেশন পাঠাতে পারে -->
+    <!-- PWA — ফোন/আইপ্যাড/পিসিতে ইনস্টল করা যায়, নোটিফিকেশন পাঠাতে পারে।
+         ডিফল্ট manifest.json (পরিচালক/এডমিন) — সব রোল বাছাই করা যায়।
+         ?role=teacher / ?role=student লিংক থেকে এলে নিচের স্ক্রিপ্ট রোল-নির্দিষ্ট
+         manifest-এ বদলে দেয়, তাই ওই লিংক দিয়ে ইনস্টল করলে অ্যাপ সরাসরি সেই
+         রোলের লগইন ফর্মে খোলে, রোল বাছাইয়ের স্ক্রিন আসে না -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#1a5c3a" />
@@ -14,6 +18,25 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="TQA একাডেমি" />
+    <script>
+      (function () {
+        // এটা কেবল PWA ইনস্টলের সময় কোন manifest/আইকন-নাম ব্যবহার হবে তা ঠিক
+        // করে — লগইন/রোল-বাছাইয়ের আসল লজিক (App-এর ভেতরে) একদমই স্পর্শ করে না
+        try {
+          var role = new URLSearchParams(location.search).get("role");
+          if (role !== "teacher" && role !== "student") return;
+          var manifestHref = role === "teacher" ? "/manifest-teacher.json" : "/manifest-student.json";
+          var manifestLink = document.querySelector('link[rel="manifest"]');
+          if (manifestLink) manifestLink.setAttribute("href", manifestHref);
+          var title = role === "teacher" ? "TQA টিচার" : "TQA স্টুডেন্ট";
+          document.title = title;
+          var appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+          if (appleTitle) appleTitle.setAttribute("content", title);
+        } catch {
+          /* উপেক্ষা */
+        }
+      })();
+    </script>
     <!-- ফন্ট একবারই head-এ লোড হয় (আগে body-র <style>@import> এ ছিল → reflow/flash হতো) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
