@@ -2756,9 +2756,8 @@ function ClassesView({
       },
     );
   };
-  const addClass = async () => {
+  const saveClass = async (students) => {
     const c = courseById(courses, f.courseId);
-    const students = f.studentIds.length ? f.studentIds : c.studentIds || []; // কাউকে না বাছলে কোর্সের সবাই
     if (usingApi) {
       // আসল persist — দুই ডিভাইসেই দেখা যাবে, রিফ্রেশেও থাকবে
       try {
@@ -2831,6 +2830,22 @@ function ClassesView({
     setShow(false);
     setEditId(null);
     setF(blankSched());
+  };
+  const addClass = () => {
+    const c = courseById(courses, f.courseId);
+    if (!f.studentIds.length) {
+      // কাউকে না বাছলে আগে চুপচাপ পুরো কোর্সের সবাইকে যুক্ত করে দিত — ভুলবশত
+      // অপ্রাসঙ্গিক স্টুডেন্ট ক্লাসে ঢুকে যাওয়ার কারণ ছিল এটাই; এখন স্পষ্ট
+      // নিশ্চিতকরণ ছাড়া এগোবে না
+      const whole = c.studentIds || [];
+      const names = whole.map((sid) => nameOf(sid)).join(", ") || "কেউ নেই";
+      askConfirm(
+        `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "এই কোর্সের"}" কোর্সে ভর্তি সবাই (${names}) এই ক্লাসে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
+        () => saveClass(whole),
+      );
+      return;
+    }
+    saveClass(f.studentIds);
   };
   const startEdit = (k) => {
     // ক্লাস এডিট — মডাল প্রি-ফিল
@@ -3295,13 +3310,10 @@ function InstantClassView({ courses, user }) {
 
   const preview = previewZone ? toZoneFullDateTime(f.date, f.time, previewZone) : null;
 
-  const create = async () => {
-    if (!f.courseId || !f.teacherId) return notice("কোর্স ও উস্তাদ বেছে নিন।");
-    if (!f.zoom.trim()) return notice("জুম লিংক দিন।");
+  const doCreate = async (targetStudents) => {
+    const c = courseById(courses, f.courseId);
     setBusy(true);
     try {
-      const c = courseById(courses, f.courseId);
-      const targetStudents = f.studentIds.length ? f.studentIds : c.studentIds || [];
       const res = await api.scheduleClass(classPayload(f, targetStudents));
       setCreated({ ...res, courseName: c.name });
       setF(blankForm());
@@ -3311,6 +3323,26 @@ function InstantClassView({ courses, user }) {
       notice("ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
     }
     setBusy(false);
+  };
+  const create = () => {
+    if (!f.courseId || !f.teacherId) return notice("কোর্স ও উস্তাদ বেছে নিন।");
+    if (!f.zoom.trim()) return notice("জুম লিংক দিন।");
+    const c = courseById(courses, f.courseId);
+    if (!f.studentIds.length) {
+      // কাউকে না বাছলে আগে চুপচাপ পুরো কোর্সের সবাইকে যুক্ত করে দিত — ভুলবশত
+      // অপ্রাসঙ্গিক স্টুডেন্ট ক্লাসে ঢুকে যাওয়ার কারণ ছিল এটাই; এখন স্পষ্ট
+      // নিশ্চিতকরণ ছাড়া এগোবে না
+      const whole = c.studentIds || [];
+      const names =
+        whole.map((sid) => students.find((s) => String(s.id) === String(sid))?.name || sid).join(", ") ||
+        "কেউ নেই";
+      askConfirm(
+        `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "এই কোর্সের"}" কোর্সে ভর্তি সবাই (${names}) এই ক্লাসে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
+        () => doCreate(whole),
+      );
+      return;
+    }
+    doCreate(f.studentIds);
   };
 
   const notifyCreated = () => {
@@ -10217,12 +10249,7 @@ function RoutineView({ db, setDb, courses, user }) {
         studentIds: students,
       })),
     );
-  const add = async () => {
-    if (!f.days.length) return notice("সপ্তাহের অন্তত একটি দিন বাছাই করুন।");
-    if (!f.teacherId)
-      return notice("উস্তাদ/উস্তাদা বাছাই করুন — ড্রপডাউন থেকে একজন নির্বাচন করুন।");
-    const c = courseById(courses, f.courseId);
-    const students = f.studentIds.length ? f.studentIds : c.studentIds || []; // কাউকে না বাছলে কোর্সের সবাই
+  const saveRoutine = async (students) => {
     // সবসময় সরাসরি API-তে সেভ (backend ধীরে লোড হলেও) — লোকালে রাখলে "আসে-যায়" হতো ও পোর্টালে যেত না
     try {
       if (editId) await api.updateRoutine(editId, routinePayload(f, students));
@@ -10244,6 +10271,25 @@ function RoutineView({ db, setDb, courses, user }) {
         : e?.message || "যাচাই করুন";
       notice("রুটিন সংরক্ষণ ব্যর্থ — " + detail);
     }
+  };
+  const add = () => {
+    if (!f.days.length) return notice("সপ্তাহের অন্তত একটি দিন বাছাই করুন।");
+    if (!f.teacherId)
+      return notice("উস্তাদ/উস্তাদা বাছাই করুন — ড্রপডাউন থেকে একজন নির্বাচন করুন।");
+    const c = courseById(courses, f.courseId);
+    if (!f.studentIds.length) {
+      // কাউকে না বাছলে আগে চুপচাপ পুরো কোর্সের সবাইকে যুক্ত করে দিত — ভুলবশত
+      // অপ্রাসঙ্গিক স্টুডেন্ট রুটিনে ঢুকে যাওয়ার কারণ ছিল এটাই; এখন স্পষ্ট
+      // নিশ্চিতকরণ ছাড়া এগোবে না
+      const whole = c.studentIds || [];
+      const names = whole.map((sid) => nameOf(sid)).join(", ") || "কেউ নেই";
+      askConfirm(
+        `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "এই কোর্সের"}" কোর্সে ভর্তি সবাই (${names}) এই রুটিনে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
+        () => saveRoutine(whole),
+      );
+      return;
+    }
+    saveRoutine(f.studentIds);
   };
   const del = async (id) => {
     try {
