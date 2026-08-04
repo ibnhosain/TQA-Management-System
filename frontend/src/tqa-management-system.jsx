@@ -1921,16 +1921,19 @@ const urlBase64ToUint8Array = (base64) => {
 // ইউজারের সরাসরি ক্লিকে (নোটিফিকেশন-পারমিশন ব্রাউজার-গ্রেসচার ছাড়া চাইলে
 // উপেক্ষা/ব্লক করে) ডাকা হয় — সার্ভিস ওয়ার্কার রেজিস্টার + পারমিশন চাওয়া +
 // পুশ-সাবস্ক্রিপশন ব্যাকএন্ডে সেভ, সব এক ফাংশনে
-async function enablePushNotifications() {
+async function enablePushNotifications(silent = false) {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    notice("এই ব্রাউজারে পুশ নোটিফিকেশন সাপোর্ট নেই।");
+    if (!silent) notice("এই ব্রাউজারে পুশ নোটিফিকেশন সাপোর্ট নেই।");
     return false;
   }
   try {
     const reg = await navigator.serviceWorker.register("/sw.js");
+    // পারমিশন আগে থেকেই "granted" থাকলে (যেমন অনেক আগে "জুমে জয়েন করুন" ক্লিকের
+    // সময় দেওয়া হয়েছিল) requestPermission() কোনো পপআপ ছাড়াই সাথে সাথে granted
+    // ফেরত দেয় — তাই silent মোডে এটা নিরাপদে ডাকা যায়, ব্যবহারকারীর ক্লিক ছাড়াই
     const perm = await Notification.requestPermission();
     if (perm !== "granted") {
-      notice("নোটিফিকেশনের অনুমতি দেওয়া হয়নি।");
+      if (!silent) notice("নোটিফিকেশনের অনুমতি দেওয়া হয়নি।");
       return false;
     }
     const { key } = await api.vapidPublicKey();
@@ -1948,10 +1951,10 @@ async function enablePushNotifications() {
       p256dh: raw.keys.p256dh,
       auth: raw.keys.auth,
     });
-    notice("✔ এই ডিভাইসে নোটিফিকেশন চালু হয়েছে।");
+    if (!silent) notice("✔ এই ডিভাইসে নোটিফিকেশন চালু হয়েছে।");
     return true;
   } catch {
-    notice("নোটিফিকেশন চালু করতে ব্যর্থ — একটু পর আবার চেষ্টা করুন।");
+    if (!silent) notice("নোটিফিকেশন চালু করতে ব্যর্থ — একটু পর আবার চেষ্টা করুন।");
     return false;
   }
 }
@@ -14476,6 +14479,15 @@ function Overview({ db, courses, user, goTo }) {
       "serviceWorker" in navigator &&
       !sessionStorage.getItem("tqa_push_dismissed"),
   );
+  // পারমিশন আগে থেকেই "granted" থাকলে (যেমন অনেক আগে "জুমে জয়েন করুন" ক্লিকের
+  // সময় দেওয়া হয়ে গিয়েছিল) — তখন ব্যানার আর দেখায় না, কিন্তু পুশ-সাবস্ক্রিপশনটাও
+  // কখনো ব্যাকএন্ডে সেভ হয়নি (সেটা শুধু ব্যানারের বাটনে ক্লিকেই হতো) — তাই এই
+  // ডিভাইসগুলোতে নিঃশব্দে (কোনো পপআপ/নোটিস ছাড়াই) একবার সাবস্ক্রাইব করে নেওয়া হচ্ছে
+  useEffect(() => {
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      enablePushNotifications(true);
+    }
+  }, []);
   useEffect(() => {
     let cancelled = false;
     api.todayClasses().then((d) => !cancelled && setTodayClasses(d)).catch(() => {});
