@@ -7758,9 +7758,11 @@ function AdmissionsView({ db, setDb, user, refresh }) {
     try {
       await api.rejectAdmission(a.id);
       await loadData();
-    } catch {
-      setAdmissions((prev) =>
-        prev.map((x) => (x.id === a.id ? { ...x, status: "rejected" } : x)),
+      notice("✔ আবেদনটি বাতিল করা হয়েছে।");
+    } catch (e) {
+      notice(
+        "আবেদন বাতিল করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
       );
     }
   };
@@ -7768,9 +7770,11 @@ function AdmissionsView({ db, setDb, user, refresh }) {
     try {
       await api.forwardAdmission(a.id);
       await loadData();
-    } catch {
-      setAdmissions((prev) =>
-        prev.map((x) => (x.id === a.id ? { ...x, forwarded: true } : x)),
+      notice("✔ আবেদনটি পরিচালকের কাছে পাঠানো হয়েছে।");
+    } catch (e) {
+      notice(
+        "আবেদন পাঠাতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
       );
     }
   };
@@ -10849,9 +10853,11 @@ function LeaveView({ db, setDb, user }) {
     try {
       await api.forwardLeave(l.id);
       await loadData();
-    } catch {
-      setLeaves((prev) =>
-        prev.map((x) => (x.id === l.id ? { ...x, status: "forwarded" } : x)),
+      notice("✔ ছুটির আবেদনটি পরিচালকের কাছে পাঠানো হয়েছে।");
+    } catch (e) {
+      notice(
+        "আবেদন পাঠাতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
       );
     }
   };
@@ -10859,11 +10865,11 @@ function LeaveView({ db, setDb, user }) {
     try {
       await api.decideLeave(l.id, ok);
       await loadData();
-    } catch {
-      setLeaves((prev) =>
-        prev.map((x) =>
-          x.id === l.id ? { ...x, status: ok ? "approved" : "rejected" } : x,
-        ),
+      notice(ok ? "✔ ছুটি মঞ্জুর করা হয়েছে।" : "✔ ছুটি নামঞ্জুর করা হয়েছে।");
+    } catch (e) {
+      notice(
+        "সিদ্ধান্ত সেভ করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
       );
     }
   };
