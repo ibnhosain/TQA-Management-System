@@ -219,18 +219,27 @@ class RoutineViewSet(viewsets.ModelViewSet):
     def _sync_upcoming_sessions(self, routine):
         # রুটিন এডিট করলে আগে শুধু *নতুন* তারিখের জন্য ক্লাস তৈরি হতো — যেসব
         # তারিখের ক্লাস-সেশন এই এডিটের আগেই তৈরি হয়ে গিয়েছিল (আগামী ৭ দিনের
-        # মধ্যে), সেগুলোর সময়/সময়কাল/জুম লিংক পুরনোই থেকে যেত, তাই টিচার-স্টুডেন্ট
-        # পোর্টালে পরিবর্তন দেখাই যেত না। এখন এডিটের সাথে সাথে "আজ বা পরে, এখনো
-        # শুরু হয়নি" এমন সেশনগুলোকেও নতুন মান দিয়ে হালনাগাদ করে দেওয়া হয়।
+        # মধ্যে), সেগুলো পুরনো মানেই থেকে যেত, তাই টিচার-স্টুডেন্ট পোর্টালে
+        # পরিবর্তন দেখাই যেত না। এখন এডিটের সাথে সাথে "আজ বা পরে, এখনো শুরু
+        # হয়নি" এমন সেশনগুলোকেও নতুন মান দিয়ে হালনাগাদ করে দেওয়া হয় — সময়/
+        # সময়কাল/জুম লিংকের পাশাপাশি এখন কোর্স, উস্তাদ ও স্টুডেন্ট তালিকাও।
         try:
             today = timezone.localtime().date()
-            ClassSession.objects.filter(
+            qs = ClassSession.objects.filter(
                 routine=routine, date__gte=today, status="upcoming",
-            ).update(
+            )
+            qs.update(
                 time=routine.time,
                 duration_min=routine.duration_min,
                 zoom_link=routine.zoom_link,
+                course=routine.course,
+                teacher=routine.teacher,
             )
+            # students ManyToMany — bulk .update() দিয়ে হয় না, প্রতিটা সেশনে
+            # আলাদাভাবে .set() করতে হয়
+            new_students = list(routine.students.all())
+            for s in qs:
+                s.students.set(new_students)
         except Exception:
             pass
 
