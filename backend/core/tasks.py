@@ -8,6 +8,7 @@ import os
 import requests as http
 from datetime import date, datetime, timedelta
 from celery import shared_task
+from django.db import IntegrityError
 from django.utils import timezone
 
 
@@ -165,11 +166,18 @@ def generate_for_routine(r):
         if d.weekday() not in _js_to_py(r.days or []):
             continue
         if not ClassSession.objects.filter(routine=r, date=d).exists():
-            s = ClassSession.objects.create(
-                routine=r, course=r.course, teacher=r.teacher, date=d, time=r.time,
-                duration_min=r.duration_min, zoom_link=r.zoom_link, kind="regular")
-            s.students.set(r.students.all())
-            created += 1
+            try:
+                s = ClassSession.objects.create(
+                    routine=r, course=r.course, teacher=r.teacher, date=d, time=r.time,
+                    duration_min=r.duration_min, zoom_link=r.zoom_link, kind="regular")
+                s.students.set(r.students.all())
+                created += 1
+            except IntegrityError:
+                # রেস কন্ডিশন — দৈনিক cron আর ম্যানুয়াল "সব রুটিনের ক্লাস তৈরি
+                # করুন" বাটন একইসাথে চললে দুটোই "নেই" দেখে ফেলতে পারত; DB-এর
+                # unique constraint একটাকে আটকে দেয় — এখানে চুপচাপ স্কিপ করাই
+                # ঠিক (অন্য রিকোয়েস্টটা ততক্ষণে সফলভাবে তৈরি করে ফেলেছে)
+                continue
     return created
 
 

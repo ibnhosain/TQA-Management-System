@@ -2036,6 +2036,10 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
   };
 
   const [joinError, setJoinError] = useState(false);
+  // presence চেক পরপর কয়েকবার ব্যর্থ হলে (আগে সম্পূর্ণ চুপচাপ উপেক্ষা হতো, ফলে
+  // নেটওয়ার্ক সমস্যায় "জয়েনের অপেক্ষায়" চিরকাল আটকে থাকলেও কিছু বোঝা যেত না)
+  const presenceFailRef = useRef(0);
+  const [presenceStale, setPresenceStale] = useState(false);
   const refreshPresence = async () => {
     if (!usingApi) {
       setPresence((p) => ({ ta: true, sa: true, myMin: p?.myMin || 0, myPresent: true }));
@@ -2052,8 +2056,11 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
         myMin: me?.minutes || 0,
         myPresent: !!me?.present, // উস্তাদ+স্টুডেন্ট দুজনেই জয়েন করা মাত্র backend এটা true করে দেয়
       });
+      presenceFailRef.current = 0;
+      setPresenceStale(false);
     } catch {
-      /* উপেক্ষা */
+      presenceFailRef.current += 1;
+      if (presenceFailRef.current >= 3) setPresenceStale(true); // পরপর ৩ বার (~১৫s) ব্যর্থ হলেই সতর্ক করি, একবার-দুবার সাময়িক নেটওয়ার্ক গ্লিচে যেন বিরক্ত না করে
     }
   };
 
@@ -2450,6 +2457,14 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
           {T(
             "⚠️ আপনার জয়েন ব্যাকএন্ডে সংরক্ষণ করা যায়নি — এই ক্লাসের সাথে আপনার অ্যাকাউন্ট ঠিকভাবে যুক্ত কিনা পরিচালককে জানান।",
             "⚠️ Your join couldn't be recorded — please tell the director if your account isn't properly linked to this class.",
+          )}
+        </div>
+      )}
+      {presenceStale && !joinError && (
+        <div style={{ color: C.red, fontWeight: 700, marginBottom: 4 }}>
+          {T(
+            "⚠️ সংযোগ চেক করতে সমস্যা হচ্ছে — ইন্টারনেট সংযোগ যাচাই করুন। 🔄 বাটনে চেপে আবার চেষ্টা করুন।",
+            "⚠️ Trouble checking connection status — please check your internet. Tap 🔄 to try again.",
           )}
         </div>
       )}

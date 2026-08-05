@@ -158,6 +158,19 @@ class ClassSession(models.Model):
 
     class Meta:
         ordering = ["date", "time"]
+        constraints = [
+            # একই রুটিন থেকে একই তারিখে দুটো ক্লাস-সেশন যেন কখনোই তৈরি না হয় —
+            # আগে শুধু "আছে কিনা চেক করে তারপর তৈরি" (check-then-create) পদ্ধতি
+            # ছিল, যা রেস কন্ডিশনে (দৈনিক cron আর কারো ম্যানুয়াল "সব রুটিনের
+            # ক্লাস তৈরি করুন" বাটন একইসাথে চললে) দুইটা আলাদা ক্লাস-সেশন তৈরি করে
+            # ফেলতে পারত — তখন টিচার ও স্টুডেন্ট ভিন্ন সেশনে জয়েন করে ফেললে কেউই
+            # কাউকে "উপস্থিত" দেখতেন না, যদিও দুজনেই আসলে জয়েন করেছেন
+            models.UniqueConstraint(
+                fields=["routine", "date"],
+                condition=models.Q(routine__isnull=False),
+                name="unique_routine_date_classsession",
+            ),
+        ]
 
 
 class Attendance(models.Model):
