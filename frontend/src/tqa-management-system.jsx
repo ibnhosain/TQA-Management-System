@@ -7742,39 +7742,16 @@ function AdmissionsView({ db, setDb, user, refresh }) {
           `✔ ভর্তি সম্পন্ন — লগইন: ${res.username} · পাস: ${res.password}`,
         );
       if (refresh) refresh();
-    } catch {
-      const sNo = USERS.filter((u) => u.role === "student").length + 1;
-      const id = "s" + uid();
-      const newPass = genPass();
-      USERS.push({
-        id,
-        role: "student",
-        name: `${a.name} (${a.country})`,
-        sub: a.course,
-        user: "student" + sNo,
-        pass: newPass,
-        fee: 4500,
-        guardian: a.guardian,
-        country: a.country,
-      });
-      const c = COURSES.find((x) => x.name === a.course);
-      if (c) c.studentIds.push(id);
-      setAdmissions((prev) =>
-        prev.map((x) =>
-          x.id === a.id
-            ? { ...x, status: "accepted", newLogin: "student" + sNo, newPass }
-            : x,
-        ),
+    } catch (e) {
+      // আগে এখানে ব্যর্থ হলেও ভুয়া লগইন-পাসওয়ার্ড বানিয়ে "✔ সম্পন্ন" দেখানো হতো —
+      // সার্ভারে আসলে কিছুই সেভ হতো না (আবেদন এখনো "পেন্ডিং"), তাই দেওয়া
+      // আইডি-পাসওয়ার্ড দিয়ে কখনোই লগইন করা যেত না। এখন স্পষ্ট এরর দেখাচ্ছে,
+      // কোনো ভুয়া অ্যাকাউন্ট তৈরি করছে না।
+      notice(
+        "ভর্তি গ্রহণ করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন") +
+          " (আবেদনটা এখনো 'পেন্ডিং'-ই আছে)",
       );
-      setDb((d) => ({
-        ...d,
-        admissions: d.admissions.map((x) =>
-          x.id === a.id
-            ? { ...x, status: "accepted", newLogin: "student" + sNo, newPass }
-            : x,
-        ),
-      }));
-      if (refresh) refresh();
     }
   };
   const reject = async (a) => {
