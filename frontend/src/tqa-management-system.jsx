@@ -8164,14 +8164,15 @@ function ManageView({ db, setDb, refresh }) {
         try {
           await api.deleteUser(u.id);
           await loadUsers();
-        } catch {
-          const i = USERS.findIndex((x) => x.id === u.id);
-          if (i > -1) USERS.splice(i, 1);
-          COURSES.forEach((c) => {
-            c.studentIds = c.studentIds.filter((s) => s !== u.id);
-          });
-          setAllUsers([...USERS]);
-          refresh();
+          notice(`✔ ${u.name}-কে মুছে ফেলা হয়েছে।`);
+        } catch (e) {
+          // আগে ব্যর্থ হলেও তালিকা থেকে সরিয়ে "মুছে গেছে" দেখানো হতো — আসল
+          // অ্যাকাউন্টটা সার্ভারে ঠিকই লগইন-সক্ষম থেকে যেত, শুধু স্ক্রিনে ভুল
+          // ধারণা হতো যে অ্যাক্সেস বাতিল হয়ে গেছে। এখন স্পষ্ট এরর দেখাচ্ছে।
+          notice(
+            `${u.name}-কে মুছতে ব্যর্থ — ` +
+              (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+          );
         }
       },
     );
@@ -11491,14 +11492,12 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
       try {
         await api.deleteUser(s.id);
         await loadStudents();
-      } catch {
-        const i = USERS.findIndex((x) => x.id === s.id);
-        if (i > -1) USERS.splice(i, 1);
-        COURSES.forEach((c) => {
-          c.studentIds = c.studentIds.filter((x) => x !== s.id);
-        });
-        setStudents(USERS.filter((u) => u.role === "student"));
-        refresh();
+        notice(`✔ ${s.name}-কে মুছে ফেলা হয়েছে।`);
+      } catch (e) {
+        notice(
+          `${s.name}-কে মুছতে ব্যর্থ — ` +
+            (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        );
       }
     });
   /* এক স্টুডেন্টের পূর্ণ চিত্র */
