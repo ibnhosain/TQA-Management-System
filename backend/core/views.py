@@ -216,12 +216,31 @@ class RoutineViewSet(viewsets.ModelViewSet):
         except Exception:
             pass
 
+    def _sync_upcoming_sessions(self, routine):
+        # রুটিন এডিট করলে আগে শুধু *নতুন* তারিখের জন্য ক্লাস তৈরি হতো — যেসব
+        # তারিখের ক্লাস-সেশন এই এডিটের আগেই তৈরি হয়ে গিয়েছিল (আগামী ৭ দিনের
+        # মধ্যে), সেগুলোর সময়/সময়কাল/জুম লিংক পুরনোই থেকে যেত, তাই টিচার-স্টুডেন্ট
+        # পোর্টালে পরিবর্তন দেখাই যেত না। এখন এডিটের সাথে সাথে "আজ বা পরে, এখনো
+        # শুরু হয়নি" এমন সেশনগুলোকেও নতুন মান দিয়ে হালনাগাদ করে দেওয়া হয়।
+        try:
+            today = timezone.localtime().date()
+            ClassSession.objects.filter(
+                routine=routine, date__gte=today, status="upcoming",
+            ).update(
+                time=routine.time,
+                duration_min=routine.duration_min,
+                zoom_link=routine.zoom_link,
+            )
+        except Exception:
+            pass
+
     def perform_create(self, serializer):
         routine = serializer.save()
         self._generate_now(routine)
 
     def perform_update(self, serializer):
         routine = serializer.save()
+        self._sync_upcoming_sessions(routine)
         self._generate_now(routine)
 
     @action(detail=False, methods=["post"], permission_classes=[IsAdminLevel])
