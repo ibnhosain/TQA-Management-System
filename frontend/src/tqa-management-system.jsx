@@ -9529,16 +9529,14 @@ function DirectorPaymentsView({ db, setDb, user }) {
     try {
       await api.verifyFee(pid);
       await loadData();
-    } catch {
-      setFees((prev) =>
-        prev.map((p) => (p.id === pid ? { ...p, status: "verified" } : p)),
+      notice("✔ পেমেন্ট ভেরিফাই হয়েছে।");
+    } catch (e) {
+      // আগে ব্যর্থ হলেও স্ক্রিনে "ভেরিফাইড" দেখানো হতো, সার্ভারে আসলে হতো না —
+      // এখন স্পষ্ট এরর দেখাচ্ছে, স্ক্রিনে ভুয়া স্ট্যাটাস বসাচ্ছে না
+      notice(
+        "ভেরিফাই করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
       );
-      setDb((d) => ({
-        ...d,
-        feePayments: d.feePayments.map((p) =>
-          p.id === pid ? { ...p, status: "verified" } : p,
-        ),
-      }));
     }
   };
   const studentById = (id) => students.find((s) => s.id === id) || userById(id);
