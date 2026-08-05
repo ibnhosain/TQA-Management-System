@@ -867,9 +867,17 @@ class StudentRemarkViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         u = self.request.user
         qs = StudentRemark.objects.select_related("teacher", "student")
+        student_id = self.request.query_params.get("student")
         if u.role == "student":
             qs = qs.filter(student=u)
-        student_id = self.request.query_params.get("student")
+        elif u.role == "teacher":
+            # টিচার শুধু নিজের লেখা মন্তব্যই দেখবে, এবং শুধু নিজের কোর্সের স্টুডেন্ট নিয়ে —
+            # অন্য টিচারের ছাত্র সম্পর্কে বা অন্য টিচারের লেখা মন্তব্য নয়
+            qs = qs.filter(teacher=u)
+            if student_id and not Course.objects.filter(
+                teacher=u, students_id=student_id
+            ).exists():
+                return qs.none()
         if student_id:
             qs = qs.filter(student_id=student_id)
         return qs
@@ -880,7 +888,12 @@ class StudentRemarkViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
-        serializer.save(teacher=self.request.user)
+        u = self.request.user
+        if u.role == "teacher":
+            student = serializer.validated_data.get("student")
+            if not Course.objects.filter(teacher=u, students=student).exists():
+                raise PermissionDenied("আপনি এই স্টুডেন্টের টিচার নন")
+        serializer.save(teacher=u)
 
 
 # ─────────────────────────── নোটিশ, নোটিফিকেশন, WhatsApp ───────────────────────────
