@@ -10831,20 +10831,15 @@ function LeaveView({ db, setDb, user }) {
         reason: f.reason,
       });
       await loadData();
-    } catch {
-      setLeaves((prev) => [
-        {
-          id: uid(),
-          userId: user.id,
-          type: f.type,
-          from: f.from,
-          to: f.to,
-          reason: f.reason,
-          date: todayISO(),
-          status: "pending_admin",
-        },
-        ...prev,
-      ]);
+      notice(T("✔ ছুটির আবেদন জমা হয়েছে।", "✔ Leave application submitted."));
+    } catch (e) {
+      notice(
+        T(
+          "আবেদন জমা দিতে ব্যর্থ — ",
+          "Failed to submit application — ",
+        ) + (e?.data?.error || e?.message || T("সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন", "Check your connection and try again")),
+      );
+      return;
     }
     setShow(false);
     setF({ type: "অসুস্থতা", from: todayISO(), to: todayISO(), reason: "" });
