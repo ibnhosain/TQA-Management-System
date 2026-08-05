@@ -2035,6 +2035,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     return Math.floor((accumulatedMsRef.current + extra) / 1000);
   };
 
+  const [joinError, setJoinError] = useState(false);
   const refreshPresence = async () => {
     if (!usingApi) {
       setPresence((p) => ({ ta: true, sa: true, myMin: p?.myMin || 0, myPresent: true }));
@@ -2056,15 +2057,22 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     }
   };
 
-  // সেগমেন্ট শুরু (মাউন্টে ও প্রতি রিজয়েনে)
+  // সেগমেন্ট শুরু (মাউন্টে ও প্রতি রিজয়েনে) — আগে এই কলটা ব্যর্থ হলে চুপচাপ
+  // উপেক্ষা করা হতো, ফলে কারো জয়েন কখনো ব্যাকএন্ডে রেকর্ড না হলেও (যেমন ওই
+  // ক্লাসের সাথে তার অ্যাকাউন্ট ঠিকভাবে যুক্ত না থাকলে) কোনো বার্তা ছাড়াই
+  // "জয়েনের অপেক্ষায়" আটকে থাকত — এখন ব্যর্থ হলে স্পষ্ট জানিয়ে দেওয়া হয়
   useEffect(() => {
-    if (usingApi && inMeeting) api.joinClass(k.id).catch(() => {});
+    if (usingApi && inMeeting) {
+      setJoinError(false);
+      api.joinClass(k.id).catch(() => setJoinError(true));
+    }
   }, [inMeeting]);
 
-  // presence poll — কে এখন মিটিংয়ে আছে
+  // presence poll — কে এখন মিটিংয়ে আছে (৫ সেকেন্ড পরপর — আগে ১২ সেকেন্ড ছিল,
+  // দ্রুত আপডেট হওয়ার জন্য কমানো হলো)
   useEffect(() => {
     refreshPresence();
-    const iv = setInterval(refreshPresence, 12000);
+    const iv = setInterval(refreshPresence, 5000);
     return () => clearInterval(iv);
   }, [k.id]);
 
@@ -2437,12 +2445,35 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
 
   return (
     <div style={{ marginTop: 6, fontSize: 13 }}>
+      {joinError && (
+        <div style={{ color: C.red, fontWeight: 700, marginBottom: 4 }}>
+          {T(
+            "⚠️ আপনার জয়েন ব্যাকএন্ডে সংরক্ষণ করা যায়নি — এই ক্লাসের সাথে আপনার অ্যাকাউন্ট ঠিকভাবে যুক্ত কিনা পরিচালককে জানান।",
+            "⚠️ Your join couldn't be recorded — please tell the director if your account isn't properly linked to this class.",
+          )}
+        </div>
+      )}
       {!bothIn ? (
         <span style={{ fontWeight: 700, color: C.gold }}>
           {T(
             `⏳ ${user.role === "teacher" ? "শিক্ষার্থীর" : "উস্তাদের"} জয়েনের অপেক্ষায়…`,
             `⏳ Waiting for ${user.role === "teacher" ? "student" : "teacher"} to join…`,
           )}
+          <button
+            onClick={refreshPresence}
+            title={T("এখনই আবার চেক করুন", "Check again now")}
+            style={{
+              marginLeft: 8,
+              border: "none",
+              background: "none",
+              cursor: "pointer",
+              fontSize: 13,
+              color: C.emerald,
+              fontWeight: 700,
+            }}
+          >
+            🔄
+          </button>
         </span>
       ) : (
         <span style={{ fontWeight: 800, color: done ? C.green : C.gold }}>
