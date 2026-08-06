@@ -132,6 +132,25 @@ class CourseViewSet(viewsets.ModelViewSet):
             return qs.filter(students=u)
         return qs
 
+    def perform_update(self, serializer):
+        old_teacher_id = serializer.instance.teacher_id
+        course = serializer.save()
+        if course.teacher_id != old_teacher_id:
+            # কোর্সের টিচার বদলালে এই কোর্সের ওপর তৈরি রুটিন ও আগে থেকে জেনারেট
+            # হওয়া আসন্ন ক্লাস-সেশনেও নতুন টিচার সিঙ্ক করা হয় — নইলে Routine
+            # এডিটের ক্ষেত্রে যেমন ছিল, এখানেও পুরনো টিচারই থেকে যেত এবং নতুন
+            # টিচার নিজের পোর্টালে ক্লাসটা দেখতেই পেতেন না
+            try:
+                today = timezone.localtime().date()
+                Routine.objects.filter(course=course, is_active=True).update(
+                    teacher=course.teacher
+                )
+                ClassSession.objects.filter(
+                    course=course, date__gte=today, status="upcoming",
+                ).update(teacher=course.teacher)
+            except Exception:
+                pass
+
 
 class SyllabusViewSet(viewsets.ModelViewSet):
     # select_related("book") → get_book_name প্রতি আইটেমে আলাদা কোয়েরি না করে (N+1 এড়ায়)
