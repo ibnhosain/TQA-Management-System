@@ -324,9 +324,6 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
   };
   const doSend = async () => {
     if (!canSend) return;
-    // আগে এখানে শুধু mock db আপডেট হতো, আসল ব্যাকএন্ডে কখনো সেভ হতো না —
-    // তাই স্টুডেন্ট নিজের ডিভাইসে/সেশনে "ভাউচার/রিসিট" পেজে গিয়ে কিছুই দেখতে
-    // পেতেন না (আসল API-কল এখানে কখনো করা হয়নি)
     try {
       await api.sendReceipt({
         to_user: person.id,
@@ -335,35 +332,12 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
         amount: p.amount,
         method: p.method,
       });
-    } catch {
-      setDb((d) => ({
-        ...d,
-        sentReceipts: [
-          {
-            id: uid(),
-            toUserId: person.id,
-            kind,
-            month: p.month,
-            amount: p.amount,
-            method: p.method,
-            date: p.date,
-            status: p.status || "verified",
-            sentBy: sender ? `${sender.name}` : "",
-            sentDate: todayISO(),
-          },
-          ...(d.sentReceipts || []),
-        ],
-        notifications: [
-          {
-            id: uid(),
-            for: [person.id],
-            text: `🧾 আপনার পোর্টালে একটি "${kind}" পাঠানো হয়েছে — "ভাউচার/রিসিট" মেনুতে দেখুন।`,
-            date: todayISO(),
-            read: false,
-          },
-          ...d.notifications,
-        ],
-      }));
+    } catch (e) {
+      notice(
+        "রিসিট পাঠাতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
+      return;
     }
     setAsk(false);
     setDone(true);
