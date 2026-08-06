@@ -3765,49 +3765,13 @@ function LecturePlan({ db, courses, user, refresh }) {
         });
       }
       await loadData();
-    } catch {
-      const picked = sylList.filter((s) => form.selIds.includes(s.id));
-      if (form.mode === "new") {
-        const topics = picked.map((s) => ({
-          id: uid(),
-          syllabusId: s.id,
-          text: sylLabel(s),
-          covered: null,
-        }));
-        setLectures((prev) => [
-          ...prev,
-          {
-            id: uid(),
-            no: noVal || prev.length + 1,
-            title: form.title.trim(),
-            topics,
-            date: null,
-          },
-        ]);
-      } else {
-        setLectures((prev) =>
-          prev.map((l) =>
-            l.id === form.lecId
-              ? {
-                  ...l,
-                  no: noVal || l.no,
-                  title: form.title.trim(),
-                  topics: picked.map((s) => {
-                    const old = l.topics.find((t) => t.syllabusId === s.id);
-                    return old
-                      ? { ...old, text: sylLabel(s) }
-                      : {
-                          id: uid(),
-                          syllabusId: s.id,
-                          text: sylLabel(s),
-                          covered: null,
-                        };
-                  }),
-                }
-              : l,
-          ),
-        );
-      }
+      notice(form.mode === "new" ? "✔ দারস তৈরি হয়েছে।" : "✔ দারস আপডেট হয়েছে।");
+    } catch (e) {
+      notice(
+        "দারস সেভ করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
+      return;
     }
     setForm(null);
   };
@@ -3818,11 +3782,10 @@ function LecturePlan({ db, courses, user, refresh }) {
         try {
           await api.deleteLecture(lec.id);
           await loadData();
-        } catch {
-          setLectures((prev) =>
-            prev
-              .filter((l) => l.id !== lec.id)
-              .map((l, j) => ({ ...l, no: j + 1 })),
+        } catch (e) {
+          notice(
+            "দারস মুছতে ব্যর্থ — " +
+              (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
           );
         }
       },
@@ -3845,19 +3808,10 @@ function LecturePlan({ db, courses, user, refresh }) {
     try {
       await api.markTopic(topic.id, val);
       await loadData();
-    } catch {
-      setLectures((prev) =>
-        prev.map((l) =>
-          l.id === lec.id
-            ? {
-                ...l,
-                date: l.date || todayISO(),
-                topics: l.topics.map((t) =>
-                  t.id === topic.id ? { ...t, covered: val } : t,
-                ),
-              }
-            : l,
-        ),
+    } catch (e) {
+      notice(
+        "টপিক মার্ক করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
       );
     }
   };
