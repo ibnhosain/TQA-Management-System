@@ -5431,32 +5431,13 @@ function ExamsView({ db, setDb, courses, user }) {
             : [],
       });
       await loadData();
-    } catch {
-      setExams((prev) => [
-        {
-          id: uid(),
-          ...f,
-          total: +f.total,
-          marks: {},
-          questions: f.mode === "form" ? qs : [],
-          subs: [],
-        },
-        ...prev,
-      ]);
-      setDb((d) => ({
-        ...d,
-        exams: [
-          {
-            id: uid(),
-            ...f,
-            total: +f.total,
-            marks: {},
-            questions: f.mode === "form" ? qs : [],
-            subs: [],
-          },
-          ...d.exams,
-        ],
-      }));
+      notice("✔ পরীক্ষা তৈরি হয়েছে।");
+    } catch (e) {
+      notice(
+        "পরীক্ষা তৈরি করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
+      return;
     }
     setShow(false);
     setQs([]);
@@ -5465,11 +5446,11 @@ function ExamsView({ db, setDb, courses, user }) {
     try {
       await api.examDirectMark(ex.id, sid, +val);
       await loadData();
-    } catch {
-      setExams((prev) =>
-        prev.map((x) =>
-          x.id === ex.id ? { ...x, marks: { ...x.marks, [sid]: +val } } : x,
-        ),
+      notice("✔ মার্ক সেভ হয়েছে।");
+    } catch (e) {
+      notice(
+        "মার্ক সেভ করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
       );
     }
   };
@@ -5477,26 +5458,18 @@ function ExamsView({ db, setDb, courses, user }) {
     try {
       await api.submitExam(ex.id, payload);
       await loadData();
-    } catch {
-      setExams((prev) =>
-        prev.map((x) =>
-          x.id === ex.id
-            ? {
-                ...x,
-                subs: [
-                  ...x.subs,
-                  {
-                    id: uid(),
-                    studentId: user.id,
-                    date: todayISO(),
-                    mark: null,
-                    ...payload,
-                  },
-                ],
-              }
-            : x,
-        ),
+      notice(T("✔ জমা হয়েছে।", "✔ Submitted."));
+    } catch (e) {
+      notice(
+        T("জমা দিতে ব্যর্থ — ", "Failed to submit — ") +
+          (e?.data?.error ||
+            e?.message ||
+            T(
+              "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন",
+              "check your connection and try again",
+            )),
       );
+      return;
     }
     setDoSub(null);
   };
@@ -5504,17 +5477,11 @@ function ExamsView({ db, setDb, courses, user }) {
     try {
       await api.gradeExam(ex.id, sub.id, mark);
       await loadData();
-    } catch {
-      setExams((prev) =>
-        prev.map((x) =>
-          x.id === ex.id
-            ? {
-                ...x,
-                subs: x.subs.map((s) => (s.id === sub.id ? { ...s, mark } : s)),
-                marks: { ...x.marks, [sub.studentId]: mark },
-              }
-            : x,
-        ),
+      notice("✔ মার্ক সেভ হয়েছে।");
+    } catch (e) {
+      notice(
+        "মার্ক সেভ করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
       );
     }
   };
