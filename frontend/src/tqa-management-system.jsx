@@ -7571,6 +7571,7 @@ function AdmissionsView({ db, setDb, user, refresh }) {
   });
   const [admissions, setAdmissions] = useState(db.admissions || []);
   const [loading, setLoading] = useState(false);
+  const [acceptingId, setAcceptingId] = useState(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -7587,6 +7588,8 @@ function AdmissionsView({ db, setDb, user, refresh }) {
   }, []);
 
   const accept = async (a) => {
+    if (acceptingId) return; // ডাবল-ক্লিকে দুইবার রিকোয়েস্ট গিয়ে ডুপ্লিকেট স্টুডেন্ট তৈরি ঠেকাতে
+    setAcceptingId(a.id);
     try {
       const res = await api.acceptAdmission(a.id, { fee: 4500 });
       await loadData();
@@ -7605,6 +7608,8 @@ function AdmissionsView({ db, setDb, user, refresh }) {
           (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন") +
           " (আবেদনটা এখনো 'পেন্ডিং'-ই আছে)",
       );
+    } finally {
+      setAcceptingId(null);
     }
   };
   const reject = async (a) => {
@@ -7685,8 +7690,12 @@ function AdmissionsView({ db, setDb, user, refresh }) {
                 </Tag>
               )}
               <div style={{ display: "flex", gap: 6 }}>
-                <Btn sm onClick={() => accept(a)}>
-                  ✔ গ্রহণ করুন
+                <Btn
+                  sm
+                  disabled={acceptingId === a.id}
+                  onClick={() => accept(a)}
+                >
+                  {acceptingId === a.id ? "..." : "✔ গ্রহণ করুন"}
                 </Btn>
                 <Btn sm kind="danger" onClick={() => reject(a)}>
                   ✘ বাতিল

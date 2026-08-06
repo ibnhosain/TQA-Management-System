@@ -780,6 +780,11 @@ class AdmissionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def accept(self, request, pk=None):  # গ্রহণ → স্টুডেন্ট অটো তৈরি, কোর্সে যুক্ত
         a = self.get_object()
+        if a.status != "pending":
+            # ডাবল-ক্লিক/দুইবার রিকোয়েস্ট গেলে দ্বিতীয়বার আরেকটা ডুপ্লিকেট
+            # স্টুডেন্ট অ্যাকাউন্ট তৈরি হওয়া ঠেকাতে — একবার গ্রহণ হয়ে গেলে
+            # আর দ্বিতীয়বার গ্রহণ করা যাবে না
+            return Response({"error": "এই আবেদনটি ইতিমধ্যে সিদ্ধান্ত নেওয়া হয়ে গেছে"}, status=400)
         from .utils import make_password_str
         pwd = make_password_str(8)
         username = request.data.get("username") or f"student{User.objects.filter(role='student').count() + 1}"
