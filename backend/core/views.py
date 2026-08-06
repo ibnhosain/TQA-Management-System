@@ -1,6 +1,5 @@
 """TQA-MS — DRF ViewSets ও workflow actions (অ্যাপ: core)"""
 import json
-from datetime import date
 from django.db.models import Q, Avg, Count, Sum
 from django.http import HttpResponse
 from django.utils import timezone
@@ -201,7 +200,7 @@ class LectureViewSet(viewsets.ModelViewSet):
         topic.marked_at = timezone.now()
         topic.save()
         if not topic.lecture.date:
-            topic.lecture.date = date.today()
+            topic.lecture.date = timezone.localtime().date()
             topic.lecture.save()
         return Response(LectureTopicSerializer(topic).data)
 
@@ -1040,7 +1039,7 @@ def export_all_data(request):
     }
 
     content = json.dumps(payload, ensure_ascii=False, indent=2)
-    filename = f"tqa-backup-{date.today().isoformat()}.json"
+    filename = f"tqa-backup-{timezone.localtime().date().isoformat()}.json"
     resp = HttpResponse(content, content_type="application/json; charset=utf-8")
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
