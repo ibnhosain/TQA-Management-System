@@ -661,6 +661,18 @@ class TeacherPaymentViewSet(viewsets.ModelViewSet):
         if total_paid >= (pay.teacher.monthly_salary or 0):
             DueMonth.objects.filter(user=pay.teacher, month_label=pay.month_label).delete()
 
+    def perform_destroy(self, instance):
+        # ভুলবশত/ডুপ্লিকেট যোগ হওয়া বেতন-পেমেন্ট মোছার পর, ওই মাসে মোট পরিশোধ
+        # আর পূর্ণ বেতনের সমান না হলে বকেয়া (DueMonth) আবার ফিরিয়ে আনা হয় —
+        # FeePaymentViewSet.perform_destroy-এর সাথে সামঞ্জস্যপূর্ণ
+        teacher, month_label = instance.teacher, instance.month_label
+        instance.delete()
+        total_paid = TeacherPayment.objects.filter(
+            teacher=teacher, month_label=month_label,
+        ).aggregate(total=Sum("amount"))["total"] or 0
+        if total_paid < (teacher.monthly_salary or 0):
+            DueMonth.objects.get_or_create(user=teacher, month_label=month_label)
+
 
 class SentReceiptViewSet(viewsets.ModelViewSet):
     serializer_class = SentReceiptSerializer
