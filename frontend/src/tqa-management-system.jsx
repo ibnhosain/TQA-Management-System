@@ -2722,21 +2722,13 @@ function ClassesView({
         stars,
         comment,
       });
-    } catch {
-      setDb((d) => ({
-        ...d,
-        ratings: [
-          ...d.ratings,
-          {
-            id: uid(),
-            ...rate,
-            studentId: user.id,
-            stars,
-            comment,
-            date: todayISO(),
-          },
-        ],
-      }));
+      notice("✔ রেটিং জমা হয়েছে, ধন্যবাদ।");
+    } catch (e) {
+      notice(
+        "রেটিং জমা দিতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
+      return;
     }
     setRate(null);
   };
@@ -2745,10 +2737,13 @@ function ClassesView({
       try {
         await api.deleteClass(id);
         await loadClasses();
-        return;
-      } catch {
-        /* fall through */
+      } catch (e) {
+        notice(
+          "ক্লাস মুছতে ব্যর্থ — " +
+            (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        );
       }
+      return;
     }
     setDb((d) => ({ ...d, classes: d.classes.filter((k) => k.id !== id) }));
   };
@@ -2792,10 +2787,13 @@ function ClassesView({
             ? "✔ ক্লাস আপডেট হয়েছে"
             : "✔ ক্লাস শিডিউল হয়েছে — সময় হলে পোর্টালে জয়েন অপশন আসবে",
         );
-        return;
-      } catch {
-        /* ব্যাকএন্ড ব্যর্থ → নিচের mock এ পড়ে */
+      } catch (e) {
+        notice(
+          "ক্লাস সেভ করতে ব্যর্থ — " +
+            (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        );
       }
+      return;
     }
     if (editId) {
       // ✏️ এডিট — কেবল এডমিন/পরিচালক; তারিখ-সময় বদলালে পোর্টালের জয়েন অপশনও অটো বদলায়
