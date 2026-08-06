@@ -6053,23 +6053,12 @@ function ProgressView({ db, setDb, courses, user }) {
         method: "নগদ গ্রহণ (অফিস)",
       });
       await loadData();
-    } catch {
-      setFees((prev) => [
-        ...prev,
-        {
-          id: uid(),
-          studentId: sel,
-          amount: st.fee,
-          month,
-          date: todayISO(),
-          method: "নগদ গ্রহণ (অফিস)",
-          status: "verified",
-        },
-      ]);
-      setDuesMap((prev) => ({
-        ...prev,
-        [selId]: (prev[selId] || []).slice(1),
-      }));
+      notice(`✔ ${month} মাসের ফি পরিশোধ রেকর্ড করা হয়েছে।`);
+    } catch (e) {
+      notice(
+        "পেমেন্ট রেকর্ড করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
     }
   };
   const studentPay = async () => {
@@ -6083,23 +6072,13 @@ function ProgressView({ db, setDb, courses, user }) {
         trx_id: pf.trx,
       });
       await loadData();
-    } catch {
-      setFees((prev) => [
-        ...prev,
-        {
-          id: uid(),
-          studentId: sel,
-          amount: st.fee,
-          month,
-          date: todayISO(),
-          method: pf.method + (pf.trx ? ` (Trx: ${pf.trx})` : ""),
-          status: "pending",
-        },
-      ]);
-      setDuesMap((prev) => ({
-        ...prev,
-        [selId]: (prev[selId] || []).slice(1),
-      }));
+      notice(`✔ ${month} মাসের ফি জমা হয়েছে — ভেরিফাই বাকি।`);
+    } catch (e) {
+      notice(
+        "ফি জমা দিতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
+      return;
     }
     setPay(false);
     setPf({ method: "বিকাশ", trx: "" });
@@ -6108,9 +6087,11 @@ function ProgressView({ db, setDb, courses, user }) {
     try {
       await api.verifyFee(pid);
       await loadData();
-    } catch {
-      setFees((prev) =>
-        prev.map((p) => (p.id === pid ? { ...p, status: "verified" } : p)),
+      notice("✔ পেমেন্ট ভেরিফাই হয়েছে।");
+    } catch (e) {
+      notice(
+        "ভেরিফাই করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
       );
     }
   };
@@ -8913,41 +8894,13 @@ function StudentPaymentsView({ db, setDb, user }) {
         screenshot: pf.shotFile || undefined,
       });
       await loadData();
-    } catch {
-      setFees((prev) => [
-        ...prev,
-        {
-          id: uid(),
-          studentId: user.id,
-          amount: userFee,
-          month: payMonth,
-          date: todayISO(),
-          method: pf.method + (pf.trx ? ` (Trx: ${pf.trx})` : ""),
-          shot: pf.shot,
-          status: "pending",
-        },
-      ]);
-      setDues((prev) => prev.filter((m) => m !== payMonth));
-      setDb((d) => ({
-        ...d,
-        feePayments: [
-          ...d.feePayments,
-          {
-            id: uid(),
-            studentId: user.id,
-            amount: userFee,
-            month: payMonth,
-            date: todayISO(),
-            method: pf.method,
-            shot: pf.shot,
-            status: "pending",
-          },
-        ],
-        dueMonths: {
-          ...d.dueMonths,
-          [user.id]: (d.dueMonths[user.id] || []).filter((m) => m !== payMonth),
-        },
-      }));
+      notice(`✔ Payment for ${payMonth} submitted — pending verification.`);
+    } catch (e) {
+      notice(
+        "Failed to submit payment — " +
+          (e?.data?.error || e?.message || "check your connection and try again"),
+      );
+      return;
     }
     setPayMonth(null);
     setPf({ method: "বিকাশ", trx: "", shot: null, shotFile: null });
