@@ -5053,32 +5053,13 @@ function AssignmentsView({ db, setDb, courses, user }) {
             : [],
       });
       await loadData();
-    } catch {
-      setAssignments((prev) => [
-        {
-          id: uid(),
-          ...f,
-          total: +f.total,
-          teacherId: user.id,
-          questions: f.mode === "form" ? qs : [],
-          subs: [],
-        },
-        ...prev,
-      ]);
-      setDb((d) => ({
-        ...d,
-        assignments: [
-          {
-            id: uid(),
-            ...f,
-            total: +f.total,
-            teacherId: user.id,
-            questions: f.mode === "form" ? qs : [],
-            subs: [],
-          },
-          ...d.assignments,
-        ],
-      }));
+      notice("✔ অ্যাসাইনমেন্ট তৈরি হয়েছে।");
+    } catch (e) {
+      notice(
+        "অ্যাসাইনমেন্ট তৈরি করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
+      return;
     }
     setShow(false);
     setQs([]);
@@ -5087,38 +5068,30 @@ function AssignmentsView({ db, setDb, courses, user }) {
     try {
       await api.deleteAssignment(id);
       await loadData();
-    } catch {
-      setAssignments((prev) => prev.filter((a) => a.id !== id));
-      setDb((d) => ({
-        ...d,
-        assignments: d.assignments.filter((a) => a.id !== id),
-      }));
+      notice("✔ অ্যাসাইনমেন্ট মুছে ফেলা হয়েছে।");
+    } catch (e) {
+      notice(
+        "অ্যাসাইনমেন্ট মুছতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
     }
   };
   const submitWork = async (a, payload) => {
     try {
       await api.submitAssignment(a.id, payload);
       await loadData();
-    } catch {
-      setAssignments((prev) =>
-        prev.map((x) =>
-          x.id === a.id
-            ? {
-                ...x,
-                subs: [
-                  ...x.subs,
-                  {
-                    id: uid(),
-                    studentId: user.id,
-                    date: todayISO(),
-                    mark: null,
-                    ...payload,
-                  },
-                ],
-              }
-            : x,
-        ),
+      notice(T("✔ জমা হয়েছে।", "✔ Submitted."));
+    } catch (e) {
+      notice(
+        T("জমা দিতে ব্যর্থ — ", "Failed to submit — ") +
+          (e?.data?.error ||
+            e?.message ||
+            T(
+              "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন",
+              "check your connection and try again",
+            )),
       );
+      return;
     }
     setDoSub(null);
   };
@@ -5126,16 +5099,11 @@ function AssignmentsView({ db, setDb, courses, user }) {
     try {
       await api.gradeAssignment(a.id, sub.id, mark);
       await loadData();
-    } catch {
-      setAssignments((prev) =>
-        prev.map((x) =>
-          x.id === a.id
-            ? {
-                ...x,
-                subs: x.subs.map((s) => (s.id === sub.id ? { ...s, mark } : s)),
-              }
-            : x,
-        ),
+      notice("✔ মার্ক সেভ হয়েছে।");
+    } catch (e) {
+      notice(
+        "মার্ক সেভ করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
       );
     }
   };
