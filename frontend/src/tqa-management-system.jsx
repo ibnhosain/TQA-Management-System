@@ -6658,8 +6658,13 @@ function BooksView({ db, user }) {
           type: res.file_type || "PDF",
         },
       ]);
-    } catch {
-      setBooks((prev) => [...prev, { id: uid(), ...f, type: f.file_type }]);
+      notice("✔ বই যোগ করা হয়েছে।");
+    } catch (e) {
+      notice(
+        "বই যোগ করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
+      return;
     }
     setShow(false);
     setF({ cls: "", title: "", author: "", link: "", file_type: "PDF" });
@@ -6667,8 +6672,14 @@ function BooksView({ db, user }) {
   const del = async (b) => {
     try {
       await api.deleteLibraryBook(b.id);
-    } catch {}
-    setBooks((prev) => prev.filter((x) => x.id !== b.id));
+      setBooks((prev) => prev.filter((x) => x.id !== b.id));
+      notice("✔ বই মুছে ফেলা হয়েছে।");
+    } catch (e) {
+      notice(
+        "বই মুছতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
+    }
   };
   return (
     <Section
