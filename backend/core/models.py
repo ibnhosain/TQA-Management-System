@@ -130,6 +130,9 @@ class Routine(models.Model):
     time = models.TimeField()
     duration_min = models.PositiveIntegerField(default=60)
     zoom_link = models.URLField()
+    # প্রথম লিংকে দুজনেই (উস্তাদ+স্টুডেন্ট) একবার জয়েন করে ফেললে সেই লিংক ওইদিনের
+    # জন্য আর দেখানো হয় না — এই দ্বিতীয় (রিজয়েন) লিংকে জয়েন হতে হয় (ঐচ্ছিক)
+    zoom_link_2 = models.URLField(blank=True)
     is_active = models.BooleanField(default=True)
 
 
@@ -164,6 +167,7 @@ class ClassSession(models.Model):
     time = models.TimeField()
     duration_min = models.PositiveIntegerField(default=60)
     zoom_link = models.URLField()
+    zoom_link_2 = models.URLField(blank=True)  # রুটিন থেকে সিঙ্ক হওয়া রিজয়েন-লিংক (ঐচ্ছিক)
     lecture_no = models.PositiveIntegerField(default=1)
     kind = models.CharField(max_length=10, choices=KINDS, default="regular")
     guardian_requirement = models.TextField(blank=True)  # অভিভাবকের রিকোয়ারমেন্ট

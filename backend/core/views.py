@@ -250,6 +250,7 @@ class RoutineViewSet(viewsets.ModelViewSet):
                 time=routine.time,
                 duration_min=routine.duration_min,
                 zoom_link=routine.zoom_link,
+                zoom_link_2=routine.zoom_link_2,
                 course=routine.course,
                 teacher=routine.teacher,
             )

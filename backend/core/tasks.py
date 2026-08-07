@@ -169,7 +169,8 @@ def generate_for_routine(r):
             try:
                 s = ClassSession.objects.create(
                     routine=r, course=r.course, teacher=r.teacher, date=d, time=r.time,
-                    duration_min=r.duration_min, zoom_link=r.zoom_link, kind="regular")
+                    duration_min=r.duration_min, zoom_link=r.zoom_link,
+                    zoom_link_2=r.zoom_link_2, kind="regular")
                 s.students.set(r.students.all())
                 created += 1
             except IntegrityError:

@@ -1179,6 +1179,8 @@ const adaptClass = (k) => ({
   dur: k.duration_min,
   lectureNo: k.lecture_no,
   zoom: k.zoom_link,
+  zoom2: k.zoom_link_2 || "",
+  attendance: k.attendance || [], // উস্তাদ+স্টুডেন্ট আজ ইতিমধ্যে (দুজনেই) জয়েন করেছেন কিনা বের করতে — জয়েন/রিজয়েন বাটন ঠিক করতে ব্যবহৃত
   kind: KEY_TO_KIND[k.kind] || "নিয়মিত ক্লাস",
   teacherId: k.teacher,
   studentIds: k.students || [],
@@ -1189,6 +1191,20 @@ const adaptClass = (k) => ({
   req: k.guardian_requirement || "",
   routineId: k.routine,
 });
+// আজকের এই ক্লাসে উস্তাদ+অন্তত একজন স্টুডেন্ট — দুজনেই ইতিমধ্যে (এই মুহূর্তে
+// একসাথে না হলেও) অন্তত একবার জয়েন করে হাজিরা 'নিশ্চিত' হয়ে গেছে কিনা —
+// হলে ১ম জুম লিংক আর দেখানো হবে না, ২য় (রিজয়েন) লিংক দেখাবে
+const bothJoinedToday = (k, teacherId) => {
+  const rows = k.attendance || [];
+  const tid = k.teacherId ?? teacherId;
+  const teacherDone = rows.some(
+    (a) => String(a.user) === String(tid) && a.marked_present,
+  );
+  const studentDone = rows.some(
+    (a) => String(a.user) !== String(tid) && a.marked_present,
+  );
+  return teacherDone && studentDone;
+};
 /* ফ্রন্টএন্ড ফরম → API ClassSession payload */
 const classPayload = (ff, students) => ({
   course: ff.courseId,
@@ -1222,6 +1238,7 @@ const adaptRoutine = (r) => ({
   time: (r.time || "").slice(0, 5),
   dur: r.duration_min,
   zoom: r.zoom_link,
+  zoom2: r.zoom_link_2 || "",
   kind: "নিয়মিত ক্লাস",
   // প্রতি স্টুডেন্ট আলাদাভাবে ম্যানুয়ালি বসানো তাদের নিজের সময়ের বার+সময়
   // (কোনো স্বয়ংক্রিয় টাইমজোন-হিসাব নয়) — না থাকলে রুটিনের মূল বার-সময়ই প্রযোজ্য
@@ -1240,6 +1257,7 @@ const routinePayload = (ff, students, studentSchedule) => ({
   time: ff.time,
   duration_min: +ff.dur,
   zoom_link: ff.zoom,
+  zoom_link_2: ff.zoom2 || "",
   student_schedules: Object.entries(studentSchedule || {})
     .filter(([sid]) => students.includes(+sid) || students.includes(sid))
     .map(([sid, v]) => ({ student: +sid, days: v.days || [], time: v.time || null })),
@@ -2691,6 +2709,7 @@ function ClassesView({
     const kStudents =
       k.studentIds && k.studentIds.length ? k.studentIds : c.studentIds || [];
     const isJoined = joined?.classId === k.id;
+    const alreadyBothJoined = bothJoinedToday(k, c.teacherId);
     return (
       <div
         key={k.id}
@@ -2767,13 +2786,17 @@ function ClassesView({
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {joinable && !isJoined && k.status !== "postponed" && (
             <a
-              href={k.zoom}
+              href={alreadyBothJoined ? k.zoom2 || k.zoom : k.zoom}
               target="_blank"
               rel="noreferrer"
               onClick={() => join(k)}
               style={{ textDecoration: "none" }}
             >
-              <Btn kind="gold">{T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}</Btn>
+              <Btn kind="gold">
+                {alreadyBothJoined
+                  ? T("🔁 রিজয়েন করুন", "🔁 Rejoin")
+                  : T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}
+              </Btn>
             </a>
           )}
           {isToday && isAdm(user) && k.status !== "postponed" && (
@@ -8365,6 +8388,8 @@ function ManageView({ db, setDb, refresh }) {
 function LiveClassPopup({ k, course, user, onJoin, onLater }) {
   const T = (bnText, enText) => (user?.role === "student" ? enText : bnText);
   const lec = course.lectures?.[k.lectureNo - 1];
+  const alreadyBothJoined = bothJoinedToday(k, k.teacherId ?? course.teacherId);
+  const joinLink = alreadyBothJoined ? k.zoom2 || k.zoom : k.zoom;
   return (
     <div
       style={{
@@ -8437,7 +8462,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
             🕐 {k.time} · {T("উস্তাদ", "Teacher")}: {course.teacher_name || userById(course.teacherId || course.teacher).name}
           </div>
           <a
-            href={k.zoom}
+            href={joinLink}
             target="_blank"
             rel="noreferrer"
             onClick={() => onJoin(k)}
@@ -8457,7 +8482,9 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
               boxSizing: "border-box",
             }}
           >
-            {T("🎥 এখনই জয়েন করুন — জুম খুলে যাবে", "🎥 Join Now — Zoom will open")}
+            {alreadyBothJoined
+              ? T("🔁 রিজয়েন করুন — জুম খুলে যাবে", "🔁 Rejoin — Zoom will open")
+              : T("🎥 এখনই জয়েন করুন — জুম খুলে যাবে", "🎥 Join Now — Zoom will open")}
           </a>
           <div
             style={{
@@ -9730,6 +9757,7 @@ function RoutineView({ db, setDb, courses, user }) {
     time: "17:00",
     dur: 60,
     zoom: "https://zoom.us/j/8801402499027",
+    zoom2: "", // রিজয়েন লিংক (ঐচ্ছিক) — উস্তাদ+স্টুডেন্ট প্রথম লিংকে একবার জয়েন করার পর এই লিংকেই আবার জয়েন হবে
     kind: "নিয়মিত ক্লাস",
     teacherId: courses[0]?.teacherId,
     studentIds: [],
@@ -10026,6 +10054,7 @@ function RoutineView({ db, setDb, courses, user }) {
                                 time: r.time,
                                 dur: r.dur,
                                 zoom: r.zoom,
+                                zoom2: r.zoom2 || "",
                                 kind: "নিয়মিত ক্লাস",
                                 teacherId: r.teacherId,
                                 studentIds: r.studentIds || [],
@@ -10303,11 +10332,22 @@ function RoutineView({ db, setDb, courses, user }) {
             </div>
           )}
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>জুম লিংক</label>
+            <label style={S.label}>১ম জুম লিংক</label>
             <input
               style={S.input}
               value={f.zoom}
               onChange={(e) => setF({ ...f, zoom: e.target.value })}
+            />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>
+              ২য় জুম লিংক (রিজয়েন — ঐচ্ছিক)
+            </label>
+            <input
+              style={S.input}
+              value={f.zoom2}
+              onChange={(e) => setF({ ...f, zoom2: e.target.value })}
+              placeholder="উস্তাদ+স্টুডেন্ট ১ম লিংকে একবার জয়েন করার পর, আবার জয়েন করতে চাইলে এই লিংক ব্যবহার হবে"
             />
           </div>
           <Btn
@@ -14862,6 +14902,8 @@ export default function App() {
                 courseId: kk.course,
                 teacherId: kk.teacher,
                 zoom: kk.zoom_link,
+                zoom2: kk.zoom_link_2 || "",
+                attendance: kk.attendance || [],
                 lectureNo: kk.lecture_no,
                 dur: kk.duration_min,
               }
