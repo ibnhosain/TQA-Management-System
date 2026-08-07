@@ -156,6 +156,7 @@ class RoutineSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source="teacher.name_bn", read_only=True)
     course_name = serializers.CharField(source="course.name", read_only=True)
     student_names = serializers.SerializerMethodField()
+    student_schedules = serializers.SerializerMethodField()
 
     class Meta:
         model = Routine
@@ -165,6 +166,13 @@ class RoutineSerializer(serializers.ModelSerializer):
         # .values_list() prefetch_related-এর ক্যাশ এড়িয়ে প্রতিবার নতুন কোয়েরি করত (N+1)।
         # .all() ইটারেট করলে queryset-এ prefetch করা students-ই ব্যবহার হয় — বাড়তি কোয়েরি নেই।
         return [s.name_bn for s in obj.students.all()]
+
+    def get_student_schedules(self, obj):
+        # .all() ইটারেট করলে queryset-এ prefetch করা student_schedules-ই ব্যবহার হয় (N+1 এড়ায়)
+        return [
+            {"student": s.student_id, "days": s.days, "time": s.time.strftime("%H:%M") if s.time else None}
+            for s in obj.student_schedules.all()
+        ]
 
 
 class AttendanceSerializer(serializers.ModelSerializer):

@@ -1223,8 +1223,16 @@ const adaptRoutine = (r) => ({
   dur: r.duration_min,
   zoom: r.zoom_link,
   kind: "নিয়মিত ক্লাস",
+  // প্রতি স্টুডেন্ট আলাদাভাবে ম্যানুয়ালি বসানো তাদের নিজের সময়ের বার+সময়
+  // (কোনো স্বয়ংক্রিয় টাইমজোন-হিসাব নয়) — না থাকলে রুটিনের মূল বার-সময়ই প্রযোজ্য
+  studentSchedule: Object.fromEntries(
+    (r.student_schedules || []).map((s) => [
+      String(s.student),
+      { days: s.days || [], time: (s.time || "").slice(0, 5) },
+    ]),
+  ),
 });
-const routinePayload = (ff, students) => ({
+const routinePayload = (ff, students, studentSchedule) => ({
   course: ff.courseId,
   teacher: ff.teacherId,
   students,
@@ -1232,6 +1240,9 @@ const routinePayload = (ff, students) => ({
   time: ff.time,
   duration_min: +ff.dur,
   zoom_link: ff.zoom,
+  student_schedules: Object.entries(studentSchedule || {})
+    .filter(([sid]) => students.includes(+sid) || students.includes(sid))
+    .map(([sid, v]) => ({ student: +sid, days: v.days || [], time: v.time || null })),
 });
 /* ক্লাস/রুটিন কার পোর্টালে দেখাবে — নির্দিষ্ট উস্তাদ/স্টুডেন্ট দেওয়া থাকলে নাম অনুযায়ী, নইলে কোর্স অনুযায়ী */
 const itemVisible = (it, user) => {
@@ -9783,64 +9794,8 @@ const DAY_EN = [
 ]; // শিক্ষার্থীর ইংরেজি ভিউয়ের জন্য — একই getDay() ক্রম
 const WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5]; // শনি → শুক্র
 
-// রুটিনের দিন/সময় বাংলাদেশ সময় (Asia/Dhaka, UTC+6, DST নেই — তাই হিসাব সরল) হিসেবে
-// সংরক্ষিত ধরে প্রতিটি দর্শকের ডিভাইসের নিজস্ব টাইমজোন অনুযায়ী দিন ও সময় বের করে —
-// কোনো নতুন সেটিং/ডাটা লাগে না, ব্রাউজারই জানে সে কোথায়
+// বাংলাদেশ সময় (Asia/Dhaka, UTC+6, DST নেই — তাই হিসাব সরল)
 const DHAKA_OFFSET_HOURS = 6;
-// সপ্তাহের রবিবারের UTC millis বের করে — কিন্তু স্থির কোনো তারিখ (যেমন ২০২৩) ধরলে
-// DST থাকা দেশে (যেমন কানাডা/আমেরিকা) ভুল সময় দেখাতে পারে, কারণ শীতকাল-গ্রীষ্মকালে
-// UTC অফসেট আলাদা হয় — তাই সবসময় চলতি সপ্তাহের রবিবার ধরে হিসাব করি, যাতে
-// "সামনের ক্লাস"-এর প্রকৃত তারিখ-ভিত্তিক কনভার্শনের সাথে মিলে যায়
-const currentRefSundayUTC = () => {
-  const now = new Date();
-  const utcMidnightToday = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate(),
-  );
-  return utcMidnightToday - now.getUTCDay() * 86400000;
-};
-const toLocalDayTime = (jsDay, timeStr) => {
-  const [hh, mm] = String(timeStr || "00:00").split(":").map(Number);
-  const utcMillis =
-    currentRefSundayUTC() +
-    jsDay * 86400000 +
-    (hh - DHAKA_OFFSET_HOURS) * 3600000 +
-    (mm || 0) * 60000;
-  const d = new Date(utcMillis);
-  return {
-    day: d.getDay(),
-    time: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
-  };
-};
-
-// পরিচালক/এডমিন — নিজে বাংলাদেশে থেকেও অন্য যেকোনো নির্দিষ্ট টাইমজোনে (যেমন কোনো
-// ছাত্র/উস্তাদ যেখানে আছেন) রুটিন কেমন দেখাবে তা যাচাই করতে পারেন এই হেল্পার দিয়ে —
-// Intl.DateTimeFormat ব্যবহার করায় DST (গ্রীষ্মকালীন সময়)ও সঠিকভাবে ধরা পড়ে
-const WD_ABBR_TO_NUM = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-const toZoneDayTime = (jsDay, timeStr, ianaZone) => {
-  const [hh, mm] = String(timeStr || "00:00").split(":").map(Number);
-  const utcMillis =
-    currentRefSundayUTC() +
-    jsDay * 86400000 +
-    (hh - DHAKA_OFFSET_HOURS) * 3600000 +
-    (mm || 0) * 60000;
-  const d = new Date(utcMillis);
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: ianaZone,
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(d);
-  const get = (t) => parts.find((p) => p.type === t)?.value;
-  let hour = get("hour");
-  if (hour === "24") hour = "00"; // কিছু ব্রাউজার hour12:false-এও মধ্যরাতে "24" দেয়
-  return {
-    day: WD_ABBR_TO_NUM[get("weekday")],
-    time: `${hour}:${get("minute")}`,
-  };
-};
 
 // নির্দিষ্ট তারিখের (routine না, বাস্তব ক্লাস instance) দিন-সময় — বাংলাদেশ সময় ধরে
 // সংরক্ষিত — কোনো টাইমজোনে কী তারিখ-সময় দাঁড়ায় তা বের করতে (তারিখও বদলাতে পারে)
@@ -9994,6 +9949,7 @@ function RoutineView({ db, setDb, courses, user }) {
     kind: "নিয়মিত ক্লাস",
     teacherId: courses[0]?.teacherId,
     studentIds: [],
+    studentSchedule: {}, // { [studentId]: { days: [0..6], time: "HH:MM" } } — শিক্ষার্থীর নিজের সময়ে ম্যানুয়াল ওভাররাইড (ঐচ্ছিক)
   });
   const [f, setF] = useState(blankR);
   const [editId, setEditId] = useState(null);
@@ -10001,10 +9957,6 @@ function RoutineView({ db, setDb, courses, user }) {
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
   const [genBusy, setGenBusy] = useState(false);
-  const [previewZone, setPreviewZone] = useState(""); // এডমিন/পরিচালক — অন্য টাইমজোনে "প্রিভিউ" (খালি মানে নিজের ডিভাইসের টাইমজোন)
-  // রুটিন তৈরি/এডিট ফর্মে — টিচার ও স্টুডেন্ট আলাদা আলাদা কোন দেশে থাকেন তা বেছে দিন-সময় ঠিক করার সময়ই যাচাই করার জন্য
-  const [formTeacherZone, setFormTeacherZone] = useState("Asia/Dhaka");
-  const [formStudentZone, setFormStudentZone] = useState("Asia/Dhaka");
   // এক ক্লিকে সব রুটিনের আগামী ৭ দিনের ক্লাস তৈরি → উস্তাদ/শিক্ষার্থীর পোর্টালে
   const genClassesNow = async () => {
     setGenBusy(true);
@@ -10112,8 +10064,8 @@ function RoutineView({ db, setDb, courses, user }) {
   const saveRoutine = async (students) => {
     // সবসময় সরাসরি API-তে সেভ (backend ধীরে লোড হলেও) — লোকালে রাখলে "আসে-যায়" হতো ও পোর্টালে যেত না
     try {
-      if (editId) await api.updateRoutine(editId, routinePayload(f, students));
-      else await api.createRoutine(routinePayload(f, students));
+      if (editId) await api.updateRoutine(editId, routinePayload(f, students, f.studentSchedule));
+      else await api.createRoutine(routinePayload(f, students, f.studentSchedule));
       await loadRoutines();
       setShow(false);
       setEditId(null);
@@ -10161,19 +10113,19 @@ function RoutineView({ db, setDb, courses, user }) {
   };
   const routinesLoading = apiRoutines === null; // এখনো লোড হচ্ছে
   const visible = apiRoutines || [];
-  // প্রতিটা রুটিনের প্রতিটা (বাংলাদেশ-সময়ে সংরক্ষিত) দিনকে দর্শকের local day+time-এ
-  // রূপান্তর করে সেই local day অনুযায়ী গ্রুপ করি — বিদেশে থাকা কেউ দেখলে সময় পার্থক্যে
-  // ভিন্ন দিনেও পড়তে পারে (যেমন রাতের ক্লাস অন্য টাইমজোনে সকালে/আগের দিনে দেখাতে পারে)।
-  // এডমিন/পরিচালক চাইলে নিজের ডিভাইসের বদলে নির্দিষ্ট অন্য একটা টাইমজোন বেছে "প্রিভিউ"
-  // করতে পারেন (previewZone) — যেমন কোনো ছাত্র/উস্তাদের দেশে তখন কী দিন-সময় দেখাচ্ছে তা যাচাই করতে
+  // প্রতিটা রুটিন বাংলাদেশ-সময়ে সংরক্ষিত বার-সময় অনুযায়ীই দিন ধরে গ্রুপ করা হয় —
+  // ডিভাইসের টাইমজোন থেকে অটো-হিসাব আর করা হয় না (নির্ভরযোগ্য ছিল না)। স্টুডেন্ট
+  // বিদেশে থাকলে, রুটিন তৈরি/এডিটের সময় পরিচালক তার জন্য আলাদাভাবে ম্যানুয়ালি
+  // বার-সময় বসিয়ে দিলে (studentSchedule) সেই স্টুডেন্ট এখানে সেটাই দেখবে।
   const localSchedule = {};
   visible.forEach((r) => {
-    (r.days || []).forEach((storedDay) => {
-      const { day: localDay, time: localTime } = previewZone
-        ? toZoneDayTime(storedDay, r.time, previewZone)
-        : toLocalDayTime(storedDay, r.time);
-      if (!localSchedule[localDay]) localSchedule[localDay] = [];
-      localSchedule[localDay].push({ ...r, localTime });
+    const override =
+      user.role === "student" ? r.studentSchedule?.[String(user.id)] : null;
+    const days = override && override.days.length ? override.days : r.days || [];
+    const displayTime = override && override.time ? override.time : r.time;
+    days.forEach((d) => {
+      if (!localSchedule[d]) localSchedule[d] = [];
+      localSchedule[d].push({ ...r, localTime: displayTime });
     });
   });
   return (
@@ -10181,30 +10133,15 @@ function RoutineView({ db, setDb, courses, user }) {
       title={T("ক্লাস রুটিন (স্থায়ী সাপ্তাহিক)", "Class Routine (Fixed Weekly)")}
       sub={
         canEdit
-          ? previewZone
-            ? `প্রিভিউ চালু: ${COMMON_ZONES.find((z) => z.zone === previewZone)?.label || previewZone}-এর সময় অনুযায়ী দেখানো হচ্ছে (নিচের ড্রপডাউন থেকে বদলান/বন্ধ করুন)`
-            : "কোন স্টুডেন্ট কোন উস্তাদের কাছে কোন বারে কোন সময়ে কোন কোর্সে পড়বে — সব সময়ের জন্য; এডিট কেবল এডমিনের হাতে · সময়/দিন আপনার ডিভাইসের টাইমজোন অনুযায়ী দেখানো হচ্ছে"
+          ? "কোন স্টুডেন্ট কোন উস্তাদের কাছে কোন বারে কোন সময়ে কোন কোর্সে পড়বে — সব সময়ের জন্য; এডিট কেবল এডমিনের হাতে · সময়/দিন বাংলাদেশ সময় অনুযায়ী দেখানো হচ্ছে"
           : T(
-              "আপনার স্থায়ী সাপ্তাহিক ক্লাসের সময়সূচি — আপনার নিজের টাইমজোন অনুযায়ী দিন-সময় দেখানো হচ্ছে; জয়েন অপশন অটো আসবে",
-              "Your fixed weekly class schedule, shown in your own device's timezone — the join option will appear automatically at the right time",
+              "আপনার স্থায়ী সাপ্তাহিক ক্লাসের সময়সূচি — জয়েন অপশন অটো আসবে",
+              "Your fixed weekly class schedule — the join option will appear automatically at the right time",
             )
       }
       action={
         canEdit && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <select
-              value={previewZone}
-              onChange={(e) => setPreviewZone(e.target.value)}
-              style={{ ...S.input, padding: "8px 10px", width: 200, fontSize: 12.5 }}
-              title="অন্য কোনো দেশের সময়ে রুটিন প্রিভিউ করুন"
-            >
-              <option value="">🌍 নিজের টাইমজোনে দেখুন</option>
-              {COMMON_ZONES.map((z) => (
-                <option key={z.zone} value={z.zone}>
-                  {z.label}
-                </option>
-              ))}
-            </select>
             <Btn
               kind="soft"
               onClick={genClassesNow}
@@ -10217,7 +10154,7 @@ function RoutineView({ db, setDb, courses, user }) {
         )
       }
     >
-      <TeacherWiseBoard db={db} setDb={setDb} user={user} previewZone={previewZone} />
+      <TeacherWiseBoard db={db} setDb={setDb} user={user} />
       {routinesLoading && (
         <Loader text={T("রুটিন লোড হচ্ছে", "Loading routine")} />
       )}
@@ -10308,6 +10245,7 @@ function RoutineView({ db, setDb, courses, user }) {
                                 kind: "নিয়মিত ক্লাস",
                                 teacherId: r.teacherId,
                                 studentIds: r.studentIds || [],
+                                studentSchedule: r.studentSchedule || {},
                               });
                               setEditId(r.id);
                               setShow(true);
@@ -10476,112 +10414,107 @@ function RoutineView({ db, setDb, courses, user }) {
               />
             </div>
           </div>
-          {/* সতর্কতা: এডমিন যদি এই মুহূর্তে বিদেশে থাকেন, উপরের সময়টা সবসময়
-              বাংলাদেশ-সময় হিসেবেই সংরক্ষিত হবে — তাই তার নিজের বর্তমান
-              টাইমজোনে এটা আসলে কী দাঁড়ায় তার লাইভ প্রিভিউ দেখানো হলো */}
-          {f.days.length > 0 && f.time && (
-            <div
-              style={{
-                marginTop: 10,
-                padding: "8px 12px",
-                borderRadius: 10,
-                background: C.amberBg,
-                fontSize: 12,
-                color: "#a16207",
-              }}
-            >
-              🌍 আপনার এই মুহূর্তের টাইমজোনে এটা দাঁড়ায়:{" "}
-              <b>
-                {f.days
-                  .map((wd) => {
-                    const lt = toLocalDayTime(wd, f.time);
-                    return `${DAY_BN[lt.day]} ${lt.time}`;
-                  })
-                  .join(" · ")}
-              </b>
-              {" "}(অন্য টাইমজোনের দর্শকরা যার যার নিজের সময়ে দেখবেন)
-            </div>
-          )}
-          {/* দিন-সময় বাংলাদেশ সময় হিসেবেই সংরক্ষিত হয় — কিন্তু টিচার ও স্টুডেন্ট
-              আলাদা দেশে থাকলে রুটিন বানানোর সময়ই যাচাই করা যায় তাদের কাছে
-              এটা কোন দিন-কয়টায় পড়বে, যাতে ভুলবশত রাত/ভোরের সময় বসে না যায় */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 10,
-              marginTop: 10,
-            }}
-          >
-            <div>
-              <label style={S.label}>👨‍🏫 টিচারের টাইমজোন</label>
-              <select
-                value={formTeacherZone}
-                onChange={(e) => setFormTeacherZone(e.target.value)}
-                style={S.input}
-              >
-                {COMMON_ZONES.map((z) => (
-                  <option key={z.zone} value={z.zone}>
-                    {z.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={S.label}>🎓 স্টুডেন্টের টাইমজোন</label>
-              <select
-                value={formStudentZone}
-                onChange={(e) => setFormStudentZone(e.target.value)}
-                style={S.input}
-              >
-                {COMMON_ZONES.map((z) => (
-                  <option key={z.zone} value={z.zone}>
-                    {z.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          {f.days.length > 0 && f.time && (
-            <div
-              style={{
-                marginTop: 10,
-                padding: "8px 12px",
-                borderRadius: 10,
-                background: C.greenBg,
-                fontSize: 12,
-                color: C.emerald,
-                display: "grid",
-                gap: 4,
-              }}
-            >
-              <div>
-                👨‍🏫 টিচার দেখবেন (
-                {COMMON_ZONES.find((z) => z.zone === formTeacherZone)?.label ||
-                  formTeacherZone}
-                ):{" "}
-                <b>
-                  {f.days
-                    .map((wd) => {
-                      const lt = toZoneDayTime(wd, f.time, formTeacherZone);
-                      return `${DAY_BN[lt.day]} ${lt.time}`;
-                    })
-                    .join(" · ")}
-                </b>
-              </div>
-              <div>
-                🎓 স্টুডেন্ট দেখবেন (
-                {COMMON_ZONES.find((z) => z.zone === formStudentZone)?.label ||
-                  formStudentZone}
-                ):{" "}
-                <b>
-                  {f.days
-                    .map((wd) => {
-                      const lt = toZoneDayTime(wd, f.time, formStudentZone);
-                      return `${DAY_BN[lt.day]} ${lt.time}`;
-                    })
-                    .join(" · ")}
-                </b>
+          {/* ছাত্র বিদেশে থাকলে তার কাছে এই ক্লাসটা অন্য বার/সময়ে পড়তে পারে —
+              টাইমজোন হিসাব-নিকাশ অটোমেটিক না করে, প্রতিটি শিক্ষার্থীর জন্য
+              আলাদাভাবে ম্যানুয়ালি বার+সময় বসিয়ে দেওয়া যায় (না দিলে উপরের
+              বাংলাদেশ-সময়ের বার-সময়ই তার পোর্টালেও দেখাবে) */}
+          {f.studentIds.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <label style={S.label}>
+                🎓 শিক্ষার্থীদের নিজস্ব সময় (ঐচ্ছিক — বিদেশে থাকা কারো জন্য আলাদা বার/সময়)
+              </label>
+              <div style={{ display: "grid", gap: 8 }}>
+                {f.studentIds.map((sid) => {
+                  const sch = f.studentSchedule[sid] || { days: [], time: "" };
+                  const custom = sch.days.length > 0 || !!sch.time;
+                  const setSch = (patch) =>
+                    setF({
+                      ...f,
+                      studentSchedule: {
+                        ...f.studentSchedule,
+                        [sid]: { ...sch, ...patch },
+                      },
+                    });
+                  return (
+                    <div
+                      key={sid}
+                      style={{
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        border: `1px solid ${C.line}`,
+                      }}
+                    >
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={custom}
+                          onChange={(e) =>
+                            setSch(
+                              e.target.checked
+                                ? { days: [...f.days], time: f.time }
+                                : { days: [], time: "" },
+                            )
+                          }
+                        />
+                        {nameOf(sid)}{" "}
+                        <span style={{ fontWeight: 400, color: C.muted }}>
+                          {custom
+                            ? "— আলাদা সময় সেট করা"
+                            : "— বাংলাদেশ সময়ের বারেই দেখবে"}
+                        </span>
+                      </label>
+                      {custom && (
+                        <div style={{ marginTop: 8 }}>
+                          <div
+                            style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
+                          >
+                            {WEEK_ORDER.map((wd) => (
+                              <button
+                                key={wd}
+                                type="button"
+                                onClick={() =>
+                                  setSch({
+                                    days: sch.days.includes(wd)
+                                      ? sch.days.filter((x) => x !== wd)
+                                      : [...sch.days, wd],
+                                  })
+                                }
+                                style={{
+                                  padding: "5px 10px",
+                                  borderRadius: 99,
+                                  cursor: "pointer",
+                                  fontFamily: "inherit",
+                                  fontWeight: 700,
+                                  fontSize: 11.5,
+                                  border: `2px solid ${sch.days.includes(wd) ? C.emerald : C.line}`,
+                                  background: sch.days.includes(wd) ? C.greenBg : "#fff",
+                                  color: sch.days.includes(wd) ? C.emerald : C.text,
+                                }}
+                              >
+                                {DAY_BN[wd]}
+                              </button>
+                            ))}
+                            <input
+                              type="time"
+                              style={{ ...S.input, width: 130 }}
+                              value={sch.time}
+                              onChange={(e) => setSch({ time: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -11865,10 +11798,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
 }
 
 /* ═══════════════ উস্তাদ-ভিত্তিক বোর্ড — কার কাছে কে পড়ে, সামনের ক্লাস, স্থগিত করার ক্ষমতা ═══════════════ */
-function TeacherWiseBoard({ db, setDb, user, previewZone }) {
-  const zoneLabel = previewZone
-    ? COMMON_ZONES.find((z) => z.zone === previewZone)?.label || previewZone
-    : null;
+function TeacherWiseBoard({ db, setDb, user }) {
   const [allTeachers, setAllTeachers] = useState([]);
   const [sel, setSel] = useState(
     user.role === "teacher" ? user.id : allTeachers[0]?.id,
@@ -12051,16 +11981,8 @@ function TeacherWiseBoard({ db, setDb, user, previewZone }) {
             )}{" "}
             — {c.name || r.course_name || "—"} ·{" "}
             {(r.days || [])
-              .map((i) => {
-                const lt = previewZone
-                  ? toZoneDayTime(i, r.time, previewZone)
-                  : toLocalDayTime(i, r.time);
-                return `${DAY_BN[lt.day]} ${lt.time}`;
-              })
+              .map((i) => `${DAY_BN[i]} ${r.time}`)
               .join(", ")}
-            {zoneLabel && (
-              <span style={{ color: C.muted }}> ({zoneLabel})</span>
-            )}
           </div>
         );
       })}
@@ -12105,14 +12027,7 @@ function TeacherWiseBoard({ db, setDb, user, previewZone }) {
           >
             <span style={{ flex: 1, minWidth: 200 }}>
               <b>{k.course_name || c.name || "—"}</b> ·{" "}
-              {(() => {
-                const zdt = previewZone
-                  ? toZoneFullDateTime(k.date, k.time, previewZone)
-                  : { date: k.date, time: k.time };
-                return `${fmtDate(zdt.date)} · 🕐 ${zdt.time}`;
-              })()}
-              {zoneLabel && <span style={{ color: C.muted }}> ({zoneLabel})</span>}{" "}
-              · 👥 {studentNames}
+              {fmtDate(k.date)} · 🕐 {k.time} · 👥 {studentNames}
             </span>
             {isAdm(user) && (
               <Btn sm kind="danger" onClick={() => postpone(k)}>

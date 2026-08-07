@@ -11,7 +11,7 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.response import Response
 
 from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
-                     Routine, ClassSession, Attendance, Assignment, Exam, Submission,
+                     Routine, RoutineStudentSchedule, ClassSession, Attendance, Assignment, Exam, Submission,
                      ExamResult, FeePayment, DueMonth, TeacherPayment, SentReceipt,
                      Admission, LeaveRequest, Rating, StudentRemark, Notice, Notification,
                      PushSubscription, WaMessage, LibraryBook)
@@ -217,7 +217,7 @@ class RoutineViewSet(viewsets.ModelViewSet):
         qs = (
             Routine.objects.filter(is_active=True)
             .select_related("course", "teacher")
-            .prefetch_related("students")
+            .prefetch_related("students", "student_schedules")
         )
         if u.role == "teacher":
             return qs.filter(teacher=u)
@@ -261,12 +261,38 @@ class RoutineViewSet(viewsets.ModelViewSet):
         except Exception:
             pass
 
+    def _save_student_schedules(self, routine):
+        # "student_schedules": [{student, days, time}, ...] — পরিচালক প্রতিটি
+        # শিক্ষার্থীর জন্য ম্যানুয়ালি বসানো তাদের নিজের সময়ের বার+সময় (কোনো
+        # স্বয়ংক্রিয় টাইমজোন-হিসাব নয়) — সবসময় সম্পূর্ণ প্রতিস্থাপন করা হয়
+        # (আগের এন্ট্রি মুছে নতুন করে বসানো), যাতে বাদ পড়া/সরানো স্টুডেন্টের
+        # পুরনো এন্ট্রি থেকে না যায়
+        try:
+            payload = self.request.data.get("student_schedules") or []
+            routine.student_schedules.all().delete()
+            objs = []
+            valid_student_ids = set(routine.students.values_list("id", flat=True))
+            for item in payload:
+                sid = item.get("student")
+                if sid not in valid_student_ids:
+                    continue
+                objs.append(RoutineStudentSchedule(
+                    routine=routine, student_id=sid,
+                    days=item.get("days") or [], time=item.get("time") or None,
+                ))
+            if objs:
+                RoutineStudentSchedule.objects.bulk_create(objs)
+        except Exception:
+            pass
+
     def perform_create(self, serializer):
         routine = serializer.save()
+        self._save_student_schedules(routine)
         self._generate_now(routine)
 
     def perform_update(self, serializer):
         routine = serializer.save()
+        self._save_student_schedules(routine)
         self._sync_upcoming_sessions(routine)
         self._generate_now(routine)
 

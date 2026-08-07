@@ -133,6 +133,20 @@ class Routine(models.Model):
     is_active = models.BooleanField(default=True)
 
 
+class RoutineStudentSchedule(models.Model):
+    """একই রুটিনের ভিন্ন ভিন্ন শিক্ষার্থী ভিন্ন ভিন্ন দেশে থাকতে পারে — তাই
+    পরিচালক প্রতিটি শিক্ষার্থীর জন্য আলাদাভাবে (ম্যানুয়ালি, কোনো স্বয়ংক্রিয়
+    টাইমজোন-হিসাব ছাড়াই) তাদের নিজের সময়ে বার ও সময় বসিয়ে দিতে পারেন —
+    না দিলে রুটিনের মূল বার-সময়ই (বাংলাদেশ সময়) তার পোর্টালে দেখানো হয়"""
+    routine = models.ForeignKey(Routine, on_delete=models.CASCADE, related_name="student_schedules")
+    student = models.ForeignKey(User, on_delete=models.CASCADE)
+    days = models.JSONField(default=list, blank=True)  # [0..6] — Routine.days-এর মতোই JS getDay() ক্রম
+    time = models.TimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = [("routine", "student")]
+
+
 class ClassSession(models.Model):
     class Status(models.TextChoices):
         UPCOMING = "upcoming", "আসন্ন"
