@@ -1945,65 +1945,12 @@ async function enablePushNotifications(silent = false) {
 }
 
 /* ═══════════════ ক্লাস ও জুম জয়েন (ফিচার ২ ও ৪) ═══════════════ */
-/* অ্যালার্মের মতো বিপ (Web Audio — বাহ্যিক ফাইল ছাড়া, CSP-নিরাপদ) */
-// একটাই AudioContext বানিয়ে রাখি — "জুমে জয়েন করুন" বাটনে ক্লিকের (আসল
-// ইউজার-গ্রেসচার) সময় unlockAudioForAlarm() দিয়ে এটা resume করা হয়, যাতে পরে
-// প্রোগ্রাম্যাটিকভাবে (২৭-মিনিট অ্যালার্মের সময়) বাজানো গেলেও মোবাইল ব্রাউজার
-// সাউন্ড ব্লক না করে
-let alarmAudioCtx = null;
-function unlockAudioForAlarm() {
-  try {
-    if (!alarmAudioCtx) {
-      alarmAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (alarmAudioCtx.state === "suspended") alarmAudioCtx.resume();
-  } catch {
-    /* উপেক্ষা */
-  }
-}
-function playAlarm() {
-  try {
-    const ctx =
-      alarmAudioCtx ||
-      (alarmAudioCtx = new (window.AudioContext || window.webkitAudioContext)());
-    if (ctx.state === "suspended") ctx.resume();
-    let t = ctx.currentTime;
-    // আগে ৪টা বিপ ছিল, এখন ৭টা (জোরালো, বেশিক্ষণ ধরে বাজবে) — যাতে সহজে হাতছাড়া না হয়
-    for (let i = 0; i < 7; i++) {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.connect(g);
-      g.connect(ctx.destination);
-      o.type = "square";
-      o.frequency.value = 880;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.9, t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
-      o.start(t);
-      o.stop(t + 0.42);
-      t += 0.5;
-    }
-  } catch {
-    /* সাউন্ড ব্লক হলে উপেক্ষা */
-  }
-  // মোবাইলে (Android — iOS Safari সাপোর্ট করে না) কম্পন দিয়েও সতর্ক করা —
-  // ট্যাব ব্যাকগ্রাউন্ডে থাকলেও সাধারণত কাজ করে
-  try {
-    if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
-  } catch {
-    /* উপেক্ষা */
-  }
-}
-
-/* ইন-ক্লাস প্যানেল — দুজন-জয়েন গেটিং, ২৭-মিনিট অটো সেগমেন্ট (অ্যালার্ম+রিজয়েন), সব মিলিয়ে ৪৫-মিনিট হাজিরা */
+/* ইন-ক্লাস প্যানেল — দুজন-জয়েন গেটিং, জয়েন করা মাত্রই হাজিরা নিশ্চিত */
 function LiveClassPanel({ k, user, usingApi, onExit }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
-  const [segSec, setSegSec] = useState(0);
   const [presence, setPresence] = useState(null);
   const [inMeeting, setInMeeting] = useState(true);
-  const [rejoin, setRejoin] = useState(false);
   const [showContinuePrompt, setShowContinuePrompt] = useState(false);
-  const SEG = 27 * 60; // এক সেগমেন্ট = ২৭ মিনিট (রিমাইন্ডার অ্যালার্মের জন্য — হাজিরা এখন জয়েন করা মাত্রই নিশ্চিত হয়, মিনিট গোনার দরকার নেই)
   // "Leave & Save" বাটনে ক্লিক ভুলে গেলে/ট্যাব বন্ধ করে ফেললেও যেন হাজিরার সময়
   // না হারায় — প্রতি ৬০ সেকেন্ডে নিঃশব্দে ব্যাকগ্রাউন্ডে যতটুকু সময় জমেছে তা
   // ব্যাকএন্ডে সেভ করে রাখি (ref ব্যবহার করছি যাতে interval-এ স্টেল ভ্যালু না আসে)
@@ -2078,19 +2025,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     } else if (activeSinceRef.current) {
       accumulatedMsRef.current += Date.now() - activeSinceRef.current;
       activeSinceRef.current = null;
-      setSegSec(computeSegSec());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inMeeting, bothIn]);
-
-  // শুধু ডিসপ্লে রিফ্রেশ করার জন্য (প্রতি সেকেন্ডে) — ট্যাব ব্যাকগ্রাউন্ডে থাকলে
-  // ব্রাউজার এটা কম ঘন ঘন চালাবে, কিন্তু প্রতিবার computeSegSec() timestamp
-  // থেকে হিসাব করে বলে মান সবসময়ই সঠিক থাকে, কোনো সেকেন্ড হারায় না
-  useEffect(() => {
-    const iv = setInterval(() => {
-      if (inMeeting && bothIn) setSegSec(computeSegSec());
-    }, 1000);
-    return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inMeeting, bothIn]);
 
@@ -2167,10 +2102,9 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
   // দু-মিনিট থেকেই বেরিয়ে যাওয়াকে স্বাভাবিক না ভাবেন।
   const done = !!presence?.myPresent;
 
-  // mode: "alarm" (২৭-মিনিট Zoom সীমা শেষ — রিজয়েন পপআপ দেখাবে), "manual"
-  // (স্টুডেন্ট/উস্তাদ নিজে "বের হন" চেপেছেন — মাঝপথে বেরোনো, রেটিং পপআপ আসবে না),
-  // "finish" (ক্লাসের নির্ধারিত সময় (dur) শেষ — কোনো বাটন ছাড়াই অটো বের হয়ে
-  // রেটিং পপআপ দেখাবে)
+  // mode: "manual" (স্টুডেন্ট/উস্তাদ নিজে "বের হন" চেপেছেন — মাঝপথে বেরোনো,
+  // রেটিং পপআপ আসবে না), "finish" (ক্লাসের নির্ধারিত সময় (dur) শেষ — কোনো
+  // বাটন ছাড়াই অটো বের হয়ে রেটিং পপআপ দেখাবে)
   const endSegment = async (mode) => {
     setInMeeting(false);
     // চেকপয়েন্টে ইতিমধ্যে সেভ হওয়া মিনিট বাদ দিয়ে শুধু বাকি (এখনো সেভ না হওয়া)
@@ -2178,7 +2112,6 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     const m = Math.max(0, Math.round((computeSegSec() - savedSecRef.current) / 60));
     activeSinceRef.current = null;
     accumulatedMsRef.current = 0;
-    setSegSec(0);
     savedSecRef.current = 0;
     if (usingApi) {
       try {
@@ -2188,11 +2121,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
       }
       await refreshPresence();
     }
-    if (mode === "alarm") {
-      setRejoin(true); // অ্যালার্ম বাজানো নিচের rejoin-effect হ্যান্ডেল করে (বারবার বাজতে থাকবে)
-    } else {
-      onExit(mode === "finish");
-    }
+    onExit(mode === "finish");
   };
 
   // জুম বাইরের অ্যাপ/ট্যাব — তাই "মিটিং শেষ হলো" এমন সরাসরি কোনো সিগন্যাল ব্রাউজার
@@ -2232,54 +2161,6 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // ২৭-মিনিট সেগমেন্ট শেষ → অটো লিভ + অ্যালার্ম
-  useEffect(() => {
-    if (inMeeting && segSec >= SEG) endSegment("alarm");
-  }, [segSec]);
-
-  // রিজয়েন পপআপ থাকা অবস্থায় অ্যালার্ম বারবার বাজতে থাকবে (থামবে না) — যতক্ষণ
-  // না "আবার জয়েন করুন" বা "ক্লাস শেষ করুন" চেপে এটা বন্ধ করা হয়। আগে ৩ সেকেন্ড
-  // পরপর শুধু সাউন্ড বাজত আর নোটিফিকেশন একবারই দেখাত — এখন আরও ঘন ঘন (২ সেকেন্ড)
-  // এবং প্রতি বার নোটিফিকেশনও নতুন করে দেখায় (renotify) যাতে ফোনে আবার কাঁপুনি/শব্দ হয়
-  const notifyRejoin = () => {
-    if (window.Notification && Notification.permission === "granted") {
-      try {
-        new Notification(T("⏰ ২৭ মিনিট শেষ!", "⏰ 27 minutes are over!"), {
-          body: T(
-            "জুম থেকে বের হয়ে আবার জয়েন করুন — ক্লাস চালিয়ে যেতে।",
-            'Please leave Zoom and tap "Join Again" to continue the class.',
-          ),
-          tag: "tqa-rejoin-alarm",
-          renotify: true,
-          requireInteraction: true,
-        });
-      } catch {
-        /* উপেক্ষা */
-      }
-    }
-  };
-  useEffect(() => {
-    if (!rejoin) return;
-    playAlarm();
-    notifyRejoin();
-    const iv = setInterval(() => {
-      playAlarm();
-      notifyRejoin();
-    }, 2000);
-    return () => clearInterval(iv);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rejoin]);
-
-  const doRejoin = () => {
-    setRejoin(false);
-    try {
-      window.open(k.zoom, "_blank", "noopener");
-    } catch {
-      /* উপেক্ষা */
-    }
-    setInMeeting(true);
-  };
 
   // স্টুডেন্ট জুম থেকে ফিরে এসেছেন — সরাসরি ক্লাস শেষ না করে জিজ্ঞেস করি
   if (showContinuePrompt)
@@ -2350,91 +2231,6 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
       </div>
     );
 
-  if (rejoin)
-    return (
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 250,
-          background: "rgba(18,63,40,.6)",
-          display: "grid",
-          placeItems: "center",
-          padding: 16,
-        }}
-      >
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 18,
-            maxWidth: 380,
-            width: "100%",
-            padding: 26,
-            textAlign: "center",
-          }}
-        >
-          <div style={{ fontSize: 42 }}>⏰</div>
-          <div
-            style={{
-              fontWeight: 800,
-              fontSize: 18,
-              color: C.emerald,
-              marginTop: 6,
-            }}
-          >
-            {T("২৭ মিনিট শেষ!", "27 minutes are over!")}
-          </div>
-          <div
-            style={{
-              fontSize: 13.5,
-              color: C.text,
-              margin: "8px 0 6px",
-              lineHeight: 1.6,
-            }}
-          >
-            {T(
-              'জুম মিটিং থেকে বের হয়ে "আবার জয়েন করুন" চাপুন ক্লাস চালিয়ে যেতে।',
-              'Please leave the Zoom meeting, then tap "Join Again" to continue the class.',
-            )}
-          </div>
-          <div
-            style={{
-              fontSize: 12.5,
-              color: done ? C.green : C.muted,
-              marginBottom: 16,
-              fontWeight: 700,
-            }}
-          >
-            {done
-              ? T("✓ হাজিরা নিশ্চিত হয়ে গেছে।", "✓ Attendance is confirmed.")
-              : T(
-                  "হাজিরা নিশ্চিত করতে আবার জয়েন করুন।",
-                  "Join again to confirm attendance.",
-                )}
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Btn
-              kind="gold"
-              style={{ flex: 1, justifyContent: "center" }}
-              onClick={doRejoin}
-            >
-              {T("🔁 আবার জয়েন করুন", "🔁 Join Again")}
-            </Btn>
-            <Btn
-              kind="soft"
-              style={{ flex: 1, justifyContent: "center" }}
-              onClick={() => {
-                setRejoin(false);
-                onExit(true);
-              }}
-            >
-              {T("ক্লাস শেষ করুন", "End Class")}
-            </Btn>
-          </div>
-        </div>
-      </div>
-    );
-
   return (
     <div style={{ marginTop: 6, fontSize: 13 }}>
       {joinError && (
@@ -2479,11 +2275,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
         <span style={{ fontWeight: 800, color: done ? C.green : C.gold }}>
           {done
             ? T("✓ হাজিরা নিশ্চিত হয়েছে", "✓ Attendance confirmed")
-            : T("হাজিরা নিশ্চিত হচ্ছে…", "Confirming attendance…")}{" "}
-          {T(
-            `· পরবর্তী রিমাইন্ডার ${bn(Math.max(0, 27 - Math.floor(segSec / 60)))} মিনিট পর`,
-            `· Next reminder in ${Math.max(0, 27 - Math.floor(segSec / 60))} min`,
-          )}
+            : T("হাজিরা নিশ্চিত হচ্ছে…", "Confirming attendance…")}
         </span>
       )}
       <div style={{ marginTop: 6 }}>
@@ -2671,7 +2463,7 @@ function ClassesView({
   );
 
   const join = (k) => {
-    // জুম খোলে অ্যাংকর লিংকে (নিচে <a>); বাকি সব (presence/২৭-মিনিট/হাজিরা) LiveClassPanel সামলায়
+    // জুম খোলে অ্যাংকর লিংকে (নিচে <a>); বাকি সব (presence/হাজিরা) LiveClassPanel সামলায়
     setJoined({ classId: k.id });
   };
   // এডমিন/পরিচালক → আজকের ক্লাসের টিচার ও শিক্ষার্থী উভয়কে জয়েন-করার রিমাইন্ডার
@@ -2978,15 +2770,7 @@ function ClassesView({
               href={k.zoom}
               target="_blank"
               rel="noreferrer"
-              onClick={() => {
-                unlockAudioForAlarm(); // এই ক্লিকের সময়ই অডিও আনলক — পরে ২৭-মিনিট অ্যালার্ম মোবাইলেও বাজবে
-                // ট্যাব ব্যাকগ্রাউন্ডে চলে গেলেও (ব্রাউজার বন্ধ না করলে) রিজয়েনের
-                // সময় সিস্টেম নোটিফিকেশন দেখানোর জন্য পারমিশন চেয়ে রাখি
-                if (window.Notification && Notification.permission === "default") {
-                  Notification.requestPermission().catch(() => {});
-                }
-                join(k);
-              }}
+              onClick={() => join(k)}
               style={{ textDecoration: "none" }}
             >
               <Btn kind="gold">{T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}</Btn>
