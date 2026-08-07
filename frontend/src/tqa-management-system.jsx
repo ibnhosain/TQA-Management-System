@@ -1214,6 +1214,7 @@ const classPayload = (ff, students) => ({
   time: ff.time,
   duration_min: +ff.dur,
   zoom_link: ff.zoom,
+  zoom_link_2: ff.zoom2 || "",
   lecture_no: +ff.lectureNo,
   kind: KIND_TO_KEY[ff.kind] || "regular",
   guardian_requirement: ff.req || "",
@@ -2400,6 +2401,7 @@ function ClassesView({
     dur: 60,
     lectureNo: 1,
     zoom: "https://zoom.us/j/",
+    zoom2: "", // রিজয়েন লিংক (ঐচ্ছিক) — উস্তাদ+স্টুডেন্ট ১ম লিংকে একবার জয়েন করার পর এই লিংকেই আবার জয়েন হবে
     kind: "মেকআপ ক্লাস",
     teacherId: courses[0]?.teacherId,
     studentIds: [],
@@ -2695,6 +2697,7 @@ function ClassesView({
       dur: k.dur,
       lectureNo: k.lectureNo,
       zoom: k.zoom,
+      zoom2: k.zoom2 || "",
       kind: k.kind || "নিয়মিত ক্লাস",
       teacherId: k.teacherId || courseById(courses, k.courseId).teacherId,
       studentIds: k.studentIds || [],
@@ -3082,11 +3085,20 @@ function ClassesView({
             </div>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>জুম লিংক</label>
+            <label style={S.label}>১ম জুম লিংক</label>
             <input
               style={S.input}
               value={f.zoom}
               onChange={(e) => setF({ ...f, zoom: e.target.value })}
+            />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>২য় জুম লিংক (রিজয়েন — ঐচ্ছিক)</label>
+            <input
+              style={S.input}
+              value={f.zoom2}
+              onChange={(e) => setF({ ...f, zoom2: e.target.value })}
+              placeholder="উস্তাদ+স্টুডেন্ট ১ম লিংকে একবার জয়েন করার পর, আবার জয়েন করতে চাইলে এই লিংক ব্যবহার হবে"
             />
           </div>
           <div style={{ marginTop: 10 }}>
@@ -3136,6 +3148,7 @@ function InstantClassView({ courses, user }) {
       dur: 60,
       lectureNo: 1,
       zoom: "https://zoom.us/j/",
+      zoom2: "", // রিজয়েন লিংক (ঐচ্ছিক) — উস্তাদ+স্টুডেন্ট ১ম লিংকে একবার জয়েন করার পর এই লিংকেই আবার জয়েন হবে
       req: "",
     };
   };
@@ -3334,11 +3347,20 @@ function InstantClassView({ courses, user }) {
         )}
       </div>
       <div style={{ marginTop: 10 }}>
-        <label style={S.label}>জুম লিংক</label>
+        <label style={S.label}>১ম জুম লিংক</label>
         <input
           style={S.input}
           value={f.zoom}
           onChange={(e) => setF({ ...f, zoom: e.target.value })}
+        />
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <label style={S.label}>২য় জুম লিংক (রিজয়েন — ঐচ্ছিক)</label>
+        <input
+          style={S.input}
+          value={f.zoom2}
+          onChange={(e) => setF({ ...f, zoom2: e.target.value })}
+          placeholder="উস্তাদ+স্টুডেন্ট ১ম লিংকে একবার জয়েন করার পর, আবার জয়েন করতে চাইলে এই লিংক ব্যবহার হবে"
         />
       </div>
       <div style={{ marginTop: 10 }}>
