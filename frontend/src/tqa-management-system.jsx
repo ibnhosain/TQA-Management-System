@@ -12230,30 +12230,13 @@ function CourseManagerView({ db, setDb, refresh }) {
       await api.saveCourse(payload, edit.id || undefined);
       await loadCourses();
       setEdit(null);
-    } catch {
-      if (edit.id) {
-        const c = COURSES.find((x) => x.id === edit.id);
-        if (c)
-          Object.assign(c, {
-            name: edit.name,
-            teacherId: edit.teacherId,
-            color: edit.color,
-            books,
-          });
-      } else {
-        COURSES.push({
-          id: "c" + uid(),
-          name: edit.name,
-          teacherId: edit.teacherId,
-          color: edit.color,
-          books,
-          studentIds: [],
-          lectures: [],
-        });
-      }
-      setCourses([...COURSES]);
-      setEdit(null);
+      notice(edit.id ? "✔ কোর্স আপডেট হয়েছে।" : "✔ কোর্স তৈরি হয়েছে।");
       refresh();
+    } catch (e) {
+      notice(
+        "কোর্স সেভ করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
     } finally {
       setSaving(false);
     }
@@ -12292,16 +12275,13 @@ function CourseManagerView({ db, setDb, refresh }) {
         try {
           await api.deleteCourse(c.id);
           await loadCourses();
-        } catch {
-          const i = COURSES.findIndex((x) => x.id === c.id);
-          if (i > -1) COURSES.splice(i, 1);
-          setDb((d) => ({
-            ...d,
-            classes: d.classes.filter((k) => k.courseId !== c.id),
-            routine: (d.routine || []).filter((r) => r.courseId !== c.id),
-          }));
-          setCourses([...COURSES]);
+          notice(`✔ "${c.name}" কোর্স মুছে ফেলা হয়েছে।`);
           refresh();
+        } catch (e) {
+          notice(
+            "কোর্স মুছতে ব্যর্থ — " +
+              (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+          );
         }
       },
     );
