@@ -10001,15 +10001,18 @@ function RoutineView({ db, setDb, courses, user }) {
   // ডিভাইসের টাইমজোন থেকে অটো-হিসাব আর করা হয় না (নির্ভরযোগ্য ছিল না)। স্টুডেন্ট
   // বিদেশে থাকলে, রুটিন তৈরি/এডিটের সময় পরিচালক তার জন্য আলাদাভাবে ম্যানুয়ালি
   // বার-সময় বসিয়ে দিলে (studentSchedule) সেই স্টুডেন্ট এখানে সেটাই দেখবে।
+  // রুটিন সবসময় তার আসল বাংলাদেশ-সময়ের বারেই (r.days) দেখানো হয় — আসল ক্লাস
+  // (ClassSession) ঠিক ওই বারেই তৈরি হয়, তাই ভিন্ন বারে সরিয়ে দেখালে স্টুডেন্ট
+  // আসল ক্লাসের দিনে "রুটিনে ক্লাস নেই" দেখে বিভ্রান্ত হতেন (আগে এমনটাই হচ্ছিল)।
+  // স্টুডেন্টের নিজের সময়ে বসানো ওভাররাইড থাকলে সেটা একই এন্ট্রির পাশে শুধু
+  // তথ্য হিসেবে দেখানো হয় — কোনো এন্ট্রি সরে যায় না
   const localSchedule = {};
   visible.forEach((r) => {
     const override =
       user.role === "student" ? r.studentSchedule?.[String(user.id)] : null;
-    const days = override && override.days.length ? override.days : r.days || [];
-    const displayTime = override && override.time ? override.time : r.time;
-    days.forEach((d) => {
+    (r.days || []).forEach((d) => {
       if (!localSchedule[d]) localSchedule[d] = [];
-      localSchedule[d].push({ ...r, localTime: displayTime });
+      localSchedule[d].push({ ...r, localTime: r.time, myOverride: override });
     });
   });
   return (
@@ -10109,6 +10112,18 @@ function RoutineView({ db, setDb, courses, user }) {
                         )}{" "}
                         🕐 {r.localTime} · {T(`${bn(r.dur)} মি`, `${r.dur} min`)} ·{" "}
                         {r.teacherName || nameOf(r.teacherId || c.teacherId)}
+                        {r.myOverride &&
+                          (r.myOverride.time || r.myOverride.days?.length > 0) && (
+                            <span style={{ color: C.gold }}>
+                              {" "}
+                              · 🌍{" "}
+                              {T("আপনার সময়ে", "your time")}:{" "}
+                              {(r.myOverride.days || [])
+                                .map((d) => T(DAY_BN[d], DAY_EN[d]))
+                                .join("/")}{" "}
+                              {r.myOverride.time}
+                            </span>
+                          )}
                         {canEdit && studNames.length > 0 && (
                           <span style={{ color: C.muted }}>
                             {" "}
