@@ -804,8 +804,13 @@ class AdmissionViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == "create":
             return []  # ওয়েবসাইটের পাবলিক ভর্তি/ট্রায়াল/যোগাযোগ ফরম
-        if self.action == "accept":
-            return [IsDirector()]  # গ্রহণ কেবল পরিচালক
+        if self.action in ("accept", "reject"):
+            # গ্রহণ/বাতিলের ক্ষমতা কেবল পরিচালকের — এডমিন বিস্তারিত দেখে
+            # পরিচালক বরাবর পাঠাবেন (UI-তেও এই কথাই বলা আছে)। reject অ্যাকশনের
+            # @action ডেকোরেটরে permission_classes=[IsDirector] বসানো ছিল, কিন্তু
+            # এই get_permissions() override সেটা কখনো পড়ত না (শুধু "accept"
+            # স্পেশাল-কেস করা ছিল) — ফলে বাস্তবে এডমিনও reject করতে পারতেন
+            return [IsDirector()]
         return [IsAdminLevel()]
 
     def perform_create(self, serializer):
