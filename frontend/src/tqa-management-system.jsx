@@ -7001,6 +7001,9 @@ function TeacherReportView({ db, setDb, courses, user }) {
   const payTeacher = async (teacher, month, amount) => {
     if (!month) return;
     if (!amount || amount <= 0) return notice("সঠিক পরিমাণ দিন।");
+    // পেমেন্ট সেভ ও রিসিট পাঠানো — আলাদা try/catch, নইলে পেমেন্ট আসলে সফল
+    // হয়ে গেলেও শুধু রিসিট পাঠাতে ব্যর্থ হলে সেটাকে "পেমেন্ট ব্যর্থ" দেখানো
+    // হতো, ফলে পরিচালক আবার পেমেন্ট দিলে ডুপ্লিকেট বেতন সেভ হয়ে যেতে পারত
     try {
       await api.payTeacherSalary({
         teacher: teacher.id,
@@ -7008,6 +7011,12 @@ function TeacherReportView({ db, setDb, courses, user }) {
         month_label: month,
         method: "ব্যাংক",
       });
+    } catch (e) {
+      notice("পেমেন্ট সেভ করতে ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+      return;
+    }
+    await loadSalaries();
+    try {
       await api.sendReceipt({
         to_user: teacher.id,
         kind: "বেতন পরিশোধ ভাউচার",
@@ -7015,9 +7024,13 @@ function TeacherReportView({ db, setDb, courses, user }) {
         amount,
         method: "ব্যাংক",
       });
-      await loadSalaries();
+      notice("✔ বেতন পেমেন্ট সেভ হয়েছে ও ভাউচার পাঠানো হয়েছে।");
     } catch (e) {
-      notice("পেমেন্ট সেভ করতে ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+      notice(
+        "✔ বেতন পেমেন্ট সেভ হয়েছে — কিন্তু ভাউচার পাঠাতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "যাচাই করুন") +
+          " (আবার পেমেন্ট দেবেন না, শুধু ভাউচারটা পরে আবার পাঠান)",
+      );
     }
   };
   const pmTeacher = allTeachers.find((x) => String(x.id) === String(pm.teacherId));
