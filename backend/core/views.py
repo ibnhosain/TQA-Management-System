@@ -318,6 +318,24 @@ def _att_defaults(s):
     }
 
 
+def _assert_session_participant(s, user):
+    """join/leave/checkpoint শুধু ওই নির্দিষ্ট ক্লাসের আসল উস্তাদ বা তালিকাভুক্ত
+    স্টুডেন্টই করতে পারবেন। এডমিন/পরিচালকের get_queryset() কোনো ফিল্টার ছাড়াই
+    সব ক্লাস দেখায় (রিপোর্টের জন্য দরকার), তাই সেই queryset-এর ওপর ভিত্তি করে
+    get_object() সফল হয়ে গেলেও এখানে আলাদাভাবে আটকানো না হলে এডমিন/পরিচালক
+    কোনো ক্লাসে "জয়েন" করে ফেললে _sync_mutual_presence তাকে ভুলবশত স্টুডেন্ট
+    ধরে নিয়ে আসল স্টুডেন্ট না এলেও হাজিরা 'নিশ্চিত' করে ফেলতে পারত"""
+    if user.role == "teacher":
+        teacher_id = s.teacher_id or (s.course.teacher_id if s.course_id else None)
+        if user.id != teacher_id:
+            raise PermissionDenied("এই ক্লাসের উস্তাদ আপনি নন")
+    elif user.role == "student":
+        if not s.students.filter(pk=user.id).exists():
+            raise PermissionDenied("এই ক্লাসে আপনি যুক্ত নন")
+    else:
+        raise PermissionDenied("শুধু ক্লাসের উস্তাদ বা শিক্ষার্থীই জয়েন করতে পারবেন")
+
+
 def _sync_mutual_presence(s):
     """উস্তাদ ও অন্তত একজন স্টুডেন্ট একই সময়ে (দুজনেই) মিটিংয়ে থাকলে সাথে সাথেই
     উভয়ের হাজিরা 'সম্পন্ন' মার্ক করে — এরপর কেউ কতক্ষণ থাকলেন তা আর হাজিরার
@@ -380,6 +398,7 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def join(self, request, pk=None):  # জুমে জয়েন → নতুন সেগমেন্ট শুরু
         s = self.get_object()
+        _assert_session_participant(s, request.user)
         att, _ = Attendance.objects.get_or_create(
             session=s, user=request.user, defaults=_att_defaults(s)
         )
@@ -392,7 +411,9 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def leave(self, request, pk=None):  # সেগমেন্ট শেষ → মিনিট যোগ (সব মিলিয়ে ৪৫-মিনিট নিয়ম)
-        att = Attendance.objects.get(session=self.get_object(), user=request.user)
+        s = self.get_object()
+        _assert_session_participant(s, request.user)
+        att = Attendance.objects.get(session=s, user=request.user)
         add = request.data.get("minutes")  # ক্লায়েন্টের হিসাব করা "দুজন-উপস্থিত" মিনিট (দিলে সেটাই যোগ)
         if add is not None:
             try: att.minutes += max(0, int(add))
@@ -411,7 +432,9 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         # পোল সেই মুহূর্তে "চলে গেছেন" ভুল বুঝে তার কাউন্টার থামিয়ে দিতে পারত।
         # এই এন্ডপয়েন্ট শুধু মিনিট যোগ করে, segment_start/left_at স্পর্শ করে না —
         # তাই "উপস্থিত আছি" অবস্থা কখনো বিঘ্নিত হয় না
-        att = Attendance.objects.get(session=self.get_object(), user=request.user)
+        s = self.get_object()
+        _assert_session_participant(s, request.user)
+        att = Attendance.objects.get(session=s, user=request.user)
         add = request.data.get("minutes")
         try:
             att.minutes += max(0, int(add))
