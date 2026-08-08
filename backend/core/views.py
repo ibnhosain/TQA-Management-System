@@ -458,6 +458,16 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
                                          phone=st.phone, text=msg, reason="postpone")
         return Response({"status": "postponed"})
 
+    @action(detail=True, methods=["post"], permission_classes=[IsAdminLevel])
+    def toggle_rejoin(self, request, pk=None):
+        # স্বয়ংক্রিয় রিজয়েন-বাটন (দুজনের হাজিরা নিশ্চিত হলে অটো আসে) কোনো কারণে
+        # না এলে, পরিচালক/এডমিন এখান থেকে ম্যানুয়ালি জোর করে চালু/বন্ধ করতে
+        # পারবেন — হাজিরার ডেটায় কোনো পরিবর্তন হয় না, শুধু বাটনের অবস্থা বদলায়
+        s = self.get_object()
+        s.force_rejoin = not s.force_rejoin
+        s.save(update_fields=["force_rejoin"])
+        return Response({"force_rejoin": s.force_rejoin})
+
 
 class AttendanceViewSet(viewsets.ModelViewSet):
     """হাজিরার তালিকা (মাসভিত্তিক রিপোর্ট) — ?month=YYYY-MM দিয়ে ফিল্টার।

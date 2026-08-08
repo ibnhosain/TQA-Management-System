@@ -168,6 +168,9 @@ class ClassSession(models.Model):
     duration_min = models.PositiveIntegerField(default=60)
     zoom_link = models.URLField()
     zoom_link_2 = models.URLField(blank=True)  # রুটিন থেকে সিঙ্ক হওয়া রিজয়েন-লিংক (ঐচ্ছিক)
+    # স্বয়ংক্রিয়ভাবে (উভয়ের হাজিরা নিশ্চিত হয়ে) রিজয়েন-বাটন না এলে, পরিচালক/এডমিন
+    # ম্যানুয়ালি এক ক্লিকে জোর করে রিজয়েন-মোড চালু করতে পারবেন — হাজিরা ডেটা স্পর্শ করে না
+    force_rejoin = models.BooleanField(default=False)
     lecture_no = models.PositiveIntegerField(default=1)
     kind = models.CharField(max_length=10, choices=KINDS, default="regular")
     guardian_requirement = models.TextField(blank=True)  # অভিভাবকের রিকোয়ারমেন্ট

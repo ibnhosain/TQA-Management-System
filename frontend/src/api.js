@@ -133,6 +133,7 @@ export const api = {
   classPresence: (id) => request(`/classes/${id}/presence/`),                   // কে এখন মিটিংয়ে (দুজন-জয়েন গেটিং)
   markAttendance: (id, student_id, present = true) => request(`/classes/${id}/mark_attendance/`, { method: "POST", body: { student_id, present } }), // পরিচালকের ম্যানুয়াল হাজিরা
   postponeClass: (id) => request(`/classes/${id}/postpone/`, { method: "POST" }), // ⛔ স্থগিত
+  toggleRejoinClass: (id) => request(`/classes/${id}/toggle_rejoin/`, { method: "POST" }), // 🔁 রিজয়েন বাটন ম্যানুয়ালি চালু/বন্ধ (পরিচালক/এডমিন)
   deleteClass: (id) => request(`/classes/${id}/`, { method: "DELETE" }),
 
   // হাজিরা রিপোর্ট (মাসভিত্তিক) — উস্তাদ নিজের, শিক্ষার্থী নিজের, পরিচালক সবার + এডিট/মোছা

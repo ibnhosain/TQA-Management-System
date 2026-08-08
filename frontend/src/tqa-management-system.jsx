@@ -1181,6 +1181,7 @@ const adaptClass = (k) => ({
   zoom: k.zoom_link,
   zoom2: k.zoom_link_2 || "",
   attendance: k.attendance || [], // উস্তাদ+স্টুডেন্ট আজ ইতিমধ্যে (দুজনেই) জয়েন করেছেন কিনা বের করতে — জয়েন/রিজয়েন বাটন ঠিক করতে ব্যবহৃত
+  forceRejoin: !!k.force_rejoin, // অটো না এলে পরিচালক/এডমিনের ম্যানুয়াল ওভাররাইড
   kind: KEY_TO_KIND[k.kind] || "নিয়মিত ক্লাস",
   teacherId: k.teacher,
   studentIds: k.students || [],
@@ -1193,8 +1194,11 @@ const adaptClass = (k) => ({
 });
 // আজকের এই ক্লাসে উস্তাদ+অন্তত একজন স্টুডেন্ট — দুজনেই ইতিমধ্যে (এই মুহূর্তে
 // একসাথে না হলেও) অন্তত একবার জয়েন করে হাজিরা 'নিশ্চিত' হয়ে গেছে কিনা —
-// হলে ১ম জুম লিংক আর দেখানো হবে না, ২য় (রিজয়েন) লিংক দেখাবে
+// হলে ১ম জুম লিংক আর দেখানো হবে না, ২য় (রিজয়েন) লিংক দেখাবে। এটা অটো না এলে
+// পরিচালক/এডমিন forceRejoin ম্যানুয়ালি চালু করে একই ফলাফল আনতে পারেন
+// (হাজিরার ডেটা স্পর্শ না করেই)
 const bothJoinedToday = (k, teacherId) => {
+  if (k.forceRejoin) return true;
   const rows = k.attendance || [];
   const tid = k.teacherId ?? teacherId;
   const teacherDone = rows.some(
@@ -2581,6 +2585,16 @@ function ClassesView({
       notice("আপডেট ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
     }
   };
+  // অটো রিজয়েন-বাটন (দুজনের হাজিরা নিশ্চিত হলে অটো আসে) কোনো কারণে না এলে,
+  // পরিচালক/এডমিন এখান থেকে ম্যানুয়ালি চালু/বন্ধ করতে পারেন — হাজিরার ডেটা বদলায় না
+  const toggleRejoin = async (k) => {
+    try {
+      await api.toggleRejoinClass(k.id);
+      await loadClasses();
+    } catch (e) {
+      notice("ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+    }
+  };
   const postponeOne = (k) => {
     askConfirm(
       "ক্লাসটি স্থগিত করবেন? উস্তাদ, স্টুডেন্ট সবার পোর্টালে সাথে সাথে আপডেট হবে।",
@@ -2809,6 +2823,13 @@ function ClassesView({
               onClick={() => notifyAll(k, c, kStudents)}
             >
               📨 টিচার ও স্টুডেন্টকে জানান
+            </Btn>
+          )}
+          {isToday && isAdm(user) && k.status !== "postponed" && (
+            <Btn sm kind="soft" onClick={() => toggleRejoin(k)}>
+              {k.forceRejoin
+                ? "↩️ রিজয়েন বাটন বন্ধ করুন"
+                : "🔁 রিজয়েন বাটন এখনই চালু করুন"}
             </Btn>
           )}
           {isDir(user) && !isJoined && (
@@ -14926,6 +14947,7 @@ export default function App() {
                 zoom: kk.zoom_link,
                 zoom2: kk.zoom_link_2 || "",
                 attendance: kk.attendance || [],
+                forceRejoin: !!kk.force_rejoin,
                 lectureNo: kk.lecture_no,
                 dur: kk.duration_min,
               }
