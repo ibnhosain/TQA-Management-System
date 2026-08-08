@@ -6713,14 +6713,12 @@ function NoticesView({ db, setDb, user }) {
       await loadNotices();
       setShow(false);
       setF({ title: "", body: "" });
-    } catch {
-      setDb((d) => ({
-        ...d,
-        notices: [{ id: uid(), ...f, date: todayISO() }, ...d.notices],
-      }));
-      setNotices((prev) => [{ id: uid(), ...f, date: todayISO() }, ...prev]);
-      setShow(false);
-      setF({ title: "", body: "" });
+      notice("✔ নোটিশ প্রকাশ হয়েছে।");
+    } catch (e) {
+      notice(
+        "নোটিশ প্রকাশ করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
     }
     setBusy(false);
   };
@@ -6728,9 +6726,12 @@ function NoticesView({ db, setDb, user }) {
     try {
       await api.deleteNotice(id);
       await loadNotices();
-    } catch {
-      setDb((d) => ({ ...d, notices: d.notices.filter((x) => x.id !== id) }));
-      setNotices((prev) => prev.filter((x) => x.id !== id));
+      notice("✔ নোটিশ মুছে ফেলা হয়েছে।");
+    } catch (e) {
+      notice(
+        "নোটিশ মুছতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
     }
   };
 
