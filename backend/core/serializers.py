@@ -289,11 +289,23 @@ class SentReceiptSerializer(serializers.ModelSerializer):
 class AdmissionSerializer(serializers.ModelSerializer):
     # website forms.js "payment_ref" পাঠায় → trx_id এ ম্যাপ
     payment_ref = serializers.CharField(source="trx_id", required=False, allow_blank=True)
+    # আগে email ঐচ্ছিক ছিল আর contact-এ যেকোনো টেক্সট (এমনকি "hhhdh"-এর মতো
+    # অক্ষরও) গ্রহণযোগ্য ছিল — ফলে ফেক/স্প্যাম আবেদন জমা পড়ত। এখন সত্যিকারের
+    # ইমেইল ফরম্যাট ও কমপক্ষে ৮ ডিজিটের ফোন নম্বর ছাড়া আবেদনই জমা হবে না।
+    email = serializers.EmailField(required=True)
 
     class Meta:
         model = Admission
         fields = "__all__"
         read_only_fields = ["status", "forwarded_to_director", "created_student"]
+
+    def validate_contact(self, value):
+        digits = "".join(ch for ch in (value or "") if ch.isdigit())
+        if len(digits) < 8:
+            raise serializers.ValidationError(
+                "সঠিক WhatsApp/ফোন নম্বর দিন (কমপক্ষে ৮ ডিজিট)।"
+            )
+        return value
 
 
 class LeaveRequestSerializer(serializers.ModelSerializer):
