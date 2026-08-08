@@ -14928,7 +14928,12 @@ export default function App() {
       try {
         const classes = await api.todayClasses();
         const now = new Date();
-        const cur = now.getHours() * 60 + now.getMinutes();
+        // ক্লাসের সময় (c.time) সবসময় বাংলাদেশ সময়ে সংরক্ষিত — তাই "এখন কয়টা
+        // বাজে" এর হিসাবও বাংলাদেশ সময়েই করতে হবে, ডিভাইসের নিজস্ব টাইমজোন
+        // দিয়ে নয় (নইলে বিদেশে থাকা স্টুডেন্টের জন্য এই পপআপ ভুল সময়ে আসত)
+        const cur =
+          ((now.getUTCHours() + DHAKA_OFFSET_HOURS) % 24) * 60 +
+          now.getUTCMinutes();
         const kk = classes.find((c) => {
           const [h, m] = c.time.split(":").map(Number);
           const st = h * 60 + m;
