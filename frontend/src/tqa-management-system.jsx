@@ -1181,7 +1181,7 @@ const adaptClass = (k) => ({
   zoom: k.zoom_link,
   zoom2: k.zoom_link_2 || "",
   attendance: k.attendance || [], // উস্তাদ+স্টুডেন্ট আজ ইতিমধ্যে (দুজনেই) জয়েন করেছেন কিনা বের করতে — জয়েন/রিজয়েন বাটন ঠিক করতে ব্যবহৃত
-  forceRejoin: !!k.force_rejoin, // অটো না এলে পরিচালক/এডমিনের ম্যানুয়াল ওভাররাইড
+  joinModeOverride: k.join_mode_override || "auto", // অটো ঠিক না হলে পরিচালক/এডমিনের ম্যানুয়াল ওভাররাইড (auto/join/rejoin)
   kind: KEY_TO_KIND[k.kind] || "নিয়মিত ক্লাস",
   teacherId: k.teacher,
   studentIds: k.students || [],
@@ -1194,11 +1194,13 @@ const adaptClass = (k) => ({
 });
 // আজকের এই ক্লাসে উস্তাদ+অন্তত একজন স্টুডেন্ট — দুজনেই ইতিমধ্যে (এই মুহূর্তে
 // একসাথে না হলেও) অন্তত একবার জয়েন করে হাজিরা 'নিশ্চিত' হয়ে গেছে কিনা —
-// হলে ১ম জুম লিংক আর দেখানো হবে না, ২য় (রিজয়েন) লিংক দেখাবে। এটা অটো না এলে
-// পরিচালক/এডমিন forceRejoin ম্যানুয়ালি চালু করে একই ফলাফল আনতে পারেন
-// (হাজিরার ডেটা স্পর্শ না করেই)
+// হলে ১ম জুম লিংক আর দেখানো হবে না, ২য় (রিজয়েন) লিংক দেখাবে। পরিচালক/এডমিন
+// joinModeOverride দিয়ে এই স্বয়ংক্রিয় সিদ্ধান্ত যেকোনো দিকে জোর করে বদলে
+// দিতে পারেন (হাজিরার ডেটা স্পর্শ না করেই) — "join" মানে সবসময় ১ম লিংক,
+// "rejoin" মানে সবসময় ২য় লিংক, "auto" মানে স্বাভাবিক (হাজিরা-ভিত্তিক) নিয়ম
 const bothJoinedToday = (k, teacherId) => {
-  if (k.forceRejoin) return true;
+  if (k.joinModeOverride === "rejoin") return true;
+  if (k.joinModeOverride === "join") return false;
   const rows = k.attendance || [];
   const tid = k.teacherId ?? teacherId;
   const teacherDone = rows.some(
@@ -2585,11 +2587,12 @@ function ClassesView({
       notice("আপডেট ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
     }
   };
-  // অটো রিজয়েন-বাটন (দুজনের হাজিরা নিশ্চিত হলে অটো আসে) কোনো কারণে না এলে,
-  // পরিচালক/এডমিন এখান থেকে ম্যানুয়ালি চালু/বন্ধ করতে পারেন — হাজিরার ডেটা বদলায় না
-  const toggleRejoin = async (k) => {
+  // অটো জয়েন/রিজয়েন-নির্ধারণ (দুজনের হাজিরার ওপর ভিত্তি করে) কোনো কারণে ঠিক
+  // না এলে, পরিচালক/এডমিন এখান থেকে জয়েন বা রিজয়েন — যেকোনো একটা লিংক
+  // ম্যানুয়ালি জোর করে চালু, বা "auto"-তে ফিরিয়ে দিতে পারেন — হাজিরার ডেটা বদলায় না
+  const setJoinMode = async (k, mode) => {
     try {
-      await api.toggleRejoinClass(k.id);
+      await api.setClassJoinMode(k.id, mode);
       await loadClasses();
     } catch (e) {
       notice("ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
@@ -2826,11 +2829,23 @@ function ClassesView({
             </Btn>
           )}
           {isToday && isAdm(user) && k.status !== "postponed" && (
-            <Btn sm kind="soft" onClick={() => toggleRejoin(k)}>
-              {k.forceRejoin
-                ? "↩️ রিজয়েন বাটন বন্ধ করুন"
-                : "🔁 রিজয়েন বাটন এখনই চালু করুন"}
-            </Btn>
+            <>
+              {k.joinModeOverride !== "join" && (
+                <Btn sm kind="soft" onClick={() => setJoinMode(k, "join")}>
+                  🎥 জয়েন লিংক জোর করে চালু করুন
+                </Btn>
+              )}
+              {k.joinModeOverride !== "rejoin" && (
+                <Btn sm kind="soft" onClick={() => setJoinMode(k, "rejoin")}>
+                  🔁 রিজয়েন লিংক জোর করে চালু করুন
+                </Btn>
+              )}
+              {k.joinModeOverride !== "auto" && (
+                <Btn sm kind="soft" onClick={() => setJoinMode(k, "auto")}>
+                  ↩️ স্বয়ংক্রিয়ে ফিরিয়ে দিন
+                </Btn>
+              )}
+            </>
           )}
           {isDir(user) && !isJoined && (
             <Btn sm kind="soft" onClick={() => setAttnMark(k)}>
@@ -14947,7 +14962,7 @@ export default function App() {
                 zoom: kk.zoom_link,
                 zoom2: kk.zoom_link_2 || "",
                 attendance: kk.attendance || [],
-                forceRejoin: !!kk.force_rejoin,
+                joinModeOverride: kk.join_mode_override || "auto",
                 lectureNo: kk.lecture_no,
                 dur: kk.duration_min,
               }

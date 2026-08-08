@@ -168,9 +168,15 @@ class ClassSession(models.Model):
     duration_min = models.PositiveIntegerField(default=60)
     zoom_link = models.URLField()
     zoom_link_2 = models.URLField(blank=True)  # রুটিন থেকে সিঙ্ক হওয়া রিজয়েন-লিংক (ঐচ্ছিক)
-    # স্বয়ংক্রিয়ভাবে (উভয়ের হাজিরা নিশ্চিত হয়ে) রিজয়েন-বাটন না এলে, পরিচালক/এডমিন
-    # ম্যানুয়ালি এক ক্লিকে জোর করে রিজয়েন-মোড চালু করতে পারবেন — হাজিরা ডেটা স্পর্শ করে না
-    force_rejoin = models.BooleanField(default=False)
+    JOIN_MODES = [
+        ("auto", "স্বয়ংক্রিয়"),        # উভয়ের হাজিরা নিশ্চিত হলে অটো রিজয়েন দেখায়, নইলে জয়েন
+        ("join", "জোর করে জয়েন লিংক"),   # সবসময় ১ম (জয়েন) লিংক দেখাবে
+        ("rejoin", "জোর করে রিজয়েন লিংক"),  # সবসময় ২য় (রিজয়েন) লিংক দেখাবে
+    ]
+    # স্বয়ংক্রিয় জয়েন/রিজয়েন-নির্ধারণ (হাজিরার ওপর ভিত্তি করে) কোনো কারণে সঠিক না
+    # হলে, পরিচালক/এডমিন ম্যানুয়ালি জয়েন বা রিজয়েন — যেকোনো একটা লিংক জোর করে
+    # চালু করতে পারবেন, বা "auto"-তে ফিরিয়ে দিতে পারবেন — হাজিরা ডেটা স্পর্শ করে না
+    join_mode_override = models.CharField(max_length=10, choices=JOIN_MODES, default="auto")
     lecture_no = models.PositiveIntegerField(default=1)
     kind = models.CharField(max_length=10, choices=KINDS, default="regular")
     guardian_requirement = models.TextField(blank=True)  # অভিভাবকের রিকোয়ারমেন্ট
