@@ -451,7 +451,13 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         msg = (f"⛔ {s.course.name} ক্লাসটি ({s.date}, {s.time}) অনিবার্য কারণে / "
                f"উস্তাদ-উস্তাদা অসুস্থ থাকার দরুন স্থগিত করা হয়েছে। "
                f"পরবর্তীতে শিডিউল করে মেকআপ করা হবে ইনশাআল্লাহ।")
-        notify(msg, studs + [s.teacher] + list(admins()))
+        # s.teacher নাল হতে পারে (টিচারের অ্যাকাউন্ট মুছে ফেললে পুরনো ক্লাস-সেশনে
+        # SET_NULL হয়ে যায়) — না ছেঁকে পাঠালে notify()-এর recipients.set() এ
+        # None ঢুকে ৫০০ এরর দিত, অথচ স্ট্যাটাস ততক্ষণে সেভ হয়ে গেছে
+        # s.teacher নাল হতে পারে (টিচারের অ্যাকাউন্ট মুছে ফেললে পুরনো ক্লাস-সেশনে
+        # SET_NULL হয়ে যায়) — Django এমনিতেই None নিঃশব্দে বাদ দেয় (ক্র্যাশ করে
+        # না), তবু স্পষ্টভাবে ছেঁকে দেওয়া বেশি নির্ভরযোগ্য ও উদ্দেশ্য-স্পষ্ট
+        notify(msg, studs + ([s.teacher] if s.teacher_id else []) + list(admins()))
         for st in studs:  # অভিভাবকের WhatsApp — Celery টাস্ক পাঠাবে
             if st.phone:
                 WaMessage.objects.create(to_name=st.guardian or st.name_bn, student=st,
