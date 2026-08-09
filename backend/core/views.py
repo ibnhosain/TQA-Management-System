@@ -255,6 +255,18 @@ class RoutineViewSet(viewsets.ModelViewSet):
         # সময়কাল/জুম লিংকের পাশাপাশি এখন কোর্স, উস্তাদ ও স্টুডেন্ট তালিকাও।
         try:
             today = timezone.localtime().date()
+            # বার বদলালে আগে যে তারিখগুলোতে ক্লাস তৈরি হয়ে গিয়েছিল সেগুলো রুটিনে
+            # আর না থাকলেও রয়ে যেত (শুধু নতুন সময় বসত), আর নতুন বারেও ক্লাস তৈরি
+            # হতো — ফলে দুই বারেই ক্লাস দেখাত। তাই আগে বাতিল-হয়ে-যাওয়া বারের
+            # আসন্ন সেশনগুলো সরিয়ে ফেলা হয়। যেখানে কেউ ইতিমধ্যে জয়েন করে ফেলেছেন
+            # সেগুলো রাখা হয় — সেই ক্লাস বাস্তবে হয়ে গেছে, হাজিরা হারানো যাবে না
+            from .tasks import _js_to_py
+            valid_weekdays = _js_to_py(routine.days or [])
+            for s in ClassSession.objects.filter(
+                routine=routine, date__gte=today, status="upcoming",
+            ):
+                if s.date.weekday() not in valid_weekdays and not s.attendance.exists():
+                    s.delete()
             qs = ClassSession.objects.filter(
                 routine=routine, date__gte=today, status="upcoming",
             )
