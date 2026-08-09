@@ -1074,9 +1074,17 @@ class WaMessageViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def send_now(self, request, pk=None):
-        """তাৎক্ষণিক পাঠানো — Celery টাস্ককে ডাকে (tasks.send_whatsapp)"""
-        from .tasks import send_whatsapp  # Celery task
-        send_whatsapp.delay(pk)
+        """তাৎক্ষণিক পাঠানো/রিট্রাই — dispatch_whatsapp() ব্যবহার করে, যা USE_CELERY
+        চেক করে Celery worker না থাকলে (Render-এ যেমন আছে — কোনো worker সার্ভিস
+        ডিপ্লয় করা নেই) সরাসরি (synchronous) পাঠায়। আগে সরাসরি send_whatsapp.delay()
+        ডাকা হতো, যা কোনো Redis/worker ছাড়া কানেকশন এরর দিয়ে ব্যর্থ হতো — director-এর
+        "আউটবক্স"-এ ব্যর্থ মেসেজ রিট্রাই করার একমাত্র বাটনটাই কখনো কাজ করত না
+        """
+        from .tasks import dispatch_whatsapp
+        try:
+            dispatch_whatsapp(pk)
+        except Exception as e:
+            return Response({"error": str(e)}, status=502)
         return Response({"queued": True})
 
 
