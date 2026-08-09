@@ -11824,6 +11824,10 @@ function TeacherWiseBoard({ db, setDb, user }) {
   );
   const [routines, setRoutines] = useState(db.routine || []);
   const [upcomingAll, setUpcomingAll] = useState([]);
+  // একটি নির্দিষ্ট আসন্ন ক্লাস ম্যানুয়ালি এডিট (তারিখ/সময়/সময়কাল/জুম লিংক) —
+  // পুরো রুটিন না বদলে শুধু ওই একটা দিনের ক্লাস সরানো/বদলানোর জন্য
+  const [editK, setEditK] = useState(null); // {id, date, time, dur, zoom}
+  const [savingK, setSavingK] = useState(false);
 
   useEffect(() => {
     // উস্তাদ-তালিকা (এডমিন/পরিচালক) — ব্যর্থ হলেও routines/classes লোড থামবে না
@@ -11889,6 +11893,49 @@ function TeacherWiseBoard({ db, setDb, user }) {
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
     .slice(0, 6);
 
+  const startEditClass = (k) =>
+    setEditK({
+      id: k.id,
+      date: k.date,
+      time: (k.time || "").slice(0, 5), // "17:00:00" → "17:00"
+      dur: k.duration_min || k.dur || 60,
+      zoom: k.zoom_link || k.zoom || "",
+    });
+  const saveEditClass = async () => {
+    if (!editK.date || !editK.time) return notice("তারিখ ও সময় দিন।");
+    setSavingK(true);
+    try {
+      await api.editClass(editK.id, {
+        date: editK.date,
+        time: editK.time,
+        duration_min: +editK.dur || 60,
+        zoom_link: editK.zoom,
+      });
+      // সার্ভারে সেভ হওয়ার পর তালিকাটাও হালনাগাদ করি, যাতে সাথে সাথেই নতুন
+      // তারিখ-সময় দেখা যায় (রিফ্রেশের অপেক্ষা না করে)
+      setUpcomingAll((prev) =>
+        prev.map((x) =>
+          x.id === editK.id
+            ? {
+                ...x,
+                date: editK.date,
+                time: editK.time,
+                duration_min: +editK.dur || 60,
+                zoom_link: editK.zoom,
+              }
+            : x,
+        ),
+      );
+      setEditK(null);
+      notice("✔ ক্লাসটি আপডেট হয়েছে — উস্তাদ ও স্টুডেন্টের পোর্টালেও বদলে গেছে।");
+    } catch (e) {
+      notice(
+        "ক্লাস আপডেট করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
+    }
+    setSavingK(false);
+  };
   const postpone = (k) =>
     askConfirm(
       "ক্লাসটি স্থগিত করবেন? উস্তাদ, স্টুডেন্ট সবার পোর্টালে সাথে সাথে আপডেট হবে এবং অভিভাবকের WhatsApp মেসেজ তৈরি হবে।",
@@ -12046,8 +12093,14 @@ function TeacherWiseBoard({ db, setDb, user }) {
           >
             <span style={{ flex: 1, minWidth: 200 }}>
               <b>{k.course_name || c.name || "—"}</b> ·{" "}
-              {fmtDate(k.date)} · 🕐 {k.time} · 👥 {studentNames}
+              {fmtDate(k.date)} · 🕐 {(k.time || "").slice(0, 5)} · 👥{" "}
+              {studentNames}
             </span>
+            {isAdm(user) && (
+              <Btn sm kind="soft" onClick={() => startEditClass(k)}>
+                ✏️ এডিট
+              </Btn>
+            )}
             {isAdm(user) && (
               <Btn sm kind="danger" onClick={() => postpone(k)}>
                 ⛔ স্থগিত করুন
@@ -12056,6 +12109,75 @@ function TeacherWiseBoard({ db, setDb, user }) {
           </div>
         );
       })}
+      {editK && (
+        <Modal
+          title="✏️ এই ক্লাসটি এডিট করুন"
+          onClose={() => setEditK(null)}
+        >
+          <div
+            style={{
+              padding: "9px 12px",
+              borderRadius: 10,
+              background: C.amberBg,
+              fontSize: 12,
+              color: "#a16207",
+              marginBottom: 12,
+            }}
+          >
+            💡 এটা শুধু এই একটা দিনের ক্লাস বদলাবে — পুরো রুটিন অপরিবর্তিত
+            থাকবে। তবে পরে রুটিনের সময়/বার এডিট করলে এই পরিবর্তন রুটিনের
+            মান দিয়ে আবার বদলে যাবে।
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={S.label}>তারিখ</label>
+              <input
+                type="date"
+                style={S.input}
+                value={editK.date}
+                onChange={(e) => setEditK({ ...editK, date: e.target.value })}
+              />
+            </div>
+            <div>
+              <label style={S.label}>সময় (বাংলাদেশ সময় 🇧🇩)</label>
+              <input
+                type="time"
+                style={S.input}
+                value={editK.time}
+                onChange={(e) => setEditK({ ...editK, time: e.target.value })}
+              />
+            </div>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>সময়কাল (মিনিট)</label>
+            <input
+              type="number"
+              style={S.input}
+              value={editK.dur}
+              onChange={(e) => setEditK({ ...editK, dur: e.target.value })}
+            />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label style={S.label}>জুম লিংক</label>
+            <input
+              style={S.input}
+              value={editK.zoom}
+              onChange={(e) => setEditK({ ...editK, zoom: e.target.value })}
+            />
+          </div>
+          <Btn
+            style={{
+              marginTop: 16,
+              width: "100%",
+              justifyContent: "center",
+              opacity: savingK ? 0.6 : 1,
+            }}
+            onClick={saveEditClass}
+          >
+            {savingK ? "⏳ সেভ হচ্ছে…" : "✔ আপডেট করুন"}
+          </Btn>
+        </Modal>
+      )}
     </div>
   );
 }
