@@ -45,6 +45,18 @@ class UserViewSet(viewsets.ModelViewSet):
         # ব্যবহারকারীতে আলাদা কোয়েরি না করে prefetch cache ব্যবহার করে (N+1 এড়ায়)
         return User.objects.exclude(is_superuser=True).prefetch_related("due_months")
 
+    def perform_destroy(self, instance):
+        # নিজেকে বা শেষ পরিচালককে মুছে ফেললে সিস্টেমে কেউ আর ইউজার ম্যানেজ
+        # করতে পারবেন না (যোগ/মুছা/পাসওয়ার্ড — কেবল পরিচালকের এখতিয়ার) —
+        # রিকভারি করতে তখন সার্ভারে ম্যানুয়ালি কমান্ড চালাতে হতো
+        if instance.id == self.request.user.id:
+            raise PermissionDenied("নিজের অ্যাকাউন্ট নিজে মুছে ফেলা যাবে না")
+        if instance.role == "director" and User.objects.filter(
+            role="director"
+        ).exclude(pk=instance.pk).count() == 0:
+            raise PermissionDenied("শেষ পরিচালকের অ্যাকাউন্ট মুছে ফেলা যাবে না")
+        instance.delete()
+
     @action(detail=False, permission_classes=[IsAuthenticated])
     def me(self, request):
         return Response(UserSerializer(request.user).data)
