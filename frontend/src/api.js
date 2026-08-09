@@ -73,7 +73,8 @@ async function request(path, { method = "GET", body, isForm, timeoutMs } = {}) {
   const isSafeRetry =
     ["GET", "PATCH", "PUT", "DELETE"].includes(method) || path === "/auth/login";
   let res;
-  for (let attempt = 0; ; attempt++) {
+  let attempt = 0; // লুপের বাইরে ঘোষণা — পরে "এটা কি রিট্রাই ছিল" জানতে লাগে (DELETE+404 কেস)
+  for (; ; attempt++) {
     try {
       res = await doFetch();
     } catch (e) {
@@ -85,6 +86,12 @@ async function request(path, { method = "GET", body, isForm, timeoutMs } = {}) {
     // 502/503/504 = গেটওয়ে/সার্ভার সাময়িক সমস্যা — শুধু নিরাপদ (idempotent) মেথডেই রিট্রাই
     if (isSafeRetry && [502, 503, 504].includes(res.status) && attempt < 5) { await sleep(1500 * (attempt + 1)); continue; }
     break;
+  }
+  // DELETE রিট্রাই হওয়ার পর ৪০৪ পেলে — সম্ভবত প্রথম চেষ্টাতেই আসলে ডিলিট হয়ে
+  // গিয়েছিল, শুধু উত্তরটা (নেটওয়ার্ক/গেটওয়ে সমস্যায়) হারিয়ে গিয়েছিল, তাই দ্বিতীয়
+  // চেষ্টায় "খুঁজে পাওয়া যায়নি" এসেছে — এটাকে ব্যর্থতা না ধরে সফলই ধরা ঠিক
+  if (method === "DELETE" && attempt > 0 && res.status === 404) {
+    return null;
   }
   if (res.status === 401 && refresh) {           // টোকেন মেয়াদোত্তীর্ণ → রিফ্রেশ
     try {
