@@ -110,10 +110,18 @@ async function request(path, { method = "GET", body, isForm, timeoutMs } = {}) {
     // বলে)। ফলে detail-নির্ভর এররের আসল বার্তা কখনো দেখানো হতো না, শুধু জেনেরিক
     // "API error"/"যাচাই করুন" দেখাত। এখানে e.message-এই আসল বার্তা বসিয়ে দিলে
     // সব জায়গার (e?.data?.error || e?.message) ফলব্যাক একবারেই ঠিক হয়ে যায়।
+    // সিরিয়ালাইজারের ফিল্ড-লেভেল ValidationError (যেমন AdmissionSerializer-এর
+    // email/contact ভ্যালিডেশন) আরও ভিন্ন আকারে আসে — {"email": ["..."], ...} —
+    // error/detail/non_field_errors কোনোটাই না থাকলে প্রথম ফিল্ডের প্রথম বার্তাটাই
+    // শেষ ভরসা হিসেবে দেখানো হয়, নইলে সেটাও জেনেরিক "API error"-এ হারিয়ে যেত
+    const firstFieldError = Object.values(data).find(
+      (v) => Array.isArray(v) && v.length,
+    )?.[0];
     const msg =
       data.error ||
       data.detail ||
       (Array.isArray(data.non_field_errors) && data.non_field_errors[0]) ||
+      firstFieldError ||
       "API error";
     throw Object.assign(new Error(msg), { status: res.status, data });
   }
