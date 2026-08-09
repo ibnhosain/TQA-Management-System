@@ -65,6 +65,15 @@ const METHOD_EN = {
   "নগদ গ্রহণ (অফিস)": "Cash (Office)",
 };
 const methodEn = (m) => METHOD_EN[m] || m;
+// CSV এক্সপোর্টের একটা সেল নিরাপদে তৈরি করে — শুধু quote-escape (CSV ফরম্যাটের
+// জন্য) না, কোনো নাম/মেসেজ =, +, -, @ দিয়ে শুরু হলে Excel/Sheets সেটাকে ফর্মুলা
+// হিসেবে চালানোর চেষ্টা করতে পারে (CSV/formula injection) — সামনে একটা অ্যাপস্ট্রফি
+// বসিয়ে সেটা ঠেকানো হয় (Excel তখন টেক্সট হিসেবে দেখায়, ইন্ডাস্ট্রি-স্ট্যান্ডার্ড মিটিগেশন)
+const csvCell = (v) => {
+  let s = String(v ?? "");
+  if (/^[=+\-@]/.test(s)) s = "'" + s;
+  return `"${s.replace(/"/g, '""')}"`;
+};
 const addDays = (n) => {
   const d = new Date();
   d.setDate(d.getDate() + n);
@@ -3490,7 +3499,7 @@ function PostponedClassesView({ user }) {
       ]);
     });
     const csv = [head, ...body]
-      .map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .map((row) => row.map(csvCell).join(","))
       .join("\r\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }); // BOM — Excel-এ বাংলা যেন না ভাঙে
     const a = document.createElement("a");
@@ -4211,7 +4220,7 @@ function AttendanceView({ user }) {
       r.present ? "উপস্থিত" : "অনুপস্থিত",
     ]);
     const csv = [head, ...body]
-      .map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .map((row) => row.map(csvCell).join(","))
       .join("\r\n");
     // ﻿ (BOM) না দিলে Excel-এ বাংলা লেখা ভাঙা দেখায়
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
