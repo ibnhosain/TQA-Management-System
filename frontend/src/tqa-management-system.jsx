@@ -3714,14 +3714,20 @@ function LecturePlan({ db, courses, user, refresh }) {
     const uncovered = lec.topics.filter(
       (t) => t.covered !== true && (isAdmin || t.covered !== false),
     );
+    const failed = [];
     for (const t of uncovered) {
       try {
         await api.markTopic(t.id, true);
       } catch {
-        /* ignore */
+        failed.push(t.text || t.id);
       }
     }
     await loadData();
+    if (failed.length) {
+      notice(
+        `${failed.length}টা বিষয় কভার করতে ব্যর্থ হয়েছে — ${failed.join(", ")}। আবার চেষ্টা করুন।`,
+      );
+    }
   };
   const covFromLectures = () => {
     const all = lectures.flatMap((l) => l.topics);
