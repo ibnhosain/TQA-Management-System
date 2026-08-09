@@ -2451,6 +2451,14 @@ function ClassesView({
     loadClasses();
   }, [user?.id]);
   useEffect(() => {
+    // এডমিন/পরিচালকের "🔴 ক্লাস চলছে" লাইভ-স্ট্যাটাস তাজা রাখতে প্রতি ৬০
+    // সেকেন্ডে তালিকা রিফ্রেশ — পেজ খোলা রাখলেও কে কখন জয়েন/লিভ করছে দেখা যায়
+    if (!isAdm(user)) return;
+    const iv = setInterval(loadClasses, 60000);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+  useEffect(() => {
     // ক্লাস শিডিউলের জন্য আসল উস্তাদ/স্টুডেন্ট তালিকা (এডমিন/পরিচালক)
     if (!isAdm(user)) return;
     api
@@ -2747,8 +2755,26 @@ function ClassesView({
     const lec = c.lectures?.[k.lectureNo - 1];
     const kStudents =
       k.studentIds && k.studentIds.length ? k.studentIds : c.studentIds || [];
-    const isJoined = joined?.classId === k.id;
+    // joined শুধু এই ট্যাবের লোকাল স্টেট — রিফ্রেশ/লগআউট-লগইনে হারিয়ে যায়, ফলে
+    // আগে সত্যিই ক্লাসে "জয়েন" থাকা অবস্থাতেও রিফ্রেশ দিলে নতুন "জয়েন করুন"
+    // বাটন দেখাত। এখন সার্ভারের হাজিরা-ডেটা (segment_start এখনো সেট আছে কিনা,
+    // অর্থাৎ "ক্লাস শেষ করুন" এখনো চাপা হয়নি) থেকেও একই সিদ্ধান্ত নেওয়া হয় —
+    // তাই রিফ্রেশ/লগআউটেও "ক্লাসে আছি" অবস্থাটা ঠিকই থেকে যায়, যতক্ষণ না
+    // সত্যিই ক্লাস শেষ করা হয়
+    const myActiveRow = (k.attendance || []).some(
+      (a) => String(a.user) === String(user.id) && a.active,
+    );
+    const isJoined = joined?.classId === k.id || (joinable && myActiveRow);
     const alreadyBothJoined = bothJoinedToday(k, c.teacherId);
+    // এডমিন/পরিচালক এখন কোন কোন ক্লাসে উস্তাদ/স্টুডেন্ট বাস্তবে এই মুহূর্তে আছেন
+    // তা দেখতে পারেন — সার্ভারের হাজিরা-ডেটা (segment_start) থেকেই সরাসরি
+    const effTeacherId = k.teacherId ?? c.teacherId;
+    const teacherLive = (k.attendance || []).some(
+      (a) => String(a.user) === String(effTeacherId) && a.active,
+    );
+    const liveStudentCount = (k.attendance || []).filter(
+      (a) => String(a.user) !== String(effTeacherId) && a.active,
+    ).length;
     return (
       <div
         key={k.id}
@@ -2813,6 +2839,26 @@ function ClassesView({
             📅 {fmtDate(k.date)} · 🕐 {k.time} ·{" "}
             {T(`${bn(k.dur)} মিনিট`, `${k.dur} min`)}
           </div>
+          {isAdm(user) && (teacherLive || liveStudentCount > 0) && (
+            <div
+              style={{
+                fontSize: 12.5,
+                fontWeight: 800,
+                color: C.green,
+                marginTop: 4,
+                background: C.greenBg,
+                padding: "5px 10px",
+                borderRadius: 8,
+                display: "inline-block",
+              }}
+            >
+              🔴 ক্লাস চলছে — {teacherLive ? "উস্তাদ আছেন" : "উস্তাদ নেই"}
+              {" · "}
+              {liveStudentCount > 0
+                ? `${bn(liveStudentCount)} জন স্টুডেন্ট আছে`
+                : "স্টুডেন্ট নেই"}
+            </div>
+          )}
           {isJoined && (
             <LiveClassPanel
               k={k}
