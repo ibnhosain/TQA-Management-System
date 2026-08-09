@@ -2151,7 +2151,17 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
       try {
         await api.leaveClass(k.id, m);
       } catch {
-        /* উপেক্ষা */
+        // হাজিরা (present/না-present) জয়েন করার মুহূর্তেই নিশ্চিত হয়ে গেছে,
+        // এটা শুধু শেষ কয়েক (< ৬০ সেকেন্ড) মিনিটের হিসাব সেভ করার চেষ্টা —
+        // ব্যর্থ হলেও হাজিরা প্রভাবিত হয় না, তাই এখনো এক্সিট আটকানো হয় না,
+        // শুধু জানিয়ে রাখা হয় যাতে "মোট মিনিট" রিপোর্টে সামান্য কম দেখালে
+        // কেউ বিভ্রান্ত না হন
+        notice(
+          T(
+            "শেষ কয়েক মিনিটের হিসাব সেভ করতে সমস্যা হয়েছে (হাজিরা প্রভাবিত হয়নি)।",
+            "Trouble saving the last minute or so (your attendance is not affected).",
+          ),
+        );
       }
       await refreshPresence();
     }
