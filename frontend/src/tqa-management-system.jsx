@@ -9968,24 +9968,61 @@ function RoutineView({ db, setDb, courses, user }) {
       notice("রুটিন সংরক্ষণ ব্যর্থ — " + detail);
     }
   };
+  // একই উস্তাদের জন্য একই বারে সময়-ওভারল্যাপ করে এমন অন্য কোনো (সক্রিয়) রুটিন
+  // আছে কিনা — থাকলে ডাবল-বুকিং হয়ে যাচ্ছে, নিঃশব্দে হতে দেওয়া ঠিক না
+  const timeToMin = (t) => {
+    const [h, m] = String(t || "0:0").split(":").map(Number);
+    return h * 60 + (m || 0);
+  };
+  const findTeacherConflicts = () => {
+    const newStart = timeToMin(f.time);
+    const newEnd = newStart + (+f.dur || 0);
+    return (apiRoutines || []).filter((r) => {
+      if (editId && r.id === editId) return false; // নিজেকে বাদ
+      if (String(r.teacherId) !== String(f.teacherId)) return false;
+      if (!(r.days || []).some((d) => f.days.includes(d))) return false;
+      const exStart = timeToMin(r.time);
+      const exEnd = exStart + (+r.dur || 0);
+      return newStart < exEnd && exStart < newEnd; // সময়সীমা ওভারল্যাপ
+    });
+  };
   const add = () => {
     if (!f.days.length) return notice("সপ্তাহের অন্তত একটি দিন বাছাই করুন।");
     if (!f.teacherId)
       return notice("উস্তাদ/উস্তাদা বাছাই করুন — ড্রপডাউন থেকে একজন নির্বাচন করুন।");
     const c = courseById(courses, f.courseId);
-    if (!f.studentIds.length) {
-      // কাউকে না বাছলে আগে চুপচাপ পুরো কোর্সের সবাইকে যুক্ত করে দিত — ভুলবশত
-      // অপ্রাসঙ্গিক স্টুডেন্ট রুটিনে ঢুকে যাওয়ার কারণ ছিল এটাই; এখন স্পষ্ট
-      // নিশ্চিতকরণ ছাড়া এগোবে না
-      const whole = c.studentIds || [];
-      const names = whole.map((sid) => nameOf(sid)).join(", ") || "কেউ নেই";
+    const afterConflictCheck = () => {
+      if (!f.studentIds.length) {
+        // কাউকে না বাছলে আগে চুপচাপ পুরো কোর্সের সবাইকে যুক্ত করে দিত — ভুলবশত
+        // অপ্রাসঙ্গিক স্টুডেন্ট রুটিনে ঢুকে যাওয়ার কারণ ছিল এটাই; এখন স্পষ্ট
+        // নিশ্চিতকরণ ছাড়া এগোবে না
+        const whole = c.studentIds || [];
+        const names = whole.map((sid) => nameOf(sid)).join(", ") || "কেউ নেই";
+        askConfirm(
+          `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "এই কোর্সের"}" কোর্সে ভর্তি সবাই (${names}) এই রুটিনে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
+          () => saveRoutine(whole),
+        );
+        return;
+      }
+      saveRoutine(f.studentIds);
+    };
+    const conflicts = findTeacherConflicts();
+    if (conflicts.length) {
+      const details = conflicts
+        .map(
+          (r) =>
+            `"${courseById(courses, r.courseId)?.name || r.courseName || "?"}" (${(r.days || [])
+              .map((d) => DAY_BN[d])
+              .join(", ")} ${r.time})`,
+        )
+        .join(" · ");
       askConfirm(
-        `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "এই কোর্সের"}" কোর্সে ভর্তি সবাই (${names}) এই রুটিনে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
-        () => saveRoutine(whole),
+        `⚠️ ${nameOf(f.teacherId)} এই বারে-সময়ে ইতিমধ্যে অন্য রুটিনে ব্যস্ত: ${details} — একই সময়ে দুইটা ক্লাসে "বুক" হয়ে যাবেন। তবুও এগিয়ে যাবেন?`,
+        afterConflictCheck,
       );
       return;
     }
-    saveRoutine(f.studentIds);
+    afterConflictCheck();
   };
   const del = async (id) => {
     try {
