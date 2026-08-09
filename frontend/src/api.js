@@ -102,7 +102,21 @@ async function request(path, { method = "GET", body, isForm, timeoutMs } = {}) {
       // (নইলে সাময়িক নেটওয়ার্ক গণ্ডগোলেই ভুলবশত লগআউট হয়ে যেত)
     }
   }
-  if (!res.ok) throw Object.assign(new Error("API error"), { status: res.status, data: await res.json().catch(() => ({})) });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    // DRF-এর নিজস্ব exception (PermissionDenied/ValidationError ইত্যাদি) সবসময়
+    // {"detail": "..."} আকারে আসে — কিন্তু পুরো অ্যাপে সব জায়গায় e?.data?.error
+    // চেক করা হয় (এই অ্যাপের কাস্টম ভিউগুলো Response({"error": ...}) ব্যবহার করে
+    // বলে)। ফলে detail-নির্ভর এররের আসল বার্তা কখনো দেখানো হতো না, শুধু জেনেরিক
+    // "API error"/"যাচাই করুন" দেখাত। এখানে e.message-এই আসল বার্তা বসিয়ে দিলে
+    // সব জায়গার (e?.data?.error || e?.message) ফলব্যাক একবারেই ঠিক হয়ে যায়।
+    const msg =
+      data.error ||
+      data.detail ||
+      (Array.isArray(data.non_field_errors) && data.non_field_errors[0]) ||
+      "API error";
+    throw Object.assign(new Error(msg), { status: res.status, data });
+  }
   return res.status === 204 ? null : res.json();
 }
 
