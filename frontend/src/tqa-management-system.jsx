@@ -2781,7 +2781,9 @@ function ClassesView({
     // বিগত দিনের ক্লাসেও ভুলভাবে "🔴 ক্লাস চলছে" দেখাত
     const effTeacherId = k.teacherId ?? c.teacherId;
     const withinClassWindow = (() => {
-      if (!isToday) return false;
+      // "সম্পন্ন" বা "স্থগিত" চিহ্নিত ক্লাসে কখনোই "চলছে" দেখাবে না — এডমিন
+      // সম্পন্ন করে দেওয়া মানেই ক্লাস শেষ, কেউ "ক্লাস শেষ করুন" চাপুক বা না চাপুক
+      if (!isToday || k.status !== "upcoming") return false;
       const n = new Date();
       // ক্লাসের সময় বাংলাদেশ সময়ে সংরক্ষিত — "এখন কয়টা" হিসাবও সেভাবেই
       const nowMin =
