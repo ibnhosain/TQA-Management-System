@@ -2773,14 +2773,33 @@ function ClassesView({
     const isJoined = joined?.classId === k.id || (joinable && myActiveRow);
     const alreadyBothJoined = bothJoinedToday(k, c.teacherId);
     // এডমিন/পরিচালক এখন কোন কোন ক্লাসে উস্তাদ/স্টুডেন্ট বাস্তবে এই মুহূর্তে আছেন
-    // তা দেখতে পারেন — সার্ভারের হাজিরা-ডেটা (segment_start) থেকেই সরাসরি
+    // তা দেখতে পারেন — সার্ভারের হাজিরা-ডেটা (segment_start) থেকেই সরাসরি।
+    // ⚠️ কিন্তু segment_start শুধু "ক্লাস শেষ করুন" চাপলেই মোছে — কেউ ট্যাব বন্ধ
+    // করে/নেট চলে গিয়ে চলে গেলে সার্ভারে "আছেন" অবস্থাটাই থেকে যায়। তাই ক্লাসের
+    // নির্ধারিত সময় (শুরুর ১৫ মিনিট আগে থেকে শেষের ৩০ মিনিট পর পর্যন্ত) পার
+    // হয়ে গেলে আর "চলছে" ধরা হয় না — নইলে ক্লাস শেষ হওয়ার অনেক পরেও, এমনকি
+    // বিগত দিনের ক্লাসেও ভুলভাবে "🔴 ক্লাস চলছে" দেখাত
     const effTeacherId = k.teacherId ?? c.teacherId;
-    const teacherLive = (k.attendance || []).some(
-      (a) => String(a.user) === String(effTeacherId) && a.active,
-    );
-    const liveStudentCount = (k.attendance || []).filter(
-      (a) => String(a.user) !== String(effTeacherId) && a.active,
-    ).length;
+    const withinClassWindow = (() => {
+      if (!isToday) return false;
+      const n = new Date();
+      // ক্লাসের সময় বাংলাদেশ সময়ে সংরক্ষিত — "এখন কয়টা" হিসাবও সেভাবেই
+      const nowMin =
+        ((n.getUTCHours() + DHAKA_OFFSET_HOURS) % 24) * 60 + n.getUTCMinutes();
+      const [sh, sm] = String(k.time || "0:0").split(":").map(Number);
+      const startMin = (sh || 0) * 60 + (sm || 0);
+      return nowMin >= startMin - 15 && nowMin <= startMin + (+k.dur || 60) + 30;
+    })();
+    const teacherLive =
+      withinClassWindow &&
+      (k.attendance || []).some(
+        (a) => String(a.user) === String(effTeacherId) && a.active,
+      );
+    const liveStudentCount = withinClassWindow
+      ? (k.attendance || []).filter(
+          (a) => String(a.user) !== String(effTeacherId) && a.active,
+        ).length
+      : 0;
     return (
       <div
         key={k.id}
