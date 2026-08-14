@@ -873,7 +873,9 @@ const Modal = ({ title, onClose, children, wide }) => (
   </div>
 );
 
-const Table = ({ head, rows, empty = "কোনো তথ্য নেই" }) => (
+// loading=true দিলে ডেটা আসার আগে "কোনো তথ্য নেই" না দেখিয়ে "লোড হচ্ছে…" দেখায় —
+// নইলে প্রতিবার পেজ খোলার সময় এক ঝলক ভুল করে "কিছু নেই" দেখাত
+const Table = ({ head, rows, empty = "কোনো তথ্য নেই", loading = false }) => (
   <div
     style={{
       overflowX: "auto",
@@ -916,7 +918,7 @@ const Table = ({ head, rows, empty = "কোনো তথ্য নেই" }) =>
               colSpan={head.length}
               style={{ padding: 18, textAlign: "center", color: C.muted }}
             >
-              {empty}
+              {loading ? "লোড হচ্ছে…" : empty}
             </td>
           </tr>
         )}
@@ -3037,7 +3039,9 @@ function ClassesView({
         sub={T("সামনের ৭ দিনের ক্লাস", "Classes in the next 7 days")}
       >
         <div style={{ display: "grid", gap: 10 }}>
-          {upcoming.length === 0 ? (
+          {classesLoading ? (
+            <Loader text={T("লোড হচ্ছে", "Loading")} />
+          ) : upcoming.length === 0 ? (
             <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
               {T("কিছু নেই", "Nothing yet")}
             </div>
@@ -3657,6 +3661,7 @@ function LecturePlan({ db, courses, user, refresh }) {
   const [form, setForm] = useState(null);
   const [lectures, setLectures] = useState([]);
   const [sylList, setSylList] = useState([]);
+  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
 
   const adaptSyl = (s) => ({
     id: s.id,
@@ -3670,7 +3675,7 @@ function LecturePlan({ db, courses, user, refresh }) {
   });
 
   const loadData = async () => {
-    if (!sel) return;
+    if (!sel) return setLoading(false);
     try {
       const [lecData, sylData] = await Promise.all([
         api.lectures(sel),
@@ -3684,6 +3689,8 @@ function LecturePlan({ db, courses, user, refresh }) {
       setSylList(
         (db.syllabus || []).filter((s) => String(s.courseId) === String(sel)),
       );
+    } finally {
+      setLoading(false);
     }
   };
   useEffect(() => {
@@ -3891,7 +3898,8 @@ function LecturePlan({ db, courses, user, refresh }) {
           এডমিন ড্যাশবোর্ডে সবুজ/লাল হয়ে দেখাবে।
         </div>
       )}
-      {lectures.length === 0 && (
+      {loading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
+      {!loading && lectures.length === 0 && (
         <div
           style={{
             ...S.card,
@@ -4959,7 +4967,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
   });
   const [qs, setQs] = useState([]);
   const [assignments, setAssignments] = useState(db.assignments);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
 
   const adaptAssignment = (a) => ({
     id: a.id,
@@ -5093,7 +5101,8 @@ function AssignmentsView({ db, setDb, courses, user }) {
       }
     >
       <div style={{ display: "grid", gap: 10 }}>
-        {list.length === 0 && (
+        {loading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
+        {!loading && list.length === 0 && (
           <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
             {T("এখনো কোনো অ্যাসাইনমেন্ট নেই।", "No assignments yet.")}
           </div>
@@ -5337,7 +5346,7 @@ function ExamsView({ db, setDb, courses, user }) {
   });
   const [qs, setQs] = useState([]);
   const [exams, setExams] = useState(db.exams);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
 
   const adaptExam = (e) => ({
     id: e.id,
@@ -5471,6 +5480,7 @@ function ExamsView({ db, setDb, courses, user }) {
       }
     >
       <div style={{ display: "grid", gap: 10 }}>
+        {loading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
         {list.map((ex) => {
           const c = courseById(courses, ex.courseId);
           const myMark = ex.marks[user.id];
@@ -6255,6 +6265,7 @@ function ProgressView({ db, setDb, courses, user }) {
 
 /* ═══════════════ হিসাব-নিকাশ (ফিচার ৯) ═══════════════ */
 function AccountsView({ db }) {
+  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
   const [genDuesBusy, setGenDuesBusy] = useState(false);
   const [fees, setFees] = useState(db.feePayments || []);
   const [salaries, setSalaries] = useState(db.teacherPayments || []);
@@ -6310,6 +6321,8 @@ function AccountsView({ db }) {
       setDuesMap(dm);
     } catch {
       /* keep mock */
+    } finally {
+      setLoading(false);
     }
   };
   useEffect(() => {
@@ -6381,7 +6394,8 @@ function AccountsView({ db }) {
           accent={C.gold}
         />
       </div>
-      <div style={{ ...S.card, marginBottom: 14 }}>
+      {loading && <Loader text="হিসাব লোড হচ্ছে" />}
+      <div style={{ ...S.card, marginBottom: 14, display: loading ? "none" : undefined }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
           👳 উস্তাদদের বেতন
         </div>
@@ -6440,9 +6454,10 @@ function AccountsView({ db }) {
             ];
           })}
           empty="কোনো পেমেন্ট ইতিহাস নেই"
+          loading={loading}
         />
       </div>
-      <div style={{ ...S.card }}>
+      <div style={{ ...S.card, display: loading ? "none" : undefined }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
           📥 স্টুডেন্ট ফি বকেয়া
         </div>
@@ -6462,6 +6477,7 @@ function AccountsView({ db }) {
               ];
             })}
           empty="কোনো বকেয়া নেই ✔"
+          loading={loading}
         />
       </div>
     </Section>
@@ -7025,6 +7041,7 @@ function RatingPopup({ courseName, onSubmit, onSkip }) {
 
 /* ═══════════════ টিচার রিপোর্ট — উপস্থিতি · ক্লাসের মান · পেমেন্ট ═══════════════ */
 function TeacherReportView({ db, setDb, courses, user }) {
+  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
   const [allTeachers, setAllTeachers] = useState([]);
   const [sel, setSel] = useState(
     user.role === "teacher" ? user.id : allTeachers[0]?.id,
@@ -7195,10 +7212,13 @@ function TeacherReportView({ db, setDb, courses, user }) {
     }
   };
   useEffect(() => {
-    loadTeachers();
-    loadSalaries();
-    loadAttendance();
-    loadClasses();
+    // সব লোড শেষ হওয়ার আগে "কোনো রেকর্ড নেই" না দেখাতে
+    Promise.all([
+      loadTeachers(),
+      loadSalaries(),
+      loadAttendance(),
+      loadClasses(),
+    ]).finally(() => setLoading(false));
   }, []);
   useEffect(() => {
     loadRatings();
@@ -7226,6 +7246,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
         )
       }
     >
+      {loading && <Loader text="রিপোর্ট লোড হচ্ছে" />}
       {maker && <ReceiptMaker user={user} onClose={() => setMaker(false)} />}
       {payModal && (
         <Modal
@@ -7443,6 +7464,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
                     fmtDate(r.rated_at || r.date),
                   ])}
                 empty="এখনো কোনো মূল্যায়ন নেই"
+                loading={loading}
               />
             </div>
           ) : (
@@ -7488,6 +7510,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
               ];
             })}
             empty="কোনো রেকর্ড নেই"
+            loading={loading}
           />
         </div>
         <div style={{ ...S.card }}>
@@ -7540,6 +7563,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
               ];
             })}
             empty="এখনো কোনো পেমেন্ট হয়নি"
+            loading={loading}
           />
         </div>
       </div>
@@ -7565,7 +7589,7 @@ function AdmissionsView({ db, setDb, user, refresh }) {
     newPass: a.created_student_password || a.newPass,
   });
   const [admissions, setAdmissions] = useState(db.admissions || []);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
   const [acceptingId, setAcceptingId] = useState(null);
 
   const loadData = async () => {
@@ -7732,7 +7756,9 @@ function AdmissionsView({ db, setDb, user, refresh }) {
         ⏳ অপেক্ষমাণ ({bn(pending.length)})
       </div>
       <div style={{ display: "grid", gap: 10, marginBottom: 18 }}>
-        {pending.length === 0 ? (
+        {loading ? (
+          <Loader text="আবেদন লোড হচ্ছে" />
+        ) : pending.length === 0 ? (
           <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
             নতুন আবেদন নেই
           </div>
@@ -8246,6 +8272,7 @@ function ManageView({ db, setDb, refresh }) {
                 fmtDate(p.paid_at),
               ])}
               empty="এখনো পেমেন্ট হয়নি"
+              loading={loading}
             />
           </>
         )}
@@ -8265,6 +8292,7 @@ function ManageView({ db, setDb, refresh }) {
                 p.status === "pending" ? "যাচাই বাকি" : "যাচাইকৃত ✔",
               ])}
               empty="এখনো পেমেন্ট নেই"
+              loading={loading}
             />
           </>
         )}
@@ -8710,7 +8738,7 @@ function StudentPaymentsView({ db, setDb, user }) {
     db.feePayments.filter((p) => p.studentId === user.id),
   );
   const [dues, setDues] = useState(db.dueMonths[user.id] || []);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
 
   const loadData = async () => {
     setLoading(true);
@@ -8877,6 +8905,7 @@ function StudentPaymentsView({ db, setDb, user }) {
           📜 Payment History
         </div>
         <Table
+          loading={loading}
           head={["Month", "Amount", "Date", "Method", "Status"]}
           rows={paid.map((p) => [
             p.month,
@@ -9308,7 +9337,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
   const [maker, setMaker] = useState(false);
   const [fees, setFees] = useState(db.feePayments);
   const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
   const [mp, setMp] = useState({
     studentId: "",
     month: "",
@@ -9559,7 +9588,8 @@ function DirectorPaymentsView({ db, setDb, user }) {
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
           ⏳ ভেরিফাইয়ের অপেক্ষায় — মিলিয়ে দেখে ক্লিক করুন
         </div>
-        {pending.length === 0 && (
+        {loading && <Loader text="পেমেন্ট লোড হচ্ছে" />}
+        {!loading && pending.length === 0 && (
           <div
             style={{
               color: C.muted,
@@ -9645,7 +9675,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
             </Btn>
           )}
         </div>
-        {dueStudents.length === 0 && (
+        {!loading && dueStudents.length === 0 && (
           <div
             style={{
               color: C.muted,
@@ -10187,7 +10217,9 @@ function RoutineView({ db, setDb, courses, user }) {
       {routinesLoading && (
         <Loader text={T("রুটিন লোড হচ্ছে", "Loading routine")} />
       )}
-      <div style={{ display: "grid", gap: 10 }}>
+      {/* রুটিন লোড হওয়ার আগে সাত বারের ঘরে "— ক্লাস নেই —" দেখাত, যা ভুল ধারণা
+          দিত — এখন লোড শেষ হলেই সপ্তাহের ছকটা দেখানো হয় */}
+      <div style={{ display: routinesLoading ? "none" : "grid", gap: 10 }}>
         {WEEK_ORDER.map((wd) => {
           const items = localSchedule[wd] || [];
           return (
@@ -10611,6 +10643,7 @@ function LeaveView({ db, setDb, user }) {
     reason: "",
   });
   const [leaves, setLeaves] = useState(db.leaves || []);
+  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
   const canApply = user.role !== "director";
 
   const adaptLeave = (l) => ({
@@ -10630,6 +10663,8 @@ function LeaveView({ db, setDb, user }) {
       setLeaves((await api.leaves()).map(adaptLeave));
     } catch {
       setLeaves(db.leaves || []);
+    } finally {
+      setLoading(false);
     }
   };
   useEffect(() => {
@@ -10720,7 +10755,8 @@ function LeaveView({ db, setDb, user }) {
       }
     >
       <div style={{ display: "grid", gap: 10 }}>
-        {list.length === 0 && (
+        {loading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
+        {!loading && list.length === 0 && (
           <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
             {T("কোনো ছুটির আবেদন নেই।", "No leave applications.")}
           </div>
@@ -11862,6 +11898,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
   // পুরো রুটিন না বদলে শুধু ওই একটা দিনের ক্লাস সরানো/বদলানোর জন্য
   const [editK, setEditK] = useState(null); // {id, date, time, dur, zoom}
   const [savingK, setSavingK] = useState(false);
+  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
 
   useEffect(() => {
     // উস্তাদ-তালিকা (এডমিন/পরিচালক) — ব্যর্থ হলেও routines/classes লোড থামবে না
@@ -11904,7 +11941,8 @@ function TeacherWiseBoard({ db, setDb, user }) {
             (k) => k.date >= todayISO() && k.status === "upcoming",
           ),
         );
-      });
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const tid = user.role === "teacher" ? user.id : sel || allTeachers[0]?.id;
@@ -12044,7 +12082,8 @@ function TeacherWiseBoard({ db, setDb, user }) {
       >
         📚 {t.name}-এর কাছে যারা পড়ে:
       </div>
-      {myRoutines.length === 0 && (
+      {loading && <Loader text="লোড হচ্ছে" />}
+      {!loading && myRoutines.length === 0 && (
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8 }}>
           এখনো রুটিন নেই
         </div>
@@ -12096,7 +12135,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
       >
         📅 সামনের ক্লাস:
       </div>
-      {upcoming.length === 0 && (
+      {!loading && upcoming.length === 0 && (
         <div style={{ fontSize: 12.5, color: C.muted }}>
           আসন্ন কোনো ক্লাস নেই
         </div>
@@ -12219,6 +12258,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
 /* ═══════════════ WhatsApp মেসেজ আউটবক্স — অভিভাবকের কাছে অটো-প্রস্তুত মেসেজ ═══════════════ */
 function WaOutboxView({ db, setDb, user }) {
   const [waList, setWaList] = useState(db.waOutbox || []);
+  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
   const cfg = db.waConfig || { backendUrl: "", autoSend: false };
   const setCfg = (patch) =>
     setDb((d) => ({ ...d, waConfig: { ...(d.waConfig || {}), ...patch } }));
@@ -12239,6 +12279,8 @@ function WaOutboxView({ db, setDb, user }) {
       setWaList((await api.waOutbox()).map(adaptMsg));
     } catch {
       setWaList(db.waOutbox || []);
+    } finally {
+      setLoading(false);
     }
   };
   useEffect(() => {
@@ -12329,7 +12371,8 @@ function WaOutboxView({ db, setDb, user }) {
         </div>
       )}
       <div style={{ display: "grid", gap: 10 }}>
-        {list.length === 0 && (
+        {loading && <Loader text="মেসেজ লোড হচ্ছে" />}
+        {!loading && list.length === 0 && (
           <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
             এখনো কোনো মেসেজ তৈরি হয়নি — ক্লাস শুরুর ৫ মিনিট আগে বা ক্লাস স্থগিত
             করলে এখানে অটো চলে আসবে।
@@ -12912,6 +12955,7 @@ function SyllabusView({ db, setDb, courses, user }) {
   const [editId, setEditId] = useState(null); // ইনলাইন সেল এডিট
   const [editVals, setEditVals] = useState({});
   const [selCourse, setSelCourse] = useState(null); // সিলেক্টেড কোর্স ID
+  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
 
   const adaptSyl = (s) => ({
     id: s.id,
@@ -12969,6 +13013,8 @@ function SyllabusView({ db, setDb, courses, user }) {
       setCourseList(courses);
       setSyllabus((db.syllabus || []).map(adaptSyl));
       setAllBooks(db.academicBooks || []);
+    } finally {
+      setLoading(false);
     }
   };
   useEffect(() => {
@@ -13134,7 +13180,8 @@ function SyllabusView({ db, setDb, courses, user }) {
 
   return (
     <Section title={T("কোর্স সিলেবাস", "Course Syllabus")} sub={roleNote}>
-      {courseList.length === 0 && (
+      {loading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
+      {!loading && courseList.length === 0 && (
         <div
           style={{
             ...S.card,
@@ -14415,6 +14462,7 @@ function Overview({ db, courses, user, goTo }) {
   // db.ratings/db.assignments/db.notices ব্যবহার হতো — লগইনের পরের প্রথম
   // পেজ (ড্যাশবোর্ড) হওয়ায় প্রভাব সবচেয়ে বেশি ছিল; এখন সরাসরি API থেকে লোড হয়
   const [todayClasses, setTodayClasses] = useState([]);
+  const [todayLoading, setTodayLoading] = useState(true); // লোড শেষ হওয়ার আগে "আজ ক্লাস নেই" না দেখাতে
   const [income, setIncome] = useState(0);
   const [admissionsPending, setAdmissionsPending] = useState(0);
   const [newForms, setNewForms] = useState(0);
@@ -14442,7 +14490,11 @@ function Overview({ db, courses, user, goTo }) {
   }, []);
   useEffect(() => {
     let cancelled = false;
-    api.todayClasses().then((d) => !cancelled && setTodayClasses(d)).catch(() => {});
+    api
+      .todayClasses()
+      .then((d) => !cancelled && setTodayClasses(d))
+      .catch(() => {})
+      .finally(() => !cancelled && setTodayLoading(false));
     api.notices().then((d) => !cancelled && setRecentNotices(d)).catch(() => {});
     if (isAdm(user)) {
       Promise.all([api.myFees(), api.admissions()])
@@ -14707,7 +14759,8 @@ function Overview({ db, courses, user, goTo }) {
         }
       >
         <div style={{ display: "grid", gap: 10 }}>
-          {todayClasses.length === 0 && (
+          {todayLoading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
+          {!todayLoading && todayClasses.length === 0 && (
             <div style={{ ...S.card, textAlign: "center", color: C.muted }}>
               {T(
                 "আজ আর কোনো ক্লাস বাকি নেই। আলহামদুলিল্লাহ।",
