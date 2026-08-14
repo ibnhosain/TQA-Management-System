@@ -2555,9 +2555,15 @@ function ClassesView({
     notice(`✔ ${bn(targets.length)} জনকে WhatsApp পাঠানো হচ্ছে`);
   };
   // প্যানেল থেকে বেরোলে (Leave & Save / End Class) — স্টুডেন্ট হলে রেটিং পপআপ
-  const onPanelExit = (finished) => {
+  const onPanelExit = async (finished) => {
     const cls = joined?.classId;
     const k = (usingApi ? apiClasses : db.classes).find((x) => x.id === cls);
+    // ইন-ক্লাস প্যানেল বন্ধ করার আগে ক্লাস-তালিকা রিফ্রেশ করে নিই — k.attendance
+    // (কে কে জয়েন করেছেন) শুধু পেজ-লোডে একবার আসত, ক্লাস চলাকালীন ব্যাকএন্ডে
+    // দুজনের হাজিরা নিশ্চিত হলেও এখানে পুরনো (খালি) ডেটাই থেকে যেত। ফলে
+    // বের হওয়ার পর "দুজনেই জয়েন করেছেন" বোঝা যেত না, আর "🔁 রিজয়েন করুন"-এর
+    // বদলে আবার "🎥 জুমে জয়েন করুন" দেখাত
+    if (usingApi) await loadClasses();
     setJoined(null);
     if (finished && user.role === "student" && k) {
       const c = courseById(courses, k.courseId);
