@@ -121,9 +121,14 @@ async function request(path, { method = "GET", body, isForm, timeoutMs } = {}) {
     // email/contact ভ্যালিডেশন) আরও ভিন্ন আকারে আসে — {"email": ["..."], ...} —
     // error/detail/non_field_errors কোনোটাই না থাকলে প্রথম ফিল্ডের প্রথম বার্তাটাই
     // শেষ ভরসা হিসেবে দেখানো হয়, নইলে সেটাও জেনেরিক "API error"-এ হারিয়ে যেত
-    const firstFieldError = Object.values(data).find(
-      (v) => Array.isArray(v) && v.length,
-    )?.[0];
+    // কোন ঘরে সমস্যা তা না বললে বার্তাটা বোঝা যায় না (যেমন "Invalid pk 3" —
+    // কিসের pk?), তাই ফিল্ডের নামসহ দেখানো হয়
+    const firstFieldEntry = Object.entries(data).find(
+      ([, v]) => Array.isArray(v) && v.length,
+    );
+    const firstFieldError = firstFieldEntry
+      ? `${firstFieldEntry[0]}: ${firstFieldEntry[1][0]}`
+      : null;
     const msg =
       data.error ||
       data.detail ||

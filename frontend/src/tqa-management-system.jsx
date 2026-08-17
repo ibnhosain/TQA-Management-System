@@ -12554,7 +12554,18 @@ function CourseManagerView({ db, setDb, refresh }) {
 
   const save = async () => {
     if (!edit.name?.trim()) return notice("কোর্সের নাম দিন।");
-    const books = edit.books || [];
+    // সার্ভার teacher হিসেবে কেবল role="teacher" ব্যবহারকারীকেই গ্রহণ করে, আর
+    // books হিসেবে কেবল বিদ্যমান একাডেমিক বই। কোনো উস্তাদের রোল বদলে গেলে বা
+    // কোনো বই মুছে গেলে কোর্সে তার পুরনো আইডি রয়ে যেত, আর সেভ করতে গেলে
+    // দুর্বোধ্য 'Invalid pk "3" - object does not exist' আসত। এখন পাঠানোর
+    // আগেই যাচাই করে স্পষ্ট বাংলা বার্তা দেখানো হয়।
+    if (!teachers.some((t) => String(t.id) === String(edit.teacherId))) {
+      return notice(
+        "দায়িত্বপ্রাপ্ত উস্তাদ/উস্তাদা বেছে নিন — আগে যিনি ছিলেন তিনি এখন আর উস্তাদ তালিকায় নেই (তাঁর রোল বদলে থাকতে পারে)।",
+      );
+    }
+    const validBookIds = new Set(academicBooks.map((b) => String(b.id)));
+    const books = (edit.books || []).filter((id) => validBookIds.has(String(id)));
     setSaving(true);
     try {
       const payload = {
@@ -12716,9 +12727,17 @@ function CourseManagerView({ db, setDb, refresh }) {
             <label style={S.label}>দায়িত্বপ্রাপ্ত উস্তাদ/উস্তাদা</label>
             <select
               style={S.input}
-              value={edit.teacherId}
+              value={
+                // পুরনো উস্তাদ তালিকায় না থাকলে (রোল বদলে গেলে) ফাঁকা দেখাবে —
+                // নইলে ব্রাউজার প্রথম নামটা দেখাত অথচ ভেতরে পুরনো অবৈধ আইডিই
+                // থেকে যেত, আর সেভ করতে গিয়ে দুর্বোধ্য এরর আসত
+                teachers.some((t) => String(t.id) === String(edit.teacherId))
+                  ? edit.teacherId
+                  : ""
+              }
               onChange={(e) => setEdit({ ...edit, teacherId: e.target.value })}
             >
+              <option value="">— বেছে নিন —</option>
               {teachers.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name} ({t.sub})
