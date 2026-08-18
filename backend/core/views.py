@@ -20,6 +20,11 @@ from .permissions import (IsDirector, IsAdminLevel, IsTeacherOrAdminLevel,
                           ReadAllWriteAdmin, ReadAllWriteDirector)
 
 
+# নতুন স্টুডেন্টের মাসিক ফি ডিফল্ট — পরিচালক পরে প্রতিটি স্টুডেন্টের জন্য
+# আলাদা করে বদলাতে পারেন (ফ্রন্টএন্ডের DEFAULT_FEE-এর সাথে মিল রাখা)
+DEFAULT_STUDENT_FEE = 3500
+
+
 def notify(text, users):
     n = Notification.objects.create(text=text)
     n.recipients.set(users)
@@ -896,7 +901,7 @@ class AdmissionViewSet(viewsets.ModelViewSet):
             name_bn=f"{a.name} ({a.country})" if a.country else a.name,
             guardian=a.guardian, country=a.country, phone=a.contact,
             plain_password=pwd,  # পরিচালকের দেখার জন্য দেখা-যায় কপি
-            monthly_fee=request.data.get("fee", 4500))
+            monthly_fee=request.data.get("fee", DEFAULT_STUDENT_FEE))
         # ভর্তি গ্রহণ করে তৈরি হওয়া স্টুডেন্টের জন্যও অটো স্টুডেন্ট আইডি
         from .student_id import assign_student_id
         if assign_student_id(student, User):

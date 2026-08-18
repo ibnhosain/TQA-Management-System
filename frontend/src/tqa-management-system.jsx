@@ -1025,6 +1025,9 @@ const Loader = ({ text = "একটু অপেক্ষা করুন…" })
 
 /* ─────────────── helper selectors ─────────────── */
 const userById = (id) => USERS.find((u) => u.id === id) || {};
+// নতুন স্টুডেন্টের মাসিক ফি ডিফল্ট — পরিচালক প্রতিটি স্টুডেন্টের জন্য আলাদা
+// করে বদলাতে পারেন; এখানে শুধু শুরুর মানটা ঠিক করা আছে (এক জায়গাতেই)
+const DEFAULT_FEE = 3500;
 const isDir = (u) => u.role === "director";
 const isAdm = (u) => u.role === "admin" || u.role === "director"; // পরিচালক = সর্বোচ্চ ক্ষমতা
 const courseById = (cs, id) => cs.find((c) => c.id === id) || {};
@@ -7610,7 +7613,7 @@ function AdmissionsView({ db, setDb, user, refresh }) {
     if (acceptingId) return; // ডাবল-ক্লিকে দুইবার রিকোয়েস্ট গিয়ে ডুপ্লিকেট স্টুডেন্ট তৈরি ঠেকাতে
     setAcceptingId(a.id);
     try {
-      const res = await api.acceptAdmission(a.id, { fee: 4500 });
+      const res = await api.acceptAdmission(a.id, { fee: DEFAULT_FEE });
       await loadData();
       if (res.username)
         notice(
@@ -7853,7 +7856,7 @@ function ManageView({ db, setDb, refresh }) {
     name: "",
     user: "",
     pass: genPass(),
-    fee: 4500,
+    fee: DEFAULT_FEE,
     salary: 10000,
     sub: "",
     courseId: COURSES[0]?.id || "",
@@ -7951,7 +7954,7 @@ function ManageView({ db, setDb, refresh }) {
       name: u.name || "",
       user: u.user || "",
       pass: u.pass && u.pass !== "••••" ? u.pass : "", // খালি = অপরিবর্তিত
-      fee: u.fee || 4500,
+      fee: u.fee || DEFAULT_FEE,
       salary: u.salary || 10000,
       sub: u.sub || "",
       courseId: COURSES[0]?.id || "",
@@ -7966,7 +7969,7 @@ function ManageView({ db, setDb, refresh }) {
       name: "",
       user: "",
       pass: genPass(),
-      fee: 4500,
+      fee: DEFAULT_FEE,
       salary: 10000,
       sub: "",
       courseId: COURSES[0]?.id || "",
@@ -8328,7 +8331,7 @@ function ManageView({ db, setDb, refresh }) {
               name: "",
               user: "",
               pass: genPass(),
-              fee: 4500,
+              fee: DEFAULT_FEE,
               salary: 10000,
               sub: "",
               courseId: COURSES[0]?.id || "",
@@ -11283,7 +11286,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         phone: joinPhone(edit.phoneIso, edit.phone),
         email: edit.email,
         guardian: edit.guardian,
-        monthly_fee: +edit.fee || 4500,
+        monthly_fee: +edit.fee || DEFAULT_FEE,
         class_days: edit.days || [],
         // খালি পাঠালে সার্ভার নিজেই অটো আইডি তৈরি করে দেয় (নতুন স্টুডেন্টে);
         // পরিচালক নিজে কিছু লিখলে সেটাই বসে
@@ -11331,7 +11334,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           sub: courseById(COURSES, edit.courseId)?.name || "নতুন স্টুডেন্ট",
           user: edit.user,
           pass: edit.pass || genPass(),
-          fee: +edit.fee || 4500,
+          fee: +edit.fee || DEFAULT_FEE,
           guardian: edit.guardian,
           country: edit.country,
           phone: joinPhone(edit.phoneIso, edit.phone),
@@ -11545,7 +11548,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 phone: "",
                 email: "",
                 guardian: "",
-                fee: 4500,
+                fee: DEFAULT_FEE,
                 days: [],
                 user: "",
                 pass: genPass(),
