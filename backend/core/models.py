@@ -21,6 +21,10 @@ class User(AbstractUser):
     phone = models.CharField("WhatsApp নম্বর (কান্ট্রি কোডসহ)", max_length=20, blank=True)
     country = models.CharField(max_length=60, blank=True)
     guardian = models.CharField("অভিভাবকের নাম", max_length=120, blank=True)
+    # স্টুডেন্ট আইডি — নাম+বাবার নাম+দেশ+সিরিয়াল মিলিয়ে অটো তৈরি (SH-LC-US-007),
+    # পরিচালক চাইলে নিজে বদলেও দিতে পারেন। কেবল স্টুডেন্টদের জন্য প্রযোজ্য।
+    student_id = models.CharField("স্টুডেন্ট আইডি", max_length=32, blank=True,
+                                  default="", db_index=True)
     monthly_fee = models.PositiveIntegerField(default=0)      # স্টুডেন্ট হলে
     monthly_salary = models.PositiveIntegerField(default=0)   # টিচার হলে
     # স্টুডেন্ট সপ্তাহে কোন কোন বার পড়বে — [0..6] JS getDay() ক্রম (০=রবিবার); ফি ও রুটিনে ব্যবহৃত

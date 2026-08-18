@@ -17,7 +17,8 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ["id", "username", "role", "name", "name_bn", "sub", "sub_title",
                   "phone", "country", "guardian", "email", "monthly_fee",
-                  "monthly_salary", "class_days", "can_fix_cross", "due_months"]
+                  "monthly_salary", "class_days", "can_fix_cross", "due_months",
+                  "student_id"]
 
     def get_due_months(self, obj):
         # .values_list()-এর বদলে .all() ইটারেট — prefetch_related("due_months") এর ক্যাশ
@@ -33,12 +34,30 @@ class UserAdminSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         fields = UserSerializer.Meta.fields + ["password", "plain_password"]
 
+    def validate_student_id(self, value):
+        """পরিচালক নিজে আইডি বসালে সেটা যেন অন্য কারো সাথে মিলে না যায়"""
+        value = (value or "").strip()
+        if not value:
+            return ""
+        qs = User.objects.filter(student_id=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError(
+                "এই স্টুডেন্ট আইডি অন্য একজনের জন্য ইতিমধ্যে ব্যবহৃত হয়েছে।"
+            )
+        return value
+
     def create(self, validated):
         from .utils import make_password_str
         pwd = validated.pop("password", None) or make_password_str(8)
         user = User(**validated)
         user.set_password(pwd)
         user.plain_password = pwd  # পরিচালকের দেখার জন্য দেখা-যায় কপি
+        # নতুন স্টুডেন্টের আইডি না দেওয়া থাকলে অটো তৈরি হয়
+        if user.role == "student" and not user.student_id:
+            from .student_id import assign_student_id
+            assign_student_id(user, User)
         user.save()
         return user
 
@@ -49,6 +68,10 @@ class UserAdminSerializer(UserSerializer):
         if pwd:
             instance.set_password(pwd)
             instance.plain_password = pwd  # নতুন পাসওয়ার্ড → দেখা-যায় কপিও আপডেট
+        # রোল বদলে স্টুডেন্ট হলে (বা আগে আইডি না থাকলে) তখনই তৈরি করে দিই
+        if instance.role == "student" and not instance.student_id:
+            from .student_id import assign_student_id
+            assign_student_id(instance, User)
         instance.save()
         return instance
 

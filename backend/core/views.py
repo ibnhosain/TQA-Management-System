@@ -897,6 +897,10 @@ class AdmissionViewSet(viewsets.ModelViewSet):
             guardian=a.guardian, country=a.country, phone=a.contact,
             plain_password=pwd,  # পরিচালকের দেখার জন্য দেখা-যায় কপি
             monthly_fee=request.data.get("fee", 4500))
+        # ভর্তি গ্রহণ করে তৈরি হওয়া স্টুডেন্টের জন্যও অটো স্টুডেন্ট আইডি
+        from .student_id import assign_student_id
+        if assign_student_id(student, User):
+            student.save(update_fields=["student_id"])
         course = Course.objects.filter(name=a.course_name).first()
         if course:
             course.students.add(student)

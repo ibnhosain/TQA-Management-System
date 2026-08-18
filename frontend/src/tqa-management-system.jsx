@@ -11208,6 +11208,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           phone: s.phone,
           email: s.email,
           days: s.class_days || [],
+          studentId: s.student_id || "", // অটো/ম্যানুয়াল স্টুডেন্ট আইডি (SH-LC-US-007)
           dues: s.due_months || [], // বকেয়া মাসের তালিকা — "বিস্তারিত"-এ ফি স্টেটাস দেখাতে
         })),
       );
@@ -11284,6 +11285,9 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         guardian: edit.guardian,
         monthly_fee: +edit.fee || 4500,
         class_days: edit.days || [],
+        // খালি পাঠালে সার্ভার নিজেই অটো আইডি তৈরি করে দেয় (নতুন স্টুডেন্টে);
+        // পরিচালক নিজে কিছু লিখলে সেটাই বসে
+        student_id: (edit.studentId || "").trim(),
         // "••••" placeholder পাঠাব না (নইলে পাসওয়ার্ড নষ্ট হতো); আসল/নতুন হলে পাঠাই
         ...(edit.pass && edit.pass !== "••••" ? { password: edit.pass } : {}),
       };
@@ -11392,6 +11396,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             marginBottom: 12,
           }}
         >
+          {inf("স্টুডেন্ট আইডি", s.studentId)}
           {inf("বাবা/অভিভাবকের নাম", s.guardian)}
           {s.email ? (
             <div
@@ -11544,6 +11549,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 days: [],
                 user: "",
                 pass: genPass(),
+                studentId: "", // খালি রাখলে সার্ভার নিজেই তৈরি করে দেবে
                 courseId: courseList[0]?.id || "",
                 teacherId: courseList[0]?.teacherId || "",
               })
@@ -11566,7 +11572,27 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           ...(isDir(user) ? ["অ্যাকশন"] : []),
         ]}
         rows={students.map((s) => [
-          <b key="n">{s.name}</b>,
+          <span key="n">
+            <b>{s.name}</b>
+            {s.studentId && (
+              <span
+                style={{
+                  marginLeft: 8,
+                  background: C.cream,
+                  border: `1px solid ${C.line}`,
+                  color: C.emerald,
+                  padding: "2px 8px",
+                  borderRadius: 99,
+                  fontSize: 11.5,
+                  fontWeight: 800,
+                  whiteSpace: "nowrap",
+                }}
+                title="স্টুডেন্ট আইডি"
+              >
+                {s.studentId}
+              </span>
+            )}
+          </span>,
           s.country || "—",
           s.user,
           <code
@@ -11635,6 +11661,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                         days: s.days || [],
                         user: s.user,
                         pass: s.pass,
+                        studentId: s.studentId || "",
                       });
                     }}
                   >
@@ -11676,6 +11703,20 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 style={S.input}
                 value={edit.guardian}
                 onChange={(e) => setEdit({ ...edit, guardian: e.target.value })}
+              />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label style={S.label}>
+                স্টুডেন্ট আইডি{" "}
+                <span style={{ fontWeight: 400, color: C.muted }}>
+                  — খালি রাখলে নাম·বাবার নাম·দেশ·সিরিয়াল মিলিয়ে নিজে থেকেই তৈরি হবে
+                </span>
+              </label>
+              <input
+                style={S.input}
+                value={edit.studentId || ""}
+                onChange={(e) => setEdit({ ...edit, studentId: e.target.value })}
+                placeholder={edit.id ? "" : "যেমন: SH-LC-US-007 (অটো তৈরি হবে)"}
               />
             </div>
             <div>
