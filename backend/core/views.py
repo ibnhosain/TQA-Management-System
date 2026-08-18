@@ -79,6 +79,15 @@ class UserViewSet(viewsets.ModelViewSet):
         qs = User.objects.filter(role="teacher").prefetch_related("due_months")
         return Response(UserSerializer(qs, many=True).data)
 
+    @action(detail=False, methods=["post"], permission_classes=[IsDirector])
+    def backfill_student_ids(self, request):
+        """যেসব স্টুডেন্টের এখনো স্টুডেন্ট আইডি নেই তাদের সবার জন্য তৈরি করে দেয় —
+        পরিচালক "সকল স্টুডেন্ট" পেজের বাটন থেকে এক ক্লিকে চালাতে পারেন
+        (idempotent — যাদের আইডি আছে তাদের কিছুই বদলায় না)"""
+        from .student_id import backfill_all
+        plan = backfill_all(User, commit=True)
+        return Response({"created": len(plan)})
+
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])
     def toggle_fix_cross(self, request, pk=None):  # লাল-ক্রস ঠিক করার অনুমতি
         u = self.get_object()

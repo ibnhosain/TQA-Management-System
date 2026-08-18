@@ -11188,6 +11188,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [idBusy, setIdBusy] = useState(false); // "স্টুডেন্ট আইডি তৈরি করুন" চলছে কিনা
   const [courseList, setCourseList] = useState(courses || []); // আসল কোর্স তালিকা (ড্রপডাউনে)
   const [teachers, setTeachers] = useState([]); // উস্তাদ তালিকা (কার কাছে পড়ে)
 
@@ -11273,6 +11274,27 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         notice(`✔ "${monthLabel}" মাসের বকেয়া মওকুফ করা হয়েছে।`);
       },
     );
+
+  // পুরনো (আইডি ছাড়া) স্টুডেন্টদের জন্য এক ক্লিকে স্টুডেন্ট আইডি তৈরি —
+  // ভর্তির ক্রম অনুযায়ী সিরিয়াল বসে; যাদের আইডি আছে তাদের কিছুই বদলায় না
+  const genStudentIds = async () => {
+    setIdBusy(true);
+    try {
+      const r = await api.backfillStudentIds();
+      await loadStudents();
+      notice(
+        r?.created
+          ? `✔ ${bn(r.created)} জন স্টুডেন্টের আইডি তৈরি হয়েছে।`
+          : "সব স্টুডেন্টেরই আইডি আগে থেকেই আছে।",
+      );
+    } catch (e) {
+      notice(
+        "স্টুডেন্ট আইডি তৈরি করতে ব্যর্থ — " +
+          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+      );
+    }
+    setIdBusy(false);
+  };
 
   const saveEdit = async () => {
     if (!edit.name || !edit.user) return notice("নাম ও আইডি দিন।");
@@ -11539,27 +11561,38 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
       }
       action={
         isDir(user) && (
-          <Btn
-            onClick={() =>
-              setEdit({
-                name: "",
-                country: "",
-                phoneIso: "BD",
-                phone: "",
-                email: "",
-                guardian: "",
-                fee: DEFAULT_FEE,
-                days: [],
-                user: "",
-                pass: genPass(),
-                studentId: "", // খালি রাখলে সার্ভার নিজেই তৈরি করে দেবে
-                courseId: courseList[0]?.id || "",
-                teacherId: courseList[0]?.teacherId || "",
-              })
-            }
-          >
-            + নতুন স্টুডেন্ট
-          </Btn>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {students.some((s) => !s.studentId) && (
+              <Btn
+                kind="soft"
+                onClick={genStudentIds}
+                style={{ opacity: idBusy ? 0.6 : 1 }}
+              >
+                {idBusy ? "⏳ তৈরি হচ্ছে…" : "🆔 বাকিদের স্টুডেন্ট আইডি তৈরি করুন"}
+              </Btn>
+            )}
+            <Btn
+              onClick={() =>
+                setEdit({
+                  name: "",
+                  country: "",
+                  phoneIso: "BD",
+                  phone: "",
+                  email: "",
+                  guardian: "",
+                  fee: DEFAULT_FEE,
+                  days: [],
+                  user: "",
+                  pass: genPass(),
+                  studentId: "", // খালি রাখলে সার্ভার নিজেই তৈরি করে দেবে
+                  courseId: courseList[0]?.id || "",
+                  teacherId: courseList[0]?.teacherId || "",
+                })
+              }
+            >
+              + নতুন স্টুডেন্ট
+            </Btn>
+          </div>
         )
       }
     >
@@ -11568,7 +11601,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         head={[
           "স্টুডেন্ট নাম",
           "দেশ",
-          "আইডি",
+          "লগইন আইডি",
           "পাসওয়ার্ড",
           "WhatsApp নম্বর",
           "বিস্তারিত",

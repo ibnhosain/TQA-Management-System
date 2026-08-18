@@ -87,6 +87,32 @@ def next_serial(User):
     return top + 1
 
 
+def backfill_all(User, commit=True):
+    """যেসব স্টুডেন্টের এখনো আইডি নেই তাদের সবার জন্য তৈরি করে দেয়।
+    ভর্তির ক্রম ঠিক রাখতে পুরনো থেকে নতুনের দিকে (id অনুসারে) সিরিয়াল বসে।
+    ফেরত দেয় [(user, নতুন আইডি), ...] — commit=False দিলে শুধু পরিকল্পনা,
+    কিছুই সেভ হয় না (ড্রাই-রান)।"""
+    pending = list(User.objects.filter(role="student", student_id="").order_by("id"))
+    if not pending:
+        return []
+    serial = next_serial(User)
+    taken = set(User.objects.exclude(student_id="").values_list("student_id", flat=True))
+    plan = []
+    for u in pending:
+        while True:
+            sid = build_student_id(u.name_bn, u.guardian, u.country, serial)
+            serial += 1
+            if sid not in taken:
+                taken.add(sid)
+                break
+        plan.append((u, sid))
+    if commit:
+        for u, sid in plan:
+            u.student_id = sid
+            u.save(update_fields=["student_id"])
+    return plan
+
+
 def assign_student_id(user, User=None):
     """একজন স্টুডেন্টের জন্য আইডি তৈরি করে বসিয়ে দেয় (আগে থেকে থাকলে কিছু করে না)।
     একই আইডি অন্য কারো থাকলে সিরিয়াল বাড়িয়ে অনন্য করা হয়।"""

@@ -12,7 +12,7 @@
 from django.core.management.base import BaseCommand
 
 from core.models import User
-from core.student_id import build_student_id, next_serial
+from core.student_id import backfill_all
 
 
 class Command(BaseCommand):
@@ -25,30 +25,15 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **opts):
-        pending = list(
-            User.objects.filter(role="student", student_id="").order_by("id")
-        )
         already = User.objects.filter(role="student").exclude(student_id="").count()
+        # commit=False → শুধু পরিকল্পনা; --confirm দিলে নিচে আবার commit=True তে চালাই
+        plan = backfill_all(User, commit=False)
 
-        if not pending:
+        if not plan:
             self.stdout.write(self.style.SUCCESS(
                 f"✔ সব স্টুডেন্টেরই আইডি আছে ({already} জন) — নতুন করে কিছু তৈরির দরকার নেই।"
             ))
             return
-
-        serial = next_serial(User)
-        taken = set(
-            User.objects.exclude(student_id="").values_list("student_id", flat=True)
-        )
-        plan = []
-        for u in pending:
-            while True:
-                sid = build_student_id(u.name_bn, u.guardian, u.country, serial)
-                serial += 1
-                if sid not in taken:
-                    taken.add(sid)
-                    break
-            plan.append((u, sid))
 
         self.stdout.write(self.style.WARNING(
             f"যাদের আইডি তৈরি হবে ({len(plan)} জন; আগে থেকে আছে {already} জনের):\n"
@@ -66,9 +51,7 @@ class Command(BaseCommand):
             ))
             return
 
-        for u, sid in plan:
-            u.student_id = sid
-            u.save(update_fields=["student_id"])
+        saved = backfill_all(User, commit=True)
         self.stdout.write(self.style.SUCCESS(
-            f"\n✔ {len(plan)} জন স্টুডেন্টের আইডি তৈরি ও সংরক্ষণ হয়েছে।"
+            f"\n✔ {len(saved)} জন স্টুডেন্টের আইডি তৈরি ও সংরক্ষণ হয়েছে।"
         ))

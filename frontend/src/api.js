@@ -307,6 +307,8 @@ export const api = {
   // ব্যবহারকারী (পরিচালক)
   allUsers: () => request("/users/"),
   allStudents: () => request("/users/students/"),
+  // যাদের এখনো স্টুডেন্ট আইডি নেই তাদের সবার জন্য তৈরি (কেবল পরিচালক)
+  backfillStudentIds: () => request("/users/backfill_student_ids/", { method: "POST" }),
   allTeachers: () => request("/users/teachers/"),
   saveUser: (d, id) => request(id ? `/users/${id}/` : "/users/", { method: id ? "PATCH" : "POST", body: d }),
   deleteUser: (id) => request(`/users/${id}/`, { method: "DELETE" }),
