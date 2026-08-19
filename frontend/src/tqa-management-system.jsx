@@ -2443,13 +2443,22 @@ function ClassesView({
   const [rate, setRate] = useState(null); // ক্লাস শেষে মূল্যায়ন পপআপ
   const [attnMark, setAttnMark] = useState(null); // পরিচালকের ম্যানুয়াল হাজিরা মডাল (কোন ক্লাস)
   const [apiClasses, setApiClasses] = useState(null); // null হলে mock db.classes ব্যবহার হয়
+  const [classesLoading, setClassesLoading] = useState(true);
+  const [loadError, setLoadError] = useState(""); // লোড ব্যর্থ হলে কারণ
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
   const loadClasses = async () => {
     try {
       setApiClasses((await api.classes()).map(adaptClass));
-    } catch {
+      setLoadError("");
+    } catch (e) {
       setApiClasses(null);
+      // ব্যর্থ হলে কারণটা জানিয়ে দিই — নইলে শুধু ফাঁকা তালিকা দেখে মনে হতো
+      // "কোনো ক্লাস নেই", অথচ আসলে সার্ভার থেকে আনাই যায়নি
+      setLoadError(e?.data?.error || e?.message || "সার্ভার থেকে ক্লাস আনা যায়নি");
+    } finally {
+      // ব্যর্থ হলেও লোডিং শেষ — নইলে "লোড হচ্ছে" চিরকাল আটকে থাকত
+      setClassesLoading(false);
     }
   };
   useEffect(() => {
@@ -2503,7 +2512,9 @@ function ClassesView({
       userById(id)
     ).name || "—";
   // ব্যাকএন্ড আগেই রোল অনুযায়ী ফিল্টার করে দেয়; লোড হওয়ার আগে খালি (লোডার দেখায়)
-  const classesLoading = apiClasses === null;
+  // ⚠️ আগে এটা `apiClasses === null` থেকে হিসাব হতো — কিন্তু লোড ব্যর্থ হলেও
+  // apiClasses null-ই থাকে, তাই "লোড হচ্ছে" কখনো শেষ হতো না (উস্তাদের পোর্টালে
+  // চিরকাল ঘুরত)। এখন আলাদা স্টেট — ব্যর্থ হোক বা সফল, একবার শেষ মানে শেষ।
   const mine = (apiClasses || []).sort((a, b) =>
     (a.date + a.time).localeCompare(b.date + b.time),
   );
@@ -3015,6 +3026,38 @@ function ClassesView({
     <>
       {classesLoading && (
         <Loader text={T("ক্লাস লোড হচ্ছে", "Loading classes")} />
+      )}
+      {!classesLoading && loadError && (
+        <div
+          style={{
+            ...S.card,
+            borderLeft: `4px solid ${C.red}`,
+            color: C.red,
+            fontWeight: 700,
+            marginBottom: 12,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ flex: 1, minWidth: 200 }}>
+            {T(
+              `⚠️ ক্লাসের তালিকা আনা যায়নি — ${loadError}। নিচে কিছু না দেখালে সেটা "ক্লাস নেই" নয়।`,
+              `⚠️ Couldn't load your classes — ${loadError}. An empty list below does not mean "no classes".`,
+            )}
+          </span>
+          <Btn
+            sm
+            kind="soft"
+            onClick={() => {
+              setClassesLoading(true);
+              loadClasses();
+            }}
+          >
+            {T("🔄 আবার চেষ্টা করুন", "🔄 Retry")}
+          </Btn>
+        </div>
       )}
       <Section
         title={T("আজকের ক্লাস", "Today's Classes")}
@@ -9976,6 +10019,7 @@ function RoutineView({ db, setDb, courses, user }) {
   const [f, setF] = useState(blankR);
   const [editId, setEditId] = useState(null);
   const [apiRoutines, setApiRoutines] = useState(null); // null হলে mock db.routine
+  const [routinesLoading, setRoutinesLoading] = useState(true);
   const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
   const [genBusy, setGenBusy] = useState(false);
@@ -9998,6 +10042,9 @@ function RoutineView({ db, setDb, courses, user }) {
       setApiRoutines((await api.routines()).map(adaptRoutine));
     } catch {
       setApiRoutines(null);
+    } finally {
+      // ব্যর্থ হলেও লোডিং শেষ — নইলে "রুটিন লোড হচ্ছে" চিরকাল আটকে থাকত
+      setRoutinesLoading(false);
     }
   };
   useEffect(() => {
@@ -10170,7 +10217,6 @@ function RoutineView({ db, setDb, courses, user }) {
       notice("রুটিন মুছতে ব্যর্থ — " + (e?.message || "সার্ভার যাচাই করুন"));
     }
   };
-  const routinesLoading = apiRoutines === null; // এখনো লোড হচ্ছে
   const visible = apiRoutines || [];
   // প্রতিটা রুটিন বাংলাদেশ-সময়ে সংরক্ষিত বার-সময় অনুযায়ীই দিন ধরে গ্রুপ করা হয় —
   // ডিভাইসের টাইমজোন থেকে অটো-হিসাব আর করা হয় না (নির্ভরযোগ্য ছিল না)। স্টুডেন্ট

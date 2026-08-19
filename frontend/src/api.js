@@ -130,6 +130,11 @@ async function request(path, { method = "GET", body, isForm, timeoutMs } = {}) {
       ? `${firstFieldEntry[0]}: ${firstFieldEntry[1][0]}`
       : null;
     const msg =
+      // ৪০১ = টোকেন মেয়াদোত্তীর্ণ/অবৈধ (উপরে রিফ্রেশের চেষ্টাও ব্যর্থ হয়েছে) —
+      // DRF-এর ইংরেজি বার্তার বদলে স্পষ্ট বাংলা নির্দেশনা দিই
+      (res.status === 401
+        ? "সেশনের মেয়াদ শেষ — একবার লগআউট করে আবার লগইন করুন।"
+        : null) ||
       data.error ||
       data.detail ||
       (Array.isArray(data.non_field_errors) && data.non_field_errors[0]) ||
