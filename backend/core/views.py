@@ -369,8 +369,13 @@ def _assert_session_participant(s, user):
     কোনো ক্লাসে "জয়েন" করে ফেললে _sync_mutual_presence তাকে ভুলবশত স্টুডেন্ট
     ধরে নিয়ে আসল স্টুডেন্ট না এলেও হাজিরা 'নিশ্চিত' করে ফেলতে পারত"""
     if user.role == "teacher":
-        teacher_id = s.teacher_id or (s.course.teacher_id if s.course_id else None)
-        if user.id != teacher_id:
+        # get_queryset() উস্তাদকে ক্লাসটা দেখায় যদি তিনি সেশনের উস্তাদ *অথবা*
+        # কোর্সের উস্তাদ হন — জয়েনের নিয়মও ঠিক একই রাখতে হবে। আগে শুধু সেশনের
+        # উস্তাদকেই অনুমতি দেওয়া হতো, ফলে কোর্সের উস্তাদ ক্লাসটা তালিকায় দেখেও
+        # জয়েন করতে গেলে আটকে যেতেন (স্টুডেন্ট জয়েন করে বসে থাকতেন, উস্তাদ
+        # ঢুকতেই পারতেন না)
+        allowed = {s.teacher_id, s.course.teacher_id if s.course_id else None}
+        if user.id not in allowed:
             raise PermissionDenied("এই ক্লাসের উস্তাদ আপনি নন")
     elif user.role == "student":
         if not s.students.filter(pk=user.id).exists():
