@@ -217,6 +217,7 @@ class ClassSessionSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source="teacher.name_bn", read_only=True)
     student_names = serializers.SerializerMethodField()
     attendance = AttendanceSerializer(many=True, read_only=True)
+    rejoin_active = serializers.SerializerMethodField()
 
     class Meta:
         model = ClassSession
@@ -225,6 +226,22 @@ class ClassSessionSerializer(serializers.ModelSerializer):
     def get_student_names(self, obj):
         # .values_list()-এর বদলে .all() ইটারেট — prefetch_related-এর ক্যাশ ব্যবহার হয় (N+1 নেই)
         return [s.name_bn for s in obj.students.all()]
+
+    def get_rejoin_active(self, obj):
+        """এখন ১ম (জয়েন) নাকি ২য় (রিজয়েন) জুম লিংক দেখাতে হবে — সিদ্ধান্তটা
+        সার্ভারেই নেওয়া হয়, যাতে উস্তাদ ও শিক্ষার্থী দুজনেই হুবহু একই উত্তর পান।
+        আগে প্রত্যেকের ব্রাউজারে আলাদাভাবে হিসাব হতো, ফলে একজন ১ম লিংকে আর
+        আরেকজন ২য় লিংকে ঢুকে দুটো ভিন্ন মিটিংয়ে চলে যেতেন — একে অন্যকে খুঁজে
+        পেতেন না।"""
+        if obj.join_mode_override == "rejoin":
+            return True
+        if obj.join_mode_override == "join":
+            return False
+        teacher_id = obj.teacher_id or (obj.course.teacher_id if obj.course_id else None)
+        rows = list(obj.attendance.all())  # prefetch করা — বাড়তি কোয়েরি নেই
+        teacher_done = any(a.user_id == teacher_id and a.marked_present for a in rows)
+        student_done = any(a.user_id != teacher_id and a.marked_present for a in rows)
+        return bool(teacher_done and student_done)
 
 
 class QuestionSerializer(serializers.ModelSerializer):

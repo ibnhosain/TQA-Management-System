@@ -1196,6 +1196,8 @@ const adaptClass = (k) => ({
   zoom2: k.zoom_link_2 || "",
   attendance: k.attendance || [], // উস্তাদ+স্টুডেন্ট আজ ইতিমধ্যে (দুজনেই) জয়েন করেছেন কিনা বের করতে — জয়েন/রিজয়েন বাটন ঠিক করতে ব্যবহৃত
   joinModeOverride: k.join_mode_override || "auto", // অটো ঠিক না হলে পরিচালক/এডমিনের ম্যানুয়াল ওভাররাইড (auto/join/rejoin)
+  // ১ম নাকি ২য় জুম লিংক দেখাতে হবে — সার্ভারের সিদ্ধান্ত (দুজনের জন্য একই)
+  rejoinActive: !!k.rejoin_active,
   kind: KEY_TO_KIND[k.kind] || "নিয়মিত ক্লাস",
   teacherId: k.teacher,
   studentIds: k.students || [],
@@ -1212,18 +1214,11 @@ const adaptClass = (k) => ({
 // joinModeOverride দিয়ে এই স্বয়ংক্রিয় সিদ্ধান্ত যেকোনো দিকে জোর করে বদলে
 // দিতে পারেন (হাজিরার ডেটা স্পর্শ না করেই) — "join" মানে সবসময় ১ম লিংক,
 // "rejoin" মানে সবসময় ২য় লিংক, "auto" মানে স্বাভাবিক (হাজিরা-ভিত্তিক) নিয়ম
-const bothJoinedToday = (k, teacherId) => {
-  if (k.joinModeOverride === "rejoin") return true;
-  if (k.joinModeOverride === "join") return false;
-  const rows = k.attendance || [];
-  const tid = k.teacherId ?? teacherId;
-  const teacherDone = rows.some(
-    (a) => String(a.user) === String(tid) && a.marked_present,
-  );
-  const studentDone = rows.some(
-    (a) => String(a.user) !== String(tid) && a.marked_present,
-  );
-  return teacherDone && studentDone;
+const bothJoinedToday = (k) => {
+  // সিদ্ধান্তটা এখন সার্ভার দেয় (rejoin_active) — উস্তাদ ও শিক্ষার্থী দুজনেই
+  // একই উত্তর পান, তাই কেউ ১ম লিংকে আর কেউ ২য় লিংকে ঢুকে আলাদা মিটিংয়ে
+  // চলে যাওয়ার সুযোগ নেই। ম্যানুয়াল ওভাররাইডও সার্ভারেই হিসাব হয়।
+  return !!k.rejoinActive;
 };
 /* ফ্রন্টএন্ড ফরম → API ClassSession payload */
 const classPayload = (ff, students) => ({
@@ -2465,10 +2460,12 @@ function ClassesView({
     loadClasses();
   }, [user?.id]);
   useEffect(() => {
-    // এডমিন/পরিচালকের "🔴 ক্লাস চলছে" লাইভ-স্ট্যাটাস তাজা রাখতে প্রতি ৬০
-    // সেকেন্ডে তালিকা রিফ্রেশ — পেজ খোলা রাখলেও কে কখন জয়েন/লিভ করছে দেখা যায়
-    if (!isAdm(user)) return;
-    const iv = setInterval(loadClasses, 60000);
+    // প্রতি ২০ সেকেন্ডে তালিকা রিফ্রেশ — সবার জন্যই। দুটো কারণে জরুরি:
+    // ১) এডমিন/পরিচালকের "🔴 ক্লাস চলছে" লাইভ-স্ট্যাটাস তাজা থাকে
+    // ২) কোন জুম লিংক (১ম নাকি ২য়) দেখাতে হবে তা উস্তাদ ও শিক্ষার্থীর
+    //    স্ক্রিনে দ্রুত মিলে যায় — নইলে একজন পুরনো তথ্য নিয়ে বসে থেকে ভিন্ন
+    //    লিংকে ঢুকে পড়তে পারতেন
+    const iv = setInterval(loadClasses, 20000);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
@@ -2787,7 +2784,7 @@ function ClassesView({
       (a) => String(a.user) === String(user.id) && a.active,
     );
     const isJoined = joined?.classId === k.id || (joinable && myActiveRow);
-    const alreadyBothJoined = bothJoinedToday(k, c.teacherId);
+    const alreadyBothJoined = bothJoinedToday(k);
     // এডমিন/পরিচালক এখন কোন কোন ক্লাসে উস্তাদ/স্টুডেন্ট বাস্তবে এই মুহূর্তে আছেন
     // তা দেখতে পারেন — সার্ভারের হাজিরা-ডেটা (segment_start) থেকেই সরাসরি।
     // ⚠️ কিন্তু segment_start শুধু "ক্লাস শেষ করুন" চাপলেই মোছে — কেউ ট্যাব বন্ধ
@@ -8639,7 +8636,7 @@ function ManageView({ db, setDb, refresh }) {
 function LiveClassPopup({ k, course, user, onJoin, onLater }) {
   const T = (bnText, enText) => (user?.role === "student" ? enText : bnText);
   const lec = course.lectures?.[k.lectureNo - 1];
-  const alreadyBothJoined = bothJoinedToday(k, k.teacherId ?? course.teacherId);
+  const alreadyBothJoined = bothJoinedToday(k);
   const joinLink = alreadyBothJoined ? k.zoom2 || k.zoom : k.zoom;
   return (
     <div
@@ -15434,6 +15431,7 @@ export default function App() {
                 teacherId: kk.teacher,
                 zoom: kk.zoom_link,
                 zoom2: kk.zoom_link_2 || "",
+                rejoinActive: !!kk.rejoin_active,
                 attendance: kk.attendance || [],
                 joinModeOverride: kk.join_mode_override || "auto",
                 lectureNo: kk.lecture_no,
