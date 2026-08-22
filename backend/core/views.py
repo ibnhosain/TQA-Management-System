@@ -549,6 +549,21 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         s.save(update_fields=["join_mode_override"])
         return Response({"join_mode_override": s.join_mode_override})
 
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
+    def open_rejoin(self, request, pk=None):
+        """উস্তাদ নিজের "🔁 রিজয়েন" বাটনে ক্লিক করলে ডাকা হয় — এতে শিক্ষার্থীদের
+        কাছেও ২য় (রিজয়েন) লিংক খুলে যায়। উস্তাদ ক্লিক না করা পর্যন্ত শিক্ষার্থী
+        শুধু "Teacher is joining, please wait" দেখে, ফলে দুজন কখনো আলাদা
+        মিটিংয়ে চলে যান না। এডমিন/পরিচালকও চালাতে পারেন।"""
+        s = self.get_object()
+        u = request.user
+        allowed_teachers = {s.teacher_id, s.course.teacher_id if s.course_id else None}
+        if u.role not in ("director", "admin") and u.id not in allowed_teachers:
+            raise PermissionDenied("কেবল এই ক্লাসের উস্তাদ রিজয়েন চালু করতে পারবেন")
+        s.join_mode_override = "rejoin"
+        s.save(update_fields=["join_mode_override"])
+        return Response({"rejoin_active": True})
+
 
 class AttendanceViewSet(viewsets.ModelViewSet):
     """হাজিরার তালিকা (মাসভিত্তিক রিপোর্ট) — ?month=YYYY-MM দিয়ে ফিল্টার।

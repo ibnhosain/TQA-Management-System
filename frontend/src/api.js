@@ -173,6 +173,7 @@ export const api = {
   markAttendance: (id, student_id, present = true) => request(`/classes/${id}/mark_attendance/`, { method: "POST", body: { student_id, present } }), // পরিচালকের ম্যানুয়াল হাজিরা
   postponeClass: (id) => request(`/classes/${id}/postpone/`, { method: "POST" }), // ⛔ স্থগিত
   setClassJoinMode: (id, mode) => request(`/classes/${id}/set_join_mode/`, { method: "POST", body: { mode } }), // auto/join/rejoin — জয়েন/রিজয়েন লিংক ম্যানুয়ালি জোর করা (পরিচালক/এডমিন)
+  openRejoin: (id) => request(`/classes/${id}/open_rejoin/`, { method: "POST" }), // উস্তাদ রিজয়েন চাপলে — শিক্ষার্থীর কাছেও ২য় লিংক খোলে
   deleteClass: (id) => request(`/classes/${id}/`, { method: "DELETE" }),
 
   // হাজিরা রিপোর্ট (মাসভিত্তিক) — উস্তাদ নিজের, শিক্ষার্থী নিজের, পরিচালক সবার + এডিট/মোছা

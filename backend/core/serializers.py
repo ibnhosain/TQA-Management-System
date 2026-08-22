@@ -228,20 +228,14 @@ class ClassSessionSerializer(serializers.ModelSerializer):
         return [s.name_bn for s in obj.students.all()]
 
     def get_rejoin_active(self, obj):
-        """এখন ১ম (জয়েন) নাকি ২য় (রিজয়েন) জুম লিংক দেখাতে হবে — সিদ্ধান্তটা
-        সার্ভারেই নেওয়া হয়, যাতে উস্তাদ ও শিক্ষার্থী দুজনেই হুবহু একই উত্তর পান।
-        আগে প্রত্যেকের ব্রাউজারে আলাদাভাবে হিসাব হতো, ফলে একজন ১ম লিংকে আর
-        আরেকজন ২য় লিংকে ঢুকে দুটো ভিন্ন মিটিংয়ে চলে যেতেন — একে অন্যকে খুঁজে
-        পেতেন না।"""
-        if obj.join_mode_override == "rejoin":
-            return True
-        if obj.join_mode_override == "join":
-            return False
-        teacher_id = obj.teacher_id or (obj.course.teacher_id if obj.course_id else None)
-        rows = list(obj.attendance.all())  # prefetch করা — বাড়তি কোয়েরি নেই
-        teacher_done = any(a.user_id == teacher_id and a.marked_present for a in rows)
-        student_done = any(a.user_id != teacher_id and a.marked_present for a in rows)
-        return bool(teacher_done and student_done)
+        """শিক্ষার্থীর কাছে ২য় (রিজয়েন) লিংক খোলা হয়েছে কিনা।
+
+        এটা কেবল তখনই সত্য হয় যখন উস্তাদ নিজে "রিজয়েন" বাটনে ক্লিক করেন
+        (অথবা পরিচালক ম্যানুয়ালি চালু করেন)। আগে হাজিরা দেখে স্বয়ংক্রিয়ভাবে
+        হিসাব হতো — কিন্তু সেই হিসাব প্রত্যেকের ব্রাউজারে আলাদা সময়ে হতো বলে
+        একজন ১ম লিংকে আর আরেকজন ২য় লিংকে ঢুকে ভিন্ন মিটিংয়ে চলে যেতেন। এখন
+        একজনই (উস্তাদ) সিদ্ধান্ত নেন, তাই দুজনের অমিল হওয়ার সুযোগ নেই।"""
+        return obj.join_mode_override == "rejoin"
 
 
 class QuestionSerializer(serializers.ModelSerializer):

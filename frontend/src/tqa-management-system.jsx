@@ -2532,6 +2532,21 @@ function ClassesView({
     // জুম খোলে অ্যাংকর লিংকে (নিচে <a>); বাকি সব (presence/হাজিরা) LiveClassPanel সামলায়
     setJoined({ classId: k.id });
   };
+  // উস্তাদ "🔁 রিজয়েন" চাপলেন — জুম খোলে অ্যাংকর লিংকে, পাশাপাশি সার্ভারকে
+  // জানিয়ে দিই যাতে শিক্ষার্থীদের কাছেও ২য় লিংক খুলে যায় (তার আগে তারা শুধু
+  // "Teacher is joining, please wait" দেখেন — তাই কেউ আলাদা মিটিংয়ে যান না)
+  const openRejoinFor = async (k) => {
+    setJoined({ classId: k.id });
+    try {
+      await api.openRejoin(k.id);
+      await loadClasses();
+    } catch (e) {
+      notice(
+        "রিজয়েন চালু করতে ব্যর্থ — শিক্ষার্থীরা এখনো ১ম লিংকই দেখছেন। " +
+          (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+      );
+    }
+  };
   // এডমিন/পরিচালক → আজকের ক্লাসের টিচার ও শিক্ষার্থী উভয়কে জয়েন-করার রিমাইন্ডার
   // WhatsApp (ইংরেজি, ইসলামিক টোন) — একই বাটনে একসাথে দুজনকেই পাঠানো হয়
   const notifyAll = (k, c, kStudents) => {
@@ -2785,6 +2800,10 @@ function ClassesView({
     );
     const isJoined = joined?.classId === k.id || (joinable && myActiveRow);
     const alreadyBothJoined = bothJoinedToday(k);
+    // এই ক্লাসের উস্তাদ কিনা — উস্তাদই কেবল রিজয়েন চালু করতে পারেন
+    const isTeacherOf =
+      user.role === "teacher" &&
+      [k.teacherId, c.teacherId].some((t) => String(t) === String(user.id));
     // এডমিন/পরিচালক এখন কোন কোন ক্লাসে উস্তাদ/স্টুডেন্ট বাস্তবে এই মুহূর্তে আছেন
     // তা দেখতে পারেন — সার্ভারের হাজিরা-ডেটা (segment_start) থেকেই সরাসরি।
     // ⚠️ কিন্তু segment_start শুধু "ক্লাস শেষ করুন" চাপলেই মোছে — কেউ ট্যাব বন্ধ
@@ -2909,21 +2928,57 @@ function ClassesView({
           )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {joinable && !isJoined && k.status !== "postponed" && (
+          {/* জয়েন (লাল) ও রিজয়েন (হলুদ) — উস্তাদ সবসময় দুটোই দেখেন, তাই
+              ক্লাস চলাকালীনও ২য় লিংকে সরে যেতে পারেন। শিক্ষার্থী রিজয়েন বাটন
+              দেখেন কেবল উস্তাদ সেটা চালু করার পর; তার আগে অপেক্ষার বার্তা */}
+          {joinable && k.status !== "postponed" && (
             <a
-              href={alreadyBothJoined ? k.zoom2 || k.zoom : k.zoom}
+              href={k.zoom}
               target="_blank"
               rel="noreferrer"
               onClick={() => join(k)}
               style={{ textDecoration: "none" }}
             >
-              <Btn kind="gold">
-                {alreadyBothJoined
-                  ? T("🔁 রিজয়েন করুন", "🔁 Rejoin")
-                  : T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}
+              <Btn style={{ background: C.red, color: "#fff" }}>
+                {T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}
               </Btn>
             </a>
           )}
+          {joinable && k.status !== "postponed" && isTeacherOf && (
+            <a
+              href={k.zoom2 || k.zoom}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => openRejoinFor(k)}
+              style={{ textDecoration: "none" }}
+            >
+              <Btn kind="gold">{T("🔁 রিজয়েন করুন", "🔁 Rejoin")}</Btn>
+            </a>
+          )}
+          {joinable && k.status !== "postponed" && !isTeacherOf &&
+            (alreadyBothJoined ? (
+              <a
+                href={k.zoom2 || k.zoom}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => join(k)}
+                style={{ textDecoration: "none" }}
+              >
+                <Btn kind="gold">{T("🔁 রিজয়েন করুন", "🔁 Rejoin")}</Btn>
+              </a>
+            ) : (
+              <span
+                style={{
+                  alignSelf: "center",
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  color: C.gold,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                ⏳ Teacher is joining, please wait
+              </span>
+            ))}
           {isToday && isAdm(user) && k.status !== "postponed" && (
             <Btn
               sm
@@ -8636,8 +8691,10 @@ function ManageView({ db, setDb, refresh }) {
 function LiveClassPopup({ k, course, user, onJoin, onLater }) {
   const T = (bnText, enText) => (user?.role === "student" ? enText : bnText);
   const lec = course.lectures?.[k.lectureNo - 1];
-  const alreadyBothJoined = bothJoinedToday(k);
-  const joinLink = alreadyBothJoined ? k.zoom2 || k.zoom : k.zoom;
+  // শিক্ষার্থীর পপআপে জয়েন বাটন সবসময় থাকে (১ম লিংক)। রিজয়েন বাটন আসে কেবল
+  // উস্তাদ নিজের রিজয়েন বাটনে ক্লিক করার পর — তার আগে অপেক্ষার বার্তা দেখায়,
+  // যাতে শিক্ষার্থী ভুল করে অন্য মিটিংয়ে ঢুকে না পড়েন
+  const rejoinOpen = bothJoinedToday(k);
   return (
     <div
       style={{
@@ -8710,7 +8767,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
             🕐 {k.time} · {T("উস্তাদ", "Teacher")}: {course.teacher_name || userById(course.teacherId || course.teacher).name}
           </div>
           <a
-            href={joinLink}
+            href={k.zoom}
             target="_blank"
             rel="noreferrer"
             onClick={() => onJoin(k)}
@@ -8730,10 +8787,49 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
               boxSizing: "border-box",
             }}
           >
-            {alreadyBothJoined
-              ? T("🔁 রিজয়েন করুন — জুম খুলে যাবে", "🔁 Rejoin — Zoom will open")
-              : T("🎥 এখনই জয়েন করুন — জুম খুলে যাবে", "🎥 Join Now — Zoom will open")}
+            {T("🎥 এখনই জয়েন করুন — জুম খুলে যাবে", "🎥 Join Now — Zoom will open")}
           </a>
+          {rejoinOpen ? (
+            <a
+              href={k.zoom2 || k.zoom}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => onJoin(k)}
+              style={{
+                display: "block",
+                textDecoration: "none",
+                width: "100%",
+                marginTop: 10,
+                background: `linear-gradient(135deg, ${C.goldL}, ${C.gold})`,
+                color: "#4a3200",
+                fontSize: 16,
+                fontWeight: 800,
+                padding: "14px 20px",
+                borderRadius: 14,
+                boxShadow: "0 8px 24px rgba(240,195,85,.45)",
+                textAlign: "center",
+                boxSizing: "border-box",
+              }}
+            >
+              🔁 Rejoin — Zoom will open
+            </a>
+          ) : (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "12px 16px",
+                borderRadius: 12,
+                background: "rgba(255,255,255,.12)",
+                border: `1px solid rgba(240,195,85,.45)`,
+                color: C.goldL,
+                fontSize: 14,
+                fontWeight: 700,
+                textAlign: "center",
+              }}
+            >
+              ⏳ Teacher is joining, please wait
+            </div>
+          )}
           <div
             style={{
               fontSize: 13,
