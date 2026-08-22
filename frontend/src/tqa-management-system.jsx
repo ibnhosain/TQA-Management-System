@@ -2799,6 +2799,12 @@ function ClassesView({
       (a) => String(a.user) === String(user.id) && a.active,
     );
     const isJoined = joined?.classId === k.id || (joinable && myActiveRow);
+    // এই ক্লাসে অন্তত একবার জয়েন করেছে কিনা (হাজিরার সারি তৈরি হয়েছে কিনা) —
+    // অপেক্ষার বার্তা শুরুতেই দেখালে শিক্ষার্থী ভুল করে জয়েন না করে বসে থাকতে
+    // পারে, তাই সেটা কেবল একবার জয়েন করার পরই দেখানো হয়
+    const hasJoinedOnce =
+      joined?.classId === k.id ||
+      (k.attendance || []).some((a) => String(a.user) === String(user.id));
     const alreadyBothJoined = bothJoinedToday(k);
     // এই ক্লাসের উস্তাদ কিনা — উস্তাদই কেবল রিজয়েন চালু করতে পারেন
     const isTeacherOf =
@@ -2966,7 +2972,7 @@ function ClassesView({
               >
                 <Btn kind="gold">{T("🔁 রিজয়েন করুন", "🔁 Rejoin")}</Btn>
               </a>
-            ) : (
+            ) : hasJoinedOnce ? (
               <span
                 style={{
                   alignSelf: "center",
@@ -2978,7 +2984,7 @@ function ClassesView({
               >
                 ⏳ Teacher is joining, please wait
               </span>
-            ))}
+            ) : null)}
           {isToday && isAdm(user) && k.status !== "postponed" && (
             <Btn
               sm
@@ -8695,6 +8701,11 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
   // উস্তাদ নিজের রিজয়েন বাটনে ক্লিক করার পর — তার আগে অপেক্ষার বার্তা দেখায়,
   // যাতে শিক্ষার্থী ভুল করে অন্য মিটিংয়ে ঢুকে না পড়েন
   const rejoinOpen = bothJoinedToday(k);
+  // অপেক্ষার বার্তা শুরুতেই নয় — শিক্ষার্থী একবার জয়েন করার পর থেকে (নইলে
+  // "wait" পড়ে জয়েনই না করে বসে থাকতে পারে)
+  const hasJoinedOnce = (k.attendance || []).some(
+    (a) => String(a.user) === String(user?.id),
+  );
   return (
     <div
       style={{
@@ -8813,7 +8824,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
             >
               🔁 Rejoin — Zoom will open
             </a>
-          ) : (
+          ) : hasJoinedOnce ? (
             <div
               style={{
                 marginTop: 10,
@@ -8829,7 +8840,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
             >
               ⏳ Teacher is joining, please wait
             </div>
-          )}
+          ) : null}
           <div
             style={{
               fontSize: 13,
