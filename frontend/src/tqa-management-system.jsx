@@ -2547,6 +2547,29 @@ function ClassesView({
       );
     }
   };
+  // উস্তাদ "🔁 রিজয়েন" চাপলে আগে নিশ্চিত হয়ে নেওয়া হয় — কারণ "হ্যাঁ" চাপলেই
+  // শিক্ষার্থীদের কাছ থেকে ১ম লিংক সরে যায় (ভুলে চাপলে ক্লাস এলোমেলো হতে পারে)।
+  // "হ্যাঁ" চাপার ক্লিকটাই ব্যবহারকারীর নিজের ক্লিক, তাই সেখান থেকে window.open
+  // করলে ব্রাউজার পপআপ ব্লক করে না
+  const confirmRejoin = (k) =>
+    askConfirm(
+      "আপনি কি রিজয়েন করার জন্য ২য় জুম খুলতে চান? \"হ্যাঁ\" চাপলে শিক্ষার্থীদের পোর্টাল থেকে ১ম জয়েন বাটন সরে গিয়ে রিজয়েন বাটন চলে আসবে।",
+      () => {
+        const link = k.zoom2 || k.zoom;
+        let win = null;
+        try {
+          win = window.open(link, "_blank", "noopener");
+        } catch {
+          /* নিচে জানিয়ে দিচ্ছি */
+        }
+        if (!win) {
+          notice(
+            "ব্রাউজার নতুন ট্যাব খুলতে দেয়নি — জুম লিংকটি নিজে খুলে নিন: " + link,
+          );
+        }
+        openRejoinFor(k);
+      },
+    );
   // এডমিন/পরিচালক → আজকের ক্লাসের টিচার ও শিক্ষার্থী উভয়কে জয়েন-করার রিমাইন্ডার
   // WhatsApp (ইংরেজি, ইসলামিক টোন) — একই বাটনে একসাথে দুজনকেই পাঠানো হয়
   const notifyAll = (k, c, kStudents) => {
@@ -2937,29 +2960,28 @@ function ClassesView({
           {/* জয়েন (লাল) ও রিজয়েন (হলুদ) — উস্তাদ সবসময় দুটোই দেখেন, তাই
               ক্লাস চলাকালীনও ২য় লিংকে সরে যেতে পারেন। শিক্ষার্থী রিজয়েন বাটন
               দেখেন কেবল উস্তাদ সেটা চালু করার পর; তার আগে অপেক্ষার বার্তা */}
-          {joinable && k.status !== "postponed" && (
-            <a
-              href={k.zoom}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => join(k)}
-              style={{ textDecoration: "none" }}
-            >
-              <Btn style={{ background: C.red, color: "#fff" }}>
-                {T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}
-              </Btn>
-            </a>
-          )}
+          {/* ১ম (জয়েন) লিংক — উস্তাদ সবসময় দেখেন, তাই ডিভাইস/নেট সমস্যা হলে
+              যতবার খুশি ১ম লিংকেই ফিরতে পারেন। শিক্ষার্থী দেখেন যতক্ষণ না উস্তাদ
+              রিজয়েন চালু করেন — খুলে গেলে তাদের কাছ থেকে ১ম লিংক সরে যায়, যাতে
+              কেউ ভুল করে পুরনো মিটিংয়ে ঢুকে না পড়ে */}
+          {joinable && k.status !== "postponed" &&
+            (isTeacherOf || !alreadyBothJoined) && (
+              <a
+                href={k.zoom}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => join(k)}
+                style={{ textDecoration: "none" }}
+              >
+                <Btn style={{ background: C.red, color: "#fff" }}>
+                  {T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}
+                </Btn>
+              </a>
+            )}
           {joinable && k.status !== "postponed" && isTeacherOf && (
-            <a
-              href={k.zoom2 || k.zoom}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => openRejoinFor(k)}
-              style={{ textDecoration: "none" }}
-            >
-              <Btn kind="gold">{T("🔁 রিজয়েন করুন", "🔁 Rejoin")}</Btn>
-            </a>
+            <Btn kind="gold" onClick={() => confirmRejoin(k)}>
+              {T("🔁 রিজয়েন করুন", "🔁 Rejoin")}
+            </Btn>
           )}
           {joinable && k.status !== "postponed" && !isTeacherOf &&
             (alreadyBothJoined ? (
@@ -8777,6 +8799,9 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
           <div style={{ fontSize: 12.5, color: "#cfe6d8", marginBottom: 16 }}>
             🕐 {k.time} · {T("উস্তাদ", "Teacher")}: {course.teacher_name || userById(course.teacherId || course.teacher).name}
           </div>
+          {/* উস্তাদ রিজয়েন চালু করার পর ১ম লিংক আর দেখানো হয় না — নইলে
+              শিক্ষার্থী ভুল করে পুরনো মিটিংয়ে ঢুকে পড়ত */}
+          {!rejoinOpen && (
           <a
             href={k.zoom}
             target="_blank"
@@ -8800,6 +8825,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
           >
             {T("🎥 এখনই জয়েন করুন — জুম খুলে যাবে", "🎥 Join Now — Zoom will open")}
           </a>
+          )}
           {rejoinOpen ? (
             <a
               href={k.zoom2 || k.zoom}
@@ -8810,7 +8836,6 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
                 display: "block",
                 textDecoration: "none",
                 width: "100%",
-                marginTop: 10,
                 background: `linear-gradient(135deg, ${C.goldL}, ${C.gold})`,
                 color: "#4a3200",
                 fontSize: 16,
