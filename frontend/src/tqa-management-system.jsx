@@ -258,6 +258,30 @@ const notice = (msg) => {
    • লগআউট করলেই সব ড্রাফট মুছে যায় (api.js → logout) — তাই একজনের লেখা
      আরেকজন দেখবেন না।
    • ফাইল/ছবি ধরে রাখা ফর্মে এটা ব্যবহার করা যাবে না — File JSON হয় না। */
+/* ট্যাব লুকানো থাকলে (ব্যবহারকারী অন্য অ্যাপে/ট্যাবে গেছেন) সার্ভারে বারবার
+   খোঁজ নেওয়া থামিয়ে রাখি — নিষ্ক্রিয় সময়ের ডাটাবেস-খরচ প্রায় পুরোটাই বেঁচে
+   যায়। ট্যাবে ফিরে এলেই সাথে সাথে একবার চালিয়ে সব হালনাগাদ করে নেওয়া হয়,
+   তাই ব্যবহারকারীর কাছে কোনো পার্থক্য চোখে পড়ে না — যা দেখার কথা তা দেখার
+   মুহূর্তেই তাজা হয়ে যায়।
+   ⚠️ ক্লাস চলাকালীন প্রেজেন্স-পোলে (LiveClassPanel) এটা ব্যবহার করা যাবে না —
+   জুমে থাকার সময় পোর্টালের ট্যাবটাই লুকানো থাকে, ওখানে থামিয়ে দিলে
+   "উস্তাদ ঢুকেছেন" কখনোই ধরা পড়ত না। */
+const visiblePoll = (fn, ms) => {
+  const tick = () => {
+    if (!document.hidden) fn();
+  };
+  tick();
+  const iv = setInterval(tick, ms);
+  const onVisible = () => {
+    if (!document.hidden) fn();
+  };
+  document.addEventListener("visibilitychange", onVisible);
+  return () => {
+    clearInterval(iv);
+    document.removeEventListener("visibilitychange", onVisible);
+  };
+};
+
 const DRAFT_PREFIX = "tqa_draft_";
 function usePersistedState(key, initial) {
   const k = DRAFT_PREFIX + key;
@@ -2538,8 +2562,9 @@ function ClassesView({
     // ২) কোন জুম লিংক (১ম নাকি ২য়) দেখাতে হবে তা উস্তাদ ও শিক্ষার্থীর
     //    স্ক্রিনে দ্রুত মিলে যায় — নইলে একজন পুরনো তথ্য নিয়ে বসে থেকে ভিন্ন
     //    লিংকে ঢুকে পড়তে পারতেন
-    const iv = setInterval(loadClasses, 20000);
-    return () => clearInterval(iv);
+    // ট্যাব লুকানো থাকলে থেমে থাকে, ফিরে এলেই সাথে সাথে একবার চলে — উপরের
+    // দুটো কারণই তখনই প্রাসঙ্গিক যখন পর্দাটা সত্যিই কেউ দেখছেন
+    return visiblePoll(loadClasses, 20000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
   useEffect(() => {
@@ -15907,9 +15932,7 @@ export default function App() {
         /* নেটওয়ার্ক ব্যর্থ হলে চুপচাপ — পরের ৬০s-এ আবার চেষ্টা হবে */
       }
     };
-    checkLive();
-    const iv = setInterval(checkLive, 60000);
-    return () => clearInterval(iv);
+    return visiblePoll(checkLive, 60000);
   }, [user]);
 
   const [apiNotifs, setApiNotifs] = useState(null);
@@ -15921,11 +15944,7 @@ export default function App() {
     }
   };
   useEffect(() => {
-    if (user) {
-      loadNotifs();
-      const iv = setInterval(loadNotifs, 60000);
-      return () => clearInterval(iv);
-    }
+    if (user) return visiblePoll(loadNotifs, 60000);
   }, [user?.id]);
 
   if (restoring)
