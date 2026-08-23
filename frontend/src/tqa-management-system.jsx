@@ -12363,20 +12363,93 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         ...(edit.pass && edit.pass !== "••••" ? { password: edit.pass } : {}),
       };
       const saved = await api.saveUser(payload, edit.id || undefined);
-      // নতুন স্টুডেন্ট হলে নির্বাচিত কোর্সে যুক্ত করি (backend-এ)
-      if (!edit.id && edit.courseId && saved?.id) {
-        const c = courseList.find(
-          (x) => String(x.id) === String(edit.courseId),
-        );
-        const patch = { students: [...((c && c.studentIds) || []), saved.id] };
-        // কোর্সে উস্তাদ না থাকলে নির্বাচিত উস্তাদকে সেট করি (কার কাছে পড়ে দেখাতে)
-        if (edit.teacherId && !(c && c.teacherId)) patch.teacher = edit.teacherId;
-        try {
-          await api.saveCourse(patch, edit.courseId);
-        } catch {}
+      const sid = saved?.id || edit.id;
+
+      /* ── কোর্স বসানো/বদলানো ──
+         ⚠️ আগে এটা কেবল নতুন স্টুডেন্টেই হতো (!edit.id)। ফলে পুরনো কারও
+         কোর্স বদলাতে গেলে ড্রপডাউন বদলাত ঠিকই, কিন্তু সংরক্ষণ হতো না —
+         আর অন্য পাতায় কোর্স অনুযায়ী তালিকা ভুল থেকে যেত।
+         এখন এডিটেও কাজ করে: আগের কোর্স থেকে সরিয়ে নতুনটিতে বসানো হয়। */
+      let courseMoved = false;
+      if (sid) {
+        const wantId = String(edit.courseId || "");
+        const inCourse = (c) =>
+          ((c && c.studentIds) || []).some((x) => String(x) === String(sid));
+        // এখন যে যে কোর্সে আছে
+        const current = courseList.filter(inCourse);
+        for (const c of current) {
+          if (String(c.id) === wantId) continue; // এটাই তো চাই
+          try {
+            await api.saveCourse(
+              {
+                students: (c.studentIds || []).filter(
+                  (x) => String(x) !== String(sid),
+                ),
+              },
+              c.id,
+            );
+            courseMoved = true;
+          } catch (e) {
+            notice(
+              `"${c.name}" কোর্স থেকে সরানো যায়নি — ` +
+                (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+            );
+          }
+        }
+        const target = courseList.find((x) => String(x.id) === wantId);
+        if (target && !inCourse(target)) {
+          try {
+            await api.saveCourse(
+              { students: [...(target.studentIds || []), sid] },
+              target.id,
+            );
+            courseMoved = true;
+          } catch (e) {
+            notice(
+              `"${target.name}" কোর্সে যুক্ত করা যায়নি — ` +
+                (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+            );
+          }
+        }
+        /* ── উস্তাদ ──
+           শিক্ষার্থীর নিজের কোনো উস্তাদ-ঘর নেই; উস্তাদ বাঁধা থাকে কোর্সের
+           সাথে (Course.teacher)। তাই "কার কাছে পড়ে" বদলানো মানে ওই কোর্সের
+           উস্তাদ বদলানো — আর তাতে ওই কোর্সের সব শিক্ষার্থীরই উস্তাদ বদলায়।
+           নীরবে করা যাবে না, তাই আগে জিজ্ঞেস করে নিই। */
+        if (
+          target &&
+          edit.teacherId &&
+          String(edit.teacherId) !== String(target.teacherId || "")
+        ) {
+          const tName =
+            (teachers.find((t) => String(t.id) === String(edit.teacherId)) || {})
+              .name || "নতুন উস্তাদ";
+          askConfirm(
+            `"${target.name}" কোর্সের উস্তাদ বদলে ${tName} করবেন?\n\n` +
+              `এই কোর্সে থাকা সব শিক্ষার্থীরই উস্তাদ বদলে যাবে — কেবল এই ` +
+              `একজনের নয়। রুটিন ও আসন্ন ক্লাসগুলোতেও নতুন উস্তাদ বসে যাবে।`,
+            async () => {
+              try {
+                await api.saveCourse({ teacher: edit.teacherId }, target.id);
+                await loadStudents();
+                notice("✔ কোর্সের উস্তাদ বদলানো হয়েছে।");
+              } catch (e) {
+                notice(
+                  "উস্তাদ বদলানো যায়নি — " +
+                    (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+                );
+              }
+            },
+          );
+        }
       }
       await loadStudents(); // ব্যাকএন্ড থেকে নতুন তালিকা
       setEdit(null);
+      if (courseMoved && edit.id)
+        notice(
+          "✔ কোর্স বদলানো হয়েছে। মনে রাখবেন — ক্লাস রুটিনে শিক্ষার্থীর " +
+            "তালিকা আলাদা, দরকার হলে সেটাও মিলিয়ে নিন।",
+        );
     } catch {
       // ব্যাকএন্ড না থাকলে — mock এ সংরক্ষণ
       if (edit.id) {
