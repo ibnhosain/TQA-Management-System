@@ -13602,6 +13602,8 @@ function SyllabusView({ db, setDb, courses, user }) {
   }, [selCourse]); // eslint-disable-line
 
   const activeCourse = findCourse(selCourse);
+  // একাধিক কোর্স থাকলে তবেই বাছাইয়ের মেনু দরকার
+  const showPicker = courseList.length > 1;
   const cols = headers.length;
 
   // ── টেবিল বদলানো (কেবল পরিচালক) ──
@@ -13707,63 +13709,70 @@ function SyllabusView({ db, setDb, courses, user }) {
 
       {!loading && activeCourse.id && (
         <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-          {/* উপরের সারি — কোর্স বাছাই (বাঁয়ে) ও প্রিন্ট (ডানে) */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              flexWrap: "wrap",
-              padding: "12px 16px",
-              background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`,
-              color: "#fff",
-            }}
-          >
-            <span style={{ fontWeight: 800, fontSize: 14 }}>
-              {T("কোর্স:", "Course:")}
-            </span>
-            <select
-              value={selCourse || ""}
-              onChange={(e) => setSelCourse(e.target.value)}
+          {/* উপরের সবুজ বার — কোর্স বাছাই ও সংরক্ষণ।
+              কোর্স একটাই হলে বাছাইয়ের মেনুর কোনো কাজ নেই, তাই দেখাই না
+              (শিক্ষার্থীর পোর্টালে সাধারণত একটাই কোর্স থাকে)। তবে একাধিক
+              কোর্স থাকলে মেনুটা থাকে — নইলে তিনি বাকিগুলো দেখতেই পেতেন না।
+              পুরো বারটাই খালি হয়ে গেলে (এক কোর্সের শিক্ষার্থী) বারটাও দেখাই না। */}
+          {(showPicker || canEdit) && (
+            <div
               style={{
-                ...S.input,
-                background: "#123f28",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+                padding: "12px 16px",
+                background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`,
                 color: "#fff",
-                border: "1px solid rgba(255,255,255,.35)",
-                minWidth: 200,
-                flex: "0 1 auto",
               }}
             >
-              {courseList.map((c) => (
-                <option
-                  key={c.id}
-                  value={c.id}
-                  style={{ background: "#123f28" }}
+              {showPicker && (
+                <>
+                  <span style={{ fontWeight: 800, fontSize: 14 }}>
+                    {T("কোর্স:", "Course:")}
+                  </span>
+                  <select
+                    value={selCourse || ""}
+                    onChange={(e) => setSelCourse(e.target.value)}
+                    style={{
+                      ...S.input,
+                      background: "#123f28",
+                      color: "#fff",
+                      border: "1px solid rgba(255,255,255,.35)",
+                      minWidth: 200,
+                      flex: "0 1 auto",
+                    }}
+                  >
+                    {courseList.map((c) => (
+                      <option
+                        key={c.id}
+                        value={c.id}
+                        style={{ background: "#123f28" }}
+                      >
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+              <div style={{ flex: 1 }} />
+              {canEdit && dirty && (
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.goldL }}>
+                  ● অসংরক্ষিত পরিবর্তন
+                </span>
+              )}
+              {canEdit && (
+                <Btn
+                  sm
+                  kind="gold"
+                  onClick={saving ? undefined : save}
+                  style={{ opacity: saving ? 0.7 : 1 }}
                 >
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <div style={{ flex: 1 }} />
-            {canEdit && dirty && (
-              <span style={{ fontSize: 12, fontWeight: 700, color: C.goldL }}>
-                ● অসংরক্ষিত পরিবর্তন
-              </span>
-            )}
-            {canEdit && (
-              <Btn
-                sm
-                kind="gold"
-                onClick={saving ? undefined : save}
-                style={{ opacity: saving ? 0.7 : 1 }}
-              >
-                {saving ? "সংরক্ষণ হচ্ছে…" : "💾 সংরক্ষণ করুন"}
-              </Btn>
-            )}
-            <Btn sm kind="soft" onClick={doPrint}>
-              {T("🖨️ প্রিন্ট / PDF", "🖨️ Print / PDF")}
-            </Btn>
-          </div>
+                  {saving ? "সংরক্ষণ হচ্ছে…" : "💾 সংরক্ষণ করুন"}
+                </Btn>
+              )}
+            </div>
+          )}
 
           {/* ছাপা কাগজের হুবহু লেআউট — হেডার + ব্যানার + মেটা + টেবিল */}
           <div
@@ -13780,8 +13789,17 @@ function SyllabusView({ db, setDb, courses, user }) {
                 color: "#fff",
                 padding: "16px 22px",
                 textAlign: "center",
+                position: "relative",
               }}
             >
+              {/* প্রিন্ট বাটন — এই ডিভের ডান-উপরের কোণে। ছাপার সময় এটা
+                  কাগজে যায় না, কারণ ছাপা হয় আলাদা করে তৈরি করা পরিচ্ছন্ন
+                  পাতা (sheetHTML), এই পর্দার অংশটা নয়। */}
+              <div style={{ position: "absolute", top: 10, right: 12 }}>
+                <Btn sm kind="soft" onClick={doPrint}>
+                  {T("🖨️ প্রিন্ট / PDF", "🖨️ Print / PDF")}
+                </Btn>
+              </div>
               <div
                 style={{
                   color: C.goldL,
