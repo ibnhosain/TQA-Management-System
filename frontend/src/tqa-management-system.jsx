@@ -16172,8 +16172,26 @@ export default function App() {
       )}
       {livePopup &&
         (() => {
-          const c = courseById(apiCourses, livePopup.courseId);
-          return c.id ? (
+          // ⚠️ আগে কোর্স তালিকায় কোর্সটা না পাওয়া গেলে চুপচাপ null ফেরত যেত —
+          // অর্থাৎ ক্লাসের সময় হয়ে গেলেও শিক্ষার্থী কোনো পপআপই পেতেন না, আর
+          // কেন পেলেন না তা বোঝারও উপায় ছিল না। কিন্তু শিক্ষার্থী কোর্স তালিকা
+          // পান কেবল তিনি Course.students-এ থাকলে (views.py → CourseViewSet),
+          // আর কোর্সটি is_active থাকলে — ক্লাসে যুক্ত থাকাই যথেষ্ট নয়। ফলে
+          // কোর্স নিষ্ক্রিয় হলে বা কোর্সের ছাত্র-তালিকা থেকে নাম বাদ পড়লে
+          // (ক্লাসে ঠিকই থাকা সত্ত্বেও) পপআপটা হারিয়ে যেত।
+          // এখন না পেলে ক্লাসের নিজের তথ্য দিয়েই পপআপ দেখাই — নাম, উস্তাদ সবই
+          // ক্লাসের পেলোডেই আছে (course_name / teacher_name)।
+          const found = courseById(apiCourses, livePopup.courseId);
+          const c = found.id
+            ? found
+            : {
+                id: livePopup.courseId,
+                name: livePopup.course_name || "",
+                teacher_name: livePopup.teacher_name || "",
+                teacherId: livePopup.teacherId,
+                lectures: [],
+              };
+          return (
             <LiveClassPopup
               k={livePopup}
               course={c}
@@ -16181,7 +16199,7 @@ export default function App() {
               onJoin={joinFromPopup}
               onLater={() => setLivePopup(null)}
             />
-          ) : null;
+          );
         })()}
 
       <div style={{ display: "flex", maxWidth: 1280, margin: "0 auto" }}>
