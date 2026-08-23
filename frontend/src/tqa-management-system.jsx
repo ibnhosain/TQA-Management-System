@@ -4015,6 +4015,149 @@ function PostponedClassesView({ user }) {
 }
 
 /* ═══════════════ লেকচার প্ল্যান — টিক/ক্রস (ফিচার ৩) ═══════════════ */
+/* ═══════════════ লেখা সাজানোর ছোট এডিটর ═══════════════
+   পরিচালক টগলের ভেতরে মোটা/বাঁকা/রঙ/আকার/তালিকা দিয়ে লিখতে পারেন।
+   লেখা HTML হিসেবে সংরক্ষিত হয়; সার্ভারে ঢোকার মুখে ছেঁকে নেওয়া হয়
+   (safe_html.py) — তাই স্ক্রিপ্ট বা বিপজ্জনক কিছু কখনো সংরক্ষিত হয় না।
+
+   ⚠️ ভেতরের লেখা কেবল প্রথমবারই বসানো হয়। প্রতিবার বসালে টাইপ করার সময়
+   কার্সর লাফিয়ে শুরুতে চলে যেত — contentEditable-এর পরিচিত সমস্যা। */
+const RT_SIZES = [
+  { v: "2", label: "ছোট" },
+  { v: "3", label: "সাধারণ" },
+  { v: "4", label: "বড়" },
+  { v: "5", label: "আরও বড়" },
+  { v: "6", label: "শিরোনাম" },
+];
+const RT_COLORS = [
+  "#1a1f2e", "#1a5c3a", "#c9962a", "#d92626", "#1d4ed8", "#7c3aed", "#6b7280",
+];
+
+function RichText({ value, onChange, placeholder }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (ref.current) ref.current.innerHTML = value || "";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const push = () => onChange(ref.current ? ref.current.innerHTML : "");
+  const cmd = (c, v) => {
+    ref.current?.focus();
+    try {
+      document.execCommand(c, false, v);
+    } catch (e) {
+      /* কোনো ব্রাউজারে না চললে চুপচাপ — লেখা তবু ঠিকই থাকে */
+    }
+    push();
+  };
+  // নির্বাচিত অংশকে আরবি বানাই — ডান-থেকে-বাঁ ও আমিরি ফন্ট
+  const arabic = () => {
+    ref.current?.focus();
+    const sel = window.getSelection();
+    const txt = sel && !sel.isCollapsed ? String(sel) : "";
+    if (!txt) return notice("আগে যে লেখাটুকু আরবি করতে চান তা নির্বাচন করুন।");
+    cmd(
+      "insertHTML",
+      `<span dir="rtl" style="font-family: Amiri, serif; font-size: 1.35em; line-height: 2">${txt.replace(
+        /[&<>]/g,
+        (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c],
+      )}</span>`,
+    );
+  };
+  const tool = {
+    border: `1px solid ${C.line}`,
+    background: "#fff",
+    borderRadius: 7,
+    cursor: "pointer",
+    fontSize: 12.5,
+    lineHeight: 1,
+    padding: "6px 9px",
+    color: C.text,
+  };
+  return (
+    <div style={{ border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden" }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 4,
+          padding: 6,
+          background: C.cream,
+          borderBottom: `1px solid ${C.line}`,
+        }}
+      >
+        <button type="button" title="মোটা" style={{ ...tool, fontWeight: 900 }} onClick={() => cmd("bold")}>B</button>
+        <button type="button" title="বাঁকা" style={{ ...tool, fontStyle: "italic" }} onClick={() => cmd("italic")}>I</button>
+        <button type="button" title="আন্ডারলাইন" style={{ ...tool, textDecoration: "underline" }} onClick={() => cmd("underline")}>U</button>
+        <select
+          title="অক্ষরের আকার"
+          defaultValue=""
+          onChange={(e) => {
+            if (e.target.value) cmd("fontSize", e.target.value);
+            e.target.value = "";
+          }}
+          style={{ ...tool, padding: "5px 6px" }}
+        >
+          <option value="">আকার</option>
+          {RT_SIZES.map((z) => (
+            <option key={z.v} value={z.v}>{z.label}</option>
+          ))}
+        </select>
+        <span style={{ display: "flex", gap: 3, alignItems: "center" }}>
+          {RT_COLORS.map((col) => (
+            <button
+              key={col}
+              type="button"
+              title="এই রঙ দিন"
+              onClick={() => cmd("foreColor", col)}
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 5,
+                border: `1px solid ${C.line}`,
+                background: col,
+                cursor: "pointer",
+                padding: 0,
+              }}
+            />
+          ))}
+        </span>
+        <button type="button" title="বুলেট তালিকা" style={tool} onClick={() => cmd("insertUnorderedList")}>• তালিকা</button>
+        <button type="button" title="নম্বর তালিকা" style={tool} onClick={() => cmd("insertOrderedList")}>১. তালিকা</button>
+        <button type="button" title="বাঁয়ে" style={tool} onClick={() => cmd("justifyLeft")}>⇤</button>
+        <button type="button" title="মাঝবরাবর" style={tool} onClick={() => cmd("justifyCenter")}>⇔</button>
+        <button type="button" title="ডানে" style={tool} onClick={() => cmd("justifyRight")}>⇥</button>
+        <button
+          type="button"
+          title="নির্বাচিত লেখাকে আরবি করুন (ডান থেকে বাঁ)"
+          style={{ ...tool, fontFamily: "Amiri, serif", fontSize: 15 }}
+          onClick={arabic}
+        >
+          ع
+        </button>
+        <button type="button" title="সাজসজ্জা মুছুন" style={tool} onClick={() => cmd("removeFormat")}>✕ সাজ</button>
+      </div>
+      <div
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={push}
+        onBlur={push}
+        data-ph={placeholder || ""}
+        style={{
+          minHeight: 110,
+          maxHeight: 320,
+          overflowY: "auto",
+          padding: "10px 12px",
+          fontSize: 13.5,
+          lineHeight: 1.9,
+          outline: "none",
+          background: "#fff",
+        }}
+      />
+    </div>
+  );
+}
+
 function LecturePlan({ db, courses, user, refresh }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [sel, setSel] = useState(courses[0]?.id);
@@ -4043,7 +4186,15 @@ function LecturePlan({ db, courses, user, refresh }) {
     loadData();
   }, [sel]);
 
-  const blankBlock = () => ({ text: "", content: "", open: true });
+  // প্রতিটি টগলের একটা স্থায়ী পরিচয় — এডিটরের key হিসেবে লাগে। ক্রম (index)
+  // দিয়ে key দিলে উপরে-নিচে সরানোর পর এডিটরে আগের লেখাই রয়ে যেত।
+  const uidRef = useRef(0);
+  const blankBlock = () => ({
+    _uid: `n${++uidRef.current}`,
+    text: "",
+    content: "",
+    open: true,
+  });
   const openNew = () =>
     setForm({
       mode: "new",
@@ -4060,6 +4211,7 @@ function LecturePlan({ db, courses, user, refresh }) {
       // আইডি সাথে রাখি — নইলে সংরক্ষণের সময় পুরনো টপিক মুছে নতুন তৈরি হতো
       // আর তার কভারের টিক (✔/✘) হারিয়ে যেত
       blocks: (lec.topics || []).map((t) => ({
+        _uid: `t${t.id}`,
         id: t.id,
         text: t.text || "",
         content: t.content || "",
@@ -4568,13 +4720,20 @@ function LecturePlan({ db, courses, user, refresh }) {
                         padding: "10px 12px",
                         fontSize: 13.5,
                         lineHeight: 1.9,
-                        whiteSpace: "pre-wrap",
                         wordWrap: "break-word",
                         background: "#fff",
                       }}
                     >
                       {tp.content ? (
-                        tp.content
+                        /* সার্ভারে ঢোকার মুখেই ছেঁকে নেওয়া হয়েছে
+                           (safe_html.clean_html) — স্ক্রিপ্ট বা বিপজ্জনক কিছু
+                           কখনো সংরক্ষিতই হয় না, তাই এখানে দেখানো নিরাপদ।
+                           পুরনো সাধারণ লেখায় ট্যাগ থাকে না — তখন লাইন-ব্রেক
+                           যেন হারিয়ে না যায়, সেজন্য নিচের whiteSpace। */
+                        <div
+                          style={{ whiteSpace: /<[a-z]/i.test(tp.content) ? "normal" : "pre-wrap" }}
+                          dangerouslySetInnerHTML={{ __html: tp.content }}
+                        />
                       ) : (
                         <span style={{ color: C.muted, fontSize: 12.5 }}>
                           {T(
@@ -4645,7 +4804,7 @@ function LecturePlan({ db, courses, user, refresh }) {
             <div style={{ display: "grid", gap: 10 }}>
               {(form.blocks || []).map((b, i) => (
                 <div
-                  key={i}
+                  key={b._uid || i}
                   style={{
                     border: `1.5px solid ${C.line}`,
                     borderRadius: 12,
@@ -4742,18 +4901,11 @@ function LecturePlan({ db, courses, user, refresh }) {
                   </div>
                   {b.open && (
                     <div style={{ padding: 10 }}>
-                      <textarea
+                      <RichText
+                        key={b._uid}
                         value={b.content}
-                        onChange={(e) => setBlock(i, { content: e.target.value })}
-                        rows={5}
-                        placeholder="এখানে লিখুন কী পড়াবেন — আরবি, বাংলা বা ইংরেজি। উস্তাদ ও শিক্ষার্থী টগল খুলে এটাই পড়বেন।"
-                        style={{
-                          ...S.input,
-                          width: "100%",
-                          resize: "vertical",
-                          lineHeight: 1.8,
-                          fontSize: 13.5,
-                        }}
+                        onChange={(html) => setBlock(i, { content: html })}
+                        placeholder="এখানে লিখুন কী পড়াবেন — আরবি, বাংলা বা ইংরেজি।"
                       />
                     </div>
                   )}

@@ -1,5 +1,6 @@
 """TQA-MS — DRF Serializers (অ্যাপ: core)"""
 from rest_framework import serializers
+from .safe_html import clean_html
 from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
                      Routine, ClassSession, Attendance, Question, Assignment, Exam,
                      Submission, ExamResult, FeePayment, DueMonth, TeacherPayment,
@@ -156,10 +157,13 @@ class LectureSerializer(serializers.ModelSerializer):
             text = str(b.get("text") or "").strip()[:300]
             if not text:
                 continue  # শিরোনামহীন টগল রাখার মানে নেই
+            # ⚠️ ভেতরের লেখা HTML হিসেবে সংরক্ষিত হয় ও পর্দায় HTML হিসেবেই
+            # দেখানো হয় — তাই ঢোকার মুখেই ছেঁকে নিই। অনুমোদিত-তালিকায় নেই
+            # এমন সব ট্যাগ/অ্যাট্রিবিউট বাদ যায় (safe_html.clean_html)।
             out.append({
                 "id": b.get("id"),
                 "text": text,
-                "content": str(b.get("content") or "")[:100000],
+                "content": clean_html(str(b.get("content") or "")[:100000]),
             })
         return out
 
