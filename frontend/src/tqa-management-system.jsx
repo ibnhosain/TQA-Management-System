@@ -155,7 +155,7 @@ const SYL_CATS_PRINT = [
    syllabusHTML-এর হুবহু একই (একাডেমি হেডার, সোনালি ব্যানার, মেটা, টেবিল),
    শুধু ঘরগুলো এখন মুক্ত লেখা। পুরনো syllabusHTML মোছা হয়নি — অন্য কোথাও
    ব্যবহার হলে সেটা আগের মতোই কাজ করবে। */
-const sheetHTML = (courseName, booksLine, headers, rows) => {
+const sheetHTML = (courseName, books, headers, rows, en) => {
   const esc = (x) =>
     String(x == null ? "" : x).replace(
       /[&<>]/g,
@@ -182,9 +182,13 @@ body{font-family:'Hind Siliguri',sans-serif;margin:0;padding:26px;background:#f4
 .v{max-width:1000px;margin:0 auto;background:#fff;border:2px solid #1a5c3a;border-radius:14px;overflow:hidden}
 .h{background:linear-gradient(135deg,#123f28,#1a5c3a);color:#fff;padding:18px 24px;text-align:center}
 .h .ar{color:#f0c355;font-size:13px;letter-spacing:3px}.h h1{margin:4px 0 2px;font-size:21px}.h .s{font-size:11.5px;color:#cfe6d8}
-.k{background:#c9962a;color:#fff;text-align:center;font-weight:800;padding:8px;font-size:16px;letter-spacing:1px}
-.meta{display:flex;gap:18px;flex-wrap:wrap;padding:12px 24px;border-bottom:1.5px solid #e5e9e5;font-size:13.5px}
-.meta b{color:#1a5c3a}
+.k{background:#c9962a;color:#fff;text-align:center;font-weight:800;padding:12px 8px;font-size:26px;line-height:1.25;letter-spacing:1px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.cn{text-align:center;font-size:20px;font-weight:800;color:#1a5c3a;padding:14px 24px 4px;line-height:1.35}
+.bw{padding:6px 24px 12px;border-bottom:1.5px solid #e5e9e5}
+.bt{text-align:center;font-weight:800;font-size:13px;color:#1a5c3a;margin-bottom:6px}
+.bl{margin:0;padding:0;list-style:none;columns:240px;column-gap:20px;font-size:12.5px;line-height:1.5}
+.bl li{break-inside:avoid;margin-bottom:2px}
+.bl .n{color:#c9962a;font-weight:800}
 table{width:100%;border-collapse:collapse;table-layout:fixed}
 th{background:#123f28;color:#fff;font-weight:800;font-size:13px;text-align:center;padding:9px 6px;border:1px solid #123f28;border-bottom:2px solid #c9962a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 td{border:1px solid #1a5c3a;vertical-align:top;padding:9px 10px;font-size:12.5px;line-height:1.6;word-wrap:break-word}
@@ -195,9 +199,15 @@ td.em{text-align:center;color:#9ca3af}
 <div class="h"><div class="ar">تربية القرآن</div><h1>তারবিয়াতুল কুরআন একাডেমী</h1>
 <div class="s">tarbiyatulquran.org · WhatsApp: +880 140 249 9027</div></div>
 <div class="k">কোর্স সিলেবাস</div>
-<div class="meta"><div><b>কোর্স:</b> ${esc(courseName)}</div>${
-    booksLine ? `<div><b>বই:</b> ${esc(booksLine)}</div>` : ""
-  }<div><b>তারিখ:</b> ${esc(fmtDate(todayISO()))}</div></div>
+<div class="cn">${en ? "Course:" : "কোর্স:"} ${esc(courseName)}</div>${
+    (books || []).length
+      ? `<div class="bw"><div class="bt">${
+          en ? "Books selected for this course" : "কোর্সের জন্য নির্বাচিত বইসমূহ"
+        }</div><ol class="bl">${books
+          .map((b, i) => `<li><span class="n">${i + 1}.</span> ${esc(b)}</li>`)
+          .join("")}</ol></div>`
+      : ""
+  }
 <table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>
 <div class="f">তারবিয়াতুল কুরআন একাডেমী · tarbiyatulquran.org</div>
 </div></body></html>`;
@@ -13652,9 +13662,10 @@ function SyllabusView({ db, setDb, courses, user }) {
     openPrintDoc(
       sheetHTML(
         activeCourse.name,
-        courseBooksOf(activeCourse.id).join(", "),
+        courseBooksOf(activeCourse.id),
         headers,
         rows,
+        user.role === "student",
       ),
       `TQA-syllabus-${activeCourse.name || "course"}.html`,
     );
@@ -13797,36 +13808,80 @@ function SyllabusView({ db, setDb, courses, user }) {
                 color: "#fff",
                 textAlign: "center",
                 fontWeight: 800,
-                padding: 8,
-                fontSize: 16,
+                padding: "12px 8px",
+                fontSize: 26,
+                lineHeight: 1.25,
                 letterSpacing: 1,
               }}
             >
               কোর্স সিলেবাস
             </div>
+            {/* কোর্সের নাম — বড়, মোটা, মাঝবরাবর */}
             <div
               style={{
-                display: "flex",
-                gap: 18,
-                flexWrap: "wrap",
-                padding: "12px 22px",
-                borderBottom: `1.5px solid ${C.line}`,
-                fontSize: 13.5,
+                textAlign: "center",
+                fontSize: 20,
+                fontWeight: 800,
+                color: C.emerald,
+                padding: "14px 22px 4px",
+                lineHeight: 1.35,
               }}
             >
-              <div>
-                <b style={{ color: C.emerald }}>কোর্স:</b> {activeCourse.name}
-              </div>
-              {courseBooksOf(activeCourse.id).length > 0 && (
-                <div>
-                  <b style={{ color: C.emerald }}>বই:</b>{" "}
-                  {courseBooksOf(activeCourse.id).join(", ")}
-                </div>
-              )}
-              <div>
-                <b style={{ color: C.emerald }}>তারিখ:</b> {fmtDate(todayISO())}
-              </div>
+              {T("কোর্স:", "Course:")} {activeCourse.name}
             </div>
+            {/* নির্বাচিত বইয়ের তালিকা — একাধিক কলামে, তাই অনেক বই থাকলেও
+                জায়গা কম নেয়। সরু পর্দায় নিজে থেকেই এক কলামে নেমে আসে। */}
+            {courseBooksOf(activeCourse.id).length > 0 && (
+              <div
+                style={{
+                  padding: "6px 22px 12px",
+                  borderBottom: `1.5px solid ${C.line}`,
+                }}
+              >
+                <div
+                  style={{
+                    textAlign: "center",
+                    fontWeight: 800,
+                    fontSize: 13,
+                    color: C.emerald,
+                    marginBottom: 6,
+                  }}
+                >
+                  {T(
+                    "কোর্সের জন্য নির্বাচিত বইসমূহ",
+                    "Books selected for this course",
+                  )}
+                </div>
+                <ol
+                  style={{
+                    margin: 0,
+                    padding: 0,
+                    listStyle: "none",
+                    columnWidth: 240,
+                    columnGap: 20,
+                    fontSize: 12.5,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {courseBooksOf(activeCourse.id).map((b, i) => (
+                    <li
+                      key={i}
+                      style={{
+                        breakInside: "avoid",
+                        display: "flex",
+                        gap: 6,
+                        marginBottom: 2,
+                      }}
+                    >
+                      <span style={{ color: C.gold, fontWeight: 800 }}>
+                        {i + 1}.
+                      </span>
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
 
             {sheetLoading ? (
               <Loader text={T("লোড হচ্ছে", "Loading")} />
