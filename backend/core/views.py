@@ -235,9 +235,19 @@ class CourseViewSet(viewsets.ModelViewSet):
         শিক্ষার্থী, কেবল নাম ও আইডি।
         """
         course = self.get_object()
+        qs = course.students.all()
+        # উস্তাদ কেবল নিজের শিক্ষার্থীদেরই দেখেন — নইলে ভুল করে অন্য উস্তাদের
+        # শিক্ষার্থী বেছে তার হিসাবে টিক দিয়ে ফেলা যেত।
+        # ⚠️ কারও নিজস্ব উস্তাদ বসানো না থাকলে (পুরনো তথ্য) তিনি কোর্সের
+        # উস্তাদের অধীনেই ধরা হন, নইলে সেই শিক্ষার্থীরা কারও তালিকাতেই আসতেন না।
+        if request.user.role == "teacher":
+            own = Q(teacher=request.user)
+            if course.teacher_id == request.user.id:
+                own = own | Q(teacher__isnull=True)
+            qs = qs.filter(own)
         rows = [
             {"id": u.id, "name": u.name_bn, "student_id": u.student_id}
-            for u in course.students.all().order_by("name_bn")
+            for u in qs.order_by("name_bn")
         ]
         return Response(rows)
 
@@ -389,7 +399,9 @@ class LectureViewSet(viewsets.ModelViewSet):
         u = request.user
         is_admin = u.role in ("director", "admin") or u.can_fix_cross
         is_course_teacher = topic.lecture.course.teacher_id == u.id
-        if not (is_admin or is_course_teacher):
+        # কোর্সের উস্তাদ না হয়েও এই কোর্সে নিজের শিক্ষার্থী থাকলে টিক দিতে পারেন
+        has_own_student = topic.lecture.course.students.filter(teacher=u).exists()
+        if not (is_admin or is_course_teacher or has_own_student):
             return Response({"detail": "অনুমতি নেই"}, status=403)
 
         # ── কোন শিক্ষার্থীর জন্য? ──
@@ -405,6 +417,14 @@ class LectureViewSet(viewsets.ModelViewSet):
             if not topic.lecture.course.students.filter(pk=sid).exists():
                 return Response(
                     {"detail": "এই শিক্ষার্থী এই কোর্সে নেই"}, status=400)
+            # ⚠️ উস্তাদ কেবল নিজের শিক্ষার্থীর জন্যই টিক দিতে পারবেন। এক
+            # কোর্সে একাধিক উস্তাদ থাকায় এটা না থাকলে একজন উস্তাদ অন্যজনের
+            # শিক্ষার্থীর হিসাবে টিক দিয়ে ফেলতে পারতেন।
+            if not is_admin and not User.objects.filter(
+                pk=sid, teacher_id=u.id
+            ).exists():
+                return Response(
+                    {"detail": "এই শিক্ষার্থী আপনার কাছে পড়ে না"}, status=403)
             row, _ = TopicCoverage.objects.get_or_create(topic=topic, student_id=sid)
             if row.covered == "missed" and not is_admin:
                 return Response(
@@ -446,7 +466,8 @@ class RoutineViewSet(viewsets.ModelViewSet):
             .prefetch_related("students", "student_schedules")
         )
         if u.role == "teacher":
-            return qs.filter(teacher=u)
+            # রুটিনের নির্ধারিত উস্তাদ, অথবা রুটিনে তাঁর নিজের শিক্ষার্থী আছে
+            return qs.filter(Q(teacher=u) | Q(students__teacher=u)).distinct()
         if u.role == "student":
             return qs.filter(students=u)
         return qs
@@ -561,6 +582,31 @@ def _att_defaults(s):
     }
 
 
+# ─────────── উস্তাদের এখতিয়ার — কার উপর তাঁর নিয়ন্ত্রণ ───────────
+# নিয়মটা এক জায়গাতেই লেখা, সব ভিউ এখান থেকেই ব্যবহার করে। ছড়িয়ে থাকলে
+# এক জায়গায় বদলে অন্য জায়গায় ভুলে যাওয়ার ঝুঁকি থাকত।
+#
+# উস্তাদ নিয়ন্ত্রণ করেন —
+#   (১) যে শিক্ষার্থীরা তাঁর কাছে পড়ে (User.teacher = তিনি), এবং
+#   (২) যে কোর্স/ক্লাসের তিনি নির্ধারিত উস্তাদ (পুরনো ব্যবস্থা, যাতে কারও
+#       নিজস্ব উস্তাদ বসানো না থাকলেও কিছু হারিয়ে না যায়)।
+def teacher_owns_student(user, student):
+    """এই শিক্ষার্থী কি এই উস্তাদের?"""
+    if not student:
+        return False
+    return getattr(student, "teacher_id", None) == user.id
+
+
+def _q_teacher_course(u):
+    """উস্তাদের কোর্স — নিজে কোর্সের উস্তাদ, অথবা কোর্সে তাঁর শিক্ষার্থী আছে।"""
+    return Q(teacher=u) | Q(students__teacher=u)
+
+
+def _q_course_teacher_or_own(u):
+    """একই নিয়ম, কিন্তু course-এর মধ্য দিয়ে (assignment/exam ইত্যাদির জন্য)।"""
+    return Q(course__teacher=u) | Q(course__students__teacher=u)
+
+
 def _assert_session_participant(s, user):
     """join/leave/checkpoint শুধু ওই নির্দিষ্ট ক্লাসের আসল উস্তাদ বা তালিকাভুক্ত
     স্টুডেন্টই করতে পারবেন। এডমিন/পরিচালকের get_queryset() কোনো ফিল্টার ছাড়াই
@@ -575,7 +621,9 @@ def _assert_session_participant(s, user):
         # জয়েন করতে গেলে আটকে যেতেন (স্টুডেন্ট জয়েন করে বসে থাকতেন, উস্তাদ
         # ঢুকতেই পারতেন না)
         allowed = {s.teacher_id, s.course.teacher_id if s.course_id else None}
-        if user.id not in allowed:
+        # নিজের কোনো শিক্ষার্থী এই ক্লাসে থাকলেও তিনি এই ক্লাসের উস্তাদ —
+        # এক কোর্সে একাধিক উস্তাদ থাকলে এটাই আসল সূত্র
+        if user.id not in allowed and not s.students.filter(teacher=user).exists():
             raise PermissionDenied("এই ক্লাসের উস্তাদ আপনি নন")
     elif user.role == "student":
         if not s.students.filter(pk=user.id).exists():
@@ -621,7 +669,11 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
             "course", "teacher", "course__teacher"
         ).prefetch_related("students", "attendance", "attendance__user")
         if u.role == "teacher":
-            return qs.filter(Q(teacher=u) | Q(course__teacher=u)).distinct()
+            # সেশনের উস্তাদ, কোর্সের উস্তাদ, অথবা এই ক্লাসে তাঁর নিজের কোনো
+            # শিক্ষার্থী আছে — যেকোনোটিতেই ক্লাসটি দেখতে পান
+            return qs.filter(
+                Q(teacher=u) | Q(course__teacher=u) | Q(students__teacher=u)
+            ).distinct()
         if u.role == "student":
             return qs.filter(students=u)
         return qs
@@ -758,7 +810,11 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         s = self.get_object()
         u = request.user
         allowed_teachers = {s.teacher_id, s.course.teacher_id if s.course_id else None}
-        if u.role not in ("director", "admin") and u.id not in allowed_teachers:
+        if (
+            u.role not in ("director", "admin")
+            and u.id not in allowed_teachers
+            and not s.students.filter(teacher=u).exists()
+        ):
             raise PermissionDenied("কেবল এই ক্লাসের উস্তাদ রিজয়েন চালু করতে পারবেন")
         s.join_mode_override = "rejoin"
         s.save(update_fields=["join_mode_override"])
@@ -779,7 +835,8 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         if u.role == "student":
             qs = qs.filter(user=u)
         elif u.role == "teacher":
-            qs = qs.filter(teacher_id=u.id)
+            # নিজে যে ক্লাস নিয়েছেন, অথবা নিজের শিক্ষার্থীর হাজিরা
+            qs = qs.filter(Q(teacher_id=u.id) | Q(user__teacher=u)).distinct()
         elif u.role not in ("director", "admin"):
             return qs.none()
         month = self.request.query_params.get("month")  # "2026-07" ফরম্যাট প্রত্যাশিত
@@ -811,7 +868,8 @@ class AssignmentViewSet(viewsets.ModelViewSet):
         if u.role == "student":
             return qs.filter(course__students=u)
         if u.role == "teacher":
-            return qs.filter(course__teacher=u)
+            # কোর্সের উস্তাদ, অথবা কোর্সে তাঁর নিজের শিক্ষার্থী আছে
+            return qs.filter(_q_course_teacher_or_own(u)).distinct()
         return qs
 
     def perform_create(self, serializer):
@@ -851,7 +909,8 @@ class ExamViewSet(viewsets.ModelViewSet):
         if u.role == "student":
             return qs.filter(course__students=u)
         if u.role == "teacher":
-            return qs.filter(course__teacher=u)
+            # কোর্সের উস্তাদ, অথবা কোর্সে তাঁর নিজের শিক্ষার্থী আছে
+            return qs.filter(_q_course_teacher_or_own(u)).distinct()
         return qs
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
