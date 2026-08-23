@@ -1,5 +1,6 @@
 """TQA-MS — DRF Serializers (অ্যাপ: core)"""
 from rest_framework import serializers
+from django.utils import timezone
 from .safe_html import clean_html
 from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
                      Routine, ClassSession, Attendance, Question, Assignment, Exam,
@@ -128,10 +129,22 @@ class SyllabusItemSerializer(serializers.ModelSerializer):
 
 class LectureTopicSerializer(serializers.ModelSerializer):
     covered = serializers.SerializerMethodField()
+    marked_at = serializers.SerializerMethodField()
 
     class Meta:
         model = LectureTopic
-        fields = ["id", "syllabus_item", "text", "content", "order", "covered"]
+        fields = ["id", "syllabus_item", "text", "content", "order",
+                  "covered", "marked_at"]
+
+    def _row(self, obj):
+        """যে শিক্ষার্থীর জন্য দেখা হচ্ছে তার নিজের রেকর্ড (থাকলে)।"""
+        sid = self.context.get("student_id")
+        if sid:
+            # prefetch করা coverages থেকেই পড়ি — প্রতি টপিকে আলাদা কোয়েরি হয় না
+            for c in obj.coverages.all():
+                if c.student_id == sid:
+                    return c
+        return None
 
     def get_covered(self, obj):
         """যে শিক্ষার্থীর জন্য দেখা হচ্ছে তার নিজের টিক।
@@ -140,13 +153,17 @@ class LectureTopicSerializer(serializers.ModelSerializer):
         সবার-জন্য-একটাই মানটাই ফেরত যায়। কারও নিজস্ব রেকর্ড না থাকলেও
         তাই — এতে আগের হিসাব হারায় না।
         """
-        sid = self.context.get("student_id")
-        if sid:
-            # prefetch করা coverages থেকেই পড়ি — প্রতি টপিকে আলাদা কোয়েরি হয় না
-            for c in obj.coverages.all():
-                if c.student_id == sid:
-                    return c.covered
-        return obj.covered
+        row = self._row(obj)
+        return row.covered if row else obj.covered
+
+    def get_marked_at(self, obj):
+        """কখন টিকটা পড়েছে — "আজকের / বিগত" ভাগ করতে লাগে।
+
+        Asia/Dhaka অনুযায়ী তারিখ (YYYY-MM-DD)। কখনো টিক না পড়ে থাকলে null।
+        """
+        row = self._row(obj)
+        at = row.marked_at if row else obj.marked_at
+        return timezone.localtime(at).date().isoformat() if at else None
 
 
 class LectureSerializer(serializers.ModelSerializer):
@@ -162,7 +179,16 @@ class LectureSerializer(serializers.ModelSerializer):
         model = Lecture
         fields = ["id", "course", "no", "title", "date", "topics",
                   "syllabus_item_ids", "topic_blocks"]
-        extra_kwargs = {"no": {"required": False}}
+        # শিরোনামের ঘরটা ফর্ম থেকে তুলে দেওয়া হয়েছে — না দিলে "দারস ৫"
+        # ধাঁচে নিজে থেকেই বসে যায় (নিচে _fill_title)
+        extra_kwargs = {"no": {"required": False},
+                        "title": {"required": False, "allow_blank": True}}
+
+    @staticmethod
+    def _fill_title(validated):
+        if not (validated.get("title") or "").strip():
+            validated["title"] = f"দারস {validated.get('no') or ''}".strip()
+        return validated
 
     def validate_topic_blocks(self, v):
         if len(v) > 100:
@@ -191,7 +217,7 @@ class LectureSerializer(serializers.ModelSerializer):
             if not validated.get("no"):
                 validated["no"] = Lecture.objects.filter(
                     course=validated["course"]).count() + 1
-            lec = Lecture.objects.create(**validated)
+            lec = Lecture.objects.create(**self._fill_title(validated))
             for i, b in enumerate(blocks):
                 LectureTopic.objects.create(
                     lecture=lec, text=b["text"], content=b["content"], order=i)

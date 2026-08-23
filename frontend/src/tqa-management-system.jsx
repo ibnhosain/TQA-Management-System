@@ -51,6 +51,14 @@ const fmtDate = (iso) => {
     return `${d.getDate()} ${MONTHS_EN_FULL[d.getMonth()]} ${d.getFullYear()}`;
   return `${bn(d.getDate())} ${MONTHS_BN_FULL[d.getMonth()]} ${bn(d.getFullYear())}`;
 };
+// দারস/টপিকের তারিখ — ছোট করে ২৩/০৮/২০২৬ ধাঁচে (শিক্ষার্থীর জন্য ইংরেজি অঙ্কে)
+const fmtDMY = (iso) => {
+  if (!iso) return "";
+  const [y, m, d] = String(iso).split("-");
+  if (!y || !m || !d) return String(iso);
+  const t = `${d}/${m}/${y}`;
+  return CURRENT_LANG === "en" ? t : bn(t);
+};
 // রিসিট/ভাউচার সবসময় ইংরেজিতে থাকে (যে বানাচ্ছেন তার ভাষা নির্বিশেষে) — তাই
 // viewer-নির্ভর fmtDate() ব্যবহার না করে আলাদা এই হেল্পার
 const fmtDateEn = (iso) => {
@@ -1225,6 +1233,10 @@ const adaptLecture = (l) => ({
     syllabusId: t.syllabus_item || t.syllabusId,
     text: t.text,
     content: t.content || "", // টগলের ভেতরের লেখা — পুরনো টপিকে খালি
+    order: t.order || 0,
+    // কোন তারিখে টিক পড়েছে (YYYY-MM-DD) — "আজকের/বিগত" ভাগ করতে ও
+    // "লেকচার: ২৩/০৮/২০২৬" দেখাতে লাগে। কখনো টিক না পড়লে null।
+    markedAt: t.marked_at || null,
     covered: coveredToBool(t.covered),
   })),
 });
@@ -4339,7 +4351,6 @@ function LecturePlan({ db, courses, user, refresh }) {
       return { ...f, blocks: b };
     });
   const saveForm = async () => {
-    if (!form.title.trim()) return notice("দারসের শিরোনাম দিন।");
     // শিরোনামহীন টগল বাদ — ওগুলো রাখার কোনো মানে নেই
     const blocks = (form.blocks || [])
       .filter((b) => (b.text || "").trim())
@@ -4354,13 +4365,13 @@ function LecturePlan({ db, courses, user, refresh }) {
       if (form.mode === "new") {
         await api.createLectureBlocks(
           sel,
-          form.title.trim(),
+          (form.title || "").trim(),
           blocks,
           noVal ? { no: noVal } : {},
         );
       } else {
         await api.editLecture(form.lecId, {
-          title: form.title.trim(),
+          title: (form.title || "").trim(),
           topic_blocks: blocks,
           ...(noVal ? { no: noVal } : {}),
         });
@@ -4455,56 +4466,57 @@ function LecturePlan({ db, courses, user, refresh }) {
   };
   const cov = covFromLectures();
 
-  /* ক্লাস রুটিনের মতো তিন ভাগ — আজকের টপিক শুরুতে, তারপর আগত, তারপর বিগত।
-     তারিখ (l.date) সার্ভার থেকে "YYYY-MM-DD" আকারে আসে আর todayISO()-ও
-     একই আকার দেয়, তাই সরাসরি তুলনা করলেই চলে।
-     ⚠️ তারিখ বসানো হয়নি এমন দারসও থাকতে পারে (তারিখ ঐচ্ছিক) — সেগুলো
-     আলাদা ভাগে সবার শেষে দেখানো হয়, যাতে একটাও চোখের আড়ালে না যায়।
-     filter() নতুন তালিকা বানায়, তাই sort() মূল lectures-কে বদলায় না। */
+  /* টপিকগুলো তিন ভাগে — দারস ধরে নয়, টিক ধরে।
+     উস্তাদ যে টপিকে টিক দিয়েছেন সেটাই "পড়ানো হয়েছে"; কোন দারসের অধীনে
+     ছিল তা দেখানোর দরকার নেই, তাই দারস-নং আর দেখাই না — বরং কোন তারিখে
+     পড়ানো হয়েছে সেটাই দেখাই (টিক দেওয়ার দিন, সার্ভার নিজেই বসায়)।
+
+       📌 আজকের টপিক  — আজ যেগুলোতে টিক পড়েছে (সবার উপরে, সর্বশেষটা আগে)
+       🗓️ সামনের টপিক — এখনো পড়ানো হয়নি (মাঝে)
+       🕓 বিগত টপিক   — আগের দিনগুলোতে পড়ানো (সবার নিচে, সাম্প্রতিকটা আগে)
+
+     ✘ "বাদ পড়েছে" চিহ্নিত টপিক সামনের ভাগেই থাকে — সেটা তো এখনো পড়ানো
+     হয়নি, তাই সামনে করারই বাকি। */
   const _today = todayISO();
-  const byNo = (a, b) => (a.no || 0) - (b.no || 0);
-  const lectureGroups = [
+  const allTopics = lectures.flatMap((l) =>
+    (l.topics || []).map((t) => ({ ...t, lecId: l.id, lecNo: l.no, lecDate: l.date })),
+  );
+  const newestFirst = (a, b) =>
+    String(b.markedAt || "").localeCompare(String(a.markedAt || "")) ||
+    (a.lecNo || 0) - (b.lecNo || 0);
+  const topicGroups = [
     {
       key: "today",
       icon: "📌",
-      bn: "আজকের টপিক",
-      en: "Today's Topics",
+      bn: "আজ যা পড়ানো হয়েছে",
+      en: "Covered today",
       tone: C.emerald,
       bg: C.greenBg,
-      items: lectures.filter((l) => l.date === _today).sort(byNo),
+      items: allTopics
+        .filter((t) => t.covered === true && t.markedAt === _today)
+        .sort(newestFirst),
     },
     {
       key: "upcoming",
       icon: "🗓️",
-      bn: "আগত টপিক",
-      en: "Upcoming Topics",
+      bn: "সামনের টপিক",
+      en: "Upcoming topics",
       tone: C.gold,
       bg: C.amberBg,
-      // কাছের তারিখ আগে
-      items: lectures
-        .filter((l) => l.date && l.date > _today)
-        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : byNo(a, b))),
+      items: allTopics
+        .filter((t) => t.covered !== true)
+        .sort((a, b) => (a.lecNo || 0) - (b.lecNo || 0) || (a.order || 0) - (b.order || 0)),
     },
     {
       key: "past",
       icon: "🕓",
       bn: "বিগত টপিক",
-      en: "Past Topics",
+      en: "Past topics",
       tone: C.muted,
       bg: C.cream,
-      // সাম্প্রতিকটা আগে
-      items: lectures
-        .filter((l) => l.date && l.date < _today)
-        .sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : byNo(b, a))),
-    },
-    {
-      key: "undated",
-      icon: "📄",
-      bn: "তারিখ বসানো হয়নি",
-      en: "No date set",
-      tone: C.muted,
-      bg: C.cream,
-      items: lectures.filter((l) => !l.date).sort(byNo),
+      items: allTopics
+        .filter((t) => t.covered === true && t.markedAt !== _today)
+        .sort(newestFirst),
     },
   ];
 
@@ -4735,7 +4747,7 @@ function LecturePlan({ db, courses, user, refresh }) {
         </div>
       )}
       {/* রুটিনের মতো তিন ভাগে — আজকের টপিক শুরুতে। খালি ভাগ দেখানো হয় না। */}
-      {lectureGroups.map((g) =>
+      {topicGroups.map((g) =>
         g.items.length === 0 ? null : (
           <div key={g.key} style={{ marginBottom: 16 }}>
             <div
@@ -4768,78 +4780,12 @@ function LecturePlan({ db, courses, user, refresh }) {
                 {T(bn(g.items.length), g.items.length)}
               </span>
             </div>
-            <div style={{ display: "grid", gap: 10 }}>
-              {g.items.map((lec) => {
-          const st = lec.topics.every((t) => t.covered === true)
-            ? "done"
-            : lec.topics.some((t) => t.covered === false)
-              ? "missed"
-              : lec.topics.some((t) => t.covered)
-                ? "partial"
-                : "pending";
-          return (
-            <div
-              key={lec.id}
-              style={{
-                ...S.card,
-                padding: 16,
-                borderLeft: `4px solid ${st === "done" ? C.green : st === "missed" ? C.red : st === "partial" ? C.gold : C.line}`,
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  flexWrap: "wrap",
-                  marginBottom: 8,
-                }}
-              >
-                <div style={{ fontWeight: 800 }}>
-                  {T(`লেকচার ${bn(lec.no)}`, `Lecture ${lec.no}`)}: {lec.title}
-                </div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  {lec.date && (
-                    <span style={{ fontSize: 11.5, color: C.muted }}>
-                      {fmtDate(lec.date)}
-                    </span>
-                  )}
-                  {isDir(user) && (
-                    <>
-                      <Btn sm kind="soft" onClick={() => openEdit(lec)}>
-                        ✏️
-                      </Btn>
-                      <Btn sm kind="danger" onClick={() => delLecture(lec)}>
-                        🗑
-                      </Btn>
-                    </>
-                  )}
-                  {(canMark || isAdmin) && st !== "done" && (
-                    <Btn sm kind="ghost" onClick={() => markAll(lec)}>
-                      ✔ পুরো লেকচার কভার
-                    </Btn>
-                  )}
-                  {st === "done" && (
-                    <Tag>{T("সম্পূর্ণ কভার ✔", "Fully covered ✔")}</Tag>
-                  )}
-                  {st === "missed" && (
-                    <Tag color={C.red} bg={C.redBg}>
-                      {T("টপিক বাদ পড়েছে ✘", "Topic missed ✘")}
-                    </Tag>
-                  )}
-                  {st === "partial" && (
-                    <Tag color={C.gold} bg={C.amberBg}>
-                      {T("আংশিক", "Partial")}
-                    </Tag>
-                  )}
-                </div>
-              </div>
-              <div style={{ display: "grid", gap: 6 }}>
-                {lec.topics.map((tp) => (
-                  <div key={tp.id}>
+            <div style={{ display: "grid", gap: 6 }}>
+              {g.items.map((tp) => (
+                <div key={tp.id}>
                   {/* টগলের শিরোনাম — পুরো সারিতে চাপলেই খোলে/বন্ধ হয়।
-                      কভার মার্ক করার বাটনগুলোতে চাপলে যেন টগল খুলে না যায়,
-                      সেজন্য ওদের ঘেরাটোপে ক্লিক আটকে দেওয়া আছে। */}
+                      মার্ক করার বাটনে চাপলে যেন টগল খুলে না যায়, সেজন্য
+                      ওদের ঘেরাটোপে ক্লিক আটকে দেওয়া আছে। */}
                   <div
                     onClick={() => toggleOpen(tp.id)}
                     title={openTopics[tp.id] ? "বন্ধ করুন" : "খুলে পড়ুন"}
@@ -4848,15 +4794,16 @@ function LecturePlan({ db, courses, user, refresh }) {
                       display: "flex",
                       alignItems: "center",
                       gap: 10,
-                      padding: "7px 10px",
+                      padding: "9px 12px",
                       borderRadius: openTopics[tp.id] ? "10px 10px 0 0" : 10,
                       flexWrap: "wrap",
+                      border: `1px solid ${C.line}`,
                       background:
                         tp.covered === true
                           ? C.greenBg
                           : tp.covered === false
                             ? C.redBg
-                            : C.cream,
+                            : "#fff",
                     }}
                   >
                     <span
@@ -4888,21 +4835,37 @@ function LecturePlan({ db, courses, user, refresh }) {
                         border: `1.5px solid ${C.line}`,
                       }}
                     >
-                      {tp.covered === true
-                        ? "✔"
-                        : tp.covered === false
-                          ? "✘"
-                          : "–"}
+                      {tp.covered === true ? "✔" : tp.covered === false ? "✘" : "–"}
                     </span>
                     <span
                       style={{
                         flex: 1,
+                        minWidth: 140,
                         fontSize: 13.5,
+                        fontWeight: 700,
                         color: tp.covered === false ? C.red : C.text,
                       }}
                     >
                       {tp.text}
                     </span>
+                    {/* দারস-নং নয় — কোন তারিখে পড়ানো হয়েছে সেটাই দেখাই।
+                        তারিখটা উস্তাদ টিক দেওয়ার দিনেই বসে যায়। */}
+                    {tp.markedAt && tp.covered === true && (
+                      <span
+                        style={{
+                          fontSize: 11.5,
+                          fontWeight: 700,
+                          color: C.emerald,
+                          background: "#fff",
+                          border: `1px solid ${C.green}`,
+                          borderRadius: 99,
+                          padding: "2px 9px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        📅 {fmtDMY(tp.markedAt)}
+                      </span>
+                    )}
                     {(canMark || isAdmin) && (
                       <span
                         onClick={(e) => e.stopPropagation()}
@@ -4920,7 +4883,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                             color: tp.covered === true ? "#fff" : C.green,
                             border: `1.5px solid ${C.green}`,
                           }}
-                          onClick={() => mark(lec, tp, true)}
+                          onClick={() => mark(null, tp, true)}
                         >
                           ✔ কভার হয়েছে
                         </Btn>
@@ -4931,17 +4894,26 @@ function LecturePlan({ db, courses, user, refresh }) {
                             color: tp.covered === false ? "#fff" : C.red,
                             border: `1.5px solid ${C.red}`,
                           }}
-                          onClick={() => mark(lec, tp, false)}
+                          onClick={() => mark(null, tp, false)}
                         >
                           ✘ বাদ পড়েছে
                         </Btn>
                         {isAdmin && (
+                          <Btn sm kind="soft" onClick={() => mark(null, tp, null)}>
+                            রিসেট
+                          </Btn>
+                        )}
+                        {isDir(user) && (
                           <Btn
                             sm
                             kind="soft"
-                            onClick={() => mark(lec, tp, null)}
+                            title="এই টপিকটি যে দারসে আছে সেটি এডিট করুন"
+                            onClick={() => {
+                              const lec = lectures.find((l) => l.id === tp.lecId);
+                              if (lec) openEdit(lec);
+                            }}
                           >
-                            রিসেট
+                            ✏️
                           </Btn>
                         )}
                       </span>
@@ -4981,15 +4953,64 @@ function LecturePlan({ db, courses, user, refresh }) {
                       )}
                     </div>
                   )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         ),
+      )}
+
+      {/* পরিচালকের জন্য দারস ব্যবস্থাপনা — উপরে টপিকগুলো তারিখ ধরে সাজানো
+          বলে দারস ধরে এডিট/মুছে ফেলার জায়গাটা এখানে আলাদা করে রাখা হলো */}
+      {isDir(user) && lectures.length > 0 && (
+        <div style={{ ...S.card, marginTop: 6 }}>
+          <div style={{ fontWeight: 800, marginBottom: 8, fontSize: 13.5 }}>
+            🗂️ দারস ব্যবস্থাপনা
+          </div>
+          <div style={{ display: "grid", gap: 6 }}>
+            {[...lectures]
+              .sort((a, b) => (a.no || 0) - (b.no || 0))
+              .map((lec) => (
+                <div
+                  key={lec.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    padding: "7px 10px",
+                    borderRadius: 9,
+                    background: C.cream,
+                    fontSize: 13,
+                  }}
+                >
+                  <span style={{ fontWeight: 700, flex: 1, minWidth: 140 }}>
+                    {/* নম্বর নয়, তারিখ — উস্তাদ যেদিন ক্লাসটি শেষ করেছেন
+                        (প্রথম টিক পড়ার দিন) সেটা সার্ভার নিজেই বসিয়ে দেয়।
+                        এখনো কেউ টিক না দিলে তারিখ থাকে না। */}
+                    লেকচার:{" "}
+                    {lec.date ? (
+                      fmtDMY(lec.date)
+                    ) : (
+                      <span style={{ color: C.muted, fontWeight: 600 }}>
+                        তারিখ এখনো বসেনি
+                      </span>
+                    )}
+                    <span style={{ color: C.muted, fontWeight: 600 }}>
+                      {" "}
+                      · {bn((lec.topics || []).length)}টি টপিক
+                    </span>
+                  </span>
+                  <Btn sm kind="soft" onClick={() => openEdit(lec)}>
+                    ✏️
+                  </Btn>
+                  <Btn sm kind="danger" onClick={() => delLecture(lec)}>
+                    🗑
+                  </Btn>
+                </div>
+              ))}
+          </div>
+        </div>
       )}
       {form && (
         <Modal
@@ -5001,33 +5022,19 @@ function LecturePlan({ db, courses, user, refresh }) {
           onClose={() => setForm(null)}
           wide
         >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "120px 1fr",
-              gap: 10,
-            }}
-          >
-            <div>
-              <label style={S.label}>দারস-নং</label>
-              <input
-                type="number"
-                min="1"
-                style={S.input}
-                value={form.no}
-                onChange={(e) => setForm({ ...form, no: e.target.value })}
-                placeholder="যেমন: ৫"
-              />
-            </div>
-            <div>
-              <label style={S.label}>দারসের শিরোনাম</label>
-              <input
-                style={S.input}
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="যেমন: হরকত — যবর, যের, পেশ"
-              />
-            </div>
+          {/* দারসের শিরোনামের ঘরটি তুলে দেওয়া হয়েছে — টপিকগুলো এখন তারিখ
+              ধরে সাজানো হয়, শিরোনাম কোথাও দেখানো হয় না। ব্যাকএন্ডে ঘরটি
+              বাধ্যতামূলক, তাই না দিলে "দারস ৫" ধাঁচে নিজে থেকেই বসে যায়। */}
+          <div style={{ maxWidth: 160 }}>
+            <label style={S.label}>দারস-নং</label>
+            <input
+              type="number"
+              min="1"
+              style={S.input}
+              value={form.no}
+              onChange={(e) => setForm({ ...form, no: e.target.value })}
+              placeholder="যেমন: ৫"
+            />
           </div>
           {/* ── টপিকের টগল ──
               পুরনো "সিলেবাস থেকে বিষয় বাছাই" ব্যবস্থা সরিয়ে দেওয়া হয়েছে।
