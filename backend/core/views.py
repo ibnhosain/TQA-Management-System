@@ -141,14 +141,16 @@ class AcademicBookViewSet(viewsets.ModelViewSet):
         return Response(AcademicBookSerializer(book).data, status=201)
 
 
-# সিলেবাসের ৫টি বিভাগ — ফ্রন্টএন্ডের SYL_CATEGORIES-এর হুবহু একই ক্রম ও নাম,
-# যাতে নতুন টেবিলটা দেখতে আগের মতোই হয়
+# সিলেবাসের ৫টি বিভাগ — ফ্রন্টএন্ডের SYL_CATEGORIES-এর হুবহু একই ক্রম, আর
+# নাম হিসেবে সেখানকার labelEn (ইংরেজি) ব্যবহার করা হয়। কারণ শিক্ষার্থীদের
+# পুরো পোর্টালই ইংরেজিতে, আর সিলেবাসের টেবিলটা তারাই সবচেয়ে বেশি দেখে।
+# এগুলো নিছক নমুনা — পরিচালক ইচ্ছামতো বদলে নিতে পারবেন।
 _SYL_COLUMNS = [
-    ("memorized_surah", "মুখস্থ সূরা"),
-    ("memorized_hadith", "মুখস্থ হাদিস"),
-    ("qirat", "কিরাত"),
-    ("dua_masala", "দুআ/মাসআলা"),
-    ("moral_story", "নৈতিক শিক্ষা/হাদিসের গল্প"),
+    ("memorized_surah", "Memorized Surah"),
+    ("memorized_hadith", "Memorized Hadith"),
+    ("qirat", "Qirat"),
+    ("dua_masala", "Dua/Masala"),
+    ("moral_story", "Moral Lesson/Hadith Story"),
 ]
 
 
