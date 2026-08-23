@@ -29,7 +29,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="TQA একাডেমি" />
+    <meta name="apple-mobile-web-app-title" content="TQA Academy" />
     <script>
       (function () {
         // এটা কেবল PWA ইনস্টলের সময় কোন manifest/আইকন-নাম ব্যবহার হবে তা ঠিক
@@ -40,7 +40,7 @@
           var manifestHref = role === "teacher" ? "/manifest-teacher.json" : "/manifest-student.json";
           var manifestLink = document.querySelector('link[rel="manifest"]');
           if (manifestLink) manifestLink.setAttribute("href", manifestHref);
-          var title = role === "teacher" ? "TQA টিচার" : "TQA স্টুডেন্ট";
+          var title = role === "teacher" ? "TQA Teacher" : "TQA Student";
           document.title = title;
           var appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
           if (appleTitle) appleTitle.setAttribute("content", title);
@@ -56,7 +56,7 @@
       href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Amiri:wght@400;700&family=Playfair+Display:wght@700;800&display=swap"
       rel="stylesheet"
     />
-    <title>TQA ম্যানেজমেন্ট সিস্টেম</title>
+    <title>TQA Management System</title>
   </head>
   <body>
     <div id="root"></div>

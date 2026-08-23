@@ -1,7 +1,7 @@
 {
-  "name": "TQA — টিচার পোর্টাল",
-  "short_name": "TQA টিচার",
-  "description": "তারবিয়াতুল কুরআন একাডেমি — উস্তাদ/উস্তাদার পোর্টাল",
+  "name": "TQA — Teacher Portal",
+  "short_name": "TQA Teacher",
+  "description": "Tarbiyatul Quran Academy — Teacher Portal",
   "start_url": "/?role=teacher",
   "scope": "/",
   "display": "standalone",

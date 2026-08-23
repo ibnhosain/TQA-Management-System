@@ -1,7 +1,7 @@
 {
-  "name": "TQA — স্টুডেন্ট পোর্টাল",
-  "short_name": "TQA স্টুডেন্ট",
-  "description": "তারবিয়াতুল কুরআন একাডেমি — শিক্ষার্থী পোর্টাল",
+  "name": "TQA — Student Portal",
+  "short_name": "TQA Student",
+  "description": "Tarbiyatul Quran Academy — Student Portal",
   "start_url": "/?role=student",
   "scope": "/",
   "display": "standalone",

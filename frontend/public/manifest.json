@@ -1,7 +1,7 @@
 {
-  "name": "তারবিয়াতুল কুরআন একাডেমি",
-  "short_name": "TQA একাডেমি",
-  "description": "তারবিয়াতুল কুরআন একাডেমি — ম্যানেজমেন্ট সিস্টেম",
+  "name": "Tarbiyatul Quran Academy",
+  "short_name": "TQA Academy",
+  "description": "Tarbiyatul Quran Academy — Management System",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
