@@ -4178,6 +4178,60 @@ function LecturePlan({ db, courses, user, refresh }) {
     };
   };
   const cov = covFromLectures();
+
+  /* ক্লাস রুটিনের মতো তিন ভাগ — আজকের টপিক শুরুতে, তারপর আগত, তারপর বিগত।
+     তারিখ (l.date) সার্ভার থেকে "YYYY-MM-DD" আকারে আসে আর todayISO()-ও
+     একই আকার দেয়, তাই সরাসরি তুলনা করলেই চলে।
+     ⚠️ তারিখ বসানো হয়নি এমন দারসও থাকতে পারে (তারিখ ঐচ্ছিক) — সেগুলো
+     আলাদা ভাগে সবার শেষে দেখানো হয়, যাতে একটাও চোখের আড়ালে না যায়।
+     filter() নতুন তালিকা বানায়, তাই sort() মূল lectures-কে বদলায় না। */
+  const _today = todayISO();
+  const byNo = (a, b) => (a.no || 0) - (b.no || 0);
+  const lectureGroups = [
+    {
+      key: "today",
+      icon: "📌",
+      bn: "আজকের টপিক",
+      en: "Today's Topics",
+      tone: C.emerald,
+      bg: C.greenBg,
+      items: lectures.filter((l) => l.date === _today).sort(byNo),
+    },
+    {
+      key: "upcoming",
+      icon: "🗓️",
+      bn: "আগত টপিক",
+      en: "Upcoming Topics",
+      tone: C.gold,
+      bg: C.amberBg,
+      // কাছের তারিখ আগে
+      items: lectures
+        .filter((l) => l.date && l.date > _today)
+        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : byNo(a, b))),
+    },
+    {
+      key: "past",
+      icon: "🕓",
+      bn: "বিগত টপিক",
+      en: "Past Topics",
+      tone: C.muted,
+      bg: C.cream,
+      // সাম্প্রতিকটা আগে
+      items: lectures
+        .filter((l) => l.date && l.date < _today)
+        .sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : byNo(b, a))),
+    },
+    {
+      key: "undated",
+      icon: "📄",
+      bn: "তারিখ বসানো হয়নি",
+      en: "No date set",
+      tone: C.muted,
+      bg: C.cream,
+      items: lectures.filter((l) => !l.date).sort(byNo),
+    },
+  ];
+
   return (
     <Section
       title={T("দৈনিক পাঠ পরিকল্পনা ও টপিক কভারেজ", "Daily Lesson Plan & Topic Coverage")}
@@ -4279,8 +4333,42 @@ function LecturePlan({ db, courses, user, refresh }) {
               )}
         </div>
       )}
-      <div style={{ display: "grid", gap: 10 }}>
-        {lectures.map((lec) => {
+      {/* রুটিনের মতো তিন ভাগে — আজকের টপিক শুরুতে। খালি ভাগ দেখানো হয় না। */}
+      {lectureGroups.map((g) =>
+        g.items.length === 0 ? null : (
+          <div key={g.key} style={{ marginBottom: 16 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: g.bg,
+                border: `1px solid ${g.tone}`,
+                borderRadius: 10,
+                padding: "7px 12px",
+                marginBottom: 8,
+                fontWeight: 800,
+                fontSize: 13.5,
+                color: g.tone,
+              }}
+            >
+              <span>{g.icon}</span>
+              <span style={{ flex: 1 }}>{T(g.bn, g.en)}</span>
+              <span
+                style={{
+                  background: g.tone,
+                  color: "#fff",
+                  borderRadius: 99,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  padding: "1px 8px",
+                }}
+              >
+                {T(bn(g.items.length), g.items.length)}
+              </span>
+            </div>
+            <div style={{ display: "grid", gap: 10 }}>
+              {g.items.map((lec) => {
           const st = lec.topics.every((t) => t.covered === true)
             ? "done"
             : lec.topics.some((t) => t.covered === false)
@@ -4445,8 +4533,11 @@ function LecturePlan({ db, courses, user, refresh }) {
               </div>
             </div>
           );
-        })}
-      </div>
+              })}
+            </div>
+          </div>
+        ),
+      )}
       {form && (
         <Modal
           title={
