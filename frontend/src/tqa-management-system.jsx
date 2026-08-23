@@ -15691,7 +15691,7 @@ function NewNotifToast({ user, notifs }) {
    ফেরামাত্র পুরো পর্দা ঢেকে এই পপআপ, সাথে সরাসরি রিজয়েনের বাটন।
    ফাঁদে পড়ার ভয় নেই — বাটনটা নিছক একটা লিংক, সবসময় কাজ করে, আর চাপলেই
    পপআপ সরে যায়। ক্লাসের সময় পেরিয়ে গেলে এমনিতেও আর আসে না। */
-function RejoinBlockPopup({ k, user, onRejoin }) {
+function RejoinBlockPopup({ k, user, onRejoin, onLater }) {
   const en = user?.role === "student";
   return (
     <BlockingPopup
@@ -15703,28 +15703,39 @@ function RejoinBlockPopup({ k, user, onRejoin }) {
           : "উস্তাদ নতুন মিটিং খুলেছেন"
       }
       footer={
-        <a
-          href={k.zoom2 || k.zoom}
-          target="_blank"
-          rel="noreferrer"
-          onClick={onRejoin}
-          style={{
-            display: "block",
-            textDecoration: "none",
-            width: "100%",
-            background: `linear-gradient(135deg, ${C.goldL}, ${C.gold})`,
-            color: "#4a3200",
-            fontSize: 16,
-            fontWeight: 800,
-            padding: "14px 20px",
-            borderRadius: 14,
-            boxShadow: "0 8px 24px rgba(240,195,85,.45)",
-            textAlign: "center",
-            boxSizing: "border-box",
-          }}
-        >
-          {en ? "🔁 Rejoin now — Zoom will open" : "🔁 এখনই রিজয়েন করুন"}
-        </a>
+        <div style={{ display: "grid", gap: 8 }}>
+          <a
+            href={k.zoom2 || k.zoom}
+            target="_blank"
+            rel="noreferrer"
+            onClick={onRejoin}
+            style={{
+              display: "block",
+              textDecoration: "none",
+              width: "100%",
+              background: `linear-gradient(135deg, ${C.goldL}, ${C.gold})`,
+              color: "#4a3200",
+              fontSize: 16,
+              fontWeight: 800,
+              padding: "14px 20px",
+              borderRadius: 14,
+              boxShadow: "0 8px 24px rgba(240,195,85,.45)",
+              textAlign: "center",
+              boxSizing: "border-box",
+            }}
+          >
+            {en ? "🔁 Rejoin now — Zoom will open" : "🔁 এখনই রিজয়েন করুন"}
+          </a>
+          {/* দ্বিতীয় পথ — এটা ছাড়া কেউ রিজয়েন করতে না চাইলে (যেমন ক্লাস
+              শেষ হয়ে গেছে) পোর্টালে আটকে থাকতেন */}
+          <Btn
+            kind="soft"
+            style={{ width: "100%", justifyContent: "center" }}
+            onClick={onLater}
+          >
+            {en ? "I'll join later" : "পরে জয়েন করছি"}
+          </Btn>
+        </div>
       }
     >
       {en ? (
@@ -16856,6 +16867,10 @@ export default function App() {
             onRejoin={() => {
               setRejoinDone(livePopup.id);
               joinFromPopup(livePopup);
+            }}
+            onLater={() => {
+              setRejoinDone(livePopup.id);
+              setLivePopup(null);
             }}
           />
         )}
