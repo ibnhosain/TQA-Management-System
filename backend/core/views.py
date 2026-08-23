@@ -1096,6 +1096,27 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
             n.read_by.add(request.user)
         return Response({"ok": True})
 
+    @action(detail=False, methods=["post"], permission_classes=[IsDirector])
+    def broadcast(self, request):
+        """পরিচালক সবাইকে একসাথে একটা বার্তা পাঠান।
+
+        দুই জায়গাতেই যায় — (১) সবার পোর্টালের নোটিফিকেশন ঘণ্টায় (এটা সবসময়
+        পৌঁছায়), (২) যাঁরা পুশ নোটিফিকেশন চালু করেছেন তাঁদের ফোনে/ডেস্কটপে,
+        অ্যাপ বন্ধ থাকলেও। পুশ ব্যর্থ হলেও ইন-অ্যাপ নোটিফিকেশন আটকায় না
+        (notify() নিজেই সেটা সামলায়)।
+
+        কেবল পাঠায় — কোনো ডাটা বদলায় বা মোছে না।
+        """
+        text = (request.data.get("text") or "").strip()
+        if not text:
+            return Response({"error": "বার্তা লিখুন"}, status=400)
+        if len(text) > 500:
+            return Response({"error": "বার্তা ৫০০ অক্ষরের মধ্যে রাখুন"}, status=400)
+        # নিষ্ক্রিয় (ছেড়ে যাওয়া) ব্যবহারকারীদের বাদ — তাঁদের পাঠিয়ে লাভ নেই
+        users = list(User.objects.filter(is_active=True))
+        notify(text, users)
+        return Response({"sent": len(users)})
+
 
 class PushSubscriptionViewSet(viewsets.ModelViewSet):
     """ব্রাউজার Web Push সাবস্ক্রিপশন সেভ/মুছা — অ্যাপ ইনস্টল/নোটিফিকেশন পারমিশন

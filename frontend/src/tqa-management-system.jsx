@@ -8061,6 +8061,65 @@ function AdmissionsView({ db, setDb, user, refresh }) {
 }
 
 /* ═══════════════ ডেটা ব্যাকআপ কার্ড ═══════════════ */
+/* পরিচালক সবাইকে একসাথে একটা বার্তা পাঠান — সবার পোর্টালের নোটিফিকেশন
+   ঘণ্টায় যায় (এটা সবসময় পৌঁছায়), আর যাঁরা পুশ চালু করেছেন তাঁদের ফোনে/
+   ডেস্কটপেও, অ্যাপ বন্ধ থাকলেও। শুধু পাঠায় — কোনো ডাটা বদলায় না। */
+function BroadcastCard({ user }) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!isDir(user)) return null;
+  const READY_MADE =
+    "📲 অ্যাপের লোগো ও নাম নতুন করা হয়েছে। যাঁরা ফোনে/পিসিতে অ্যাপটি ইনস্টল " +
+    "করে রেখেছেন, একবার আনইনস্টল করে আবার ইনস্টল করে নিন — তাহলেই নতুন " +
+    "লোগো ও নাম বসে যাবে। আপনার কোনো তথ্য হারাবে না।";
+  const send = () => {
+    const msg = text.trim();
+    if (!msg) return notice("বার্তা লিখুন।");
+    askConfirm(
+      `এই বার্তাটি একাডেমির সবাইকে পাঠানো হবে — পরিচালক, এডমিন, উস্তাদ ও সব শিক্ষার্থীকে।
+
+"${msg}"`,
+      async () => {
+        setBusy(true);
+        try {
+          const r = await api.broadcastNotification(msg);
+          notice(`পাঠানো হয়েছে — ${bn(r?.sent ?? 0)} জনের কাছে।`);
+          setText("");
+        } catch (e) {
+          notice("পাঠানো যায়নি — " + (e?.data?.error || e?.message || "আবার চেষ্টা করুন"));
+        } finally {
+          setBusy(false);
+        }
+      },
+    );
+  };
+  return (
+    <div style={{ ...S.card, border: `1.5px solid ${C.emerald}`, marginBottom: 14 }}>
+      <div style={{ fontWeight: 800, marginBottom: 4 }}>📢 সবাইকে নোটিফিকেশন</div>
+      <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
+        একাডেমির সবার পোর্টালের নোটিফিকেশন ঘণ্টায় বার্তাটি চলে যাবে। যাঁরা
+        ফোনে নোটিফিকেশন চালু করেছেন, তাঁদের কাছে অ্যাপ বন্ধ থাকলেও পৌঁছাবে।
+      </div>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={3}
+        maxLength={500}
+        placeholder="যে বার্তাটি সবাইকে জানাতে চান…"
+        style={{ ...S.input, width: "100%", resize: "vertical", marginBottom: 8 }}
+      />
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <Btn sm kind="soft" onClick={() => setText(READY_MADE)}>
+          📲 অ্যাপ নতুন করে ইনস্টলের বার্তা বসান
+        </Btn>
+        <Btn kind="gold" onClick={send} style={{ opacity: busy ? 0.7 : 1 }}>
+          {busy ? "পাঠানো হচ্ছে…" : "📢 সবাইকে পাঠান"}
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
 function BackupCard() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -8123,7 +8182,7 @@ function BackupCard() {
 }
 
 /* ═══════════════ ম্যানেজ সেটিংস — কেবল পরিচালক (পূর্ণ নিয়ন্ত্রণ, কিছুই আড়াল নয়) ═══════════════ */
-function ManageView({ db, setDb, refresh }) {
+function ManageView({ db, setDb, user, refresh }) {
   const [show, setShow] = useState(false);
   const [editId, setEditId] = useState(null); // এডিট মোড — কোন ইউজার (null = নতুন)
   const [report, setReport] = useState(null); // কার বিস্তারিত রিপোর্ট দেখা হচ্ছে
@@ -8729,6 +8788,7 @@ function ManageView({ db, setDb, refresh }) {
             </div>
           ))}
       </div>
+      <BroadcastCard user={user} />
       <BackupCard />
       <div style={{ ...S.card, border: `1.5px solid #f3c9b8` }}>
         <div style={{ fontWeight: 800, marginBottom: 4, color: C.red }}>
@@ -15424,6 +15484,126 @@ const NAV = [
    নিজে থেকে কিছুই রিফ্রেশ করে না — শুধু জানায়, চাপবেন কিনা ব্যবহারকারীর ইচ্ছা। */
 const RELOAD_GUARD_KEY = "tqa_update_reloaded_at";
 let selfReloading = false;
+/* ═══════════════ "অ্যাপটি নতুন করে ইনস্টল করুন" পপআপ ═══════════════
+   অ্যাপের আইকন বা নাম বদলালে ইনস্টল করা অ্যাপে সেটা আপনাআপনি বসে না —
+   উইন্ডোজ, আইপ্যাড ও অ্যান্ড্রয়েড ইনস্টলের সময়ের আইকন-নামই ধরে রাখে। তাই
+   যাঁরা অ্যাপটি ইনস্টল করে ব্যবহার করছেন তাঁদের একবার নতুন করে ইনস্টল
+   করতে বলতে হয়।
+   • দেখায় কেবল ইনস্টল করা অ্যাপে (ব্রাউজারে খুললে নয়) — যাঁর ইনস্টলই নেই
+     তাঁকে "আবার ইনস্টল করুন" বলার মানে হয় না।
+   • লগইনের আগে ও পরে — দুই অবস্থাতেই আসে, কারণ overlays দুই জায়গাতেই থাকে।
+     (প্রায় সবাই লগইন করাই থাকেন, তাই কেবল লগইন-পর্দায় দেখালে বেশিরভাগের
+     কাছে কখনো পৌঁছাত না।)
+   • একবার "বুঝেছি" চাপলে আর আসে না।
+   🔧 ভবিষ্যতে আবার এমন বদল করলে নিচের NOTICE_ID-টা বদলে দিলেই যথেষ্ট —
+      তখন সবার কাছে (আগে যাঁরা দেখেছেন তাঁদের কাছেও) আবার একবার করে যাবে। */
+const REINSTALL_NOTICE_ID = "2026-08-icon-and-name";
+const REINSTALL_SEEN_KEY = "tqa_reinstall_seen";
+const isInstalledApp = () => {
+  try {
+    return (
+      !!window.matchMedia?.("(display-mode: standalone)")?.matches ||
+      window.navigator.standalone === true // আইফোন/আইপ্যাডের নিজস্ব উপায়
+    );
+  } catch (e) {
+    return false;
+  }
+};
+function ReinstallNotice({ lang }) {
+  const en = lang === "en";
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!isInstalledApp()) return;
+    try {
+      if (window.localStorage.getItem(REINSTALL_SEEN_KEY) === REINSTALL_NOTICE_ID)
+        return;
+    } catch (e) {
+      /* উপেক্ষা — দেখিয়ে দেওয়াই নিরাপদ */
+    }
+    setShow(true);
+  }, []);
+  if (!show) return null;
+  const done = () => {
+    try {
+      window.localStorage.setItem(REINSTALL_SEEN_KEY, REINSTALL_NOTICE_ID);
+    } catch (e) {
+      /* উপেক্ষা */
+    }
+    setShow(false);
+  };
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 310,
+        background: "rgba(18,63,40,.6)",
+        display: "grid",
+        placeItems: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 18,
+          maxWidth: 380,
+          width: "100%",
+          padding: 26,
+          textAlign: "center",
+          fontFamily: "'Hind Siliguri', sans-serif",
+        }}
+      >
+        <div style={{ fontSize: 40 }}>📲</div>
+        <div
+          style={{ fontWeight: 800, fontSize: 17, color: C.emerald, marginTop: 6 }}
+        >
+          {en
+            ? "Please reinstall the app once"
+            : "অ্যাপটি একবার নতুন করে ইনস্টল করুন"}
+        </div>
+        <div
+          style={{
+            fontSize: 13.5,
+            color: C.text,
+            margin: "10px 0 18px",
+            lineHeight: 1.7,
+            textAlign: "left",
+          }}
+        >
+          {en ? (
+            <>
+              The app's logo and name have been updated. An installed app keeps
+              the old logo and name, so please <b>uninstall it and install it
+              again</b> — just this once.
+              <br />
+              <br />
+              Nothing of yours will be lost. Your account and all your records
+              stay exactly as they are.
+            </>
+          ) : (
+            <>
+              অ্যাপের লোগো ও নাম নতুন করা হয়েছে। ইনস্টল করা অ্যাপ পুরনো
+              লোগো-নামই ধরে রাখে, তাই একবার <b>আনইনস্টল করে আবার ইনস্টল</b>{" "}
+              করে নিন — শুধু এইবারের জন্য।
+              <br />
+              <br />
+              আপনার কিছুই হারাবে না। অ্যাকাউন্ট ও সব তথ্য যেমন আছে তেমনই থাকবে।
+            </>
+          )}
+        </div>
+        <Btn
+          kind="gold"
+          style={{ width: "100%", justifyContent: "center" }}
+          onClick={done}
+        >
+          {en ? "Got it" : "বুঝেছি"}
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
 function UpdateBanner({ lang }) {
   const en = lang === "en";
   const [ready, setReady] = useState(false);
@@ -15817,6 +15997,7 @@ export default function App() {
   const overlays = (
     <>
       <UpdateBanner lang={user?.role === "student" ? "en" : "bn"} />
+      <ReinstallNotice lang={user?.role === "student" ? "en" : "bn"} />
       {confirmReq && (
         <div
           style={{

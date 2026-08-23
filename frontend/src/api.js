@@ -347,6 +347,10 @@ export const api = {
   markAllRead: () => request("/notifications/mark_all_read/", { method: "POST" }),
 
   // Web Push (PWA) — ব্রাউজার/ট্যাব বন্ধ থাকলেও নোটিফিকেশন পাঠাতে
+  // পরিচালক সবাইকে একসাথে একটা বার্তা পাঠান — সবার নোটিফিকেশন ঘণ্টায় যায়,
+  // আর যাঁরা পুশ চালু করেছেন তাঁদের ফোনে/ডেস্কটপেও (অ্যাপ বন্ধ থাকলেও)
+  broadcastNotification: (text) =>
+    request("/notifications/broadcast/", { method: "POST", body: { text } }),
   vapidPublicKey: () => request("/push/vapid-public-key/"),
   subscribePush: (sub) =>
     request("/push-subscriptions/", {
