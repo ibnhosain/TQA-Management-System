@@ -4333,18 +4333,22 @@ function LecturePlan({ db, courses, user, refresh }) {
       })),
     });
   // ── টগল সম্পাদনা ──
+  /* ⚠️ f.blocks সবসময় আছে ধরে নেওয়া যায় না। খোলা ফর্ম ডিভাইসে সংরক্ষিত
+     থাকে (usePersistedState "lec_form"), আর টগল ব্যবস্থা আসার আগের খসড়ায়
+     blocks ঘরটাই ছিল না — সেখানে blocks ছাড়াই ফর্ম খুলত, আর "টপিক যোগ
+     করুন" চাপলেই অ্যাপ ক্র্যাশ করত। তাই সবখানে খালি তালিকার ফলব্যাক। */
   const setBlock = (i, patch) =>
     setForm((f) => ({
       ...f,
-      blocks: f.blocks.map((b, j) => (j === i ? { ...b, ...patch } : b)),
+      blocks: (f.blocks || []).map((b, j) => (j === i ? { ...b, ...patch } : b)),
     }));
   const addBlock = () =>
-    setForm((f) => ({ ...f, blocks: [...f.blocks, blankBlock()] }));
+    setForm((f) => ({ ...f, blocks: [...(f.blocks || []), blankBlock()] }));
   const delBlock = (i) =>
-    setForm((f) => ({ ...f, blocks: f.blocks.filter((_, j) => j !== i) }));
+    setForm((f) => ({ ...f, blocks: (f.blocks || []).filter((_, j) => j !== i) }));
   const moveBlock = (i, d) =>
     setForm((f) => {
-      const b = [...f.blocks];
+      const b = [...(f.blocks || [])];
       const j = i + d;
       if (j < 0 || j >= b.length) return f;
       [b[i], b[j]] = [b[j], b[i]];
@@ -4595,7 +4599,7 @@ function LecturePlan({ db, courses, user, refresh }) {
           💡 প্রতিটি টপিকের পাশের{" "}
           <b style={{ color: C.green }}>"✔ কভার হয়েছে"</b> বা{" "}
           <b style={{ color: C.red }}>"✘ বাদ পড়েছে"</b> বাটনে ক্লিক করে মার্ক
-          করুন — অথবা এক ক্লিকে "পুরো লেকচার কভার" করুন। মার্ক করলেই স্টুডেন্ট ও
+          করুন। মার্ক করলেই স্টুডেন্ট ও
           এডমিন ড্যাশবোর্ডে সবুজ/লাল হয়ে দেখাবে।
         </div>
       )}
@@ -5001,6 +5005,14 @@ function LecturePlan({ db, courses, user, refresh }) {
                       · {bn((lec.topics || []).length)}টি টপিক
                     </span>
                   </span>
+                  {/* এই বাটনটা আগে দারসের কার্ডে ছিল; কার্ড তুলে দেওয়ায়
+                      হারিয়ে গিয়েছিল — এখানে ফিরিয়ে আনা হলো */}
+                  {(canMark || isAdmin) &&
+                    (lec.topics || []).some((t) => t.covered !== true) && (
+                      <Btn sm kind="ghost" onClick={() => markAll(lec)}>
+                        ✔ পুরো দারস কভার
+                      </Btn>
+                    )}
                   <Btn sm kind="soft" onClick={() => openEdit(lec)}>
                     ✏️
                   </Btn>
@@ -16853,12 +16865,21 @@ export default function App() {
           const st = h * 60 + m;
           return cur >= st - 15 && cur <= st + (c.duration_min || 60); // শুরুর ১৫ মিনিট আগে থেকে শেষ পর্যন্ত "চলমান"
         };
-        // উস্তাদ রিজয়েন চালু করে থাকলে সেই ক্লাসটাই অগ্রাধিকার পায় — সময়সীমা
-        // না মিললেও। কারণ ক্লাস নির্ধারিত সময়ের চেয়ে বেশি চললে (যা প্রায়ই হয়)
-        // সময়সীমার বাইরে চলে যেত, আর তখন রিজয়েনের পপআপটাই আসত না — উস্তাদ
-        // ২য় লিংকে চলে গেছেন অথচ শিক্ষার্থী ১ম মিটিংয়ে একা বসে থাকতেন
+        // ক্লাস নির্ধারিত সময়ের চেয়ে বেশি চললে (যা প্রায়ই হয়) সেটা সময়সীমার
+        // বাইরে চলে যেত, আর তখন রিজয়েনের পপআপ আসত না — উস্তাদ ২য় লিংকে চলে
+        // গেছেন অথচ শিক্ষার্থী ১ম মিটিংয়ে একা বসে থাকতেন। তাই রিজয়েন চালু
+        // থাকা ক্লাসকে বাড়তি ৩ ঘণ্টা সময় দেওয়া হয়।
+        // ⚠️ কিন্তু "সারাদিনের জন্য" নয়: rejoin_active একবার চালু হলে দিনের
+        // শেষ পর্যন্ত চালুই থাকে, তাই সীমা না দিলে সকালের ক্লাসটা সারাদিন
+        // অগ্রাধিকার পেত আর বিকেলের ক্লাসের পপআপ কখনো আসতই না।
+        const nearby = (c) => {
+          const [h, m] = c.time.split(":").map(Number);
+          const st = h * 60 + m;
+          return cur >= st - 15 && cur <= st + (c.duration_min || 60) + 180;
+        };
         const kk =
-          classes.find((c) => c.rejoin_active) || classes.find(inWindow);
+          classes.find((c) => c.rejoin_active && nearby(c)) ||
+          classes.find(inWindow);
         setLivePopup(
           kk
             ? {
