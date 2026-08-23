@@ -4166,6 +4166,15 @@ function LecturePlan({ db, courses, user, refresh }) {
   const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
   // কোন টগলগুলো এই মুহূর্তে খোলা — { [topicId]: true }
   const [openTopics, setOpenTopics] = useState({});
+  /* কার জন্য কভার-টিক দেওয়া/দেখা হচ্ছে।
+     উস্তাদ ভুল করে একজনের ক্লাসে অন্যজনের টপিক টিক দিয়ে না ফেলেন — সেজন্য
+     পাতায় ঢোকার সাথে সাথেই পর্দা ঢেকে শিক্ষার্থী বাছাইয়ের পপআপ আসে, আর
+     বাছাই না করা পর্যন্ত পাতাটাই খোলে না।
+     শিক্ষার্থী নিজে দেখলে এসবের দরকার নেই — সার্ভার সবসময় তারই টিক দেয়। */
+  const [forStudent, setForStudent] = useState(null); // {id, name}
+  const [courseStudents, setCourseStudents] = useState([]);
+  const [pickOpen, setPickOpen] = useState(false);
+  const needsStudent = user.role !== "student";
   const toggleOpen = (id) =>
     setOpenTopics((o) => ({ ...o, [id]: !o[id] }));
 
@@ -4174,7 +4183,9 @@ function LecturePlan({ db, courses, user, refresh }) {
   const loadData = async () => {
     if (!sel) return setLoading(false);
     try {
-      setLectures((await api.lectures(sel)).map(adaptLecture));
+      setLectures(
+        (await api.lectures(sel, forStudent?.id)).map(adaptLecture),
+      );
     } catch {
       const c = courseById(courses, sel);
       setLectures(c.lectures || []);
@@ -4184,6 +4195,26 @@ function LecturePlan({ db, courses, user, refresh }) {
   };
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sel, forStudent]);
+
+  // কোর্স বদলালে আগের শিক্ষার্থী আর প্রযোজ্য নয় — তালিকা নতুন করে এনে
+  // বাছাই খালি করি, নইলে এক কোর্সের ছাত্রের নামে অন্য কোর্সে টিক পড়ত
+  useEffect(() => {
+    if (!sel || !needsStudent) return;
+    setForStudent(null);
+    setCourseStudents([]);
+    api
+      .courseStudents(sel)
+      .then((rows) => {
+        setCourseStudents(rows || []);
+        setPickOpen(true);
+      })
+      .catch(() => {
+        setCourseStudents([]);
+        setPickOpen(true); // তালিকা না এলেও পপআপে কারণটা জানানো হবে
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel]);
 
   // প্রতিটি টগলের একটা স্থায়ী পরিচয় — এডিটরের key হিসেবে লাগে। ক্রম (index)
@@ -4300,12 +4331,17 @@ function LecturePlan({ db, courses, user, refresh }) {
   const isAdmin = isAdm(user) || hasGrant;
   const mark = async (lec, topic, val) => {
     if (!canMark && !isAdmin) return;
+    // শিক্ষার্থী না বেছে টিক দেওয়া যাবে না — নইলে সেটা সবার জন্য বসে যেত
+    if (!forStudent) {
+      setPickOpen(true);
+      return notice("আগে কোন শিক্ষার্থীর জন্য টিক দিচ্ছেন তা বেছে নিন।");
+    }
     if (canMark && !isAdmin && topic.covered === false)
       return notice(
         "লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করতে পারবেন — অথবা পরিচালক আপনাকে অনুমতি দিলে।",
       );
     try {
-      await api.markTopic(topic.id, val);
+      await api.markTopic(topic.id, val, forStudent.id);
       await loadData();
     } catch (e) {
       notice(
@@ -4315,13 +4351,17 @@ function LecturePlan({ db, courses, user, refresh }) {
     }
   };
   const markAll = async (lec) => {
+    if (!forStudent) {
+      setPickOpen(true);
+      return notice("আগে কোন শিক্ষার্থীর জন্য টিক দিচ্ছেন তা বেছে নিন।");
+    }
     const uncovered = lec.topics.filter(
       (t) => t.covered !== true && (isAdmin || t.covered !== false),
     );
     const failed = [];
     for (const t of uncovered) {
       try {
-        await api.markTopic(t.id, true);
+        await api.markTopic(t.id, true, forStudent?.id);
       } catch {
         failed.push(t.text || t.id);
       }
@@ -4476,6 +4516,131 @@ function LecturePlan({ db, courses, user, refresh }) {
           এডমিন ড্যাশবোর্ডে সবুজ/লাল হয়ে দেখাবে।
         </div>
       )}
+      {/* ── কার জন্য টিক দিচ্ছি ── */}
+      {needsStudent && forStudent && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+            padding: "9px 14px",
+            borderRadius: 12,
+            background: C.greenBg,
+            border: `1.5px solid ${C.emerald}`,
+            marginBottom: 10,
+            fontSize: 13,
+          }}
+        >
+          <span style={{ fontWeight: 800, color: C.emerald }}>
+            👤 এখন টিক পড়বে:
+          </span>
+          <span style={{ fontWeight: 800 }}>{forStudent.name}</span>
+          {forStudent.student_id && (
+            <span style={{ color: C.muted, fontSize: 12 }}>
+              ({forStudent.student_id})
+            </span>
+          )}
+          <div style={{ flex: 1 }} />
+          <Btn sm kind="soft" onClick={() => setPickOpen(true)}>
+            🔄 অন্য শিক্ষার্থী
+          </Btn>
+        </div>
+      )}
+
+      {/* ── পর্দা ঢেকে শিক্ষার্থী বাছাই ──
+          বাছাই না করা পর্যন্ত লেকচার প্ল্যান দেখা যায় না, যাতে ভুল করে
+          একজনের ক্লাসে অন্যজনের টপিকে টিক না পড়ে। */}
+      {needsStudent && pickOpen && (
+        <BlockingPopup
+          icon="👤"
+          zIndex={306}
+          title="কোন শিক্ষার্থীর জন্য?"
+          footer={
+            /* ⚠️ বের হওয়ার পথ সবসময় থাকতেই হবে —
+               • কেউ বাছাই করা থাকলে সেটাই রেখে চালিয়ে যাওয়া যায়
+               • কোর্সে একজন শিক্ষার্থীও না থাকলে বাছার কিছু নেই, নইলে
+                 পরিচালক দারস তৈরি করতেই পারতেন না — চিরকাল আটকে থাকতেন
+               • পরিচালক/এডমিন দারস তৈরি করতে আসেন, তাই তাঁরা বাছাই ছাড়াও
+                 দেখতে পারেন; তবে টিক দিতে গেলে তখনো বাছতেই হবে
+               উস্তাদের ক্ষেত্রে (শিক্ষার্থী আছে এমন কোর্সে) বাছাই ছাড়া
+               পাতাটা খোলে না — এটাই আসল উদ্দেশ্য। */
+            forStudent ? (
+              <Btn
+                kind="soft"
+                style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => setPickOpen(false)}
+              >
+                বাতিল — {forStudent.name} রেখেই চালিয়ে যাই
+              </Btn>
+            ) : courseStudents.length === 0 || isAdm(user) ? (
+              <Btn
+                kind="soft"
+                style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => setPickOpen(false)}
+              >
+                {courseStudents.length === 0
+                  ? "ঠিক আছে"
+                  : "শিক্ষার্থী না বেছেই দেখি (টিক দেওয়া যাবে না)"}
+              </Btn>
+            ) : null
+          }
+        >
+          <div style={{ marginBottom: 10 }}>
+            যাঁর দারস দেখছেন বা যাঁর টপিকে টিক দেবেন, তাঁকে বেছে নিন। টিক
+            কেবল <b>তাঁর নিজের পোর্টালেই</b> দেখাবে, অন্য কারও নয়।
+          </div>
+          {courseStudents.length === 0 ? (
+            <div style={{ color: C.muted }}>
+              এই কোর্সে এখনো কোনো শিক্ষার্থী যুক্ত নেই — পরিচালক কোর্সে
+              শিক্ষার্থী যোগ করলে এখানে দেখা যাবে।
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 6, maxHeight: "46vh", overflowY: "auto" }}>
+              {courseStudents.map((st) => (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => {
+                    setForStudent(st);
+                    setPickOpen(false);
+                  }}
+                  style={{
+                    textAlign: "left",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    color: C.text,
+                    background:
+                      forStudent?.id === st.id ? C.greenBg : "#fff",
+                    border: `1.5px solid ${
+                      forStudent?.id === st.id ? C.emerald : C.line
+                    }`,
+                  }}
+                >
+                  {st.name}
+                  {st.student_id && (
+                    <span
+                      style={{
+                        color: C.muted,
+                        fontWeight: 600,
+                        fontSize: 12,
+                        marginLeft: 6,
+                      }}
+                    >
+                      {st.student_id}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </BlockingPopup>
+      )}
+
       {loading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
       {!loading && lectures.length === 0 && (
         <div

@@ -261,7 +261,12 @@ export const api = {
   addSyllabus: (d) => request("/syllabus/", { method: "POST", body: d }),
   editSyllabus: (id, d) => request(`/syllabus/${id}/`, { method: "PATCH", body: d }),
   deleteSyllabus: (id) => request(`/syllabus/${id}/`, { method: "DELETE" }),
-  lectures: (courseId) => request(`/lectures/?course=${courseId}`),
+  // studentId দিলে ওই শিক্ষার্থীর নিজের কভার-টিক নিয়ে আসে
+  lectures: (courseId, studentId) =>
+    request(
+      `/lectures/?course=${courseId}` +
+        (studentId ? `&student=${studentId}` : ""),
+    ),
   createLecture: (course, title, syllabus_item_ids, extra = {}) =>            // সিলেবাস থেকে টপিক সিলেকশন (+ ঐচ্ছিক দারস-নং/তারিখ)
     request("/lectures/", { method: "POST", body: { course, title, syllabus_item_ids, ...extra } }),
   // নতুন পথ — পরিচালকের নিজের লেখা টগল: [{id?, text, content}, ...]
@@ -272,10 +277,14 @@ export const api = {
     }),
   editLecture: (id, d) => request(`/lectures/${id}/`, { method: "PATCH", body: d }),
   deleteLecture: (id) => request(`/lectures/${id}/`, { method: "DELETE" }),
-  markTopic: (topic_id, covered) => {                             // ✔/✘ — সবুজ/লাল
+  markTopic: (topic_id, covered, student_id) => {                 // ✔/✘ — সবুজ/লাল
     // ফ্রন্টএন্ড boolean (true/false/null) → ব্যাকএন্ড LectureTopic.Covered স্ট্রিং enum
     const v = covered === true ? "covered" : covered === false ? "missed" : "pending";
-    return request("/lectures/mark_topic/", { method: "POST", body: { topic_id, covered: v } });
+    // student_id দিলে টিকটা কেবল সেই শিক্ষার্থীর জন্য বসে, অন্য কারও নয়
+    return request("/lectures/mark_topic/", {
+      method: "POST",
+      body: { topic_id, covered: v, ...(student_id ? { student_id } : {}) },
+    });
   },
 
   // অ্যাসাইনমেন্ট ও পরীক্ষা
@@ -358,6 +367,8 @@ export const api = {
   broadcastNotification: (text) =>
     request("/notifications/broadcast/", { method: "POST", body: { text } }),
   // কোর্সের সিলেবাস টেবিল — পরিচালকের নিজের হাতে লেখা (পড়া: সবাই, লেখা: পরিচালক)
+  // কোর্সের শিক্ষার্থী তালিকা — লেকচার প্ল্যানে "কার জন্য টিক" বাছাই করতে
+  courseStudents: (courseId) => request(`/courses/${courseId}/students/`),
   syllabusSheet: (courseId) => request(`/courses/${courseId}/syllabus_sheet/`),
   saveSyllabusSheet: (courseId, headers, rows) =>
     request(`/courses/${courseId}/syllabus_sheet/`, {

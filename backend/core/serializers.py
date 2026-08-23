@@ -127,9 +127,26 @@ class SyllabusItemSerializer(serializers.ModelSerializer):
 
 
 class LectureTopicSerializer(serializers.ModelSerializer):
+    covered = serializers.SerializerMethodField()
+
     class Meta:
         model = LectureTopic
         fields = ["id", "syllabus_item", "text", "content", "order", "covered"]
+
+    def get_covered(self, obj):
+        """যে শিক্ষার্থীর জন্য দেখা হচ্ছে তার নিজের টিক।
+
+        student_id না থাকলে (যেমন পরিচালক এখনো কাউকে বাছেননি) পুরনো
+        সবার-জন্য-একটাই মানটাই ফেরত যায়। কারও নিজস্ব রেকর্ড না থাকলেও
+        তাই — এতে আগের হিসাব হারায় না।
+        """
+        sid = self.context.get("student_id")
+        if sid:
+            # prefetch করা coverages থেকেই পড়ি — প্রতি টপিকে আলাদা কোয়েরি হয় না
+            for c in obj.coverages.all():
+                if c.student_id == sid:
+                    return c.covered
+        return obj.covered
 
 
 class LectureSerializer(serializers.ModelSerializer):

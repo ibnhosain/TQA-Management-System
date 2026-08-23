@@ -154,6 +154,35 @@ class LectureTopic(models.Model):
         ordering = ["order", "id"]
 
 
+class TopicCoverage(models.Model):
+    """কোন শিক্ষার্থীর জন্য কোন টপিক কভার হয়েছে।
+
+    আগে LectureTopic.covered একটাই মান ছিল — অর্থাৎ উস্তাদ টিক দিলে সেটা
+    কোর্সের সব শিক্ষার্থীর জন্যই বসে যেত। এখন প্রতিটি শিক্ষার্থীর হিসাব
+    আলাদা: এক ছাত্রের জন্য টিক দিলে কেবল তার পোর্টালেই দেখায়।
+
+    ⚠️ পুরনো LectureTopic.covered ঘরটা মোছা হয়নি। কোনো শিক্ষার্থীর নিজস্ব
+    রেকর্ড না থাকলে ওই পুরনো মানটাই দেখানো হয় — তাই আগের কোনো হিসাব
+    হারায় না, শুধু নতুন টিকগুলো এখান থেকে আসে।
+    """
+    topic = models.ForeignKey(LectureTopic, on_delete=models.CASCADE,
+                              related_name="coverages")
+    student = models.ForeignKey(User, on_delete=models.CASCADE,
+                                limit_choices_to={"role": "student"},
+                                related_name="topic_coverages")
+    covered = models.CharField(max_length=8, choices=LectureTopic.Covered.choices,
+                               default=LectureTopic.Covered.PENDING)
+    marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                  blank=True, related_name="+")
+    marked_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("topic", "student")]
+
+    def __str__(self):
+        return f"{self.student.name_bn} — {self.topic.text}: {self.covered}"
+
+
 # ─────────────────────────── রুটিন ও ক্লাস সেশন ───────────────────────────
 class Routine(models.Model):
     """স্থায়ী সাপ্তাহিক রুটিন — কে, কার কাছে, কোন বারে, কোন সময়ে"""

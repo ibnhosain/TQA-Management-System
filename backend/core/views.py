@@ -15,7 +15,7 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      ExamResult, FeePayment, DueMonth, TeacherPayment, SentReceipt,
                      Admission, LeaveRequest, Rating, StudentRemark, Notice, Notification,
                      PushSubscription, WaMessage, LibraryBook,
-                     CourseSyllabusSheet)
+                     CourseSyllabusSheet, TopicCoverage)
 from .serializers import *
 from .permissions import (IsDirector, IsAdminLevel, IsTeacherOrAdminLevel,
                           ReadAllWriteAdmin, ReadAllWriteDirector)
@@ -219,6 +219,22 @@ class CourseViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
+    @action(detail=True, permission_classes=[IsTeacherOrAdminLevel])
+    def students(self, request, pk=None):
+        """কোর্সের শিক্ষার্থীদের নাম ও আইডি।
+
+        লেকচার প্ল্যানে "কার জন্য টিক দিচ্ছি" বাছাই করতে লাগে। পুরো
+        ব্যবহারকারী-তালিকা (/users/) কেবল পরিচালক দেখতে পান, তাই উস্তাদের
+        জন্য এই ছোট ও সীমিত পথটা আলাদা করে রাখা হলো — কেবল নিজের কোর্সের
+        শিক্ষার্থী, কেবল নাম ও আইডি।
+        """
+        course = self.get_object()
+        rows = [
+            {"id": u.id, "name": u.name_bn, "student_id": u.student_id}
+            for u in course.students.all().order_by("name_bn")
+        ]
+        return Response(rows)
+
     @action(detail=True, methods=["get", "put"], permission_classes=[IsAuthenticated])
     def syllabus_sheet(self, request, pk=None):
         """কোর্সের সিলেবাস টেবিল — পরিচালকের নিজের হাতে লেখা।
@@ -272,10 +288,32 @@ class SyllabusViewSet(viewsets.ModelViewSet):
 class LectureViewSet(viewsets.ModelViewSet):
     # prefetch_related("topics") → নেস্টেড topics প্রতি লেকচারে আলাদা কোয়েরি না করে
     # prefetch cache ব্যবহার করে (N+1 এড়ায়) — লেকচার প্ল্যান পেজে সব দারসের টপিক দেখায়
-    queryset = Lecture.objects.prefetch_related("topics").all()
+    queryset = Lecture.objects.prefetch_related(
+        "topics", "topics__coverages"
+    ).all()
     serializer_class = LectureSerializer
     permission_classes = [ReadAllWriteDirector]
     filterset_fields = ["course"]
+
+    def _student_id(self):
+        """কোন শিক্ষার্থীর টিক দেখানো হবে।
+
+        শিক্ষার্থী নিজে দেখলে সবসময় নিজেরটাই — অন্য কারও টিক সে দেখতে
+        পাবে না। উস্তাদ/এডমিন ?student=<id> দিয়ে বেছে নেন।
+        """
+        u = self.request.user
+        if u.role == "student":
+            return u.id
+        raw = self.request.query_params.get("student")
+        try:
+            return int(raw) if raw else None
+        except (TypeError, ValueError):
+            return None
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx["student_id"] = self._student_id()
+        return ctx
 
     @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
     def mark_topic(self, request):
@@ -290,6 +328,34 @@ class LectureViewSet(viewsets.ModelViewSet):
         is_course_teacher = topic.lecture.course.teacher_id == u.id
         if not (is_admin or is_course_teacher):
             return Response({"detail": "অনুমতি নেই"}, status=403)
+
+        # ── কোন শিক্ষার্থীর জন্য? ──
+        # student_id দিলে টিকটা কেবল সেই শিক্ষার্থীর জন্য বসে — অন্য কারও
+        # পোর্টালে দেখাবে না। না দিলে আগের মতোই সবার জন্য একটাই মান বসে
+        # (পুরনো ক্লায়েন্ট বা পরিচালকের সাধারণ সংশোধনের জন্য)।
+        sid = request.data.get("student_id")
+        if sid:
+            try:
+                sid = int(sid)
+            except (TypeError, ValueError):
+                return Response({"detail": "student_id অবৈধ"}, status=400)
+            if not topic.lecture.course.students.filter(pk=sid).exists():
+                return Response(
+                    {"detail": "এই শিক্ষার্থী এই কোর্সে নেই"}, status=400)
+            row, _ = TopicCoverage.objects.get_or_create(topic=topic, student_id=sid)
+            if row.covered == "missed" and not is_admin:
+                return Response(
+                    {"detail": "লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করতে পারবেন।"},
+                    status=403)
+            row.covered = new
+            row.marked_by = u
+            row.save()
+            if not topic.lecture.date:
+                topic.lecture.date = timezone.localtime().date()
+                topic.lecture.save()
+            return Response(
+                LectureTopicSerializer(topic, context={"student_id": sid}).data)
+
         if topic.covered == "missed" and not is_admin:
             return Response({"detail": "লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করতে পারবেন।"}, status=403)
         topic.covered = new
