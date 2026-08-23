@@ -15536,63 +15536,134 @@ function BlockingPopup({ icon, title, children, footer, zIndex = 305 }) {
   );
 }
 
-/* ═══════════ পরিচালক/এডমিনের পাঠানো নোটিফিকেশন — না-পড়া থাকলে পপআপ ═══════════
-   লগইন করার সাথে সাথেই (এবং পরে নতুন কিছু এলেও) পুরো পর্দা ঢেকে দেখানো হয়।
-   "বুঝেছি" চাপলে সবগুলো "পড়া হয়েছে" চিহ্নিত হয়ে পপআপ চলে যায় — তার আগে নয়।
-   এখানে ফাঁদে পড়ার ভয় নেই: বাটনটা সবসময় কাজ করে, আর সার্ভারে পৌঁছাতে না
-   পারলেও পপআপ বন্ধ হয়ে যায় (নইলে নেট গেলে অ্যাপটাই ব্যবহার করা যেত না)। */
-function UnreadNotifPopup({ user, notifs, onDone }) {
-  const [busy, setBusy] = useState(false);
+/* ═══════════ নতুন নোটিফিকেশন এলে ভাসমান কার্ড ═══════════
+   পর্দা আটকায় না — উপরে একটা কার্ড ভেসে ওঠে, নিজেই কয়েক সেকেন্ড পর সরে
+   যায়। মাউস রাখলে বা ছুঁয়ে থাকলে সরে না, যাতে পুরোটা পড়ে নেওয়া যায়।
+   পরে ইচ্ছা করলে নোটিফিকেশন ঘণ্টা থেকে আবার পড়া যাবে — তাই "পড়া হয়েছে"
+   চিহ্নিত করা হয় না, ঘণ্টার লাল সংখ্যাটা আগের মতোই থাকে।
+
+   ⚠️ কেবল *নতুন* গুলোই দেখায়। কোন নম্বর পর্যন্ত দেখানো হয়ে গেছে তা
+   ডিভাইসেই মনে রাখা হয়। প্রথমবার কিছুই দেখায় না — নইলে আগে জমে থাকা
+   সব পুরনো নোটিফিকেশন একসাথে ঝাঁপিয়ে পড়ত। */
+const SEEN_NOTIF_KEY = "tqa_seen_notif_id";
+const NOTIF_TOAST_MS = 10000; // কত সময় পর নিজে থেকে সরে যাবে
+
+function NewNotifToast({ user, notifs }) {
   const en = user?.role === "student";
-  const unread = (notifs || []).filter((n) => !n.is_read);
-  if (!user || !unread.length) return null;
-  const ack = async () => {
-    setBusy(true);
+  const [items, setItems] = useState([]);
+  // একবার ছুঁয়ে/মাউস রাখলে (অর্থাৎ পড়তে শুরু করলে) সময় গোনা একেবারেই
+  // থেমে যায় — তারপর কেবল ✕ চাপলেই সরে। পড়ার মাঝপথে সরে যাওয়ার ভয় নেই।
+  const [reading, setReading] = useState(false);
+  useEffect(() => {
+    if (!user || !notifs || !notifs.length) return;
+    const ids = notifs.map((n) => Number(n.id)).filter((x) => !Number.isNaN(x));
+    if (!ids.length) return;
+    const maxId = Math.max(...ids);
+    let seen = null;
     try {
-      await api.markAllRead();
+      const raw = window.localStorage.getItem(SEEN_NOTIF_KEY);
+      seen = raw == null ? null : Number(raw);
     } catch (e) {
-      /* সার্ভারে জানানো গেল না — তবু আটকে রাখি না */
+      /* উপেক্ষা */
     }
-    setBusy(false);
-    onDone();
-  };
+    const remember = () => {
+      try {
+        window.localStorage.setItem(SEEN_NOTIF_KEY, String(maxId));
+      } catch (e) {
+        /* উপেক্ষা */
+      }
+    };
+    if (seen == null || Number.isNaN(seen)) {
+      remember(); // প্রথমবার — পুরনোগুলো দেখাই না, শুধু জায়গাটা চিহ্নিত করে রাখি
+      return;
+    }
+    const fresh = notifs.filter((n) => Number(n.id) > seen);
+    if (!fresh.length) return;
+    setItems(fresh);
+    setReading(false); // নতুন বার্তা — আবার নিজে থেকে সরার সুযোগ পাক
+    remember();
+  }, [notifs, user]);
+  // নিজে থেকে সরে যাওয়া — কেউ পড়তে শুরু করলে আর সরে না
+  useEffect(() => {
+    if (!items.length || reading) return;
+    const t = setTimeout(() => setItems([]), NOTIF_TOAST_MS);
+    return () => clearTimeout(t);
+  }, [items, reading]);
+  if (!user || !items.length) return null;
   return (
-    <BlockingPopup
-      icon="🔔"
-      title={
-        en
-          ? unread.length > 1
-            ? `${unread.length} new messages from the Academy`
-            : "A message from the Academy"
-          : unread.length > 1
-            ? `একাডেমি থেকে ${bn(unread.length)}টি নতুন বার্তা`
-            : "একাডেমি থেকে একটি বার্তা"
-      }
-      footer={
-        <Btn
-          kind="gold"
-          style={{ width: "100%", justifyContent: "center", opacity: busy ? 0.7 : 1 }}
-          onClick={busy ? undefined : ack}
-        >
-          {busy ? (en ? "Please wait…" : "একটু অপেক্ষা…") : en ? "Got it" : "বুঝেছি"}
-        </Btn>
-      }
+    <div
+      onMouseEnter={() => setReading(true)}
+      onTouchStart={() => setReading(true)}
+      onClick={() => setReading(true)}
+      style={{
+        position: "fixed",
+        top: 12,
+        left: 12,
+        right: 12,
+        margin: "0 auto",
+        maxWidth: 400,
+        zIndex: 290,
+        background: "#fff",
+        border: `1.5px solid ${C.emerald}`,
+        borderRadius: 16,
+        boxShadow: "0 12px 32px rgba(0,0,0,.22)",
+        padding: "14px 16px",
+        fontFamily: "'Hind Siliguri', sans-serif",
+        maxHeight: "60vh",
+        overflowY: "auto",
+      }}
     >
-      {unread.map((n) => (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 8,
+        }}
+      >
+        <span style={{ fontSize: 18 }}>🔔</span>
+        <span style={{ fontWeight: 800, fontSize: 14, color: C.emerald, flex: 1 }}>
+          {en
+            ? items.length > 1
+              ? `${items.length} new messages`
+              : "New message from the Academy"
+            : items.length > 1
+              ? `${bn(items.length)}টি নতুন বার্তা`
+              : "একাডেমি থেকে নতুন বার্তা"}
+        </span>
+        <button
+          onClick={() => setItems([])}
+          title={en ? "Close" : "বন্ধ করুন"}
+          aria-label={en ? "Close" : "বন্ধ করুন"}
+          style={{
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            fontSize: 16,
+            color: C.muted,
+            lineHeight: 1,
+          }}
+        >
+          ✕
+        </button>
+      </div>
+      {items.map((n) => (
         <div
           key={n.id}
           style={{
             background: C.greenBg,
-            border: `1px solid ${C.line}`,
-            borderRadius: 12,
-            padding: "10px 12px",
-            marginBottom: 8,
+            borderRadius: 10,
+            padding: "9px 11px",
+            marginTop: 6,
+            fontSize: 13.5,
+            lineHeight: 1.65,
+            color: C.text,
           }}
         >
           {n.text}
         </div>
       ))}
-    </BlockingPopup>
+    </div>
   );
 }
 
@@ -16667,7 +16738,7 @@ export default function App() {
       </div>
 
       {overlays}
-      <UnreadNotifPopup user={user} notifs={apiNotifs} onDone={loadNotifs} />
+      <NewNotifToast user={user} notifs={apiNotifs} />
       {receipt && (
         <ReceiptModal
           r={receipt}
