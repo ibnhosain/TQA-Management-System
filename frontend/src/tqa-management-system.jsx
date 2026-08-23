@@ -187,7 +187,7 @@ body{font-family:'Hind Siliguri',sans-serif;margin:0;padding:26px;background:#f4
 .meta b{color:#1a5c3a}
 table{width:100%;border-collapse:collapse;table-layout:fixed}
 th{background:#123f28;color:#fff;font-weight:800;font-size:13px;text-align:center;padding:9px 6px;border:1px solid #123f28;border-bottom:2px solid #c9962a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-td{border:1px solid #e5e9e5;vertical-align:top;padding:9px 10px;font-size:12.5px;line-height:1.6;word-wrap:break-word}
+td{border:1px solid #1a5c3a;vertical-align:top;padding:9px 10px;font-size:12.5px;line-height:1.6;word-wrap:break-word}
 td.em{text-align:center;color:#9ca3af}
 .f{text-align:center;font-size:11px;color:#9ca3af;padding:10px;border-top:1px solid #eef0ee}
 @media print{body{background:#fff;padding:0}.v{border:none;border-radius:0;max-width:100%}}
@@ -13666,8 +13666,11 @@ function SyllabusView({ db, setDb, courses, user }) {
       ? "আপনি যে কোর্সগুলোতে পড়ান তার সিলেবাস (দেখা ও প্রিন্ট)"
       : "Your course syllabus (view & print)";
 
+  // ঘরের রেখা গাঢ় সবুজ — আগে খুব হালকা ধূসর (#e5e9e5) ছিল বলে কোন লেখা
+  // কোন ঘরের তা আলাদা করে বোঝা যেত না, বিশেষ করে ঘরে একাধিক লাইন থাকলে
+  const gridLine = `1px solid ${C.emerald}`;
   const cellStyle = {
-    border: `1px solid ${C.line}`,
+    border: gridLine,
     verticalAlign: "top",
     padding: canEdit ? 0 : "9px 10px",
     fontSize: 12.5,
