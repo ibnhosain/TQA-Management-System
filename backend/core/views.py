@@ -1079,6 +1079,26 @@ class NoticeViewSet(viewsets.ModelViewSet):
     serializer_class = NoticeSerializer
     permission_classes = [ReadAllWriteAdmin]
 
+    def perform_create(self, serializer):
+        """নতুন নোটিশ দিলে সবার কাছে নোটিফিকেশনও চলে যায়।
+
+        আগে নোটিশ কেবল নোটিশ পেইজে বসে থাকত — কেউ ওই পেইজে না গেলে কোনোদিন
+        জানতেই পারতেন না। এখন সবার নোটিফিকেশন ঘণ্টায় ও পুশ-চালু ডিভাইসে
+        পৌঁছায়, আর পোর্টাল খুললেই পুরো পর্দা ঢেকে দেখানো হয়।
+
+        ⚠️ কেবল নতুন নোটিশে — এডিট করলে নয় (perform_update ছোঁয়া হয়নি)।
+        নইলে বানান ঠিক করলেও সবার কাছে আবার বাজত।
+        """
+        obj = serializer.save()
+        try:
+            notify(f"📢 {obj.title} — {obj.body}",
+                   list(User.objects.filter(is_active=True)))
+        except Exception:
+            # নোটিফিকেশন পাঠানো ব্যর্থ হলেও নোটিশ তৈরি হওয়াটা আটকানো যাবে না —
+            # নইলে সেভ হয়ে যাওয়া নোটিশের জন্য ভুল করে ব্যর্থতা দেখিয়ে এডমিন
+            # আবার পোস্ট করতেন, আর একই নোটিশ দুবার হয়ে যেত
+            pass
+
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NotificationSerializer
