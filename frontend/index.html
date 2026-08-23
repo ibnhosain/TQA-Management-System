@@ -12,7 +12,19 @@
          manifest-এ বদলে দেয়, তাই ওই লিংক দিয়ে ইনস্টল করলে অ্যাপ সরাসরি সেই
          রোলের লগইন ফর্মে খোলে, রোল বাছাইয়ের স্ক্রিন আসে না -->
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- আইপ্যাড/আইফোন — iOS মাপ-নির্দিষ্ট আইকন খোঁজে। শুধু একটা সাধারণ
+         apple-touch-icon থাকলে আইপ্যাড অনেক সময় সেটা ব্যবহার না করে হোম
+         স্ক্রিনে পাতার স্ক্রিনশট বসিয়ে দেয় — লগো দেখায় না -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152.png" />
+    <!-- পিসি/ল্যাপটপ — ডেস্কটপ ব্রাউজার ট্যাব ও ইনস্টল করা অ্যাপের উইন্ডোতে
+         মাপ অনুযায়ী আইকন বাছে; মাপ ঘোষণা না থাকলে কোনোটাই বেছে নিতে না
+         পেরে ফাঁকা দেখাতে পারে -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
     <meta name="theme-color" content="#1a5c3a" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
