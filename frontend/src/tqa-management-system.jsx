@@ -252,6 +252,34 @@ const notice = (msg) => {
     } catch (e) {}
 };
 
+/* খোলা ফর্মের অসমাপ্ত লেখা localStorage-এ রেখে দিই — মোবাইল ব্রাউজার পেইজটাকে
+   ব্যাকগ্রাউন্ডে ফেলে দিয়ে পরে রিলোড করলেও যেন টাইপ করা কিছু হারিয়ে না যায়।
+   useState-এর হুবহু বিকল্প, শুধু মানটা অতিরিক্তভাবে সংরক্ষিত থাকে।
+   • লগআউট করলেই সব ড্রাফট মুছে যায় (api.js → logout) — তাই একজনের লেখা
+     আরেকজন দেখবেন না।
+   • ফাইল/ছবি ধরে রাখা ফর্মে এটা ব্যবহার করা যাবে না — File JSON হয় না। */
+const DRAFT_PREFIX = "tqa_draft_";
+function usePersistedState(key, initial) {
+  const k = DRAFT_PREFIX + key;
+  const [v, setV] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem(k);
+      if (raw != null) return JSON.parse(raw);
+    } catch (e) {
+      /* নষ্ট বা অপঠনযোগ্য ড্রাফট — উপেক্ষা করে স্বাভাবিকভাবেই শুরু করি */
+    }
+    return typeof initial === "function" ? initial() : initial;
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(k, JSON.stringify(v));
+    } catch (e) {
+      /* জায়গা শেষ ইত্যাদি — উপেক্ষা, ফর্ম আগের মতোই চলবে */
+    }
+  }, [k, v]);
+  return [v, setV];
+}
+
 let receiptHandler = null;
 const printReceipt = (p, person, kind) => {
   if (receiptHandler) receiptHandler({ p, person, kind });
@@ -2418,7 +2446,7 @@ function ClassesView({
 }) {
   // শিক্ষার্থী বাংলা বোঝে না বলে তাদের জন্য ইংরেজি; উস্তাদ/এডমিন/পরিচালকের জন্য বাংলাই থাকছে
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
-  const [show, setShow] = useState(false);
+  const [show, setShow] = usePersistedState("cls_show", false);
   const blankSched = () => ({
     courseId: courses[0]?.id,
     date: todayISO(),
@@ -2432,8 +2460,8 @@ function ClassesView({
     studentIds: [],
     req: "",
   });
-  const [f, setF] = useState(blankSched);
-  const [editId, setEditId] = useState(null); // এডিট — কেবল এডমিন/পরিচালক
+  const [f, setF] = usePersistedState("cls_f", blankSched);
+  const [editId, setEditId] = usePersistedState("cls_editId", null); // এডিট — কেবল এডমিন/পরিচালক
   const [joined, setJoined] = useState(null); // {classId}
   const [rate, setRate] = useState(null); // ক্লাস শেষে মূল্যায়ন পপআপ
   const [attnMark, setAttnMark] = useState(null); // পরিচালকের ম্যানুয়াল হাজিরা মডাল (কোন ক্লাস)
@@ -3433,7 +3461,7 @@ function InstantClassView({ courses, user }) {
       req: "",
     };
   };
-  const [f, setF] = useState(blankForm);
+  const [f, setF] = usePersistedState("inst_f", blankForm);
   const [previewZone, setPreviewZone] = useState("");
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState(null); // সদ্য তৈরি হওয়া ক্লাস — নিচে নোটিফাই বাটন দেখাতে
@@ -3807,7 +3835,7 @@ function PostponedClassesView({ user }) {
 function LecturePlan({ db, courses, user, refresh }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [sel, setSel] = useState(courses[0]?.id);
-  const [form, setForm] = useState(null);
+  const [form, setForm] = usePersistedState("lec_form", null);
   const [lectures, setLectures] = useState([]);
   const [sylList, setSylList] = useState([]);
   const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
@@ -5103,10 +5131,10 @@ function EvalWork({ item, onClose, onMark }) {
 /* ═══════════════ অ্যাসাইনমেন্ট (ফিচার ৫) — ফরম বা ছবি, মূল্যায়নসহ ═══════════════ */
 function AssignmentsView({ db, setDb, courses, user }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
-  const [show, setShow] = useState(false);
+  const [show, setShow] = usePersistedState("asg_show", false);
   const [doSub, setDoSub] = useState(null);
   const [evalFor, setEvalFor] = useState(null);
-  const [f, setF] = useState({
+  const [f, setF] = usePersistedState("asg_f", {
     courseId: courses[0]?.id,
     title: "",
     desc: "",
@@ -5114,7 +5142,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
     mode: "form",
     total: 10,
   });
-  const [qs, setQs] = useState([]);
+  const [qs, setQs] = usePersistedState("asg_qs", []);
   const [assignments, setAssignments] = useState(db.assignments);
   const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
 
@@ -5481,11 +5509,11 @@ function AssignmentsView({ db, setDb, courses, user }) {
 /* ═══════════════ পরীক্ষা (ফিচার ৬) — ফরম (MCQ/লিখিত) বা ছবি, মূল্যায়নসহ ═══════════════ */
 function ExamsView({ db, setDb, courses, user }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
-  const [show, setShow] = useState(false);
+  const [show, setShow] = usePersistedState("exam_show", false);
   const [marksFor, setMarksFor] = useState(null);
   const [doSub, setDoSub] = useState(null);
   const [evalFor, setEvalFor] = useState(null);
-  const [f, setF] = useState({
+  const [f, setF] = usePersistedState("exam_f", {
     type: "mcq",
     title: "",
     courseId: courses[0]?.id,
@@ -5493,7 +5521,7 @@ function ExamsView({ db, setDb, courses, user }) {
     date: addDays(7),
     mode: "form",
   });
-  const [qs, setQs] = useState([]);
+  const [qs, setQs] = usePersistedState("exam_qs", []);
   const [exams, setExams] = useState(db.exams);
   const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
 
@@ -6949,8 +6977,8 @@ function BooksView({ db, user }) {
 /* ═══════════════ নোটিশ বোর্ড (অতিরিক্ত প্রফেশনাল ফিচার) ═══════════════ */
 function NoticesView({ db, setDb, user }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
-  const [show, setShow] = useState(false);
-  const [f, setF] = useState({ title: "", body: "" });
+  const [show, setShow] = usePersistedState("notice_show", false);
+  const [f, setF] = usePersistedState("notice_f", { title: "", body: "" });
   const [notices, setNotices] = useState(db.notices || []);
   const [busy, setBusy] = useState(false);
 
@@ -10155,7 +10183,7 @@ function RemarkBox({ studentId, studentName }) {
 function RoutineView({ db, setDb, courses, user }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const canEdit = isAdm(user);
-  const [show, setShow] = useState(false);
+  const [show, setShow] = usePersistedState("rt_show", false);
   const blankR = () => ({
     courseId: courses[0]?.id,
     days: [],
@@ -10168,8 +10196,8 @@ function RoutineView({ db, setDb, courses, user }) {
     studentIds: [],
     studentSchedule: {}, // { [studentId]: { days: [0..6], time: "HH:MM" } } — শিক্ষার্থীর নিজের সময়ে ম্যানুয়াল ওভাররাইড (ঐচ্ছিক)
   });
-  const [f, setF] = useState(blankR);
-  const [editId, setEditId] = useState(null);
+  const [f, setF] = usePersistedState("rt_f", blankR);
+  const [editId, setEditId] = usePersistedState("rt_editId", null);
   const [apiRoutines, setApiRoutines] = useState(null); // null হলে mock db.routine
   const [routinesLoading, setRoutinesLoading] = useState(true);
   const [teachers, setTeachers] = useState([]);
@@ -10836,8 +10864,8 @@ const LEAVE_TYPE_EN = {
 };
 function LeaveView({ db, setDb, user }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
-  const [show, setShow] = useState(false);
-  const [f, setF] = useState({
+  const [show, setShow] = usePersistedState("leave_show", false);
+  const [f, setF] = usePersistedState("leave_f", {
     type: "অসুস্থতা",
     from: todayISO(),
     to: todayISO(),
@@ -11382,7 +11410,7 @@ const joinPhone = (iso, local) =>
 
 function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   const [detail, setDetail] = useState(null);
-  const [edit, setEdit] = useState(null); // {id?} — null=বন্ধ, {}=নতুন
+  const [edit, setEdit] = usePersistedState("stu_edit", null); // {id?} — null=বন্ধ, {}=নতুন
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -12753,7 +12781,7 @@ function WaOutboxView({ db, setDb, user }) {
 
 /* ═══════════════ কোর্স ব্যবস্থাপনা — কেবল পরিচালক; যোগ/এডিট/বাদ এখান থেকেই সর্বত্র কার্যকর ═══════════════ */
 function CourseManagerView({ db, setDb, refresh }) {
-  const [edit, setEdit] = useState(null); // null=বন্ধ, {}=নতুন, {id}=এডিট
+  const [edit, setEdit] = usePersistedState("crs_edit", null); // null=বন্ধ, {}=নতুন, {id}=এডিট
   const PALETTE = [C.emerald, C.gold, C.blue, C.red, "#7c3aed", "#0f766e"];
   const [courses, setCourses] = useState(COURSES);
   const [teachers, setTeachers] = useState([]);
