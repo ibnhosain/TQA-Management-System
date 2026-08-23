@@ -156,11 +156,16 @@ def _sheet_from_syllabus(course):
     """পুরনো SyllabusItem গুলো থেকে টেবিলের হেডার ও সারি বানায় (read-only)।
 
     প্রতিটি বিভাগ একটি কলাম; ওই বিভাগের এন্ট্রিগুলো ওই কলামে উপর থেকে নিচে।
-    কোনো এন্ট্রি না থাকলে খালি টেবিল ফেরত — তখন পরিচালক নিজেই লিখে নেবেন।
+
+    কোনো এন্ট্রি না থাকলেও খালি টেবিল দেওয়া হয় না — পাঁচটি বিভাগের নামই
+    কলামের শিরোনাম হিসেবে বসিয়ে একটি ফাঁকা সারি দেওয়া হয়, যাতে পরিচালক
+    সাথে সাথেই লিখতে শুরু করতে পারেন। শিরোনামগুলো নিছক নমুনা — ইচ্ছামতো
+    বদলানো, বাদ দেওয়া বা নতুন কলাম যোগ করা যাবে।
     """
+    headers_default = [label for _, label in _SYL_COLUMNS]
     items = list(course.syllabus.select_related("book").all())
     if not items:
-        return [], []
+        return headers_default, [[""] * len(headers_default)]
     by_cat = {key: [] for key, _ in _SYL_COLUMNS}
     for it in items:
         by_cat.setdefault(it.category, []).append(it)
