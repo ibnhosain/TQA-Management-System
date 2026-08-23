@@ -3132,16 +3132,30 @@ function ClassesView({
           )}
           {isToday && isAdm(user) && k.status !== "postponed" && (
             <>
-              {k.joinModeOverride !== "join" && (
-                <Btn sm kind="soft" onClick={() => setJoinMode(k, "join")}>
-                  🎥 জয়েন লিংক জোর করে চালু করুন
-                </Btn>
-              )}
-              {k.joinModeOverride !== "rejoin" && (
-                <Btn sm kind="soft" onClick={() => setJoinMode(k, "rejoin")}>
-                  🔁 রিজয়েন লিংক জোর করে চালু করুন
-                </Btn>
-              )}
+              {/* পরিচালক/এডমিনের কাছে জয়েন ও রিজয়েন — দুটোই সবসময় পাশাপাশি
+                  থাকে, তাই এক ক্লিকেই যেকোনোটায় যাওয়া যায়। আগে যেটা চালু
+                  থাকত সেটা লুকিয়ে যেত, ফলে দুটো একসাথে দেখা যেত না। এখন
+                  চালু থাকা বাটনটা সোনালি ✓ দিয়ে চেনা যায় — নইলে দুটোই একরকম
+                  দেখানোয় কোনটা এখন চালু তা বোঝার উপায় থাকত না */}
+              <Btn
+                sm
+                kind={k.joinModeOverride === "join" ? "gold" : "soft"}
+                onClick={() => setJoinMode(k, "join")}
+              >
+                {k.joinModeOverride === "join" ? "✓ " : ""}🎥 জয়েন লিংক জোর করে চালু
+              </Btn>
+              <Btn
+                sm
+                kind={k.joinModeOverride === "rejoin" ? "gold" : "soft"}
+                onClick={() => setJoinMode(k, "rejoin")}
+              >
+                {k.joinModeOverride === "rejoin" ? "✓ " : ""}🔁 রিজয়েন লিংক জোর করে চালু
+              </Btn>
+              {/* "স্বয়ংক্রিয়ে ফিরিয়ে দিন" কেবল একটা আনডু — জোর করে চালু করা
+                  অবস্থাটা এই ক্লাসের জন্যই বাতিল করে। পরের দিনের ক্লাসের জন্য
+                  এটা চাপার দরকার নেই: প্রতিটি ক্লাস আলাদা রেকর্ড, আর নতুন ক্লাস
+                  তৈরির সময় join_mode_override পাঠানোই হয় না (tasks.py), তাই
+                  মডেলের ডিফল্ট "auto"-ই বসে — নতুন দিন নিজে থেকেই স্বয়ংক্রিয় */}
               {k.joinModeOverride !== "auto" && (
                 <Btn sm kind="soft" onClick={() => setJoinMode(k, "auto")}>
                   ↩️ স্বয়ংক্রিয়ে ফিরিয়ে দিন
