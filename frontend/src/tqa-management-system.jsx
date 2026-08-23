@@ -2234,6 +2234,37 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // উস্তাদ "ক্লাস শেষ করুন" চাপলে ব্যাকএন্ডে তার segment_start মুছে যায় — অর্থাৎ
+  // teacher_active মিথ্যা হয়ে যায়। সেটা টের পেলে শিক্ষার্থীর প্যানেলও নিজে থেকেই
+  // শেষ হয়ে যাবে (রেটিং পপআপসহ), আলাদা করে তাকে কিছু চাপতে হবে না।
+  // ভুলবশত বন্ধ হওয়া ঠেকাতে তিনটি শর্ত একসাথে মানতে হয় —
+  //   (১) এই বসায় উস্তাদকে অন্তত একবার উপস্থিত দেখা গেছে (নইলে উস্তাদ আসার
+  //       আগেই জয়েন করা শিক্ষার্থী সাথে সাথেই বেরিয়ে যেত),
+  //   (২) টানা ~২০ সেকেন্ড অনুপস্থিত (এক-দুটো পোলের সাময়িক গোলমালে নয়),
+  //   (৩) presence চেক তখন ব্যর্থ হচ্ছে না (নেট সমস্যাকে "শেষ" ধরা যাবে না)।
+  // উস্তাদ ফিরে এলে গণনা রিসেট হয়ে যায়।
+  const teacherSeenRef = useRef(false);
+  const teacherGoneSinceRef = useRef(null);
+  useEffect(() => {
+    if (user.role !== "student" || !usingApi || !inMeeting || !presence) return;
+    if (presence.ta) {
+      teacherSeenRef.current = true;
+      teacherGoneSinceRef.current = null;
+      return;
+    }
+    if (!teacherSeenRef.current || presenceStale) return;
+    if (teacherGoneSinceRef.current == null) {
+      teacherGoneSinceRef.current = Date.now();
+      return;
+    }
+    if (Date.now() - teacherGoneSinceRef.current >= 20000) {
+      teacherGoneSinceRef.current = null;
+      notice(T("উস্তাদ ক্লাস শেষ করেছেন।", "The teacher has ended the class."));
+      endSegment("finish");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presence, presenceStale, inMeeting]);
+
   // স্টুডেন্ট জুম থেকে ফিরে এসেছেন — সরাসরি ক্লাস শেষ না করে জিজ্ঞেস করি
   if (showContinuePrompt)
     return (
@@ -2350,11 +2381,18 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
             : T("হাজিরা নিশ্চিত হচ্ছে…", "Confirming attendance…")}
         </span>
       )}
-      <div style={{ marginTop: 6 }}>
-        <Btn sm kind="danger" onClick={() => endSegment("manual")}>
-          {T("ক্লাস শেষ করুন", "End Class")}
-        </Btn>
-      </div>
+      {/* "ক্লাস শেষ করুন" আসলে নিজে বেরিয়ে যাওয়ার বাটন — ক্লাসটা সবার জন্য শেষ
+          করে না। শিক্ষার্থীর কাছে এই লেখাটা বিভ্রান্তিকর ছিল, তাই তাদের কাছে
+          দেখানো হয় না। উস্তাদ শেষ করলে উপরের হুক শিক্ষার্থীর ক্লাস আপনাআপনি
+          শেষ করে দেয়; আর জুম থেকে ফিরলে "Have you finished today's class?"
+          পপআপেই সে নিজে শেষ করতে পারে। */}
+      {user.role !== "student" && (
+        <div style={{ marginTop: 6 }}>
+          <Btn sm kind="danger" onClick={() => endSegment("manual")}>
+            {T("ক্লাস শেষ করুন", "End Class")}
+          </Btn>
+        </div>
+      )}
     </div>
   );
 }
