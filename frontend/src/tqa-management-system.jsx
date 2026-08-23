@@ -15397,15 +15397,27 @@ const NAV = [
    স্ক্রিপ্টের নাম ওখানে আছে সেটা এখন চালু নামটার সাথে না মিললে বুঝি নতুন
    সংস্করণ উঠেছে।
    নিজে থেকে কিছুই রিফ্রেশ করে না — শুধু জানায়, চাপবেন কিনা ব্যবহারকারীর ইচ্ছা। */
+const RELOAD_GUARD_KEY = "tqa_update_reloaded_at";
 let selfReloading = false;
 function UpdateBanner({ lang }) {
   const en = lang === "en";
   const [ready, setReady] = useState(false);
+  const [left, setLeft] = useState(6);
   useEffect(() => {
     const cur = document
       .querySelector('script[src*="/assets/index-"]')
       ?.getAttribute("src");
     if (!cur) return; // ডেভ সার্ভার/অচেনা বিল্ড — কিছু করি না
+    // ⚠️ লুপ-প্রতিরোধ: আপডেটের জন্য একবার রিফ্রেশ করার পর ১০ মিনিট আর
+    // রিফ্রেশ করি না। CDN কখনো এক রিকোয়েস্টে পুরনো index.html ফেরত দিলে
+    // এই প্রহরী না থাকলে পাতাটা অনন্তকাল রিলোড হতে থাকত।
+    let lastReload = 0;
+    try {
+      lastReload = Number(window.localStorage.getItem(RELOAD_GUARD_KEY)) || 0;
+    } catch (e) {
+      /* উপেক্ষা */
+    }
+    if (Date.now() - lastReload < 10 * 60 * 1000) return;
     let stopped = false;
     const check = async () => {
       try {
@@ -15424,45 +15436,77 @@ function UpdateBanner({ lang }) {
       clearInterval(iv);
     };
   }, []);
+  // নতুন সংস্করণ পাওয়া গেলে কয়েক সেকেন্ড জানিয়ে নিয়ে নিজে থেকেই রিফ্রেশ —
+  // কোনো বাটন চাপতে হয় না। এই কয়েক সেকেন্ড রাখা হয়েছে যাতে পর্দা হঠাৎ
+  // বদলে গেলে কেউ ঘাবড়ে না যান, কারণটা চোখে পড়ে।
+  // কাজ হারানোর ভয় নেই — লগইন, খোলা পেইজ ও খোলা ফর্মের লেখা সবই আগে থেকেই
+  // সংরক্ষিত থাকে, রিফ্রেশের পর যেখানে ছিলেন সেখানেই ফিরে আসবেন।
+  useEffect(() => {
+    if (!ready) return;
+    if (left <= 0) {
+      try {
+        window.localStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
+      } catch (e) {
+        /* উপেক্ষা */
+      }
+      selfReloading = true; // "সাইট ছেড়ে যাবেন?" বাক্সটা যেন না আসে
+      window.location.reload();
+      return;
+    }
+    const t = setTimeout(() => setLeft((n) => n - 1), 1000);
+    return () => clearTimeout(t);
+  }, [ready, left]);
   if (!ready) return null;
   return (
     <div
       style={{
         position: "fixed",
-        left: 12,
-        right: 12,
-        bottom: 12,
-        zIndex: 240,
-        background: C.emerald,
-        color: "#fff",
-        borderRadius: 14,
-        padding: "12px 14px",
-        boxShadow: "0 8px 24px rgba(0,0,0,.22)",
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        flexWrap: "wrap",
-        fontFamily: "'Hind Siliguri', sans-serif",
+        inset: 0,
+        zIndex: 320,
+        background: "rgba(18,63,40,.6)",
+        display: "grid",
+        placeItems: "center",
+        padding: 16,
       }}
     >
-      <span style={{ fontWeight: 700, fontSize: 13.5, flex: 1, minWidth: 180 }}>
-        {en
-          ? "✨ A new version is available — refresh to get it."
-          : "✨ নতুন সংস্করণ এসেছে — রিফ্রেশ করলেই পেয়ে যাবেন।"}
-      </span>
-      <Btn
-        sm
-        kind="gold"
-        onClick={() => {
-          selfReloading = true;
-          window.location.reload();
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 18,
+          maxWidth: 360,
+          width: "100%",
+          padding: 26,
+          textAlign: "center",
+          fontFamily: "'Hind Siliguri', sans-serif",
         }}
       >
-        {en ? "🔄 Refresh now" : "🔄 এখনই রিফ্রেশ"}
-      </Btn>
-      <Btn sm kind="soft" onClick={() => setReady(false)}>
-        {en ? "Later" : "পরে"}
-      </Btn>
+        <div style={{ fontSize: 40 }}>✨</div>
+        <div
+          style={{
+            fontWeight: 800,
+            fontSize: 17,
+            color: C.emerald,
+            marginTop: 6,
+          }}
+        >
+          {en ? "A new update has arrived" : "নতুন আপডেট এসেছে"}
+        </div>
+        <div
+          style={{
+            fontSize: 13.5,
+            color: C.text,
+            margin: "8px 0 4px",
+            lineHeight: 1.6,
+          }}
+        >
+          {en
+            ? "The page will refresh on its own — nothing for you to press. Your work is saved."
+            : "পাতাটি নিজে থেকেই রিফ্রেশ হবে — আপনাকে কিছু চাপতে হবে না। আপনার কাজ সংরক্ষিত আছে।"}
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: C.gold }}>
+          {en ? `Refreshing in ${left}…` : `${bn(left)} সেকেন্ড পর রিফ্রেশ হচ্ছে…`}
+        </div>
+      </div>
     </div>
   );
 }
