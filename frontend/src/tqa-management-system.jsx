@@ -3086,12 +3086,14 @@ function ClassesView({
               >
                 <Btn kind="gold">{T("🔁 রিজয়েন করুন", "🔁 Rejoin")}</Btn>
               </a>
-            ) : hasJoinedOnce && !isJoined ? (
-              /* শিক্ষার্থী ইতিমধ্যে ক্লাস-প্যানেলের ভেতরে থাকলে এটা দেখাই না —
-                 প্যানেল নিজেই "Waiting for teacher to join…" (৫ সেকেন্ড পরপর
-                 হালনাগাদ, ম্যানুয়াল 🔄সহ) দেখায়। দুটো একসাথে থাকায় একই কথা
-                 দুবার আসত, আর উস্তাদ ঢুকে যাওয়ার পরও এই স্থির লেখাটা
-                 "উস্তাদ আসছেন" বলে ভুল বোঝাত */
+            ) : isJoined ? (
+              /* এই লেখাটা রিজয়েন বাটনের জায়গা ধরে রাখে — উস্তাদ রিজয়েন চালু
+                 করলে ঠিক এখানেই "🔁 Rejoin" বাটন হয়ে যায়।
+                 তাই এটা দেখানো হয় কেবল শিক্ষার্থী ক্লাসে ঢোকার পর, যখন
+                 রিজয়েনের প্রশ্নটাই প্রাসঙ্গিক। জয়েন করার আগে (অর্থাৎ যখন
+                 সামনে শুধু "🎥 Join Zoom" বাটনটাই থাকার কথা) এটা আর আসবে না —
+                 আগে "একবার জয়েন করেছে কিনা" দিয়ে যাচাই হতো বলে আগের দিনের/
+                 আগের বারের হাজিরার সারি থাকলেই জয়েনের সময়েও দেখাত */
               <span
                 style={{
                   alignSelf: "center",
@@ -15359,6 +15361,83 @@ const NAV = [
   { id: "manage", icon: "⚙️", label: "ম্যানেজ সেটিংস", roles: ["director"] },
 ];
 
+/* ═══════════════ নতুন সংস্করণ এসেছে কিনা জানানো ═══════════════
+   লগইন থাকা অবস্থায় ট্যাবটা আর কখনো নিজে থেকে রিলোড হয় না (কাজ যেন না হারায়,
+   সেটা ইচ্ছাকৃত) — কিন্তু এর ফলে নতুন সংস্করণও আপনাআপনি নামে না, পুরনো কোডই
+   চলতে থাকে। তাই ১০ মিনিট পরপর index.html দেখে নিই: বিল্ডের হ্যাশসহ যে
+   স্ক্রিপ্টের নাম ওখানে আছে সেটা এখন চালু নামটার সাথে না মিললে বুঝি নতুন
+   সংস্করণ উঠেছে।
+   নিজে থেকে কিছুই রিফ্রেশ করে না — শুধু জানায়, চাপবেন কিনা ব্যবহারকারীর ইচ্ছা। */
+let selfReloading = false;
+function UpdateBanner({ lang }) {
+  const en = lang === "en";
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const cur = document
+      .querySelector('script[src*="/assets/index-"]')
+      ?.getAttribute("src");
+    if (!cur) return; // ডেভ সার্ভার/অচেনা বিল্ড — কিছু করি না
+    let stopped = false;
+    const check = async () => {
+      try {
+        const res = await fetch("/index.html", { cache: "no-store" });
+        if (!res.ok) return;
+        const m = (await res.text()).match(/\/assets\/index-[A-Za-z0-9_-]+\.js/);
+        if (!stopped && m && m[0] !== cur) setReady(true);
+      } catch (e) {
+        /* নেট সমস্যা — চুপচাপ, পরেরবার আবার দেখা হবে */
+      }
+    };
+    check();
+    const iv = setInterval(check, 10 * 60 * 1000);
+    return () => {
+      stopped = true;
+      clearInterval(iv);
+    };
+  }, []);
+  if (!ready) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        left: 12,
+        right: 12,
+        bottom: 12,
+        zIndex: 240,
+        background: C.emerald,
+        color: "#fff",
+        borderRadius: 14,
+        padding: "12px 14px",
+        boxShadow: "0 8px 24px rgba(0,0,0,.22)",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        flexWrap: "wrap",
+        fontFamily: "'Hind Siliguri', sans-serif",
+      }}
+    >
+      <span style={{ fontWeight: 700, fontSize: 13.5, flex: 1, minWidth: 180 }}>
+        {en
+          ? "✨ A new version is available — refresh to get it."
+          : "✨ নতুন সংস্করণ এসেছে — রিফ্রেশ করলেই পেয়ে যাবেন।"}
+      </span>
+      <Btn
+        sm
+        kind="gold"
+        onClick={() => {
+          selfReloading = true;
+          window.location.reload();
+        }}
+      >
+        {en ? "🔄 Refresh now" : "🔄 এখনই রিফ্রেশ"}
+      </Btn>
+      <Btn sm kind="soft" onClick={() => setReady(false)}>
+        {en ? "Later" : "পরে"}
+      </Btn>
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const T = (bnText, enText) => (user?.role === "student" ? enText : bnText);
@@ -15401,6 +15480,9 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     const warn = (e) => {
+      // আপডেটের জন্য আমরা নিজেরাই রিফ্রেশ করছি — তখন এই সতর্কবাক্সটা এলে
+      // ব্যবহারকারীকে অকারণে দুবার নিশ্চিত করতে হতো
+      if (selfReloading) return;
       e.preventDefault();
       e.returnValue = "";
       return "";
@@ -15620,6 +15702,7 @@ export default function App() {
   }, []);
   const overlays = (
     <>
+      <UpdateBanner lang={user?.role === "student" ? "en" : "bn"} />
       {confirmReq && (
         <div
           style={{
