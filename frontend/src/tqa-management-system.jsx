@@ -15651,7 +15651,7 @@ export default function App() {
   // নিজে থেকেই লগআউট হয়ে যায় (শেয়ার্ড/খোলা রেখে যাওয়া কম্পিউটারের জন্য)।
   useEffect(() => {
     if (!user) return;
-    const IDLE_MS = 30 * 60 * 1000; // ৩০ মিনিট
+    const IDLE_MS = 60 * 60 * 1000; // ৬০ মিনিট (পরিচালকের নির্দেশ)
     let timer;
     const doLogout = () => {
       logout();
@@ -16203,7 +16203,10 @@ export default function App() {
             sm
             kind="soft"
             onClick={() => {
-              logout();
+              // একমাত্র এখানেই keepDrafts:false — ব্যবহারকারী নিজে লগআউট
+              // চাপলে তবেই খোলা ফর্মের লেখা মোছা হয়। স্বয়ংক্রিয় লগআউটে
+              // (নিষ্ক্রিয়তা/টোকেন মেয়াদ/নেট গোলমাল) কিছুই মোছে না।
+              logout({ keepDrafts: false });
               try {
                 window.localStorage.removeItem("tqa_view");
               } catch {

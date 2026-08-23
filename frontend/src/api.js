@@ -29,7 +29,28 @@ const saveTokens = (a, r) => {
   if (r) store.setItem("tqa_refresh", r);
 };
 
-export const logout = () => {
+/* খোলা ফর্মের সংরক্ষিত অসমাপ্ত লেখা (ড্রাফট) মুছে ফেলা।
+   ⚠️ এটা কেবল দুই ক্ষেত্রেই ডাকা হয় — (১) ব্যবহারকারী নিজে লগআউট বাটন
+   চাপলে, (২) একই ডিভাইসে অন্য একজন লগইন করলে (তখন আগের জনের লেখা তাঁকে
+   দেখানো যাবে না)। আর কোথাও নয়। */
+export const clearDrafts = () => {
+  try {
+    Object.keys(store)
+      .filter((k) => k.startsWith("tqa_draft_"))
+      .forEach((k) => store.removeItem(k));
+  } catch {
+    /* উপেক্ষা */
+  }
+};
+
+/* সেশন শেষ করা।
+   ⚠️ keepDrafts ডিফল্টভাবে true — অর্থাৎ খোলা ফর্মের লেখা মোছে না।
+   কারণ logout() স্বয়ংক্রিয়ভাবেও ডাকা হয় (৩০ মিনিট নিষ্ক্রিয় থাকলে, টোকেন
+   রিফ্রেশ ব্যর্থ হলে, সেশন ফেরাতে গিয়ে 401 পেলে) — সেসব ক্ষেত্রে ব্যবহারকারী
+   কিছু মুছতে বলেননি, তাই তাঁর আধা-লেখা ফর্ম মুছে ফেলা যাবে না। ফিরে এসে
+   আবার লগইন করলেই লেখাগুলো যেখানে ছিল সেখানেই পাবেন।
+   কেবল নিজে লগআউট বাটন চাপলে keepDrafts:false পাঠানো হয়। */
+export const logout = ({ keepDrafts = true } = {}) => {
   access = refresh = null;
   store.removeItem("tqa_access");
   store.removeItem("tqa_refresh");
@@ -40,15 +61,7 @@ export const logout = () => {
   } catch {
     /* উপেক্ষা */
   }
-  // খোলা ফর্মের সংরক্ষিত অসমাপ্ত লেখা (ড্রাফট) — লগআউটের পর একই ডিভাইসে
-  // অন্য কেউ লগইন করলে যেন আগের জনের লেখা দেখতে না পান
-  try {
-    Object.keys(store)
-      .filter((k) => k.startsWith("tqa_draft_"))
-      .forEach((k) => store.removeItem(k));
-  } catch {
-    /* উপেক্ষা */
-  }
+  if (!keepDrafts) clearDrafts();
 };
 
 // fetch()-এর নিজের কোনো টাইমআউট নেই — নেটওয়ার্ক গণ্ডগোলে (যেমন দুর্বল/অস্থির
@@ -167,9 +180,20 @@ async function request(path, { method = "GET", body, isForm, timeoutMs } = {}) {
 export async function login(username, password) {
   // পুরোনো সেশন/টোকেন আগে মুছে ফেলি — নতুন লগইন সবসময় পরিষ্কার থেকে শুরু হয়;
   // ফলে ভুল পাসওয়ার্ডে আগের refresh-টোকেন দিয়ে অনিচ্ছাকৃতভাবে লগইন হয়ে যাওয়া অসম্ভব।
-  logout();
+  logout(); // টোকেন যায়, কিন্তু ড্রাফট থাকে — কে লগইন করছেন তা এখনো জানি না
   const t = await request("/auth/login", { method: "POST", body: { username, password } });
   saveTokens(t.access, t.refresh);
+  // একই ডিভাইসে আগের জনের আধা-লেখা ফর্ম নতুন ব্যবহারকারীকে দেখানো যাবে না।
+  // কিন্তু একই ব্যবহারকারী আবার লগইন করলে তাঁর নিজের লেখা মুছে ফেলাও চলবে না —
+  // তাই কে সর্বশেষ লগইন করেছিলেন তা মনে রেখে কেবল ভিন্ন হলেই মুছি।
+  const who = String(username || "").trim().toLowerCase();
+  try {
+    const prev = store.getItem("tqa_last_user");
+    if (prev !== null && prev !== who) clearDrafts();
+    store.setItem("tqa_last_user", who);
+  } catch {
+    /* উপেক্ষা */
+  }
   return request("/users/me/");  // {id, role, name_bn, ...} → setUser()
 }
 
