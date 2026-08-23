@@ -14,7 +14,8 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      Routine, RoutineStudentSchedule, ClassSession, Attendance, Assignment, Exam, Submission,
                      ExamResult, FeePayment, DueMonth, TeacherPayment, SentReceipt,
                      Admission, LeaveRequest, Rating, StudentRemark, Notice, Notification,
-                     PushSubscription, WaMessage, LibraryBook)
+                     PushSubscription, WaMessage, LibraryBook,
+                     CourseSyllabusSheet)
 from .serializers import *
 from .permissions import (IsDirector, IsAdminLevel, IsTeacherOrAdminLevel,
                           ReadAllWriteAdmin, ReadAllWriteDirector)
@@ -140,6 +141,41 @@ class AcademicBookViewSet(viewsets.ModelViewSet):
         return Response(AcademicBookSerializer(book).data, status=201)
 
 
+# সিলেবাসের ৫টি বিভাগ — ফ্রন্টএন্ডের SYL_CATEGORIES-এর হুবহু একই ক্রম ও নাম,
+# যাতে নতুন টেবিলটা দেখতে আগের মতোই হয়
+_SYL_COLUMNS = [
+    ("memorized_surah", "মুখস্থ সূরা"),
+    ("memorized_hadith", "মুখস্থ হাদিস"),
+    ("qirat", "কিরাত"),
+    ("dua_masala", "দুআ/মাসআলা"),
+    ("moral_story", "নৈতিক শিক্ষা/হাদিসের গল্প"),
+]
+
+
+def _sheet_from_syllabus(course):
+    """পুরনো SyllabusItem গুলো থেকে টেবিলের হেডার ও সারি বানায় (read-only)।
+
+    প্রতিটি বিভাগ একটি কলাম; ওই বিভাগের এন্ট্রিগুলো ওই কলামে উপর থেকে নিচে।
+    কোনো এন্ট্রি না থাকলে খালি টেবিল ফেরত — তখন পরিচালক নিজেই লিখে নেবেন।
+    """
+    items = list(course.syllabus.select_related("book").all())
+    if not items:
+        return [], []
+    by_cat = {key: [] for key, _ in _SYL_COLUMNS}
+    for it in items:
+        by_cat.setdefault(it.category, []).append(it)
+    headers = [label for _, label in _SYL_COLUMNS]
+    depth = max((len(by_cat.get(k, [])) for k, _ in _SYL_COLUMNS), default=0)
+    rows = []
+    for i in range(depth):
+        row = []
+        for key, _ in _SYL_COLUMNS:
+            col = by_cat.get(key, [])
+            row.append(col[i].label if i < len(col) else "")
+        rows.append(row)
+    return headers, rows
+
+
 class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer
     permission_classes = [ReadAllWriteDirector]  # তৈরি/এডিট/বাদ — কেবল পরিচালক
@@ -175,6 +211,34 @@ class CourseViewSet(viewsets.ModelViewSet):
                 ).update(teacher=course.teacher)
             except Exception:
                 pass
+
+    @action(detail=True, methods=["get", "put"], permission_classes=[IsAuthenticated])
+    def syllabus_sheet(self, request, pk=None):
+        """কোর্সের সিলেবাস টেবিল — পরিচালকের নিজের হাতে লেখা।
+
+        GET  — যে কেউ (get_queryset নিজেই রোল অনুযায়ী ফিল্টার করে, তাই
+               শিক্ষার্থী কেবল নিজের কোর্সেরটাই পান)।
+        PUT  — কেবল পরিচালক।
+
+        শিট প্রথমবার চাওয়া হলে খালি না দিয়ে পুরনো সিলেবাসের তথ্য থেকেই
+        সাজিয়ে দেওয়া হয় — পরিচালকের কিছু নতুন করে লিখতে হয় না, আর পুরনো
+        তথ্যের একটাও হারায় না (SyllabusItem-এ হাত পড়ে না, শুধু পড়া হয়)।
+        """
+        course = self.get_object()
+        sheet, _ = CourseSyllabusSheet.objects.get_or_create(course=course)
+        if request.method == "GET":
+            if not sheet.headers and not sheet.rows:
+                h, r = _sheet_from_syllabus(course)
+                if h:
+                    sheet.headers, sheet.rows = h, r
+                    sheet.save(update_fields=["headers", "rows"])
+            return Response(CourseSyllabusSheetSerializer(sheet).data)
+        if request.user.role != "director":
+            raise PermissionDenied("কেবল পরিচালক সিলেবাস টেবিল বদলাতে পারবেন")
+        ser = CourseSyllabusSheetSerializer(sheet, data=request.data, partial=True)
+        ser.is_valid(raise_exception=True)
+        ser.save()
+        return Response(ser.data)
 
 
 class SyllabusViewSet(viewsets.ModelViewSet):

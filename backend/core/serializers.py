@@ -4,7 +4,8 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      Routine, ClassSession, Attendance, Question, Assignment, Exam,
                      Submission, ExamResult, FeePayment, DueMonth, TeacherPayment,
                      SentReceipt, Admission, LeaveRequest, Rating, StudentRemark, Notice,
-                     Notification, PushSubscription, WaMessage, LibraryBook)
+                     Notification, PushSubscription, WaMessage, LibraryBook,
+                     CourseSyllabusSheet)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -373,6 +374,35 @@ class StudentRemarkSerializer(serializers.ModelSerializer):
         model = StudentRemark
         fields = ["id", "student", "teacher", "teacher_name", "text", "created_at"]
         read_only_fields = ["teacher"]
+
+
+class CourseSyllabusSheetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseSyllabusSheet
+        fields = ["headers", "rows", "updated_at"]
+        read_only_fields = ["updated_at"]
+
+    def _clean(self, value, name):
+        if not isinstance(value, list):
+            raise serializers.ValidationError({name: "তালিকা হতে হবে"})
+        return value
+
+    def validate_headers(self, v):
+        v = self._clean(v, "headers")
+        if len(v) > 12:
+            raise serializers.ValidationError("সর্বোচ্চ ১২টি কলাম রাখা যাবে")
+        return [str(x)[:120] for x in v]
+
+    def validate_rows(self, v):
+        v = self._clean(v, "rows")
+        if len(v) > 300:
+            raise serializers.ValidationError("সর্বোচ্চ ৩০০টি সারি রাখা যাবে")
+        out = []
+        for r in v:
+            if not isinstance(r, list):
+                raise serializers.ValidationError("প্রতিটি সারি একটি তালিকা হতে হবে")
+            out.append([str(c)[:2000] for c in r[:12]])
+        return out
 
 
 class NoticeSerializer(serializers.ModelSerializer):

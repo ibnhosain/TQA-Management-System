@@ -351,6 +351,13 @@ export const api = {
   // আর যাঁরা পুশ চালু করেছেন তাঁদের ফোনে/ডেস্কটপেও (অ্যাপ বন্ধ থাকলেও)
   broadcastNotification: (text) =>
     request("/notifications/broadcast/", { method: "POST", body: { text } }),
+  // কোর্সের সিলেবাস টেবিল — পরিচালকের নিজের হাতে লেখা (পড়া: সবাই, লেখা: পরিচালক)
+  syllabusSheet: (courseId) => request(`/courses/${courseId}/syllabus_sheet/`),
+  saveSyllabusSheet: (courseId, headers, rows) =>
+    request(`/courses/${courseId}/syllabus_sheet/`, {
+      method: "PUT",
+      body: { headers, rows },
+    }),
   vapidPublicKey: () => request("/push/vapid-public-key/"),
   subscribePush: (sub) =>
     request("/push-subscriptions/", {

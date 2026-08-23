@@ -97,6 +97,29 @@ class SyllabusItem(models.Model):
         return f"[{self.get_category_display()}] {self.label}"
 
 
+class CourseSyllabusSheet(models.Model):
+    """পরিচালকের নিজের হাতে লেখা কোর্স-সিলেবাসের টেবিল।
+
+    ⚠️ উপরের SyllabusItem-এ কোনো হাত দেওয়া হয়নি — সেটা আগের মতোই আছে,
+    কোনো তথ্য মোছেওনি। এই টেবিলটা সম্পূর্ণ আলাদাভাবে যোগ হলো।
+
+    প্রতিটি কোর্সে একটাই শিট (OneToOne):
+      headers — কলামের শিরোনাম, যেমন ["মুখস্থ সূরা", "কিরাত", …]
+      rows    — প্রতিটি সারি ওই কলামগুলোর ঘরের লেখার তালিকা
+
+    কেন ছক-বাঁধা কলাম নয়: পরিচালক নিজের ইচ্ছামতো কলাম যোগ/বাদ ও শিরোনাম
+    বদলাতে পারবেন, তাই কলামগুলো আগে থেকে ঠিক করে রাখা যায় না।
+    """
+    course = models.OneToOneField(Course, on_delete=models.CASCADE,
+                                  related_name="syllabus_sheet")
+    headers = models.JSONField(default=list, blank=True)
+    rows = models.JSONField(default=list, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"সিলেবাস টেবিল — {self.course.name}"
+
+
 # ─────────────────────────── লেকচার প্ল্যান ও টপিক কভারেজ ───────────────────────────
 class Lecture(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="lectures")
