@@ -1223,6 +1223,7 @@ const adaptLecture = (l) => ({
     id: t.id,
     syllabusId: t.syllabus_item || t.syllabusId,
     text: t.text,
+    content: t.content || "", // টগলের ভেতরের লেখা — পুরনো টপিকে খালি
     covered: coveredToBool(t.covered),
   })),
 });
@@ -4019,35 +4020,21 @@ function LecturePlan({ db, courses, user, refresh }) {
   const [sel, setSel] = useState(courses[0]?.id);
   const [form, setForm] = usePersistedState("lec_form", null);
   const [lectures, setLectures] = useState([]);
-  const [sylList, setSylList] = useState([]);
   const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
+  // কোন টগলগুলো এই মুহূর্তে খোলা — { [topicId]: true }
+  const [openTopics, setOpenTopics] = useState({});
+  const toggleOpen = (id) =>
+    setOpenTopics((o) => ({ ...o, [id]: !o[id] }));
 
-  const adaptSyl = (s) => ({
-    id: s.id,
-    courseId: s.course || s.courseId,
-    category: s.category || "qirat",
-    book: s.book_name || s.book,
-    lesson: s.lesson,
-    pages: s.pages,
-    lines: s.lines,
-    note: s.note,
-  });
-
+  // সিলেবাস আর আনা হয় না — টপিক এখন পরিচালক নিজেই টগলে লেখেন, তাই ওই
+  // বাড়তি ডাটাবেস-কলটার আর দরকার নেই
   const loadData = async () => {
     if (!sel) return setLoading(false);
     try {
-      const [lecData, sylData] = await Promise.all([
-        api.lectures(sel),
-        api.syllabus(sel),
-      ]);
-      setLectures(lecData.map(adaptLecture));
-      setSylList(sylData.map(adaptSyl));
+      setLectures((await api.lectures(sel)).map(adaptLecture));
     } catch {
       const c = courseById(courses, sel);
       setLectures(c.lectures || []);
-      setSylList(
-        (db.syllabus || []).filter((s) => String(s.courseId) === String(sel)),
-      );
     } finally {
       setLoading(false);
     }
@@ -4056,12 +4043,13 @@ function LecturePlan({ db, courses, user, refresh }) {
     loadData();
   }, [sel]);
 
+  const blankBlock = () => ({ text: "", content: "", open: true });
   const openNew = () =>
     setForm({
       mode: "new",
       no: String(lectures.length + 1),
       title: "",
-      selIds: [],
+      blocks: [blankBlock()],
     });
   const openEdit = (lec) =>
     setForm({
@@ -4069,32 +4057,57 @@ function LecturePlan({ db, courses, user, refresh }) {
       lecId: lec.id,
       no: String(lec.no),
       title: lec.title,
-      selIds: lec.topics.map((t) => t.syllabusId).filter(Boolean),
+      // আইডি সাথে রাখি — নইলে সংরক্ষণের সময় পুরনো টপিক মুছে নতুন তৈরি হতো
+      // আর তার কভারের টিক (✔/✘) হারিয়ে যেত
+      blocks: (lec.topics || []).map((t) => ({
+        id: t.id,
+        text: t.text || "",
+        content: t.content || "",
+        open: false,
+      })),
     });
-  const toggleSyl = (id) =>
-    setForm({
-      ...form,
-      selIds: form.selIds.includes(id)
-        ? form.selIds.filter((x) => x !== id)
-        : [...form.selIds, id],
+  // ── টগল সম্পাদনা ──
+  const setBlock = (i, patch) =>
+    setForm((f) => ({
+      ...f,
+      blocks: f.blocks.map((b, j) => (j === i ? { ...b, ...patch } : b)),
+    }));
+  const addBlock = () =>
+    setForm((f) => ({ ...f, blocks: [...f.blocks, blankBlock()] }));
+  const delBlock = (i) =>
+    setForm((f) => ({ ...f, blocks: f.blocks.filter((_, j) => j !== i) }));
+  const moveBlock = (i, d) =>
+    setForm((f) => {
+      const b = [...f.blocks];
+      const j = i + d;
+      if (j < 0 || j >= b.length) return f;
+      [b[i], b[j]] = [b[j], b[i]];
+      return { ...f, blocks: b };
     });
   const saveForm = async () => {
     if (!form.title.trim()) return notice("দারসের শিরোনাম দিন।");
-    if (!form.selIds.length)
-      return notice("সিলেবাস থেকে অন্তত একটি বিষয় বাছাই করুন।");
+    // শিরোনামহীন টগল বাদ — ওগুলো রাখার কোনো মানে নেই
+    const blocks = (form.blocks || [])
+      .filter((b) => (b.text || "").trim())
+      .map((b) => ({
+        ...(b.id ? { id: b.id } : {}),
+        text: b.text.trim(),
+        content: b.content || "",
+      }));
+    if (!blocks.length) return notice("অন্তত একটি টপিক লিখুন।");
     const noVal = parseInt(form.no, 10);
     try {
       if (form.mode === "new") {
-        await api.createLecture(
+        await api.createLectureBlocks(
           sel,
           form.title.trim(),
-          form.selIds,
+          blocks,
           noVal ? { no: noVal } : {},
         );
       } else {
         await api.editLecture(form.lecId, {
           title: form.title.trim(),
-          syllabus_item_ids: form.selIds,
+          topic_blocks: blocks,
           ...(noVal ? { no: noVal } : {}),
         });
       }
@@ -4435,14 +4448,20 @@ function LecturePlan({ db, courses, user, refresh }) {
               </div>
               <div style={{ display: "grid", gap: 6 }}>
                 {lec.topics.map((tp) => (
+                  <div key={tp.id}>
+                  {/* টগলের শিরোনাম — পুরো সারিতে চাপলেই খোলে/বন্ধ হয়।
+                      কভার মার্ক করার বাটনগুলোতে চাপলে যেন টগল খুলে না যায়,
+                      সেজন্য ওদের ঘেরাটোপে ক্লিক আটকে দেওয়া আছে। */}
                   <div
-                    key={tp.id}
+                    onClick={() => toggleOpen(tp.id)}
+                    title={openTopics[tp.id] ? "বন্ধ করুন" : "খুলে পড়ুন"}
                     style={{
+                      cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
                       gap: 10,
                       padding: "7px 10px",
-                      borderRadius: 10,
+                      borderRadius: openTopics[tp.id] ? "10px 10px 0 0" : 10,
                       flexWrap: "wrap",
                       background:
                         tp.covered === true
@@ -4452,6 +4471,16 @@ function LecturePlan({ db, courses, user, refresh }) {
                             : C.cream,
                     }}
                   >
+                    <span
+                      style={{
+                        color: C.emerald,
+                        fontWeight: 800,
+                        fontSize: 12,
+                        width: 12,
+                      }}
+                    >
+                      {openTopics[tp.id] ? "▾" : "▸"}
+                    </span>
                     <span
                       style={{
                         width: 22,
@@ -4488,6 +4517,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                     </span>
                     {(canMark || isAdmin) && (
                       <span
+                        onClick={(e) => e.stopPropagation()}
                         style={{
                           display: "flex",
                           gap: 5,
@@ -4528,6 +4558,33 @@ function LecturePlan({ db, courses, user, refresh }) {
                         )}
                       </span>
                     )}
+                  </div>
+                  {openTopics[tp.id] && (
+                    <div
+                      style={{
+                        border: `1px solid ${C.line}`,
+                        borderTop: "none",
+                        borderRadius: "0 0 10px 10px",
+                        padding: "10px 12px",
+                        fontSize: 13.5,
+                        lineHeight: 1.9,
+                        whiteSpace: "pre-wrap",
+                        wordWrap: "break-word",
+                        background: "#fff",
+                      }}
+                    >
+                      {tp.content ? (
+                        tp.content
+                      ) : (
+                        <span style={{ color: C.muted, fontSize: 12.5 }}>
+                          {T(
+                            "— এই টপিকের ভেতরে এখনো কিছু লেখা হয়নি —",
+                            "— nothing has been written inside this topic yet —",
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   </div>
                 ))}
               </div>
@@ -4576,119 +4633,141 @@ function LecturePlan({ db, courses, user, refresh }) {
               />
             </div>
           </div>
-          <div style={{ marginTop: 12 }}>
+          {/* ── টপিকের টগল ──
+              পুরনো "সিলেবাস থেকে বিষয় বাছাই" ব্যবস্থা সরিয়ে দেওয়া হয়েছে।
+              এখন প্রতিটি টগল = একটি টপিক: উপরে শিরোনাম, ভেতরে কী পড়ানো
+              হবে তার বিস্তারিত। উস্তাদ ও শিক্ষার্থী পরে যেকোনো সময় টগল
+              খুলে পড়তে পারবেন। */}
+          <div style={{ marginTop: 14 }}>
             <label style={S.label}>
-              সিলেবাস থেকে বিষয় বাছাই করুন — {bn(form.selIds.length)}টি
-              নির্বাচিত (বিভাগ অনুযায়ী সাজানো)
+              টপিকসমূহ — {bn((form.blocks || []).length)}টি টগল
             </label>
-            {sylList.length === 0 ? (
-              <div
-                style={{
-                  padding: "14px 12px",
-                  borderRadius: 10,
-                  background: C.amberBg,
-                  fontSize: 12.5,
-                  color: "#a16207",
-                }}
-              >
-                ⚠️ "{course.name}" কোর্সের সিলেবাস এখনো তৈরি হয়নি — আগে 📜
-                সিলেবাস মেনুতে গিয়ে প্রতিটি বিভাগে বিষয় যোগ করুন, তারপর এখানে
-                বাছাই করতে পারবেন।
-              </div>
-            ) : (
-              <div style={{ display: "grid", gap: 10 }}>
-                {SYL_CATEGORIES.map((cat) => {
-                  const items = sylList.filter(
-                    (s) => (s.category || "qirat") === cat.key,
-                  );
-                  if (items.length === 0) return null;
-                  return (
-                    <div
-                      key={cat.key}
+            <div style={{ display: "grid", gap: 10 }}>
+              {(form.blocks || []).map((b, i) => (
+                <div
+                  key={i}
+                  style={{
+                    border: `1.5px solid ${C.line}`,
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    background: "#fff",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "8px 10px",
+                      background: C.greenBg,
+                      borderBottom: b.open ? `1px solid ${C.line}` : "none",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setBlock(i, { open: !b.open })}
+                      title={b.open ? "বন্ধ করুন" : "খুলুন"}
                       style={{
-                        border: `1.5px solid ${C.line}`,
-                        borderRadius: 12,
-                        overflow: "hidden",
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                        fontSize: 13,
+                        color: C.emerald,
+                        fontWeight: 800,
+                        width: 20,
                       }}
                     >
-                      <div
+                      {b.open ? "▾" : "▸"}
+                    </button>
+                    <input
+                      value={b.text}
+                      onChange={(e) => setBlock(i, { text: e.target.value })}
+                      placeholder={`টপিক ${bn(i + 1)} — যেমন: সূরা ইখলাস`}
+                      style={{
+                        ...S.input,
+                        flex: 1,
+                        fontWeight: 700,
+                        border: "none",
+                        background: "transparent",
+                        padding: "4px 2px",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => moveBlock(i, -1)}
+                      title="উপরে"
+                      style={{
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                        color: C.muted,
+                        fontSize: 13,
+                      }}
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveBlock(i, 1)}
+                      title="নিচে"
+                      style={{
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                        color: C.muted,
+                        fontSize: 13,
+                      }}
+                    >
+                      ▼
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        askConfirm(
+                          `"${b.text || "নামহীন"}" টপিকটি সরিয়ে ফেলবেন?`,
+                          () => delBlock(i),
+                        )
+                      }
+                      title="এই টপিকটি সরান"
+                      style={{
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                        color: C.red,
+                        fontSize: 14,
+                      }}
+                    >
+                      🗑
+                    </button>
+                  </div>
+                  {b.open && (
+                    <div style={{ padding: 10 }}>
+                      <textarea
+                        value={b.content}
+                        onChange={(e) => setBlock(i, { content: e.target.value })}
+                        rows={5}
+                        placeholder="এখানে লিখুন কী পড়াবেন — আরবি, বাংলা বা ইংরেজি। উস্তাদ ও শিক্ষার্থী টগল খুলে এটাই পড়বেন।"
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          padding: "8px 12px",
-                          background: C.cream,
-                          borderBottom: `1px solid ${C.line}`,
+                          ...S.input,
+                          width: "100%",
+                          resize: "vertical",
+                          lineHeight: 1.8,
+                          fontSize: 13.5,
                         }}
-                      >
-                        <span style={{ fontSize: 15 }}>{cat.icon}</span>
-                        <b style={{ flex: 1, fontSize: 13, color: C.emerald }}>
-                          {cat.label}
-                        </b>
-                        <span style={{ fontSize: 11.5, color: C.muted }}>
-                          {bn(
-                            items.filter((s) => form.selIds.includes(s.id))
-                              .length,
-                          )}
-                          /{bn(items.length)}
-                        </span>
-                      </div>
-                      <div style={{ padding: 6 }}>
-                        {items.map((s) => (
-                          <label
-                            key={s.id}
-                            style={{
-                              display: "flex",
-                              gap: 8,
-                              alignItems: "flex-start",
-                              padding: "7px 8px",
-                              fontSize: 13,
-                              cursor: "pointer",
-                              borderRadius: 8,
-                              background: form.selIds.includes(s.id)
-                                ? C.greenBg
-                                : "transparent",
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={form.selIds.includes(s.id)}
-                              onChange={() => toggleSyl(s.id)}
-                              style={{ marginTop: 3 }}
-                            />
-                            <span>
-                              <b>
-                                {s.book && s.book !== "অন্যান্য"
-                                  ? s.book + " — "
-                                  : ""}
-                                {s.lesson}
-                              </b>
-                              {s.pages && (
-                                <span style={{ color: C.muted }}>
-                                  {" "}
-                                  · পৃষ্ঠা: {s.pages}
-                                </span>
-                              )}
-                              {s.lines && (
-                                <span style={{ color: C.muted }}>
-                                  {" "}
-                                  · লাইন: {s.lines}
-                                </span>
-                              )}
-                              {s.note && (
-                                <div style={{ fontSize: 11.5, color: C.muted }}>
-                                  💬 {s.note}
-                                </div>
-                              )}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
+                      />
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  )}
+                </div>
+              ))}
+            </div>
+            <Btn
+              sm
+              kind="soft"
+              onClick={addBlock}
+              style={{ marginTop: 10 }}
+            >
+              ➕ টপিক যোগ করুন
+            </Btn>
           </div>
           <Btn
             style={{ marginTop: 16, width: "100%", justifyContent: "center" }}

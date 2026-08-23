@@ -139,11 +139,19 @@ class LectureTopic(models.Model):
         MISSED = "missed", "বাদ ✘"
 
     lecture = models.ForeignKey(Lecture, on_delete=models.CASCADE, related_name="topics")
+    # পুরনো সিলেবাস-বাছাই ব্যবস্থার সূত্র — নতুন টপিকে খালি থাকে, কিন্তু আগে
+    # তৈরি হওয়া টপিকগুলোর সংযোগ যেন না হারায় তাই ঘরটা রাখা হয়েছে
     syllabus_item = models.ForeignKey(SyllabusItem, on_delete=models.SET_NULL, null=True)
-    text = models.CharField(max_length=300)  # sylLabel স্ন্যাপশট
+    text = models.CharField(max_length=300)  # টগলের শিরোনাম (আগে sylLabel স্ন্যাপশট ছিল)
+    # টগলের ভেতরের লেখা — কী পড়ানো হবে। খালি হতে পারে (পুরনো টপিকগুলোর মতো)।
+    order = models.PositiveIntegerField(default=0)  # টগলের ক্রম
+    content = models.TextField(blank=True, default="")
     covered = models.CharField(max_length=8, choices=Covered.choices, default=Covered.PENDING)
     marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     marked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["order", "id"]
 
 
 # ─────────────────────────── রুটিন ও ক্লাস সেশন ───────────────────────────

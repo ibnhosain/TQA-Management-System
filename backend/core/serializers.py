@@ -128,21 +128,53 @@ class SyllabusItemSerializer(serializers.ModelSerializer):
 class LectureTopicSerializer(serializers.ModelSerializer):
     class Meta:
         model = LectureTopic
-        fields = ["id", "syllabus_item", "text", "covered"]
+        fields = ["id", "syllabus_item", "text", "content", "order", "covered"]
 
 
 class LectureSerializer(serializers.ModelSerializer):
     topics = LectureTopicSerializer(many=True, read_only=True)
+    # পুরনো পথ — সিলেবাস থেকে টপিক বাছাই। ফ্রন্টএন্ড আর ব্যবহার করে না, তবু
+    # রেখে দেওয়া হলো যাতে পুরনো কোনো ক্লায়েন্ট/স্ক্রিপ্ট হঠাৎ ভেঙে না পড়ে।
     syllabus_item_ids = serializers.ListField(child=serializers.IntegerField(),
                                               write_only=True, required=False)
+    # নতুন পথ — পরিচালকের নিজের লেখা টগল: [{text, content}, ...]
+    topic_blocks = serializers.ListField(write_only=True, required=False)
 
     class Meta:
         model = Lecture
-        fields = ["id", "course", "no", "title", "date", "topics", "syllabus_item_ids"]
+        fields = ["id", "course", "no", "title", "date", "topics",
+                  "syllabus_item_ids", "topic_blocks"]
         extra_kwargs = {"no": {"required": False}}
 
+    def validate_topic_blocks(self, v):
+        if len(v) > 100:
+            raise serializers.ValidationError("একটি দারসে সর্বোচ্চ ১০০টি টপিক রাখা যাবে")
+        out = []
+        for b in v:
+            if not isinstance(b, dict):
+                raise serializers.ValidationError("প্রতিটি টপিক একটি অবজেক্ট হতে হবে")
+            text = str(b.get("text") or "").strip()[:300]
+            if not text:
+                continue  # শিরোনামহীন টগল রাখার মানে নেই
+            out.append({
+                "id": b.get("id"),
+                "text": text,
+                "content": str(b.get("content") or "")[:100000],
+            })
+        return out
+
     def create(self, validated):
+        blocks = validated.pop("topic_blocks", None)
         ids = validated.pop("syllabus_item_ids", [])
+        if blocks is not None:
+            if not validated.get("no"):
+                validated["no"] = Lecture.objects.filter(
+                    course=validated["course"]).count() + 1
+            lec = Lecture.objects.create(**validated)
+            for i, b in enumerate(blocks):
+                LectureTopic.objects.create(
+                    lecture=lec, text=b["text"], content=b["content"], order=i)
+            return lec
         # দারস-নং দেওয়া না থাকলে স্বয়ংক্রিয়; দেওয়া থাকলে তা-ই ব্যবহার
         if not validated.get("no"):
             validated["no"] = Lecture.objects.filter(course=validated["course"]).count() + 1
@@ -153,10 +185,30 @@ class LectureSerializer(serializers.ModelSerializer):
         return lec
 
     def update(self, instance, validated):
+        blocks = validated.pop("topic_blocks", None)
         ids = validated.pop("syllabus_item_ids", None)
         for k, v in validated.items():
             setattr(instance, k, v)
         instance.save()
+        if blocks is not None:
+            # আইডি মিলিয়ে পুরনো টগলই হালনাগাদ করি — নতুন করে বানাই না।
+            # কারণ টপিক নতুন করে বানালে তার কভার-স্ট্যাটাস (✔/✘) হারিয়ে যেত।
+            existing = {t.id: t for t in instance.topics.all()}
+            kept = set()
+            for i, b in enumerate(blocks):
+                t = existing.get(b.get("id"))
+                if t:
+                    t.text, t.content, t.order = b["text"], b["content"], i
+                    t.save(update_fields=["text", "content", "order"])
+                    kept.add(t.id)
+                else:
+                    LectureTopic.objects.create(
+                        lecture=instance, text=b["text"],
+                        content=b["content"], order=i)
+            for tid, t in existing.items():
+                if tid not in kept:
+                    t.delete()  # পরিচালক নিজে সরিয়ে দিয়েছেন
+            return instance
         if ids is not None:  # টপিক তালিকা হালনাগাদ — কভার-স্ট্যাটাস যথাসম্ভব অক্ষত
             keep = set(ids)
             existing = {t.syllabus_item_id: t for t in instance.topics.all()}

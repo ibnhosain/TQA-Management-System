@@ -264,6 +264,12 @@ export const api = {
   lectures: (courseId) => request(`/lectures/?course=${courseId}`),
   createLecture: (course, title, syllabus_item_ids, extra = {}) =>            // সিলেবাস থেকে টপিক সিলেকশন (+ ঐচ্ছিক দারস-নং/তারিখ)
     request("/lectures/", { method: "POST", body: { course, title, syllabus_item_ids, ...extra } }),
+  // নতুন পথ — পরিচালকের নিজের লেখা টগল: [{id?, text, content}, ...]
+  createLectureBlocks: (course, title, topic_blocks, extra = {}) =>
+    request("/lectures/", {
+      method: "POST",
+      body: { course, title, topic_blocks, ...extra },
+    }),
   editLecture: (id, d) => request(`/lectures/${id}/`, { method: "PATCH", body: d }),
   deleteLecture: (id) => request(`/lectures/${id}/`, { method: "DELETE" }),
   markTopic: (topic_id, covered) => {                             // ✔/✘ — সবুজ/লাল
