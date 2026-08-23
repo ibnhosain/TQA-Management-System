@@ -12,11 +12,13 @@ const wakeBackend = () => fetch(`${BASE}/ping/`).catch(() => {});
 wakeBackend();
 setInterval(wakeBackend, 10 * 60 * 1000);
 
-/* নিরাপত্তা: টোকেন sessionStorage-এ রাখি (localStorage নয়)।
-   ফলে ব্রাউজার/ট্যাব বন্ধ করলেই সেশন মুছে যায় — পরেরবার পোর্টাল খুললে
-   আবার পাসওয়ার্ড দিতে হবে। (localStorage হলে টোকেন স্থায়ী থেকে যেত ও
-   পাসওয়ার্ড ছাড়াই auto-login হতো।) পেজ রিফ্রেশে সেশন টেকে, তাই বিরক্তিকর নয়। */
-const store = window.sessionStorage;
+/* টোকেন localStorage-এ রাখা হয় — পরিচালকের নির্দেশ: "লগআউট করার আগে কিছুই
+   যাবে না"। আগে sessionStorage ছিল, ফলে ট্যাব বন্ধ করলে বা অন্য ট্যাবে গেলে
+   (বিশেষত মোবাইলে, যেখানে ব্রাউজার ব্যাকগ্রাউন্ডের পেজ মেমরি থেকে সরিয়ে দেয়)
+   সেশন মুছে গিয়ে চলমান কাজ হারিয়ে যেত। এখন কেবল "লগআউট" চাপলেই সেশন মোছে।
+   ⚠️ ফলে ডিভাইসটি অন্য কেউ ব্যবহার করলে পাসওয়ার্ড ছাড়াই পোর্টাল খুলে ফেলতে
+   পারবে — শেয়ার করা ডিভাইসে কাজ শেষে লগআউট করা জরুরি। */
+const store = window.localStorage;
 
 let access = store.getItem("tqa_access") || null;
 let refresh = store.getItem("tqa_refresh") || null;
@@ -31,6 +33,13 @@ export const logout = () => {
   access = refresh = null;
   store.removeItem("tqa_access");
   store.removeItem("tqa_refresh");
+  // পুরনো সংস্করণের রেখে যাওয়া sessionStorage টোকেনও পরিষ্কার করি
+  try {
+    window.sessionStorage.removeItem("tqa_access");
+    window.sessionStorage.removeItem("tqa_refresh");
+  } catch {
+    /* উপেক্ষা */
+  }
 };
 
 // fetch()-এর নিজের কোনো টাইমআউট নেই — নেটওয়ার্ক গণ্ডগোলে (যেমন দুর্বল/অস্থির

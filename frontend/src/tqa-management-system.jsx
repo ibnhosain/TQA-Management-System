@@ -15291,12 +15291,49 @@ export default function App() {
   CURRENT_LANG = user?.role === "student" ? "en" : "bn"; // fmtDate সব জায়গায় এই ভাষা মেনে চলে
   const [restoring, setRestoring] = useState(hasToken());
   const [db, setDb] = useState(seedDB);
-  const [view, setView] = useState("overview");
+  // কোন পেজে ছিলেন তা মনে রাখি — মোবাইলে ব্যাকগ্রাউন্ডে গেলে ব্রাউজার পেজটা
+  // মেমরি থেকে সরিয়ে দেয় ও ফিরে এলে নতুন করে লোড করে; আগে তখন সবসময়
+  // "ওভারভিউ"-তে ফিরে যেত, চলমান কাজ হারিয়ে যেত
+  const [view, setView] = useState(() => {
+    try {
+      return window.localStorage.getItem("tqa_view") || "overview";
+    } catch {
+      return "overview";
+    }
+  });
   const [menu, setMenu] = useState(false);
   const [bell, setBell] = useState(false);
   const [, force] = useState(0);
   const refresh = () => force((x) => x + 1);
   const [apiCourses, setApiCourses] = useState([]);
+  // কোন পেজে আছেন তা মনে রাখি (ফিরে এলে সেখানেই ফিরবেন)
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("tqa_view", view);
+    } catch {
+      /* উপেক্ষা */
+    }
+  }, [view]);
+  // মনে রাখা পেজটা এই রোলের জন্য বৈধ কিনা — নইলে ফাঁকা পাতা দেখাত (যেমন
+  // পরিচালকের পেজ মনে রেখে পরে শিক্ষার্থী লগইন করলে)
+  useEffect(() => {
+    if (!user) return;
+    const ok = NAV.some((n) => n.id === view && n.roles.includes(user.role));
+    if (!ok) setView("overview");
+  }, [user, view]);
+  // ট্যাব/অ্যাপ বন্ধ করার আগে নিশ্চিতকরণ — ভুলে বন্ধ করে কাজ হারানো ঠেকাতে।
+  // ব্রাউজার নিরাপত্তার কারণে এখানে নিজস্ব ডিজাইনের পপআপ দেখানো যায় না, তাই
+  // ব্রাউজারের নিজের "সাইট ছেড়ে যাবেন?" বাক্সটিই আসে (হ্যাঁ/না দুটোই থাকে)
+  useEffect(() => {
+    if (!user) return;
+    const warn = (e) => {
+      e.preventDefault();
+      e.returnValue = "";
+      return "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [user]);
   // পেজ রিফ্রেশের পর সংরক্ষিত টোকেন থাকলে সেশন ফিরিয়ে আনি — শুধু রিফ্রেশ দিলে আর লগআউট হবে না
   useEffect(() => {
     // ওয়েবসাইটের "Login" (?role=...) থেকে এলে সবসময় পাসওয়ার্ড ফর্ম দেখাই —
@@ -15898,6 +15935,12 @@ export default function App() {
             kind="soft"
             onClick={() => {
               logout();
+              try {
+                window.localStorage.removeItem("tqa_view");
+              } catch {
+                /* উপেক্ষা */
+              }
+              setView("overview");
               setUser(null);
             }}
           >
