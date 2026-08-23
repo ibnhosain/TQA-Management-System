@@ -2137,14 +2137,21 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
   }, []);
 
   // প্যানেল হঠাৎ বন্ধ/সরিয়ে ফেললে (অন্য ভিউতে চলে গেলে) — যতটুকু সময় এখনো
-  // চেকপয়েন্টে সেভ হয়নি তা শেষবারের মতো ব্যাকগ্রাউন্ডে সেভ করার চেষ্টা
+  // চেকপয়েন্টে সেভ হয়নি তা শেষবারের মতো ব্যাকগ্রাউন্ডে সেভ করার চেষ্টা।
+  // ⚠️ এখানে leave() ব্যবহার করা যাবে না — leave() ব্যাকএন্ডে segment_start
+  // মুছে দেয়, অর্থাৎ "ইনি আর মিটিংয়ে নেই" ঘোষণা করে। ফলে উস্তাদ ক্লাস
+  // চলাকালীন পোর্টালের অন্য পেইজে এক মিনিটের জন্য গেলেও অন্যপাশে তাঁকে
+  // "চলে গেছেন" দেখাত এবং শিক্ষার্থীর মিনিট গণনা থেমে যেত। checkpoint()
+  // শুধু মিনিট যোগ করে, উপস্থিতিতে হাত দেয় না — তাই উস্তাদ যেখানেই যান বা
+  // যত নেট সমস্যাই হোক, তাঁর "উপস্থিত" অবস্থা অক্ষুণ্ণ থাকে। একমাত্র
+  // "ক্লাস শেষ করুন" বাটনই (endSegment) leave() ডাকে।
   useEffect(() => {
     return () => {
       if (!usingApi) return;
       const deltaMin = Math.floor(
         (computeSegSec() - savedSecRef.current) / 60,
       );
-      if (deltaMin >= 1) api.leaveClass(k.id, deltaMin).catch(() => {});
+      if (deltaMin >= 1) api.checkpointClass(k.id, deltaMin).catch(() => {});
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -2234,34 +2241,30 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // উস্তাদ "ক্লাস শেষ করুন" চাপলে ব্যাকএন্ডে তার segment_start মুছে যায় — অর্থাৎ
-  // teacher_active মিথ্যা হয়ে যায়। সেটা টের পেলে শিক্ষার্থীর প্যানেলও নিজে থেকেই
-  // শেষ হয়ে যাবে (রেটিং পপআপসহ), আলাদা করে তাকে কিছু চাপতে হবে না।
-  // ভুলবশত বন্ধ হওয়া ঠেকাতে তিনটি শর্ত একসাথে মানতে হয় —
-  //   (১) এই বসায় উস্তাদকে অন্তত একবার উপস্থিত দেখা গেছে (নইলে উস্তাদ আসার
-  //       আগেই জয়েন করা শিক্ষার্থী সাথে সাথেই বেরিয়ে যেত),
-  //   (২) টানা ~২০ সেকেন্ড অনুপস্থিত (এক-দুটো পোলের সাময়িক গোলমালে নয়),
-  //   (৩) presence চেক তখন ব্যর্থ হচ্ছে না (নেট সমস্যাকে "শেষ" ধরা যাবে না)।
-  // উস্তাদ ফিরে এলে গণনা রিসেট হয়ে যায়।
+  // উস্তাদ "ক্লাস শেষ করুন" চাপলে ব্যাকএন্ডে তাঁর segment_start মুছে যায় — অর্থাৎ
+  // teacher_active মিথ্যা হয়ে যায়। এটাই একমাত্র সংকেত যাতে শিক্ষার্থীর ক্লাসও
+  // নিজে থেকে শেষ হয়ে যায় (রেটিং পপআপসহ), আলাদা করে তাকে কিছু চাপতে হবে না।
+  //
+  // ⚠️ এটা কোনো সময়/নিষ্ক্রিয়তার অনুমান নয় — নেট সমস্যা, ট্যাব বদল, পোর্টালের
+  // অন্য পেইজে যাওয়া, এমনকি ব্রাউজার বন্ধ করা — কোনোটাতেই segment_start মোছে
+  // না (উপরের unmount cleanup এখন checkpoint ডাকে, leave নয়)। কেবল উস্তাদ
+  // ইচ্ছা করে "ক্লাস শেষ করুন" চাপলেই এটা ঘটে। তাই এখানে কোনো টাইমআউট নেই।
+  //
+  // দুটি প্রহরী রাখা হয়েছে:
+  //   (১) এই বসায় উস্তাদকে অন্তত একবার উপস্থিত দেখা গেছে — নইলে উস্তাদ আসার
+  //       আগেই জয়েন করা শিক্ষার্থী সাথে সাথেই বেরিয়ে যেত,
+  //   (২) presence চেক তখন ব্যর্থ হচ্ছে না — নেট গোলমালে পুরনো তথ্য দেখে
+  //       ভুল সিদ্ধান্ত যেন না হয়।
   const teacherSeenRef = useRef(false);
-  const teacherGoneSinceRef = useRef(null);
   useEffect(() => {
     if (user.role !== "student" || !usingApi || !inMeeting || !presence) return;
     if (presence.ta) {
       teacherSeenRef.current = true;
-      teacherGoneSinceRef.current = null;
       return;
     }
     if (!teacherSeenRef.current || presenceStale) return;
-    if (teacherGoneSinceRef.current == null) {
-      teacherGoneSinceRef.current = Date.now();
-      return;
-    }
-    if (Date.now() - teacherGoneSinceRef.current >= 20000) {
-      teacherGoneSinceRef.current = null;
-      notice(T("উস্তাদ ক্লাস শেষ করেছেন।", "The teacher has ended the class."));
-      endSegment("finish");
-    }
+    notice(T("উস্তাদ ক্লাস শেষ করেছেন।", "The teacher has ended the class."));
+    endSegment("finish");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presence, presenceStale, inMeeting]);
 
