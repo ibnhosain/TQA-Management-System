@@ -13520,9 +13520,15 @@ function SyllabusView({ db, setDb, courses, user }) {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
+  // ⚠️ শেয়ার করা courseById() হুবহু মিল (===) খোঁজে, কিন্তু <select> সবসময়
+  // লেখা (string) দেয় আর API দেয় সংখ্যা — ফলে কোর্স বদলানো মাত্রই কোনো কোর্সই
+  // "পাওয়া যেত না" এবং পুরো পাতাটা ফাঁকা হয়ে যেত। এখানে দুপাশকে লেখা বানিয়ে
+  // মেলানো হয়। (courseById-এ হাত দিইনি — সেটা অন্য অনেক জায়গায় ব্যবহৃত।)
+  const findCourse = (cid) =>
+    courseList.find((c) => String(c.id) === String(cid)) || {};
   const bookNameOf = (id) => (allBooks.find((b) => b.id === id) || {}).name;
   const courseBooksOf = (cid) =>
-    (courseById(courseList, cid).books || []).map(bookNameOf).filter(Boolean);
+    (findCourse(cid).books || []).map(bookNameOf).filter(Boolean);
 
   useEffect(() => {
     (async () => {
@@ -13563,11 +13569,19 @@ function SyllabusView({ db, setDb, courses, user }) {
         if (!alive) return;
         setHeaders([]);
         setRows([]);
+        // কোড নম্বরটা সাথে দিই — নইলে সার্ভার HTML পাতা ফেরত দিলে (যেমন
+        // ডিপ্লয় চলাকালীন ৪০৪) শুধু জেনেরিক "API error" দেখাত, আর কী ঘটেছে
+        // তা বোঝার কোনো উপায় থাকত না
+        const why =
+          e?.data?.error ||
+          e?.data?.detail ||
+          (e?.status ? `সার্ভার সাড়া দিয়েছে কোড ${e.status}` : null) ||
+          e?.message ||
+          "আবার চেষ্টা করুন";
         notice(
           T(
-            "সিলেবাস আনা যায়নি — " +
-              (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
-            "Couldn't load the syllabus — " + (e?.message || "please try again"),
+            "সিলেবাস আনা যায়নি — " + why,
+            "Couldn't load the syllabus — " + why,
           ),
         );
       })
@@ -13577,7 +13591,7 @@ function SyllabusView({ db, setDb, courses, user }) {
     };
   }, [selCourse]); // eslint-disable-line
 
-  const activeCourse = courseById(courseList, selCourse);
+  const activeCourse = findCourse(selCourse);
   const cols = headers.length;
 
   // ── টেবিল বদলানো (কেবল পরিচালক) ──
