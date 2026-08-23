@@ -15677,6 +15677,69 @@ function NewNotifToast({ user, notifs }) {
   );
 }
 
+/* ═══════════ উস্তাদ রিজয়েন চালু করলে শিক্ষার্থীর পর্দা ঢেকে রিজয়েন বাটন ═══════════
+   উস্তাদ "রিজয়েন" চেপে ২য় জুম লিংকে সরে গেলে শিক্ষার্থী ১ম মিটিংয়ে একা বসে
+   থাকেন — তিনি বুঝতেই পারেন না উস্তাদ অন্য লিংকে চলে গেছেন। তাই পোর্টালে
+   ফেরামাত্র পুরো পর্দা ঢেকে এই পপআপ, সাথে সরাসরি রিজয়েনের বাটন।
+   ফাঁদে পড়ার ভয় নেই — বাটনটা নিছক একটা লিংক, সবসময় কাজ করে, আর চাপলেই
+   পপআপ সরে যায়। ক্লাসের সময় পেরিয়ে গেলে এমনিতেও আর আসে না। */
+function RejoinBlockPopup({ k, user, onRejoin }) {
+  const en = user?.role === "student";
+  return (
+    <BlockingPopup
+      icon="🔁"
+      zIndex={302}
+      title={
+        en
+          ? "Your teacher has opened a new meeting"
+          : "উস্তাদ নতুন মিটিং খুলেছেন"
+      }
+      footer={
+        <a
+          href={k.zoom2 || k.zoom}
+          target="_blank"
+          rel="noreferrer"
+          onClick={onRejoin}
+          style={{
+            display: "block",
+            textDecoration: "none",
+            width: "100%",
+            background: `linear-gradient(135deg, ${C.goldL}, ${C.gold})`,
+            color: "#4a3200",
+            fontSize: 16,
+            fontWeight: 800,
+            padding: "14px 20px",
+            borderRadius: 14,
+            boxShadow: "0 8px 24px rgba(240,195,85,.45)",
+            textAlign: "center",
+            boxSizing: "border-box",
+          }}
+        >
+          {en ? "🔁 Rejoin now — Zoom will open" : "🔁 এখনই রিজয়েন করুন"}
+        </a>
+      }
+    >
+      {en ? (
+        <>
+          Your teacher has moved to a <b>new Zoom meeting</b>. The old meeting
+          is no longer in use — please tap the button below to join them.
+          <br />
+          <br />
+          Your attendance is already recorded and will not be affected.
+        </>
+      ) : (
+        <>
+          আপনার উস্তাদ <b>নতুন একটি জুম মিটিংয়ে</b> সরে গেছেন। আগের মিটিংটি আর
+          ব্যবহার হচ্ছে না — নিচের বাটনে চেপে তাঁর সাথে যোগ দিন।
+          <br />
+          <br />
+          আপনার হাজিরা ইতিমধ্যেই লেখা হয়ে গেছে, এতে কিছু হবে না।
+        </>
+      )}
+    </BlockingPopup>
+  );
+}
+
 /* ═══════════ অ্যাপ ইনস্টল করার পপআপ (যাঁদের ইনস্টল করা নেই) ═══════════
    পুরো পর্দা ঢেকে দেখায়, "📲 ইনস্টল করুন" চাপলে ব্রাউজারের আসল ইনস্টল
    পপআপ খোলে।
@@ -16237,6 +16300,14 @@ export default function App() {
   }, [user?.id]);
 
   const [livePopup, setLivePopup] = useState(null);
+  // কোন ক্লাসের রিজয়েন শিক্ষার্থী ইতিমধ্যে সেরে ফেলেছেন (আবার যেন না দেখায়)
+  const [rejoinDone, setRejoinDone] = useState(null);
+  // যে ক্লাসগুলোর লাইভ-পপআপে ইতিমধ্যে সাড়া দেওয়া হয়েছে (জয়েন বা "পরে")।
+  // ⚠️ ছাড়া এটা: checkLive প্রতি ৬০ সেকেন্ডে livePopup আবার বসিয়ে দিত, ফলে
+  // জয়েন করার পরও ক্লাসের পুরো সময় জুড়ে প্রতি মিনিটে ফুল-পেজ পপআপ ফিরে
+  // আসত। রিজয়েনের পপআপ এই তালিকা মানে না — উস্তাদ নতুন লিংকে গেলে সেটা
+  // আলাদাভাবেই দেখাতে হবে।
+  const [livePopupDone, setLivePopupDone] = useState([]);
   const [autoJoinId, setAutoJoinId] = useState(null);
   const [receipt, setReceipt] = useState(null);
   // WhatsApp Business API অটো-সেন্ড: আউটবক্সে নতুন মেসেজ এলে ব্যাকএন্ডে পাঠায়
@@ -16543,6 +16614,7 @@ export default function App() {
     setAutoJoinId(k.id); // হাজিরা টাইমার অটো চালু হবে
     setView("classes");
     setLivePopup(null);
+    setLivePopupDone((a) => (a.includes(k.id) ? a : [...a, k.id]));
   };
 
   return (
@@ -16758,7 +16830,29 @@ export default function App() {
           sender={user}
         />
       )}
-      {livePopup &&
+      {/* উস্তাদ রিজয়েন চালু করলে শিক্ষার্থীর পর্দা ঢেকে রিজয়েন বাটন —
+          সাধারণ লাইভ-ক্লাস পপআপের বদলে এটাই দেখানো হয়, দুটো একসাথে নয় */}
+      {user?.role === "student" &&
+        livePopup &&
+        livePopup.rejoinActive &&
+        rejoinDone !== livePopup.id && (
+          <RejoinBlockPopup
+            k={livePopup}
+            user={user}
+            onRejoin={() => {
+              setRejoinDone(livePopup.id);
+              joinFromPopup(livePopup);
+            }}
+          />
+        )}
+      {!(
+        user?.role === "student" &&
+        livePopup &&
+        livePopup.rejoinActive &&
+        rejoinDone !== livePopup.id
+      ) &&
+        livePopup &&
+        !livePopupDone.includes(livePopup.id) &&
         (() => {
           // ⚠️ আগে কোর্স তালিকায় কোর্সটা না পাওয়া গেলে চুপচাপ null ফেরত যেত —
           // অর্থাৎ ক্লাসের সময় হয়ে গেলেও শিক্ষার্থী কোনো পপআপই পেতেন না, আর
@@ -16785,7 +16879,12 @@ export default function App() {
               course={c}
               user={user}
               onJoin={joinFromPopup}
-              onLater={() => setLivePopup(null)}
+              onLater={() => {
+                setLivePopup(null);
+                setLivePopupDone((a) =>
+                  a.includes(livePopup.id) ? a : [...a, livePopup.id],
+                );
+              }}
             />
           );
         })()}
