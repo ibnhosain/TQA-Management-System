@@ -15334,6 +15334,45 @@ export default function App() {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [user]);
+  // ফোনে ইনস্টল করা অ্যাপে (ও ব্রাউজারেও) "ব্যাক" চাপলে সরাসরি বের না হয়ে
+  // নিজেদের ডিজাইনের নিশ্চিতকরণ দেখাই — শিক্ষার্থীর জন্য ইংরেজিতে।
+  // কীভাবে কাজ করে: লগইন থাকা অবস্থায় একটা "গার্ড" এন্ট্রি বসিয়ে রাখি; ব্যাক
+  // চাপলে সেটাই সরে গিয়ে popstate আসে, তখনই আবার গার্ড বসিয়ে দিই যাতে এখনই
+  // বের না হয়ে যায় (askConfirm-এ "না"-এর আলাদা কলব্যাক নেই, তাই আগেভাগে
+  // বসানোই একমাত্র নিরাপদ উপায়)। "হ্যাঁ" চাপলে গার্ড খুলে সত্যিই পেছনে যাই।
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    const pushGuard = () => {
+      try {
+        window.history.pushState({ tqaExitGuard: true }, "");
+      } catch {
+        /* উপেক্ষা */
+      }
+    };
+    const onPop = () => {
+      if (!active) return;
+      pushGuard(); // এখনই বেরিয়ে যাওয়া ঠেকাই; "না" হলে এটাই বহাল থাকবে
+      askConfirm(
+        T("আপনি কি বের হয়ে যেতে চান?", "Do you want to exit?"),
+        () => {
+          active = false;
+          window.removeEventListener("popstate", onPop);
+          try {
+            window.history.go(-2); // দুটো গার্ড এন্ট্রি পেরিয়ে সত্যিই পেছনে
+          } catch {
+            /* উপেক্ষা */
+          }
+        },
+      );
+    };
+    pushGuard();
+    window.addEventListener("popstate", onPop);
+    return () => {
+      active = false;
+      window.removeEventListener("popstate", onPop);
+    };
+  }, [user]);
   // পেজ রিফ্রেশের পর সংরক্ষিত টোকেন থাকলে সেশন ফিরিয়ে আনি — শুধু রিফ্রেশ দিলে আর লগআউট হবে না
   useEffect(() => {
     // ওয়েবসাইটের "Login" (?role=...) থেকে এলে সবসময় পাসওয়ার্ড ফর্ম দেখাই —
