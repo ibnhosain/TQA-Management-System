@@ -47,6 +47,8 @@ urlpatterns = [
     # পরিচালক সব ডেটা ডাউনলোড করতে পারবেন — JSON ব্যাকআপ
     path("export/", views.export_all_data),
     # Web Push পাবলিক কী — ফ্রন্টএন্ড PushManager.subscribe()-এ ব্যবহার করে
+    # দারসের টগলে বসানোর ছবি/PDF আপলোড (কেবল পরিচালক)
+    path("lesson-media/", views.LessonMediaView.as_view()),
     path("push/vapid-public-key/", lambda r: JsonResponse({"key": push.public_key_b64()})),
     path("", include(router.urls)),
 ]

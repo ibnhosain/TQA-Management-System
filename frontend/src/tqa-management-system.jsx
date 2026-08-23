@@ -768,6 +768,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
           </div>
         </div>
       )}
+      <style>{LESSON_BODY_CSS}</style>
       <style>{`@media print {
         body * { visibility: hidden !important; }
         #tqa-receipt, #tqa-receipt * { visibility: visible !important; }
@@ -4033,8 +4034,21 @@ const RT_COLORS = [
   "#1a1f2e", "#1a5c3a", "#c9962a", "#d92626", "#1d4ed8", "#7c3aed", "#6b7280",
 ];
 
+/* টগলের ভেতরের লেখায় বসানো ছবি ও টেবিল যেন বাক্স ছাপিয়ে না যায় —
+   এডিটরে ও দেখার জায়গায় দুটোতেই এক নিয়ম। */
+const LESSON_BODY_CSS = `
+.tqaLessonBody img, [contenteditable] img { max-width: 100%; height: auto; border-radius: 8px; }
+.tqaLessonBody table, [contenteditable] table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.tqaLessonBody td, .tqaLessonBody th, [contenteditable] td, [contenteditable] th { border: 1px solid #1a5c3a; padding: 6px 8px; word-wrap: break-word; }
+.tqaLessonBody th, [contenteditable] th { background: #eafaf1; }
+.tqaLessonBody a { color: #1a5c3a; font-weight: 700; }
+.tqaLessonBody ul, .tqaLessonBody ol, [contenteditable] ul, [contenteditable] ol { padding-left: 24px; margin: 6px 0; }
+`;
+
 function RichText({ value, onChange, placeholder }) {
   const ref = useRef(null);
+  const fileRef = useRef(null);
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (ref.current) ref.current.innerHTML = value || "";
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4061,6 +4075,52 @@ function RichText({ value, onChange, placeholder }) {
         /[&<>]/g,
         (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c],
       )}</span>`,
+    );
+  };
+  // ছবি বা PDF — আপলোড করে সেটার ঠিকানা লেখার ভেতরে বসিয়ে দিই
+  const pickFile = () => fileRef.current?.click();
+  const onFile = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = ""; // একই ফাইল আবার বাছলেও যেন কাজ করে
+    if (!f) return;
+    setBusy(true);
+    try {
+      const r = await api.uploadLessonMedia(f);
+      const url = String(r.url).replace(/"/g, "&quot;");
+      const name = String(r.name || "ফাইল").replace(/[&<>]/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c],
+      );
+      cmd(
+        "insertHTML",
+        r.kind === "image"
+          ? `<img src="${url}" alt="${name}" style="max-width: 100%; border-radius: 8px" /><br />`
+          : `<p>📄 <a href="${url}">${name}</a></p>`,
+      );
+    } catch (err) {
+      notice(
+        "আপলোড ব্যর্থ — " +
+          (err?.data?.error || err?.message || "আবার চেষ্টা করুন"),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  // টেবিল — সারি ও কলাম জিজ্ঞেস করে খালি ছক বসাই
+  const insertTable = () => {
+    const rows = parseInt(window.prompt("কয়টি সারি?", "3") || "", 10);
+    const cols = parseInt(window.prompt("কয়টি কলাম?", "3") || "", 10);
+    if (!rows || !cols || rows < 1 || cols < 1) return;
+    if (rows > 50 || cols > 12)
+      return notice("সর্বোচ্চ ৫০টি সারি ও ১২টি কলাম।");
+    const td =
+      '<td style="border: 1px solid #1a5c3a; padding: 6px 8px">&nbsp;</td>';
+    const th =
+      '<th style="border: 1px solid #1a5c3a; padding: 6px 8px; background: #eafaf1">&nbsp;</th>';
+    const head = `<tr>${th.repeat(cols)}</tr>`;
+    const body = `<tr>${td.repeat(cols)}</tr>`.repeat(Math.max(rows - 1, 1));
+    cmd(
+      "insertHTML",
+      `<table style="border-collapse: collapse; width: 100%">${head}${body}</table><br />`,
     );
   };
   const tool = {
@@ -4134,7 +4194,18 @@ function RichText({ value, onChange, placeholder }) {
         >
           ع
         </button>
+        <button type="button" title="ছবি বা PDF যোগ করুন" style={tool} onClick={busy ? undefined : pickFile}>
+          {busy ? "⏳ যাচ্ছে…" : "🖼️ ছবি/PDF"}
+        </button>
+        <button type="button" title="টেবিল বসান" style={tool} onClick={insertTable}>▦ টেবিল</button>
         <button type="button" title="সাজসজ্জা মুছুন" style={tool} onClick={() => cmd("removeFormat")}>✕ সাজ</button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+          onChange={onFile}
+          style={{ display: "none" }}
+        />
       </div>
       <div
         ref={ref}
@@ -4896,6 +4967,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                            পুরনো সাধারণ লেখায় ট্যাগ থাকে না — তখন লাইন-ব্রেক
                            যেন হারিয়ে না যায়, সেজন্য নিচের whiteSpace। */
                         <div
+                          className="tqaLessonBody"
                           style={{ whiteSpace: /<[a-z]/i.test(tp.content) ? "normal" : "pre-wrap" }}
                           dangerouslySetInnerHTML={{ __html: tp.content }}
                         />

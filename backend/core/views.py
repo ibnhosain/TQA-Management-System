@@ -9,6 +9,8 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
                      Routine, RoutineStudentSchedule, ClassSession, Attendance, Assignment, Exam, Submission,
@@ -283,6 +285,63 @@ class SyllabusViewSet(viewsets.ModelViewSet):
             serializer.save(category=cat)
         else:
             serializer.save()
+
+
+# দারসের টগলে বসানোর জন্য ছবি/PDF — ডাটাবেসে কিছু জমে না, শুধু ফাইলটা
+# Cloudinary-তে গিয়ে তার ঠিকানা ফেরত আসে, আর সেটাই লেখার ভেতরে বসে।
+_IMG_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+_DOC_TYPES = {"application/pdf"}
+_MAX_UPLOAD_MB = 10
+
+
+class LessonMediaView(APIView):
+    """POST /api/lesson-media/ — ছবি বা PDF আপলোড করে ঠিকানা ফেরত দেয়।
+
+    কেবল পরিচালক, কারণ টগলের ভেতরের লেখা কেবল তিনিই লেখেন। ধরনও যাচাই
+    করা হয় — যেকোনো ফাইল আপলোড করতে দিলে তা অপব্যবহারের পথ খুলে দিত।
+    """
+    permission_classes = [IsDirector]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        import os, traceback as tb
+
+        f = request.FILES.get("file")
+        if not f:
+            return Response({"error": "ফাইল দিন"}, status=400)
+        ctype = (getattr(f, "content_type", "") or "").lower()
+        if ctype not in _IMG_TYPES | _DOC_TYPES:
+            return Response(
+                {"error": "কেবল ছবি (JPG/PNG/GIF/WebP) বা PDF দেওয়া যাবে"},
+                status=400,
+            )
+        if f.size > _MAX_UPLOAD_MB * 1024 * 1024:
+            return Response(
+                {"error": f"ফাইলটি {_MAX_UPLOAD_MB} MB-র বেশি বড়"}, status=400
+            )
+        is_image = ctype in _IMG_TYPES
+        cloud = os.environ.get("CLOUDINARY_URL", "")
+        if cloud:
+            try:
+                import cloudinary.uploader
+                res = cloudinary.uploader.upload(
+                    f,
+                    folder="tqa-lessons",
+                    resource_type="image" if is_image else "raw",
+                    use_filename=True,
+                    unique_filename=True,
+                )
+                url = res["secure_url"]
+            except Exception as e:
+                tb.print_exc()
+                return Response({"error": f"Cloudinary: {e}"}, status=500)
+        else:
+            # ডেভেলপমেন্টে — লোকাল ফাইল
+            from django.core.files.storage import default_storage
+            saved = default_storage.save(f"lessons/{f.name}", f)
+            url = request.build_absolute_uri(f"/media/{saved}")
+        return Response({"url": url, "kind": "image" if is_image else "pdf",
+                         "name": f.name}, status=201)
 
 
 class LectureViewSet(viewsets.ModelViewSet):

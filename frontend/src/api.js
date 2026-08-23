@@ -368,6 +368,12 @@ export const api = {
     request("/notifications/broadcast/", { method: "POST", body: { text } }),
   // কোর্সের সিলেবাস টেবিল — পরিচালকের নিজের হাতে লেখা (পড়া: সবাই, লেখা: পরিচালক)
   // কোর্সের শিক্ষার্থী তালিকা — লেকচার প্ল্যানে "কার জন্য টিক" বাছাই করতে
+  // দারসের টগলে বসানোর ছবি/PDF আপলোড — ঠিকানা ফেরত আসে (কেবল পরিচালক)
+  uploadLessonMedia: (file) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return request("/lesson-media/", { method: "POST", body: fd, isForm: true });
+  },
   courseStudents: (courseId) => request(`/courses/${courseId}/students/`),
   syllabusSheet: (courseId) => request(`/courses/${courseId}/syllabus_sheet/`),
   saveSyllabusSheet: (courseId, headers, rows) =>
