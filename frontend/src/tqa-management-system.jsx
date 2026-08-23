@@ -15484,6 +15484,227 @@ const NAV = [
    নিজে থেকে কিছুই রিফ্রেশ করে না — শুধু জানায়, চাপবেন কিনা ব্যবহারকারীর ইচ্ছা। */
 const RELOAD_GUARD_KEY = "tqa_update_reloaded_at";
 let selfReloading = false;
+/* সব ব্লকিং পপআপের অভিন্ন খোলস — পুরো পর্দা ঢেকে দেয়, বাইরে চাপলে বা
+   ব্যাক চাপলে বন্ধ হয় না; কেবল ভেতরের বাটনেই বন্ধ হয়। উদ্দেশ্য: জরুরি
+   বার্তা যেন কেউ না দেখেই পাশ কাটিয়ে যেতে না পারেন। */
+function BlockingPopup({ icon, title, children, footer, zIndex = 305 }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex,
+        background: "rgba(18,63,40,.72)",
+        display: "grid",
+        placeItems: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 18,
+          maxWidth: 400,
+          width: "100%",
+          maxHeight: "86vh",
+          overflowY: "auto",
+          padding: 26,
+          textAlign: "center",
+          fontFamily: "'Hind Siliguri', sans-serif",
+        }}
+      >
+        <div style={{ fontSize: 40 }}>{icon}</div>
+        <div
+          style={{ fontWeight: 800, fontSize: 17, color: C.emerald, marginTop: 6 }}
+        >
+          {title}
+        </div>
+        <div
+          style={{
+            fontSize: 13.5,
+            color: C.text,
+            margin: "12px 0 18px",
+            lineHeight: 1.7,
+            textAlign: "left",
+          }}
+        >
+          {children}
+        </div>
+        {footer}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════ পরিচালক/এডমিনের পাঠানো নোটিফিকেশন — না-পড়া থাকলে পপআপ ═══════════
+   লগইন করার সাথে সাথেই (এবং পরে নতুন কিছু এলেও) পুরো পর্দা ঢেকে দেখানো হয়।
+   "বুঝেছি" চাপলে সবগুলো "পড়া হয়েছে" চিহ্নিত হয়ে পপআপ চলে যায় — তার আগে নয়।
+   এখানে ফাঁদে পড়ার ভয় নেই: বাটনটা সবসময় কাজ করে, আর সার্ভারে পৌঁছাতে না
+   পারলেও পপআপ বন্ধ হয়ে যায় (নইলে নেট গেলে অ্যাপটাই ব্যবহার করা যেত না)। */
+function UnreadNotifPopup({ user, notifs, onDone }) {
+  const [busy, setBusy] = useState(false);
+  const en = user?.role === "student";
+  const unread = (notifs || []).filter((n) => !n.is_read);
+  if (!user || !unread.length) return null;
+  const ack = async () => {
+    setBusy(true);
+    try {
+      await api.markAllRead();
+    } catch (e) {
+      /* সার্ভারে জানানো গেল না — তবু আটকে রাখি না */
+    }
+    setBusy(false);
+    onDone();
+  };
+  return (
+    <BlockingPopup
+      icon="🔔"
+      title={
+        en
+          ? unread.length > 1
+            ? `${unread.length} new messages from the Academy`
+            : "A message from the Academy"
+          : unread.length > 1
+            ? `একাডেমি থেকে ${bn(unread.length)}টি নতুন বার্তা`
+            : "একাডেমি থেকে একটি বার্তা"
+      }
+      footer={
+        <Btn
+          kind="gold"
+          style={{ width: "100%", justifyContent: "center", opacity: busy ? 0.7 : 1 }}
+          onClick={busy ? undefined : ack}
+        >
+          {busy ? (en ? "Please wait…" : "একটু অপেক্ষা…") : en ? "Got it" : "বুঝেছি"}
+        </Btn>
+      }
+    >
+      {unread.map((n) => (
+        <div
+          key={n.id}
+          style={{
+            background: C.greenBg,
+            border: `1px solid ${C.line}`,
+            borderRadius: 12,
+            padding: "10px 12px",
+            marginBottom: 8,
+          }}
+        >
+          {n.text}
+        </div>
+      ))}
+    </BlockingPopup>
+  );
+}
+
+/* ═══════════ অ্যাপ ইনস্টল করার পপআপ (যাঁদের ইনস্টল করা নেই) ═══════════
+   পুরো পর্দা ঢেকে দেখায়, "📲 ইনস্টল করুন" চাপলে ব্রাউজারের আসল ইনস্টল
+   পপআপ খোলে।
+   ⚠️ "পরে" বাটনটা কেন রাখতেই হলো: আইফোন/আইপ্যাডের সাফারিতে ওয়েবসাইট থেকে
+   ইনস্টল করানোর কোনো উপায়ই নেই (অ্যাপলের সীমাবদ্ধতা) — সেখানে বাটন দিয়ে
+   ইনস্টল হয় না, নিজে হাতে "Add to Home Screen" করতে হয়। ফায়ারফক্স ও কিছু
+   ব্রাউজারেও একই। তাই বের হওয়ার পথ না রাখলে ওই ব্যবহারকারীরা অ্যাপে চিরকাল
+   আটকে যেতেন, কিছুই করতে পারতেন না।
+   তবে উপেক্ষা করা যায় না — "পরে" শুধু এইবারের জন্য, অ্যাপ আবার খুললেই
+   পপআপটা আবার আসবে, যতক্ষণ না সত্যিই ইনস্টল করা হয়। */
+function InstallPopup({ user }) {
+  const en = user?.role === "student";
+  const [ready, setReady] = useState(!!window.__tqaInstallEvent);
+  const [hidden, setHidden] = useState(
+    () => {
+      try {
+        return sessionStorage.getItem("tqa_install_dismissed") === "1";
+      } catch (e) {
+        return false;
+      }
+    },
+  );
+  useEffect(() => {
+    const h = () => setReady(true);
+    window.addEventListener("tqa-install-ready", h);
+    return () => window.removeEventListener("tqa-install-ready", h);
+  }, []);
+  if (isInstalledApp() || hidden) return null;
+  const ua = navigator.userAgent || "";
+  const isIOS =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);
+  if (!ready && !isIOS) return null; // ইনস্টলের কোনো উপায়ই নেই — বৃথা আটকাই না
+  const later = () => {
+    try {
+      sessionStorage.setItem("tqa_install_dismissed", "1");
+    } catch (e) {
+      /* উপেক্ষা */
+    }
+    setHidden(true);
+  };
+  const install = async () => {
+    const evt = window.__tqaInstallEvent;
+    if (!evt) return later();
+    evt.prompt();
+    try {
+      await evt.userChoice;
+    } catch (e) {
+      /* উপেক্ষা */
+    }
+    window.__tqaInstallEvent = null;
+    later();
+  };
+  return (
+    <BlockingPopup
+      icon="📲"
+      zIndex={295}
+      title={en ? "Install the app" : "অ্যাপটি ইনস্টল করে নিন"}
+      footer={
+        <div style={{ display: "grid", gap: 8 }}>
+          {!isIOS && (
+            <Btn
+              kind="gold"
+              style={{ width: "100%", justifyContent: "center" }}
+              onClick={install}
+            >
+              {en ? "📲 Install now" : "📲 এখনই ইনস্টল করুন"}
+            </Btn>
+          )}
+          <Btn
+            kind="soft"
+            style={{ width: "100%", justifyContent: "center" }}
+            onClick={later}
+          >
+            {en ? "Later" : "পরে"}
+          </Btn>
+        </div>
+      }
+    >
+      {isIOS ? (
+        en ? (
+          <>
+            Open the <b>Share</b> menu below and choose{" "}
+            <b>“Add to Home Screen”</b>. The app will then open straight from
+            your home screen — faster, and notifications will work.
+          </>
+        ) : (
+          <>
+            নিচের <b>Share</b> মেনু খুলে <b>“Add to Home Screen”</b> বেছে নিন।
+            তাহলে হোম স্ক্রিন থেকেই অ্যাপটি খুলবে — দ্রুত চলবে, আর
+            নোটিফিকেশনও পাবেন।
+          </>
+        )
+      ) : en ? (
+        <>
+          Install the Academy app on this device. It opens faster, works like a
+          real app, and you will receive class and notice alerts even when it is
+          closed.
+        </>
+      ) : (
+        <>
+          এই ডিভাইসে একাডেমির অ্যাপটি ইনস্টল করে নিন। দ্রুত খুলবে, আসল অ্যাপের
+          মতো চলবে, আর অ্যাপ বন্ধ থাকলেও ক্লাস ও নোটিশের খবর পেয়ে যাবেন।
+        </>
+      )}
+    </BlockingPopup>
+  );
+}
+
 /* ═══════════════ "অ্যাপটি নতুন করে ইনস্টল করুন" পপআপ ═══════════════
    অ্যাপের আইকন বা নাম বদলালে ইনস্টল করা অ্যাপে সেটা আপনাআপনি বসে না —
    উইন্ডোজ, আইপ্যাড ও অ্যান্ড্রয়েড ইনস্টলের সময়ের আইকন-নামই ধরে রাখে। তাই
@@ -15536,8 +15757,8 @@ function ReinstallNotice({ lang }) {
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 310,
-        background: "rgba(18,63,40,.6)",
+        zIndex: 300,
+        background: "rgba(18,63,40,.72)",
         display: "grid",
         placeItems: "center",
         padding: 16,
@@ -15997,7 +16218,15 @@ export default function App() {
   const overlays = (
     <>
       <UpdateBanner lang={user?.role === "student" ? "en" : "bn"} />
+      {/* জরুরি পপআপগুলো — পুরো পর্দা ঢেকে দেয়, বাটন না চাপলে সরে না।
+          একসাথে একাধিক এলে zIndex অনুযায়ী উপরেরটাই আগে দেখায়:
+          নোটিফিকেশন (৩০৫) → নতুন করে ইনস্টল (৩০০) → ইনস্টল (২৯৫)।
+          ⚠️ নোটিফিকেশনের পপআপটা এখানে বসানো যায় না — overlays তৈরি হয়
+          apiNotifs ঘোষণার আগে, তাই এখানে বসালে অ্যাপ চালু হওয়ার সাথে সাথেই
+          ক্র্যাশ করত। সেটা নিচে, লগইন করা অবস্থার অংশে বসানো আছে (আর
+          লগইন ছাড়া নোটিফিকেশনের প্রশ্নই আসে না)। */}
       <ReinstallNotice lang={user?.role === "student" ? "en" : "bn"} />
+      <InstallPopup user={user} />
       {confirmReq && (
         <div
           style={{
@@ -16438,6 +16667,7 @@ export default function App() {
       </div>
 
       {overlays}
+      <UnreadNotifPopup user={user} notifs={apiNotifs} onDone={loadNotifs} />
       {receipt && (
         <ReceiptModal
           r={receipt}
