@@ -12361,6 +12361,9 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         student_id: (edit.studentId || "").trim(),
         // "••••" placeholder পাঠাব না (নইলে পাসওয়ার্ড নষ্ট হতো); আসল/নতুন হলে পাঠাই
         ...(edit.pass && edit.pass !== "••••" ? { password: edit.pass } : {}),
+        // "কার কাছে পড়ে" — এখন শিক্ষার্থীর নিজের ঘরে বসে, কোর্সে নয়। তাই
+        // একজনের উস্তাদ বদলালে ওই কোর্সের বাকিদের কিছুই বদলায় না।
+        teacher: edit.teacherId ? +edit.teacherId : null,
       };
       const saved = await api.saveUser(payload, edit.id || undefined);
       const sid = saved?.id || edit.id;
@@ -12410,37 +12413,6 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
             );
           }
-        }
-        /* ── উস্তাদ ──
-           শিক্ষার্থীর নিজের কোনো উস্তাদ-ঘর নেই; উস্তাদ বাঁধা থাকে কোর্সের
-           সাথে (Course.teacher)। তাই "কার কাছে পড়ে" বদলানো মানে ওই কোর্সের
-           উস্তাদ বদলানো — আর তাতে ওই কোর্সের সব শিক্ষার্থীরই উস্তাদ বদলায়।
-           নীরবে করা যাবে না, তাই আগে জিজ্ঞেস করে নিই। */
-        if (
-          target &&
-          edit.teacherId &&
-          String(edit.teacherId) !== String(target.teacherId || "")
-        ) {
-          const tName =
-            (teachers.find((t) => String(t.id) === String(edit.teacherId)) || {})
-              .name || "নতুন উস্তাদ";
-          askConfirm(
-            `"${target.name}" কোর্সের উস্তাদ বদলে ${tName} করবেন?\n\n` +
-              `এই কোর্সে থাকা সব শিক্ষার্থীরই উস্তাদ বদলে যাবে — কেবল এই ` +
-              `একজনের নয়। রুটিন ও আসন্ন ক্লাসগুলোতেও নতুন উস্তাদ বসে যাবে।`,
-            async () => {
-              try {
-                await api.saveCourse({ teacher: edit.teacherId }, target.id);
-                await loadStudents();
-                notice("✔ কোর্সের উস্তাদ বদলানো হয়েছে।");
-              } catch (e) {
-                notice(
-                  "উস্তাদ বদলানো যায়নি — " +
-                    (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
-                );
-              }
-            },
-          );
         }
       }
       await loadStudents(); // ব্যাকএন্ড থেকে নতুন তালিকা
@@ -13025,11 +12997,14 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                     const c = courseList.find(
                       (x) => String(x.id) === String(cid),
                     );
-                    // কোর্স বাছলেই তার উস্তাদ অটো বসে (কার কাছে পড়ে)
+                    // কোর্স বাছলে উস্তাদ অটো বসে — কিন্তু কেবল তখনই, যখন
+                    // শিক্ষার্থীর নিজের কোনো উস্তাদ এখনো বসানো হয়নি।
+                    // আগে শর্তহীনভাবে বসত, ফলে কোর্স বদলাতে গেলেই
+                    // পরিচালকের বসানো উস্তাদ চাপা পড়ে যেত।
                     setEdit({
                       ...edit,
                       courseId: cid,
-                      teacherId: c?.teacherId ?? edit.teacherId,
+                      teacherId: edit.teacherId || c?.teacherId || "",
                     });
                   }}
                 >
@@ -13042,7 +13017,15 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 </select>
               </div>
               <div>
-                <label style={S.label}>👳 কার কাছে পড়ে (উস্তাদ/উস্তাদা)</label>
+                <label style={S.label}>
+                  👳 কার কাছে পড়ে (উস্তাদ/উস্তাদা)
+                  <span
+                    style={{ color: C.muted, fontWeight: 600, fontSize: 11.5 }}
+                  >
+                    {" "}
+                    — কেবল এই শিক্ষার্থীর
+                  </span>
+                </label>
                 <select
                   style={S.input}
                   value={edit.teacherId || ""}
@@ -13118,7 +13101,9 @@ function TeacherWiseBoard({ db, setDb, user }) {
           routData.map((r) => ({
             ...r,
             courseId: r.course ?? r.courseId,
+            // শিক্ষার্থীর নিজের উস্তাদ আগে; না থাকলে কোর্সের উস্তাদ
             teacherId: r.teacher ?? r.teacherId,
+            teacherName: r.teacher_name || "",
             studentIds: r.students || r.studentIds || [],
             studentNames: r.student_names || [],
             days: r.days || [],

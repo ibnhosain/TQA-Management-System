@@ -25,6 +25,16 @@ class User(AbstractUser):
     # পরিচালক চাইলে নিজে বদলেও দিতে পারেন। কেবল স্টুডেন্টদের জন্য প্রযোজ্য।
     student_id = models.CharField("স্টুডেন্ট আইডি", max_length=32, blank=True,
                                   default="", db_index=True)
+    # শিক্ষার্থী কার কাছে পড়ে — নিজস্ব উস্তাদ।
+    # আগে উস্তাদ বাঁধা ছিল কেবল কোর্সের সাথে (Course.teacher), তাই এক
+    # শিক্ষার্থীর উস্তাদ বদলাতে গেলে ওই কোর্সের সবারই বদলে যেত। এখন প্রতিটি
+    # শিক্ষার্থীর আলাদা উস্তাদ থাকতে পারে, আর একই কোর্সে একাধিক উস্তাদও।
+    # ⚠️ Course.teacher মোছা হয়নি — খালি থাকলে কোর্সের উস্তাদই প্রযোজ্য ধরা
+    # হয়, তাই পুরনো কোনো হিসাব হারায় না।
+    teacher = models.ForeignKey("self", on_delete=models.SET_NULL, null=True,
+                                blank=True, limit_choices_to={"role": "teacher"},
+                                related_name="my_students",
+                                verbose_name="কার কাছে পড়ে")
     monthly_fee = models.PositiveIntegerField(default=0)      # স্টুডেন্ট হলে
     monthly_salary = models.PositiveIntegerField(default=0)   # টিচার হলে
     # স্টুডেন্ট সপ্তাহে কোন কোন বার পড়বে — [0..6] JS getDay() ক্রম (০=রবিবার); ফি ও রুটিনে ব্যবহৃত

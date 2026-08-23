@@ -197,7 +197,11 @@ class CourseViewSet(viewsets.ModelViewSet):
             "teacher"
         ).prefetch_related("students", "books")
         if u.role == "teacher":
-            return qs.filter(teacher=u)
+            # কোর্সের নির্ধারিত উস্তাদ হলে, অথবা এই কোর্সে তাঁর নিজের কোনো
+            # শিক্ষার্থী থাকলে — দুটোর যেকোনোটিতেই কোর্সটি দেখতে পান।
+            # ফলে একই কোর্সে একাধিক উস্তাদ থাকতে পারেন, প্রত্যেকে নিজের
+            # শিক্ষার্থীদের সূত্রে কোর্সটি দেখেন।
+            return qs.filter(Q(teacher=u) | Q(students__teacher=u)).distinct()
         if u.role == "student":
             return qs.filter(students=u)
         return qs

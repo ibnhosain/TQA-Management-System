@@ -15,13 +15,15 @@ class UserSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source="name_bn", required=False)
     sub = serializers.CharField(source="sub_title", required=False, allow_blank=True)
     due_months = serializers.SerializerMethodField()
+    # শিক্ষার্থীর নিজস্ব উস্তাদ — "কার কাছে পড়ে"
+    teacher_name = serializers.CharField(source="teacher.name_bn", read_only=True)
 
     class Meta:
         model = User
         fields = ["id", "username", "role", "name", "name_bn", "sub", "sub_title",
                   "phone", "country", "guardian", "email", "monthly_fee",
                   "monthly_salary", "class_days", "can_fix_cross", "due_months",
-                  "student_id"]
+                  "student_id", "teacher", "teacher_name"]
 
     def get_due_months(self, obj):
         # .values_list()-এর বদলে .all() ইটারেট — prefetch_related("due_months") এর ক্যাশ
