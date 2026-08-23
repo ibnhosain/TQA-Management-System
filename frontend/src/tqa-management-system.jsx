@@ -2950,6 +2950,13 @@ function ClassesView({
       joined?.classId === k.id ||
       (k.attendance || []).some((a) => String(a.user) === String(user.id));
     const alreadyBothJoined = bothJoinedToday(k);
+    // উস্তাদের সাথে দেখা হয়ে হাজিরা পাকাপাকি নিশ্চিত হয়ে গেছে কিনা। হাজিরা
+    // বসে দুজনে একসাথে মিটিংয়ে থাকা মাত্রই (_sync_mutual_presence), আর তা
+    // কখনো ফিরিয়ে নেওয়া হয় না — তাই এটা সত্য হওয়া মানে "উস্তাদ এসে গেছেন"।
+    const meetingDone = (k.attendance || []).some(
+      (a) =>
+        String(a.user) === String(user.id) && (a.present || a.marked_present),
+    );
     // এই ক্লাসের উস্তাদ কিনা — উস্তাদই কেবল রিজয়েন চালু করতে পারেন
     const isTeacherOf =
       user.role === "teacher" &&
@@ -3126,9 +3133,12 @@ function ClassesView({
               >
                 <Btn kind="gold">{T("🔁 রিজয়েন করুন", "🔁 Rejoin")}</Btn>
               </a>
-            ) : isJoined ? (
+            ) : isJoined && !meetingDone ? (
               /* এই লেখাটা রিজয়েন বাটনের জায়গা ধরে রাখে — উস্তাদ রিজয়েন চালু
                  করলে ঠিক এখানেই "🔁 Rejoin" বাটন হয়ে যায়।
+                 উস্তাদের সাথে দেখা হয়ে হাজিরা নিশ্চিত হয়ে গেলে (meetingDone)
+                 লেখাটা সরে যায় — তখন "Teacher is joining, please wait" পড়ে
+                 শিক্ষার্থী ভাবতেন উস্তাদ এখনো আসেননি, অথচ ক্লাস চলছে।
                  তাই এটা দেখানো হয় কেবল শিক্ষার্থী ক্লাসে ঢোকার পর, যখন
                  রিজয়েনের প্রশ্নটাই প্রাসঙ্গিক। জয়েন করার আগে (অর্থাৎ যখন
                  সামনে শুধু "🎥 Join Zoom" বাটনটাই থাকার কথা) এটা আর আসবে না —
