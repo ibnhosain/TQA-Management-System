@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { api, login, logout, getMe, hasToken, downloadBackup } from "./api";
+import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
 
 /* ═══════════════════════════════════════════════════════════
    তারবিয়াতুল কুরআন একাডেমি — ম্যানেজমেন্ট সিস্টেম (TQA-MS)
@@ -15466,21 +15466,31 @@ function UpdateBanner({ lang }) {
   // বদলে গেলে কেউ ঘাবড়ে না যান, কারণটা চোখে পড়ে।
   // কাজ হারানোর ভয় নেই — লগইন, খোলা পেইজ ও খোলা ফর্মের লেখা সবই আগে থেকেই
   // সংরক্ষিত থাকে, রিফ্রেশের পর যেখানে ছিলেন সেখানেই ফিরে আসবেন।
+  const [waited, setWaited] = useState(0);
   useEffect(() => {
     if (!ready) return;
-    if (left <= 0) {
-      try {
-        window.localStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
-      } catch (e) {
-        /* উপেক্ষা */
-      }
-      selfReloading = true; // "সাইট ছেড়ে যাবেন?" বাক্সটা যেন না আসে
-      window.location.reload();
-      return;
+    if (left > 0) {
+      const t = setTimeout(() => setLeft((n) => n - 1), 1000);
+      return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setLeft((n) => n - 1), 1000);
-    return () => clearTimeout(t);
-  }, [ready, left]);
+    // গণনা শেষ — কিন্তু ঠিক এই মুহূর্তে কোনো সেভ সার্ভারে পাঠানো অবস্থায়
+    // থাকলে রিফ্রেশ করা যাবে না। রিলোড করলে অনুরোধটা মাঝপথে কেটে যেত;
+    // সার্ভার হয়তো সেটা প্রসেস করেই ফেলত, কিন্তু উত্তরটা আর ফিরত না — ফিরে
+    // এসে আবার সেভ চাপলে একই রুটিন/ক্লাস দুবার তৈরি হয়ে যেতে পারত।
+    // ৩০ সেকেন্ডের সীমা রাখা হয়েছে যাতে কোনো অনুরোধ আটকে গেলেও রিফ্রেশ
+    // চিরকাল ঝুলে না থাকে (ওদিকে ৩০s-এ রিকোয়েস্ট নিজেই টাইমআউট করে)।
+    if (hasPendingWrites() && waited < 30) {
+      const t = setTimeout(() => setWaited((n) => n + 1), 1000);
+      return () => clearTimeout(t);
+    }
+    try {
+      window.localStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
+    } catch (e) {
+      /* উপেক্ষা */
+    }
+    selfReloading = true; // "সাইট ছেড়ে যাবেন?" বাক্সটা যেন না আসে
+    window.location.reload();
+  }, [ready, left, waited]);
   if (!ready) return null;
   return (
     <div
@@ -15529,7 +15539,13 @@ function UpdateBanner({ lang }) {
             : "পাতাটি নিজে থেকেই রিফ্রেশ হবে — আপনাকে কিছু চাপতে হবে না। আপনার কাজ সংরক্ষিত আছে।"}
         </div>
         <div style={{ fontSize: 13, fontWeight: 800, color: C.gold }}>
-          {en ? `Refreshing in ${left}…` : `${bn(left)} সেকেন্ড পর রিফ্রেশ হচ্ছে…`}
+          {left > 0
+            ? en
+              ? `Refreshing in ${left}…`
+              : `${bn(left)} সেকেন্ড পর রিফ্রেশ হচ্ছে…`
+            : en
+              ? "Finishing your save first…"
+              : "আপনার সেভ শেষ হওয়ার অপেক্ষায়…"}
         </div>
       </div>
     </div>

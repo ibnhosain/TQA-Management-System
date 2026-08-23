@@ -77,10 +77,22 @@ const fetchWithTimeout = (url, opts = {}, ms = 30000) => {
   return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(timer));
 };
 
+/* এই মুহূর্তে সার্ভারে কয়টা "লেখালেখির" রিকোয়েস্ট পাঠানো অবস্থায় আছে
+   (POST/PATCH/PUT/DELETE)। GET গোনা হয় না — সেটা মাঝপথে কেটে গেলে কিছুই
+   হারায় না, শুধু আবার পড়তে হয়।
+   কাজে লাগে অটো-আপডেটের রিফ্রেশে: সেভ পাঠানো অবস্থায় পাতা রিলোড হলে
+   অনুরোধটা মাঝপথে কেটে যেত। সার্ভার হয়তো সেটা প্রসেস করেই ফেলত, কিন্তু
+   উত্তরটা আর ফিরত না — ফিরে এসে আবার সেভ চাপলে একই রুটিন/ক্লাস দুবার
+   তৈরি হয়ে যেতে পারত। */
+let pendingWrites = 0;
+export const hasPendingWrites = () => pendingWrites > 0;
+
 /* মূল রিকোয়েস্ট র‍্যাপার — JWT সংযুক্তি + মেয়াদ শেষে অটো-রিফ্রেশ */
 async function request(path, { method = "GET", body, isForm, timeoutMs } = {}) {
-  const doFetch = () =>
-    fetchWithTimeout(
+  const isWrite = method !== "GET";
+  const doFetch = () => {
+    if (isWrite) pendingWrites += 1;
+    return fetchWithTimeout(
       `${BASE}${path}`,
       {
         method,
@@ -91,7 +103,10 @@ async function request(path, { method = "GET", body, isForm, timeoutMs } = {}) {
         body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
       },
       timeoutMs,
-    );
+    ).finally(() => {
+      if (isWrite) pendingWrites -= 1;
+    });
+  };
 
   // কোল্ড-স্টার্ট/সাময়িক সার্ভার সমস্যায় কয়েকবার চেষ্টা (Render ফ্রি প্ল্যান ঘুম থেকে জাগতে সময় নেয়)
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
