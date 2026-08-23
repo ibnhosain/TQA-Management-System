@@ -186,7 +186,7 @@ body{font-family:'Hind Siliguri',sans-serif;margin:0;padding:26px;background:#f4
 .meta{display:flex;gap:18px;flex-wrap:wrap;padding:12px 24px;border-bottom:1.5px solid #e5e9e5;font-size:13.5px}
 .meta b{color:#1a5c3a}
 table{width:100%;border-collapse:collapse;table-layout:fixed}
-th{background:#eafaf1;color:#1a5c3a;font-weight:800;font-size:13px;text-align:center;padding:9px 6px;border:1px solid #e5e9e5;border-bottom:1.5px solid #1a7a44}
+th{background:#123f28;color:#fff;font-weight:800;font-size:13px;text-align:center;padding:9px 6px;border:1px solid #123f28;border-bottom:2px solid #c9962a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 td{border:1px solid #e5e9e5;vertical-align:top;padding:9px 10px;font-size:12.5px;line-height:1.6;word-wrap:break-word}
 td.em{text-align:center;color:#9ca3af}
 .f{text-align:center;font-size:11px;color:#9ca3af;padding:10px;border-top:1px solid #eef0ee}
@@ -13849,17 +13849,23 @@ function SyllabusView({ db, setDb, courses, user }) {
                         <th
                           key={i}
                           style={{
-                            background: C.greenBg,
-                            color: C.emerald,
+                            /* গাঢ় ও সম্পূর্ণ নিরেট রঙ — আগে হালকা সবুজ (#eafaf1)
+                               ছিল বলে স্ক্রল করার সময় নিচ দিয়ে যাওয়া লেখা
+                               হেডারের ভেতর দিয়ে ভেসে উঠত। boxShadow-টা ঘরের
+                               পুরো জায়গা একই রঙে ভরে দেয়, তাই কোনো ফাঁক দিয়েই
+                               পেছনের কিছু দেখা যায় না */
+                            background: C.emeraldD,
+                            boxShadow: `inset 0 0 0 9999px ${C.emeraldD}`,
+                            color: "#fff",
                             fontWeight: 800,
                             fontSize: 12.5,
                             textAlign: "center",
                             padding: canEdit ? "5px 5px 7px" : "9px 6px",
-                            border: `1px solid ${C.line}`,
-                            borderBottom: `1.5px solid ${C.green}`,
+                            border: `1px solid ${C.emeraldD}`,
+                            borderBottom: `2px solid ${C.gold}`,
                             position: "sticky",
                             top: 0,
-                            zIndex: 2,
+                            zIndex: 3,
                           }}
                         >
                           {canEdit ? (
@@ -13874,7 +13880,9 @@ function SyllabusView({ db, setDb, courses, user }) {
                                   textAlign: "center",
                                   fontWeight: 800,
                                   fontSize: 12.5,
-                                  color: C.emerald,
+                                  color: "#fff",
+                                  background: "rgba(255,255,255,.14)",
+                                  border: "1px solid rgba(255,255,255,.35)",
                                   padding: "5px 6px",
                                 }}
                               />
@@ -13885,7 +13893,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                                   border: "none",
                                   background: "none",
                                   cursor: "pointer",
-                                  color: C.red,
+                                  color: C.goldL,
                                   fontSize: 11,
                                   fontWeight: 700,
                                   marginTop: 2,
@@ -13902,12 +13910,14 @@ function SyllabusView({ db, setDb, courses, user }) {
                       {canEdit && (
                         <th
                           style={{
-                            background: C.greenBg,
-                            border: `1px solid ${C.line}`,
+                            background: C.emeraldD,
+                            boxShadow: `inset 0 0 0 9999px ${C.emeraldD}`,
+                            border: `1px solid ${C.emeraldD}`,
+                            borderBottom: `2px solid ${C.gold}`,
                             width: 46,
                             position: "sticky",
                             top: 0,
-                            zIndex: 2,
+                            zIndex: 3,
                           }}
                         />
                       )}
