@@ -138,7 +138,8 @@ def generate_monthly_dues(roles=None):
     "স্টুডেন্ট পেমেন্ট" পেজের বাটন শুধু roles=["student"] দিয়ে কল করে।"""
     from django.db.models import Sum
 
-    from .models import User, DueMonth, FeePayment, TeacherPayment
+    from .models import (User, DueMonth, FeePayment, TeacherPayment,
+                         LeaveRequest)
     # date.today() সার্ভারের (UTC) তারিখ দেয়, বাংলাদেশ সময়ের নয় — মাসের শুরুর
     # দিকে মধ্যরাত-থেকে-ভোর৬টার মধ্যে চললে ভুল মাসও ধরে ফেলতে পারত
     t = timezone.localtime().date()
@@ -165,11 +166,27 @@ def generate_monthly_dues(roles=None):
         if (row["total"] or 0) >= (salary_of.get(row["teacher_id"]) or 0) > 0
     }
 
+    # ⚠️ মঞ্জুর হওয়া ছুটি পুরো মাসটা ঢেকে রাখলে সে মাসের বকেয়া তৈরি হয় না।
+    # শর্তটা ইচ্ছাকৃতভাবে কড়া — ছুটি মাসের ১ তারিখের আগে (বা সেদিনই) শুরু
+    # হয়ে শেষ তারিখের পরে (বা সেদিনই) শেষ হতে হবে। কয়েক দিনের অসুস্থতার
+    # ছুটিতে পুরো মাসের ফি মাফ হয়ে যাওয়াটা ঠিক হতো না।
+    import calendar
+
+    first = t.replace(day=1)
+    last = t.replace(day=calendar.monthrange(t.year, t.month)[1])
+    on_leave = set(
+        LeaveRequest.objects.filter(
+            status="approved", from_date__lte=first, to_date__gte=last
+        ).values_list("applicant_id", flat=True)
+    )
+
     created = 0
     for u in User.objects.filter(role__in=(roles or ["student", "teacher"]), is_active=True):
         if u.role == "student" and u.id in paid_students:
             continue
         if u.role == "teacher" and u.id in paid_teachers:
+            continue
+        if u.id in on_leave:
             continue
         _, is_new = DueMonth.objects.get_or_create(user=u, month_label=label)
         if is_new:

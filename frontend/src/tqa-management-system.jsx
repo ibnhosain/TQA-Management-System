@@ -10242,6 +10242,20 @@ function DirectorPaymentsView({ db, setDb, user }) {
     setMpBusy(false);
   };
   const dueStudents = students.filter((s) => (s.dueMonths || []).length > 0);
+  // ছুটির মাসের বকেয়া মওকুফ — সরিয়ে দিয়ে তালিকা নতুন করে আনি
+  const waiveDueHere = async (studentId, monthLabel) => {
+    try {
+      await api.waiveDue(studentId, monthLabel);
+      await loadData();
+      notice(`✔ "${monthLabel}" মাসের বকেয়া মওকুফ করা হয়েছে।`);
+    } catch (e) {
+      notice(
+        "মওকুফ করা যায়নি — " +
+          (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+      );
+    }
+  };
+
   const waMsg = (s) => {
     const dues = s.dueMonths || db.dueMonths[s.id] || [];
     return `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহি ওয়া বারাকাতুহ।\n\nমুহতারাম ${s.guardian || "অভিভাবক"},\nতারবিয়াতুল কুরআন একাডেমির পক্ষ থেকে আন্তরিক দুআ ও সালাম। আল্লাহ তাআলা আপনার সন্তানের ইলম ও আমলে বরকত দান করুন।\n\nবিনয়ের সাথে স্মরণ করিয়ে দিচ্ছি — ${s.name}-এর ${dues.join(", ")} মাসের ফি (মোট ৳${(dues.length * (s.fee || 0)).toLocaleString("en")}) এখনো অপরিশোধিত রয়েছে। আপনার সুবিধাজনক সময়ে পরিশোধ করে দিলে কৃতজ্ঞ থাকব ইনশাআল্লাহ।\n\nজাযাকুমুল্লাহু খাইরান।\n— তারবিয়াতুল কুরআন একাডেমি`;
@@ -10534,6 +10548,28 @@ function DirectorPaymentsView({ db, setDb, user }) {
                 নম্বর নেই
               </Tag>
             )}
+            {/* ছুটি বা অন্য কারণে যাঁর কাছ থেকে ফি নেওয়া হবে না — এখান
+                থেকেই মাস ধরে মওকুফ করা যায়। আগে এটা কেবল বিস্তারিত পাতায়
+                ছিল, তাই এই তালিকা দেখতে দেখতে সরানো যেত না। */}
+            {isDir(user) &&
+              (s.dueMonths || []).map((m) => (
+                <Btn
+                  key={m}
+                  sm
+                  kind="soft"
+                  title={`${m} মাসের বকেয়া মওকুফ করুন`}
+                  onClick={() =>
+                    askConfirm(
+                      `${s.name}-এর "${m}" মাসের বকেয়া মওকুফ করবেন?\n\n` +
+                        `ছুটিতে থাকলে বা অন্য কারণে ফি না নিলে এটা করুন। ` +
+                        `বকেয়াটি তালিকা থেকে সরে যাবে।`,
+                      () => waiveDueHere(s.id, m),
+                    )
+                  }
+                >
+                  🏝️ {m} মওকুফ
+                </Btn>
+              ))}
           </div>
         ))}
       </div>
