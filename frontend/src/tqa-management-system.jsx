@@ -1158,8 +1158,13 @@ const myCourses = (cs, u) =>
   isAdm(u)
     ? cs
     : u.role === "teacher"
-      ? cs.filter((c) => c.teacherId === u.id)
-      : cs.filter((c) => c.studentIds.includes(u.id));
+      /* ⚠️ এখানে আবার "কেবল কোর্সের উস্তাদ" ধরে ছাঁকা যাবে না।
+         সার্ভার আগেই রোল অনুযায়ী ছেঁকে দেয় — উস্তাদ কোর্সটি পান দুই সূত্রে:
+         তিনি কোর্সের নির্ধারিত উস্তাদ, অথবা কোর্সে তাঁর নিজের শিক্ষার্থী
+         আছে। এখানে দ্বিতীয়বার ছাঁকলে দ্বিতীয় ধরনের কোর্সগুলো পর্দা থেকে
+         হারিয়ে যেত — উস্তাদ নিজের শিক্ষার্থীর কোর্সই দেখতে পেতেন না। */
+      ? cs
+      : cs.filter((c) => (c.studentIds || []).includes(u.id));
 /* অভিভাবকের WhatsApp-এ পাঠানোর মেসেজ তৈরি — আউটবক্সে জমা হয়, এক ট্যাপে পাঠানো যায় */
 const waGuardianMsgs = (k, course, reason) => {
   const studs =
@@ -1462,15 +1467,6 @@ function StudentPicker({ selected, onToggle, people }) {
   );
 }
 
-const coverageOf = (course) => {
-  const all = (course.lectures || []).flatMap((l) => l.topics || []);
-  const done = all.filter((t) => t.covered === true).length;
-  return {
-    done,
-    total: all.length,
-    pct: all.length ? Math.round((done / all.length) * 100) : 0,
-  };
-};
 
 /* এক-ক্লিকে অ্যাপ ইনস্টল করার ব্যানার — লগইন পেজের উপরে দেখায়। Android/Windows/
    Mac-এ Chrome/Edge হলে beforeinstallprompt ইভেন্ট থাকলে সরাসরি ব্রাউজারের আসল
@@ -6431,6 +6427,40 @@ function ProgressView({ db, setDb, courses, user }) {
       ? [user]
       : [],
   );
+  /* সিলেবাস অগ্রগতি — আগে হিসাব হতো coverageOf(course) দিয়ে, যা
+     api.lectures()-এর পুরনো "সবার-জন্য-একটাই" covered মান পড়ত। কভার এখন
+     প্রতি শিক্ষার্থীর আলাদা, তাই ওই মান আর বসে না — বারটা সবার জন্য ০%
+     দেখাত। এখন দারস পরিকল্পনার হেডিং থেকেই আনা হয়, শিক্ষার্থীর নিজের
+     টিক ধরে। { [courseId]: {done,total,pct} } */
+  const [progress, setProgress] = useState({});
+  useEffect(() => {
+    let alive = true;
+    const who = user.role === "student" ? null : undefined; // শিক্ষার্থী হলে সার্ভার নিজেই তারটা দেয়
+    Promise.all(
+      (courses || []).map((c) =>
+        api
+          .lessonSections(c.id, who)
+          .then((rows) => {
+            const all = (rows || []).flatMap((x) => x.topics || []);
+            const done = all.filter((t) => t.covered === "covered").length;
+            return [
+              c.id,
+              {
+                done,
+                total: all.length,
+                pct: all.length ? Math.round((done / all.length) * 100) : 0,
+              },
+            ];
+          })
+          .catch(() => [c.id, { done: 0, total: 0, pct: 0 }]),
+      ),
+    ).then((pairs) => alive && setProgress(Object.fromEntries(pairs)));
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courses.map((c) => c.id).join(",")]);
+
   const [pay, setPay] = useState(false);
   const [maker, setMaker] = useState(false);
   const [pf, setPf] = useState({ method: "বিকাশ", trx: "" });
@@ -6665,7 +6695,7 @@ function ProgressView({ db, setDb, courses, user }) {
             {T("📈 কোর্সভিত্তিক সিলেবাস অগ্রগতি", "📈 Syllabus Progress by Course")}
           </div>
           {stCourses.map((c) => {
-            const cv = coverageOf(c);
+            const cv = progress[c.id] || { done: 0, total: 0, pct: 0 };
             return (
               <div key={c.id} style={{ marginBottom: 10 }}>
                 <div
@@ -13662,9 +13692,9 @@ function CourseManagerView({ db, setDb, refresh }) {
                     : c.studentIds?.length || 0,
                 )}{" "}
                 জন · বই: {bn((c.books || []).length)}টি
-                {c.lectures?.length
-                  ? ` · লেকচার: ${bn(c.lectures.length)}টি`
-                  : ""}
+                {/* "লেকচার: Nটি" সরানো হলো — দারস এখন কেবল লুকানো ধারক
+                    (কোর্স-প্রতি একটিই), তাই সংখ্যাটা সবসময় ১ দেখাত এবং
+                    কিছুই বোঝাত না। টপিকের হিসাব দারস পরিকল্পনা পাতাতেই আছে। */}
               </div>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
