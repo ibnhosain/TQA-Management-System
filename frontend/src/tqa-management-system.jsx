@@ -7028,6 +7028,12 @@ function AccountsView({ db }) {
           String(p.teacherId) === String(teacherId) && (p.month || p.month_label) === month,
       )
       .reduce((s, p) => s + (+p.amount || 0), 0);
+  // এই উস্তাদকে কখনো কোনো বেতন দেওয়া হয়েছে কিনা (যেকোনো মাসে)
+  const everPaid = (teacherId) =>
+    salaries.some(
+      (p) => String(p.teacherId) === String(teacherId) && (+p.amount || 0) > 0,
+    );
+
   return (
     <Section
       title="হিসাব-নিকাশ"
@@ -7084,6 +7090,10 @@ function AccountsView({ db }) {
             return [
               t.name,
               `৳${bn(salary.toLocaleString("en"))}`,
+              /* ⚠️ আগে বকেয়ার রেকর্ড না থাকলেই "পরিশোধিত ✔" দেখাত। কিন্তু
+                 বকেয়া তৈরি হয় মাসিক cron চললে — নতুন উস্তাদের ক্ষেত্রে বা
+                 cron না চললে কোনো বকেয়াই থাকে না, ফলে এক টাকা বেতন না
+                 দিয়েও "পরিশোধিত" দেখাত। এখন আসল বেতনের রেকর্ড দেখে বলা হয়। */
               dues.length ? (
                 <Tag key="d" color={C.red} bg={C.redBg}>
                   {month}
@@ -7091,8 +7101,12 @@ function AccountsView({ db }) {
                     ? ` — ৳${bn(paid.toLocaleString("en"))} পেয়েছেন, ৳${bn(remaining.toLocaleString("en"))} বাকি`
                     : ""}
                 </Tag>
-              ) : (
+              ) : everPaid(t.id) ? (
                 <Tag key="d">পরিশোধিত ✔</Tag>
+              ) : (
+                <Tag key="d" color={C.red} bg={C.redBg}>
+                  এখনো কোনো বেতন দেওয়া হয়নি
+                </Tag>
               ),
             ];
           })}
@@ -9639,8 +9653,16 @@ function StudentPaymentsView({ db, setDb, user }) {
           icon="⏳"
           label="Due"
           value={`৳${(dues.length * userFee).toLocaleString("en")}`}
-          accent={dues.length ? C.red : C.emerald}
-          note={dues.join(", ") || "Alhamdulillah, no dues"}
+          /* ⚠️ বকেয়ার রেকর্ড না থাকলেই "no dues" বলা যায় না — বকেয়া তৈরি
+             হয় মাসিক cron চললে। কেউ কখনো কিছু না দিয়ে থাকলে সেটাই বলি,
+             নইলে "Alhamdulillah, no dues" দেখে ভুল বোঝার সুযোগ থাকত। */
+          accent={dues.length || totalPaid === 0 ? C.red : C.emerald}
+          note={
+            dues.join(", ") ||
+            (totalPaid === 0
+              ? "No payment recorded yet"
+              : "Alhamdulillah, no dues")
+          }
         />
       </div>
       {dues.length > 0 && (
