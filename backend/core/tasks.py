@@ -136,13 +136,41 @@ def generate_monthly_dues(roles=None):
     """চলতি মাসের বকেয়া তৈরি (idempotent) — কতগুলো নতুন তৈরি হলো তা ফেরত দেয়।
     roles না দিলে ডিফল্টে student+teacher দুটোই (cron/হিসাব-নিকাশের বাটন);
     "স্টুডেন্ট পেমেন্ট" পেজের বাটন শুধু roles=["student"] দিয়ে কল করে।"""
-    from .models import User, DueMonth
+    from django.db.models import Sum
+
+    from .models import User, DueMonth, FeePayment, TeacherPayment
     # date.today() সার্ভারের (UTC) তারিখ দেয়, বাংলাদেশ সময়ের নয় — মাসের শুরুর
     # দিকে মধ্যরাত-থেকে-ভোর৬টার মধ্যে চললে ভুল মাসও ধরে ফেলতে পারত
     t = timezone.localtime().date()
     label = f"{BN_MONTHS[t.month - 1]} {str(t.year).translate(BN_DIGITS)}"
+
+    # ⚠️ যাঁরা এই মাসের টাকা আগেই দিয়ে ফেলেছেন তাঁদের বকেয়া বানানো যাবে না।
+    # অনেক অভিভাবক ১-২ মাসের ফি অগ্রিম দিয়ে দেন — আগে সেটা দেখা হতো না,
+    # তাই পরের মাসের ৫ তারিখে তাঁদের নামেও বকেয়া বসে যেত এবং রিমাইন্ডারের
+    # তালিকায় চলে আসতেন, যদিও টাকা আগেই দেওয়া।
+    paid_students = set(
+        FeePayment.objects.filter(month_label=label, status="verified")
+        .values_list("student_id", flat=True)
+    )
+    # উস্তাদের বেলায় পূর্ণ বেতন পেলে তবেই বাদ — আংশিক দিলে বকেয়া থাকা উচিত
+    # (perform_destroy/verify-এর নিয়মের সাথে মিলিয়ে)
+    salary_of = dict(
+        User.objects.filter(role="teacher").values_list("id", "monthly_salary")
+    )
+    paid_teachers = {
+        row["teacher_id"]
+        for row in TeacherPayment.objects.filter(month_label=label)
+        .values("teacher_id")
+        .annotate(total=Sum("amount"))
+        if (row["total"] or 0) >= (salary_of.get(row["teacher_id"]) or 0) > 0
+    }
+
     created = 0
     for u in User.objects.filter(role__in=(roles or ["student", "teacher"]), is_active=True):
+        if u.role == "student" and u.id in paid_students:
+            continue
+        if u.role == "teacher" and u.id in paid_teachers:
+            continue
         _, is_new = DueMonth.objects.get_or_create(user=u, month_label=label)
         if is_new:
             created += 1
