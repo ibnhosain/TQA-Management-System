@@ -770,11 +770,19 @@ def _sync_mutual_presence(s):
     teacher_id = s.teacher_id or (s.course.teacher_id if s.course_id else None)
     if not teacher_id:
         return
-    rows = list(Attendance.objects.filter(session=s))
+    rows = list(Attendance.objects.filter(session=s).select_related("user"))
     teacher_row = next((r for r in rows if r.user_id == teacher_id), None)
     teacher_active = bool(teacher_row and teacher_row.segment_start is not None)
+    # ⚠️ "শিক্ষার্থী আছেন" বলতে সত্যিই শিক্ষার্থী বোঝাতে হবে। আগে শর্ত ছিল
+    # শুধু "এই সারিটি উস্তাদের নয়" — ভূমিকা দেখা হতো না। ফলে দ্বিতীয় কোনো
+    # উস্তাদ, এডমিন বা পরিচালক ক্লাসে ঢুকলেই তাঁকে শিক্ষার্থী ধরে নিয়ে
+    # দুজনের হাজিরাই "নিশ্চিত" হয়ে যেত — একজন শিক্ষার্থীও না এসে।
+    # এক কোর্সে একাধিক উস্তাদ চালু হওয়ার পর এটা আরও সহজে ঘটত।
     student_rows_active = [
-        r for r in rows if r.user_id != teacher_id and r.segment_start is not None
+        r for r in rows
+        if r.user_id != teacher_id
+        and r.segment_start is not None
+        and getattr(r.user, "role", None) == "student"
     ]
     if not (teacher_active and student_rows_active):
         return
@@ -882,7 +890,11 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         return Response({
             "attendance": AttendanceSerializer(rows, many=True).data,
             "teacher_active": rows.filter(user_id=teacher_id, segment_start__isnull=False).exists() if teacher_id else False,
-            "any_student_active": rows.filter(segment_start__isnull=False).exclude(user_id=teacher_id).exists(),
+            # একই কারণে এখানেও ভূমিকা যাচাই — উস্তাদ/এডমিন ঢুকলে যেন
+            # অন্যপাশে "শিক্ষার্থী এসে গেছেন" না দেখায়
+            "any_student_active": rows.filter(
+                segment_start__isnull=False, user__role="student"
+            ).exclude(user_id=teacher_id).exists(),
         })
 
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])
