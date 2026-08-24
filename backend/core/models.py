@@ -142,6 +142,28 @@ class Lecture(models.Model):
         unique_together = [("course", "no")]
 
 
+class LessonSection(models.Model):
+    """দারস পরিকল্পনার হেডিং — সিলেবাসের বিষয় ধরে।
+
+    যেমন: Memorized Surah, Memorized Hadith, Qirat, Dua, Masala,
+    Moral Lesson, Hadith Story — আর পরিচালক ইচ্ছামতো নতুন নাম যোগ করতে
+    বা পুরনো নাম বদলাতে পারেন।
+
+    প্রতিটি হেডিংয়ের নিচে যত খুশি টপিক (টগল) থাকতে পারে। টপিক কভার হয়ে
+    গেলেও নিজের হেডিংয়েই থাকে — জায়গা বদলায় না, কেবল রঙ বদলায়।
+    """
+    course = models.ForeignKey(Course, on_delete=models.CASCADE,
+                               related_name="lesson_sections")
+    name = models.CharField(max_length=120)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"{self.course.name} — {self.name}"
+
+
 class LectureTopic(models.Model):
     class Covered(models.TextChoices):
         PENDING = "pending", "বাকি"
@@ -153,8 +175,12 @@ class LectureTopic(models.Model):
     # তৈরি হওয়া টপিকগুলোর সংযোগ যেন না হারায় তাই ঘরটা রাখা হয়েছে
     syllabus_item = models.ForeignKey(SyllabusItem, on_delete=models.SET_NULL, null=True)
     text = models.CharField(max_length=300)  # টগলের শিরোনাম (আগে sylLabel স্ন্যাপশট ছিল)
+    # কোন হেডিংয়ের নিচে। পুরনো টপিকে খালি থাকতে পারে — তখন "অন্যান্য"
+    # হেডিংয়ে দেখানো হয়, যাতে একটাও চোখের আড়ালে না যায়।
+    section = models.ForeignKey(LessonSection, on_delete=models.SET_NULL,
+                                null=True, blank=True, related_name="topics")
     # টগলের ভেতরের লেখা — কী পড়ানো হবে। খালি হতে পারে (পুরনো টপিকগুলোর মতো)।
-    order = models.PositiveIntegerField(default=0)  # টগলের ক্রম
+    order = models.PositiveIntegerField(default=0)  # হেডিংয়ের ভেতরে টগলের ক্রম
     content = models.TextField(blank=True, default="")
     covered = models.CharField(max_length=8, choices=Covered.choices, default=Covered.PENDING)
     marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)

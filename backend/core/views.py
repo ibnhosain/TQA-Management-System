@@ -17,7 +17,8 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      ExamResult, FeePayment, DueMonth, TeacherPayment, SentReceipt,
                      Admission, LeaveRequest, Rating, StudentRemark, Notice, Notification,
                      PushSubscription, WaMessage, LibraryBook,
-                     CourseSyllabusSheet, TopicCoverage)
+                     CourseSyllabusSheet, TopicCoverage, LessonSection)
+from .safe_html import clean_html
 from .serializers import *
 from .permissions import (IsDirector, IsAdminLevel, IsTeacherOrAdminLevel,
                           ReadAllWriteAdmin, ReadAllWriteDirector)
@@ -356,6 +357,135 @@ class LessonMediaView(APIView):
             url = request.build_absolute_uri(f"/media/{saved}")
         return Response({"url": url, "kind": "image" if is_image else "pdf",
                          "name": f.name}, status=201)
+
+
+# পরিচালকের দেওয়া ক্রমেই নতুন কোর্সে হেডিংগুলো বসে
+DEFAULT_SECTIONS = [
+    "Memorized Surah", "Memorized Hadith", "Qirat", "Dua", "Masala",
+    "Moral Lesson", "Hadith Story",
+]
+
+
+class LessonSectionViewSet(viewsets.ModelViewSet):
+    """দারস পরিকল্পনার হেডিং — তৈরি, নাম বদলানো, ক্রম, মুছে ফেলা।
+
+    পড়তে পারেন সবাই (নিজের কোর্সের), লিখতে কেবল পরিচালক।
+    """
+    serializer_class = LessonSectionSerializer
+    permission_classes = [ReadAllWriteDirector]
+    filterset_fields = ["course"]
+
+    def get_queryset(self):
+        u = self.request.user
+        qs = LessonSection.objects.prefetch_related(
+            "topics", "topics__coverages"
+        ).select_related("course")
+        if u.role == "student":
+            return qs.filter(course__students=u).distinct()
+        if u.role == "teacher":
+            return qs.filter(
+                Q(course__teacher=u) | Q(course__students__teacher=u)
+            ).distinct()
+        return qs
+
+    def _student_id(self):
+        """কোন শিক্ষার্থীর টিক দেখানো হবে — LectureViewSet-এর মতোই নিয়ম।"""
+        u = self.request.user
+        if u.role == "student":
+            return u.id
+        raw = self.request.query_params.get("student")
+        try:
+            return int(raw) if raw else None
+        except (TypeError, ValueError):
+            return None
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx["student_id"] = self._student_id()
+        return ctx
+
+    @action(detail=False, methods=["post"], permission_classes=[IsDirector])
+    def ensure(self, request):
+        """কোর্সে হেডিং না থাকলে সাতটি ডিফল্ট বানিয়ে দেয়।
+
+        নতুন কোর্সে পরিচালককে একটা একটা করে হেডিং লিখতে না হয়, সেজন্য।
+        আগে থেকে হেডিং থাকলে কিছুই করে না — তাই বারবার ডাকা নিরাপদ।
+        """
+        cid = request.data.get("course")
+        course = Course.objects.filter(pk=cid).first()
+        if not course:
+            return Response({"error": "কোর্স খুঁজে পাওয়া যায়নি"}, status=400)
+        if not LessonSection.objects.filter(course=course).exists():
+            LessonSection.objects.bulk_create([
+                LessonSection(course=course, name=n, order=i)
+                for i, n in enumerate(DEFAULT_SECTIONS)
+            ])
+        rows = self.get_queryset().filter(course=course)
+        return Response(self.get_serializer(rows, many=True).data)
+
+    @action(detail=True, methods=["put"], permission_classes=[IsDirector])
+    def topics(self, request, pk=None):
+        """হেডিংয়ের নিচের টপিকগুলো একবারে সংরক্ষণ — [{id?, text, content}, …]
+
+        দারস (Lecture) আর ব্যবহার হয় না; টপিক সরাসরি হেডিংয়ের নিচে বসে।
+        তবু LectureTopic.lecture ঘরটি বাধ্যতামূলক, তাই কোর্স-প্রতি একটি
+        লুকানো "ধারক" দারস রাখা হয় — পর্দায় কোথাও দেখানো হয় না।
+
+        ⚠️ আইডি মিলিয়ে পুরনো টপিকই হালনাগাদ হয়, নতুন করে বানানো হয় না —
+        নইলে প্রতিবার সংরক্ষণে কভারের টিক (প্রতি শিক্ষার্থীর) হারিয়ে যেত।
+        """
+        section = self.get_object()
+        blocks = request.data.get("topics")
+        if not isinstance(blocks, list):
+            return Response({"error": "topics তালিকা দিন"}, status=400)
+        if len(blocks) > 200:
+            return Response({"error": "একটি হেডিংয়ে সর্বোচ্চ ২০০টি টপিক"},
+                            status=400)
+
+        holder = Lecture.objects.filter(course=section.course).order_by("id").first()
+        if not holder:
+            holder = Lecture.objects.create(
+                course=section.course, no=1, title="দারস তালিকা")
+
+        existing = {t.id: t for t in section.topics.all()}
+        kept, order = set(), 0
+        for b in blocks:
+            if not isinstance(b, dict):
+                continue
+            text = str(b.get("text") or "").strip()[:300]
+            if not text:
+                continue  # শিরোনামহীন টগল রাখার মানে নেই
+            content = clean_html(str(b.get("content") or "")[:100000])
+            t = existing.get(b.get("id"))
+            if t:
+                t.text, t.content, t.order = text, content, order
+                t.save(update_fields=["text", "content", "order"])
+                kept.add(t.id)
+            else:
+                LectureTopic.objects.create(
+                    lecture=holder, section=section, text=text,
+                    content=content, order=order)
+            order += 1
+        for tid, t in existing.items():
+            if tid not in kept:
+                t.delete()  # পরিচালক নিজে সরিয়ে দিয়েছেন
+        section.refresh_from_db()
+        return Response(self.get_serializer(section).data)
+
+    @action(detail=False, methods=["post"], permission_classes=[IsDirector])
+    def reorder(self, request):
+        """হেডিংগুলোর ক্রম — [id, id, ...] যে ক্রমে পাঠানো হয় সেই ক্রমেই বসে।"""
+        ids = request.data.get("ids") or []
+        rows = {x.id: x for x in LessonSection.objects.filter(id__in=ids)}
+        changed = []
+        for i, sid in enumerate(ids):
+            r = rows.get(sid)
+            if r and r.order != i:
+                r.order = i
+                changed.append(r)
+        if changed:
+            LessonSection.objects.bulk_update(changed, ["order"])
+        return Response({"ok": True})
 
 
 class LectureViewSet(viewsets.ModelViewSet):

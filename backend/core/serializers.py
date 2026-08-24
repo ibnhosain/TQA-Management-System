@@ -7,7 +7,7 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      Submission, ExamResult, FeePayment, DueMonth, TeacherPayment,
                      SentReceipt, Admission, LeaveRequest, Rating, StudentRemark, Notice,
                      Notification, PushSubscription, WaMessage, LibraryBook,
-                     CourseSyllabusSheet)
+                     CourseSyllabusSheet, LessonSection)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -136,7 +136,7 @@ class LectureTopicSerializer(serializers.ModelSerializer):
     class Meta:
         model = LectureTopic
         fields = ["id", "syllabus_item", "text", "content", "order",
-                  "covered", "marked_at"]
+                  "section", "covered", "marked_at"]
 
     def _row(self, obj):
         """যে শিক্ষার্থীর জন্য দেখা হচ্ছে তার নিজের রেকর্ড (থাকলে)।"""
@@ -166,6 +166,24 @@ class LectureTopicSerializer(serializers.ModelSerializer):
         row = self._row(obj)
         at = row.marked_at if row else obj.marked_at
         return timezone.localtime(at).date().isoformat() if at else None
+
+
+class LessonSectionSerializer(serializers.ModelSerializer):
+    """হেডিং ও তার নিচের টপিকগুলো।
+
+    টপিকগুলো নেস্টেড করে পাঠানো হয় — ফ্রন্টএন্ডে আলাদা করে সাজাতে হয় না,
+    আর প্রতি হেডিংয়ে আলাদা কল করারও দরকার পড়ে না।
+    """
+    topics = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LessonSection
+        fields = ["id", "course", "name", "order", "topics"]
+
+    def get_topics(self, obj):
+        # prefetch করা topics থেকেই — প্রতি হেডিংয়ে আলাদা কোয়েরি হয় না
+        rows = sorted(obj.topics.all(), key=lambda t: (t.order, t.id))
+        return LectureTopicSerializer(rows, many=True, context=self.context).data
 
 
 class LectureSerializer(serializers.ModelSerializer):

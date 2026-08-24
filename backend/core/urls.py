@@ -33,6 +33,7 @@ router.register("notices", views.NoticeViewSet)
 router.register("notifications", views.NotificationViewSet, basename="notifications")
 router.register("wa-messages", views.WaMessageViewSet)
 router.register("library-books", views.LibraryBookViewSet)
+router.register("lesson-sections", views.LessonSectionViewSet, basename="lesson-sections")
 router.register("push-subscriptions", views.PushSubscriptionViewSet, basename="push-subscriptions")
 
 urlpatterns = [
