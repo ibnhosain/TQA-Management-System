@@ -11946,6 +11946,19 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   const [teachers, setTeachers] = useState([]); // উস্তাদ তালিকা (কার কাছে পড়ে)
 
   // ব্যাকএন্ড থেকে স্টুডেন্ট তালিকা লোড — ব্যর্থ হলে mock USERS
+  // ফি স্টেটাস আসল পেমেন্ট দেখে বলার জন্য (null = এখনো আসেনি)
+  const [payments, setPayments] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    api
+      .myFees()
+      .then((rows) => alive && setPayments(rows || []))
+      .catch(() => alive && setPayments([]));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const loadStudents = async () => {
     setLoading(true);
     try {
@@ -12047,6 +12060,23 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
       );
     }
     setIdBusy(false);
+  };
+
+  /* বাছাই করা উস্তাদ কি এই কোর্সের সাথে যুক্ত?
+     যুক্ত ধরা হয় দুই সূত্রে — তিনি কোর্সের নির্ধারিত উস্তাদ, অথবা এই
+     কোর্সের অন্য কোনো শিক্ষার্থী ইতিমধ্যে তাঁর কাছে পড়ে। */
+  const teacherLinkedToCourse = (cid, tid) => {
+    const c = courseList.find((x) => String(x.id) === String(cid));
+    if (!c) return true; // কোর্স জানা নেই — অকারণে সতর্ক করি না
+    if (String(c.teacherId || "") === String(tid)) return true;
+    return (c.studentIds || []).some((sid) =>
+      students.some(
+        (st) =>
+          String(st.id) === String(sid) &&
+          String(st.id) !== String(edit?.id || "") &&
+          String(st.teacherId || "") === String(tid),
+      ),
+    );
   };
 
   const saveEdit = async () => {
@@ -12193,6 +12223,19 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         : (courseById(COURSES, r.courseId).studentIds || []).includes(s.id),
     );
     const dues = s.dues || [];
+    /* ⚠️ আগে কেবল "বকেয়া আছে কিনা" দেখে বলা হতো — বকেয়া না থাকলেই
+       "পরিশোধিত ✔"। কিন্তু বকেয়ার রেকর্ড তৈরি হয় মাসিক cron চললে
+       (cron/monthly/)। নতুন ভর্তি হওয়া শিক্ষার্থীর জন্য সেটা চলার আগে
+       কোনো বকেয়াই থাকে না — ফলে এক টাকাও না দিয়েই "পরিশোধিত" দেখাত।
+       এখন আসল পেমেন্টের রেকর্ড দেখে বলা হয়।
+       ⚠️ তালিকাটা প্যারেন্টে আনা হয় — Detail প্রতিবার নতুন করে তৈরি হয়
+       বলে এখানে useEffect রাখলে বারবার রিমাউন্ট হয়ে অকারণে কল হতো। */
+    const myPays =
+      payments === null
+        ? null
+        : payments.filter(
+            (x) => String(x.student) === String(s.id) && x.status === "verified",
+          );
     const inf = (k, v) => (
       <div
         style={{
@@ -12290,8 +12333,24 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                   </Tag>
                 ))}
               </span>
+            ) : myPays === null ? (
+              <Tag color={C.muted} bg={C.cream}>
+                দেখা হচ্ছে…
+              </Tag>
+            ) : myPays.length === 0 ? (
+              /* কোনো যাচাই-করা পেমেন্ট নেই — "পরিশোধিত" বলা যায় না */
+              <Tag color={C.red} bg={C.redBg}>
+                এখনো কোনো পেমেন্ট নেই
+              </Tag>
             ) : (
-              <Tag>পরিশোধিত ✔</Tag>
+              <Tag>
+                পরিশোধিত ✔ — সর্বশেষ {myPays[0].month_label}
+              </Tag>
+            )}
+            {myPays && myPays.length > 0 && (
+              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 4 }}>
+                মোট {bn(myPays.length)}টি পেমেন্ট যাচাই করা হয়েছে
+              </div>
             )}
           </div>
         </div>
@@ -12760,6 +12819,33 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                     </option>
                   ))}
                 </select>
+                {/* ⚠️ কোর্স বদলালেও শিক্ষার্থীর নিজস্ব উস্তাদ নিজে থেকে বদলায়
+                    না (ইচ্ছাকৃত — এক কোর্সে একাধিক উস্তাদ থাকতে পারেন)। কিন্তু
+                    নতুন কোর্সের সাথে এই উস্তাদের কোনো সম্পর্ক না থাকলে তিনি
+                    শিক্ষার্থীকে নিজের তালিকায় দেখতেই পাবেন না — সেটাই এখানে
+                    আগেভাগে জানিয়ে দেওয়া হয়। */}
+                {edit.courseId &&
+                  edit.teacherId &&
+                  !teacherLinkedToCourse(edit.courseId, edit.teacherId) && (
+                    <div
+                      style={{
+                        marginTop: 6,
+                        padding: "7px 9px",
+                        borderRadius: 8,
+                        background: C.amberBg,
+                        border: `1px solid ${C.goldL}`,
+                        fontSize: 11.5,
+                        lineHeight: 1.6,
+                        color: "#8a5a00",
+                      }}
+                    >
+                      ⚠️ এই উস্তাদ বাছাই করা কোর্সটির সাথে যুক্ত নন। এভাবে
+                      সংরক্ষণ করলে <b>তিনি এই শিক্ষার্থীকে নিজের তালিকায়
+                      দেখতে পাবেন</b> (কারণ শিক্ষার্থী তাঁর কাছেই পড়ে), তবে{" "}
+                      <b>কোর্সের অন্য উস্তাদ দেখবেন না</b>। ইচ্ছা করে এমন
+                      চাইলে ঠিক আছে।
+                    </div>
+                  )}
               </div>
           </div>
           <Btn
