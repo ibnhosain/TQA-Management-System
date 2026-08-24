@@ -422,6 +422,14 @@ class DueMonth(models.Model):
 
     class Meta:
         unique_together = [("user", "month_label")]
+    # ⚠️ মওকুফ করলে রেকর্ডটা মুছে ফেলা হয় না, চিহ্নিত করে রাখা হয়।
+    # আগে মুছে ফেলা হতো — ফলে পরে বোঝার উপায় থাকত না কেন বকেয়া নেই, আর
+    # "মওকুফ" ও "পরিশোধিত" এক দেখাত। এখন দুটো আলাদা করে দেখানো যায়।
+    # বাড়তি লাভ: মাসিক কাজটি get_or_create করে, তাই মওকুফ করা মাস আর
+    # নতুন করে বকেয়া হিসেবে ফিরে আসে না।
+    waived = models.BooleanField(default=False, verbose_name="মওকুফ")
+    waived_reason = models.CharField(max_length=120, blank=True, default="")
+    waived_at = models.DateTimeField(null=True, blank=True)
 
 
 class TeacherPayment(models.Model):

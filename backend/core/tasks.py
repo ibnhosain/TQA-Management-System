@@ -188,6 +188,8 @@ def generate_monthly_dues(roles=None):
             continue
         if u.id in on_leave:
             continue
+        # মওকুফ করা মাস আবার বকেয়া হিসেবে ফিরে আসে না — get_or_create
+        # পুরনো (মওকুফ চিহ্নিত) সারিটাই পায়, নতুন বানায় না
         _, is_new = DueMonth.objects.get_or_create(user=u, month_label=label)
         if is_new:
             created += 1

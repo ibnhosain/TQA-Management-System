@@ -10243,9 +10243,9 @@ function DirectorPaymentsView({ db, setDb, user }) {
   };
   const dueStudents = students.filter((s) => (s.dueMonths || []).length > 0);
   // ছুটির মাসের বকেয়া মওকুফ — সরিয়ে দিয়ে তালিকা নতুন করে আনি
-  const waiveDueHere = async (studentId, monthLabel) => {
+  const waiveDueHere = async (studentId, monthLabel, reason) => {
     try {
-      await api.waiveDue(studentId, monthLabel);
+      await api.waiveDue(studentId, monthLabel, reason);
       await loadData();
       notice(`✔ "${monthLabel}" মাসের বকেয়া মওকুফ করা হয়েছে।`);
     } catch (e) {
@@ -10563,7 +10563,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
                       `${s.name}-এর "${m}" মাসের বকেয়া মওকুফ করবেন?\n\n` +
                         `ছুটিতে থাকলে বা অন্য কারণে ফি না নিলে এটা করুন। ` +
                         `বকেয়াটি তালিকা থেকে সরে যাবে।`,
-                      () => waiveDueHere(s.id, m),
+                      () => waiveDueHere(s.id, m, "ছুটি/মওকুফ"),
                     )
                   }
                 >
@@ -12036,12 +12036,18 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   // ব্যাকএন্ড থেকে স্টুডেন্ট তালিকা লোড — ব্যর্থ হলে mock USERS
   // ফি স্টেটাস আসল পেমেন্ট দেখে বলার জন্য (null = এখনো আসেনি)
   const [payments, setPayments] = useState(null);
+  // কোন কোন মাস মওকুফ করা হয়েছে — "মওকুফ" ও "পরিশোধিত" আলাদা দেখাতে
+  const [waived, setWaived] = useState([]);
   useEffect(() => {
     let alive = true;
     api
       .myFees()
       .then((rows) => alive && setPayments(rows || []))
       .catch(() => alive && setPayments([]));
+    api
+      .duesWithWaived()
+      .then((rows) => alive && setWaived((rows || []).filter((x) => x.waived)))
+      .catch(() => alive && setWaived([]));
     return () => {
       alive = false;
     };
@@ -12324,6 +12330,9 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         : payments.filter(
             (x) => String(x.student) === String(s.id) && x.status === "verified",
           );
+    const myWaived = (waived || []).filter(
+      (x) => String(x.user) === String(s.id),
+    );
     const inf = (k, v) => (
       <div
         style={{
@@ -12425,19 +12434,35 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               <Tag color={C.muted} bg={C.cream}>
                 দেখা হচ্ছে…
               </Tag>
-            ) : myPays.length === 0 ? (
-              /* কোনো যাচাই-করা পেমেন্ট নেই — "পরিশোধিত" বলা যায় না */
-              <Tag color={C.red} bg={C.redBg}>
-                এখনো কোনো পেমেন্ট নেই
+            ) : myPays.length > 0 ? (
+              <Tag>পরিশোধিত ✔ — সর্বশেষ {myPays[0].month_label}</Tag>
+            ) : myWaived.length > 0 ? (
+              /* মওকুফ ≠ পরিশোধিত — টাকা আসেনি, নেওয়া হবেও না।
+                 তাই আলাদা রঙে, আলাদা কথায়। */
+              <Tag color={C.gold} bg={C.amberBg}>
+                বকেয়া নেই — মওকুফ করা হয়েছে
               </Tag>
             ) : (
-              <Tag>
-                পরিশোধিত ✔ — সর্বশেষ {myPays[0].month_label}
+              /* কোনো পেমেন্টও নেই, মওকুফও নেই */
+              <Tag color={C.red} bg={C.redBg}>
+                এখনো কোনো পেমেন্ট নেই
               </Tag>
             )}
             {myPays && myPays.length > 0 && (
               <div style={{ fontSize: 11.5, color: C.muted, marginTop: 4 }}>
                 মোট {bn(myPays.length)}টি পেমেন্ট যাচাই করা হয়েছে
+              </div>
+            )}
+            {myWaived.length > 0 && (
+              <div style={{ fontSize: 11.5, color: "#8a5a00", marginTop: 4 }}>
+                🏝️ মওকুফ:{" "}
+                {myWaived
+                  .map(
+                    (w) =>
+                      w.month_label +
+                      (w.waived_reason ? ` (${w.waived_reason})` : ""),
+                  )
+                  .join(", ")}
               </div>
             )}
           </div>

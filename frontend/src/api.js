@@ -319,7 +319,14 @@ export const api = {
   myFees: () => request("/fees/"),
   myDues: () => request("/fees/dues/"),
   generateMonthlyDues: (role) => request("/fees/generate_dues/", { method: "POST", body: role ? { role } : undefined, timeoutMs: 60000 }), // চলতি মাসের বকেয়া এখনই তৈরি — role="student" দিলে কেবল স্টুডেন্ট, না দিলে সবার জন্য
-  waiveDue: (user_id, month_label) => request("/fees/waive_due/", { method: "POST", body: { user_id, month_label } }), // পরিচালক নির্দিষ্ট মাসের বকেয়া মওকুফ করে সরিয়ে দিতে পারেন
+  // মওকুফ — রেকর্ড মুছে না, চিহ্নিত হয়। কারণ লিখে রাখা যায়।
+  waiveDue: (user_id, month_label, reason) =>
+    request("/fees/waive_due/", {
+      method: "POST",
+      body: { user_id, month_label, ...(reason ? { reason } : {}) },
+    }),
+  // মওকুফ করা মাসগুলোসহ পুরো তালিকা (কে কোন মাস মওকুফ পেয়েছেন দেখাতে)
+  duesWithWaived: () => request("/fees/dues/?include_waived=1"), // পরিচালক নির্দিষ্ট মাসের বকেয়া মওকুফ করে সরিয়ে দিতে পারেন
   payFee: ({ amount, month_label, method, trx_id, screenshot }) => {  // বিকাশ/নগদ/ব্যাংক + স্ক্রিনশট
     const f = new FormData();
     f.append("amount", amount); f.append("month_label", month_label);

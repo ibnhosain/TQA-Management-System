@@ -1091,7 +1091,15 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
         # ভুল/ডুপ্লিকেট পেমেন্ট মুছা কেবল পরিচালকের এখতিয়ার — আর্থিক রেকর্ড
         if self.action == "destroy":
             return [IsDirector()]
-        return [IsAuthenticated()]
+        # 🔒 super() ব্যবহার করতেই হবে — নইলে প্রতিটি @action-এ ঘোষিত
+        # permission_classes চাপা পড়ে যায়। আগে সরাসরি [IsAuthenticated()]
+        # ফেরত দেওয়া হতো, ফলে record_payment / waive_due / verify /
+        # generate_dues — টাকার সাথে জড়িত চারটি কাজই যেকোনো লগইন করা
+        # ব্যবহারকারীর জন্য খোলা ছিল। শিক্ষার্থী নিজেই নিজের ফি "পরিশোধিত"
+        # করে ফেলতে বা বকেয়া মওকুফ করে দিতে পারত।
+        # DRF অ্যাকশনের initkwargs থেকে self.permission_classes বসিয়ে দেয়,
+        # তাই super() ঠিক অনুমতিটাই ফেরত দেয়।
+        return super().get_permissions()
 
     def perform_create(self, serializer):  # স্টুডেন্টের "এখনই পেমেন্ট" → pending
         pay = serializer.save(student=self.request.user, status="pending")
@@ -1109,6 +1117,8 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
             student=student, month_label=month_label, status="verified",
         ).exists()
         if not still_paid:
+            # get_or_create — মওকুফ করা সারি থাকলে সেটাই থাকে, মওকুফ অবস্থা
+            # নষ্ট হয় না
             DueMonth.objects.get_or_create(user=student, month_label=month_label)
 
     @action(detail=False, permission_classes=[IsAuthenticated])
@@ -1120,6 +1130,11 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
             qs = DueMonth.objects.all().select_related("user")
         else:
             qs = DueMonth.objects.none()
+        # মওকুফ করা মাস আর "বকেয়া" নয় — তাই বকেয়ার তালিকা থেকে বাদ।
+        # ?include_waived=1 দিলে সবগুলোই আসে (কে কোন মাস মওকুফ পেয়েছেন তা
+        # দেখাতে লাগে)।
+        if not self.request.query_params.get("include_waived"):
+            qs = qs.filter(waived=False)
         return Response(DueMonthSerializer(qs, many=True).data)
 
     @action(detail=False, methods=["post"], permission_classes=[IsAdminLevel])
@@ -1150,8 +1165,20 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
         month_label = request.data.get("month_label")
         if not user_id or not month_label:
             return Response({"error": "user_id ও month_label আবশ্যক"}, status=400)
-        deleted, _ = DueMonth.objects.filter(user_id=user_id, month_label=month_label).delete()
-        return Response({"deleted": deleted})
+        # ⚠️ আগে .delete() করা হতো — রেকর্ডটাই মুছে যেত। ফলে পরে বোঝার কোনো
+        # উপায় থাকত না কেন বকেয়া নেই, আর পর্দায় "পরিশোধিত ✔" দেখাত, যদিও
+        # টাকা আসেনি। এখন চিহ্নিত করে রাখা হয় — "মওকুফ" ও "পরিশোধিত"
+        # আলাদা করে দেখানো যায়, আর মাসিক কাজটিও (get_or_create) মওকুফ করা
+        # মাসকে নতুন করে বকেয়া বানায় না।
+        # 💰 মওকুফ কোনো পেমেন্ট নয় — FeePayment তৈরি হয় না, তাই আয়ের
+        # হিসাবেও এক পয়সা যোগ হয় না।
+        row, _ = DueMonth.objects.get_or_create(
+            user_id=user_id, month_label=month_label)
+        row.waived = True
+        row.waived_reason = (request.data.get("reason") or "").strip()[:120]
+        row.waived_at = timezone.now()
+        row.save(update_fields=["waived", "waived_reason", "waived_at"])
+        return Response(DueMonthSerializer(row).data)
 
     @action(detail=False, methods=["post"], permission_classes=[IsAdminLevel])
     def generate_dues(self, request):
