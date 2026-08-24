@@ -762,6 +762,40 @@ def _assert_session_participant(s, user):
         raise PermissionDenied("শুধু ক্লাসের উস্তাদ বা শিক্ষার্থীই জয়েন করতে পারবেন")
 
 
+def _finalize_session(s, by=None):
+    """ক্লাস সত্যিই শেষ করা — একটাই জায়গা, সবাই এখান থেকেই ডাকে।
+
+    "ক্লাস শেষ" মানে নিছক প্যানেল বন্ধ করা নয়। এখানে যা হয় —
+      ১) খোলা থাকা প্রত্যেকের সেগমেন্ট বন্ধ হয়ে জমে থাকা মিনিট হাজিরায় যোগ
+         হয় (কারও তথ্য "জমা হওয়ার অপেক্ষায়" ঝুলে থাকে না),
+      ২) দুজনেই এসে থাকলে হাজিরা পাকাপাকি নিশ্চিত হয়,
+      ৩) ক্লাসটি "সম্পন্ন" হিসেবে তালিকাবদ্ধ হয়।
+
+    উস্তাদ "ক্লাস শেষ করুন" চাপলে, আর পরিচালক/এডমিন ক্লাসকে "সম্পন্ন"
+    চিহ্নিত করলে — দুই পথেই একই কাজ হয়। তাই উস্তাদ ভুলে গেলে পরিচালক
+    চিহ্নিত করলেই ক্লাস শেষ হিসেবে গণ্য হয়।
+    """
+    _sync_mutual_presence(s)  # শেষ করার আগে হাজিরাটা পাকা করে নিই
+    now = timezone.now()
+    open_rows = list(Attendance.objects.filter(session=s, segment_start__isnull=False))
+    for a in open_rows:
+        a.minutes += max(0, int((now - a.segment_start).total_seconds() // 60))
+        a.segment_start = None
+        a.left_at = now
+    if open_rows:
+        Attendance.objects.bulk_update(open_rows, ["minutes", "segment_start", "left_at"])
+    fields = []
+    if s.status != "done":
+        s.status = "done"
+        fields.append("status")
+    if not s.date:
+        s.date = timezone.localtime().date()
+        fields.append("date")
+    if fields:
+        s.save(update_fields=fields)
+    return s
+
+
 def _sync_mutual_presence(s):
     """উস্তাদ ও অন্তত একজন স্টুডেন্ট একই সময়ে (দুজনেই) মিটিংয়ে থাকলে সাথে সাথেই
     উভয়ের হাজিরা 'সম্পন্ন' মার্ক করে — এরপর কেউ কতক্ষণ থাকলেন তা আর হাজিরার
@@ -823,7 +857,13 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
             is_today = serializer.instance.date == timezone.localtime().date()
             if not is_today:
                 raise PermissionDenied("আজকের ক্লাস ছাড়া অন্য কোনো ক্লাসের স্ট্যাটাস বদলানো কেবল পরিচালকের এখতিয়ার")
-        serializer.save()
+        was = serializer.instance.status
+        obj = serializer.save()
+        # "সম্পন্ন" চিহ্নিত করাও ক্লাস শেষ করার সমান — উস্তাদ "ক্লাস শেষ করুন"
+        # চাপতে ভুলে গেলে পরিচালক/এডমিন এই পথেই সব গুছিয়ে দিতে পারেন
+        # (জমে থাকা মিনিট বসে, হাজিরা পাকা হয়)
+        if obj.status == "done" and was != "done":
+            _finalize_session(obj, by=self.request.user)
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def today(self, request):  # লাইভ পপআপ + "আজকের ক্লাস"
@@ -942,6 +982,35 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         s.join_mode_override = mode
         s.save(update_fields=["join_mode_override"])
         return Response({"join_mode_override": s.join_mode_override})
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
+    def finish(self, request, pk=None):
+        """ক্লাস সত্যিই শেষ করা — উস্তাদের "ক্লাস শেষ করুন" বাটন।
+
+        নিছক প্যানেল বন্ধ করা নয়: সবার জমে থাকা মিনিট হাজিরায় বসে, হাজিরা
+        পাকা হয়, আর ক্লাসটি "সম্পন্ন" হিসেবে তালিকাবদ্ধ হয়
+        (_finalize_session)। তাই উস্তাদ শেষ না করে লগআউট করলে ক্লাস শেষ হয়
+        না — তথ্য জমা হওয়ার অপেক্ষায় থাকে, আর পরিচালক পরে "সম্পন্ন"
+        চিহ্নিত করলেই সব গুছিয়ে যায়।
+
+        সেই সাথে শিক্ষার্থীদের কাছে রিজয়েন লিংক খুলে দেওয়া হয় — ক্লাসটি
+        আবার শুরু করার দরকার পড়লে তাঁরা যেন সাথে সাথেই ফিরতে পারেন।
+        """
+        s_obj = self.get_object()
+        u = request.user
+        allowed = {s_obj.teacher_id,
+                   s_obj.course.teacher_id if s_obj.course_id else None}
+        if (
+            u.role not in ("director", "admin")
+            and u.id not in allowed
+            and not s_obj.students.filter(teacher=u).exists()
+        ):
+            raise PermissionDenied("কেবল এই ক্লাসের উস্তাদ ক্লাস শেষ করতে পারবেন")
+        _finalize_session(s_obj, by=u)
+        if s_obj.join_mode_override != "rejoin":
+            s_obj.join_mode_override = "rejoin"
+            s_obj.save(update_fields=["join_mode_override"])
+        return Response(self.get_serializer(s_obj).data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def open_rejoin(self, request, pk=None):
