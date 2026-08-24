@@ -2460,7 +2460,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
           "✓ হাজিরা নিশ্চিত" দেখে মনে হতো তিনি আছেন। */}
       {done && (
         <div style={{ fontWeight: 800, color: C.green }}>
-          {T("✓ হাজিরা নিশ্চিত হয়েছে", "✓ Attendance confirmed")}
+          ✓ Teacher &amp; student join confirmed
         </div>
       )}
       {!bothIn ? (
@@ -2488,7 +2488,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
       ) : (
         !done && (
           <span style={{ fontWeight: 800, color: C.gold }}>
-            {T("হাজিরা নিশ্চিত হচ্ছে…", "Confirming attendance…")}
+            Confirming join…
           </span>
         )
       )}
