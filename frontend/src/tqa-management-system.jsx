@@ -12496,6 +12496,15 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                         user: s.user,
                         pass: s.pass,
                         studentId: s.studentId || "",
+                        // ⚠️ আগে এ দুটো ভরাই হতো না, তাই এডিট খুললে ঘর
+                        // দুটো খালি দেখাত — মনে হতো কোর্স/উস্তাদ বসানোই নেই
+                        courseId:
+                          (courseList.find((c) =>
+                            (c.studentIds || []).some(
+                              (x) => String(x) === String(s.id),
+                            ),
+                          ) || {}).id || "",
+                        teacherId: s.teacherId || "",
                       });
                     }}
                   >
@@ -12685,15 +12694,18 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               💡 দিনের সংখ্যা অনুযায়ী ফি নির্ধারণ ও রুটিন তৈরিতে কাজে লাগবে।
             </div>
           </div>
-          {!edit.id && (
-            <div
-              style={{
-                marginTop: 10,
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 10,
-              }}
-            >
+          {/* ⚠️ আগে এখানে শর্ত ছিল {!edit.id && …} — অর্থাৎ কোর্স ও উস্তাদের
+              ঘর দুটো কেবল নতুন স্টুডেন্ট তৈরির সময় দেখাত। পুরনো কারও
+              এডিটে ঘর দুটো একেবারে লুকানো থাকত, তাই একবার বসিয়ে দিলে আর
+              দেখাও যেত না, বদলানোও যেত না। এখন সবসময় দেখায়। */}
+          <div
+            style={{
+              marginTop: 10,
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 10,
+            }}
+          >
               <div>
                 <label style={S.label}>📚 কী পড়ে (কোর্স)</label>
                 <select
@@ -12749,8 +12761,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                   ))}
                 </select>
               </div>
-            </div>
-          )}
+          </div>
           <Btn
             style={{
               marginTop: 16,
