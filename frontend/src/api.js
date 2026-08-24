@@ -374,6 +374,24 @@ export const api = {
     fd.append("file", file);
     return request("/lesson-media/", { method: "POST", body: fd, isForm: true });
   },
+  // ── দারস পরিকল্পনার হেডিং ও তার নিচের টপিক ──
+  // studentId দিলে ওই শিক্ষার্থীর নিজের কভার-টিক নিয়ে আসে
+  lessonSections: (courseId, studentId) =>
+    request(
+      `/lesson-sections/?course=${courseId}` +
+        (studentId ? `&student=${studentId}` : ""),
+    ),
+  ensureSections: (course) =>
+    request("/lesson-sections/ensure/", { method: "POST", body: { course } }),
+  addSection: (course, name, order) =>
+    request("/lesson-sections/", { method: "POST", body: { course, name, order } }),
+  renameSection: (id, name) =>
+    request(`/lesson-sections/${id}/`, { method: "PATCH", body: { name } }),
+  delSection: (id) => request(`/lesson-sections/${id}/`, { method: "DELETE" }),
+  reorderSections: (ids) =>
+    request("/lesson-sections/reorder/", { method: "POST", body: { ids } }),
+  saveSectionTopics: (id, topics) =>
+    request(`/lesson-sections/${id}/topics/`, { method: "PUT", body: { topics } }),
   courseStudents: (courseId) => request(`/courses/${courseId}/students/`),
   syllabusSheet: (courseId) => request(`/courses/${courseId}/syllabus_sheet/`),
   saveSyllabusSheet: (courseId, headers, rows) =>

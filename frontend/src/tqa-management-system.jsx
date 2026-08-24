@@ -4242,47 +4242,60 @@ function RichText({ value, onChange, placeholder }) {
 }
 
 function LecturePlan({ db, courses, user, refresh }) {
+  /* দারস পরিকল্পনা — সিলেবাসের বিষয় ধরে হেডিং, প্রতিটির নিচে যত খুশি
+     টগল-টপিক। টপিক কভার হয়ে গেলেও নিজের হেডিংয়েই থাকে, কেবল রঙ বদলায়।
+     ক্রম পরিচালকের নির্ধারিত — তারিখ বা কভারের অবস্থা দেখে সরে না।
+     কভারের টিক প্রতি শিক্ষার্থীর আলাদা, আগের মতোই। */
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [sel, setSel] = useState(courses[0]?.id);
-  const [form, setForm] = usePersistedState("lec_form", null);
-  const [lectures, setLectures] = useState([]);
-  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
-  // কোন টগলগুলো এই মুহূর্তে খোলা — { [topicId]: true }
+  const [sections, setSections] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [openTopics, setOpenTopics] = useState({});
-  /* কার জন্য কভার-টিক দেওয়া/দেখা হচ্ছে।
-     উস্তাদ ভুল করে একজনের ক্লাসে অন্যজনের টপিক টিক দিয়ে না ফেলেন — সেজন্য
-     পাতায় ঢোকার সাথে সাথেই পর্দা ঢেকে শিক্ষার্থী বাছাইয়ের পপআপ আসে, আর
-     বাছাই না করা পর্যন্ত পাতাটাই খোলে না।
-     শিক্ষার্থী নিজে দেখলে এসবের দরকার নেই — সার্ভার সবসময় তারই টিক দেয়। */
-  const [forStudent, setForStudent] = useState(null); // {id, name}
+  const toggleOpen = (id) => setOpenTopics((o) => ({ ...o, [id]: !o[id] }));
+
+  /* কার জন্য টিক দেওয়া/দেখা হচ্ছে। উস্তাদ ভুল করে একজনের হিসাবে অন্যজনের
+     টপিকে টিক না দিয়ে ফেলেন — সেজন্য ঢোকার সাথে সাথেই পর্দা ঢেকে বাছাই। */
+  const [forStudent, setForStudent] = useState(null);
   const [courseStudents, setCourseStudents] = useState([]);
   const [pickOpen, setPickOpen] = useState(false);
   const needsStudent = user.role !== "student";
-  const toggleOpen = (id) =>
-    setOpenTopics((o) => ({ ...o, [id]: !o[id] }));
 
-  // সিলেবাস আর আনা হয় না — টপিক এখন পরিচালক নিজেই টগলে লেখেন, তাই ওই
-  // বাড়তি ডাটাবেস-কলটার আর দরকার নেই
-  const loadData = async () => {
+  const [edit, setEdit] = useState(null); // {sectionId, blocks:[…]} — টপিক সম্পাদনা
+  const [saving, setSaving] = useState(false);
+
+  const hasGrant =
+    user.role === "teacher" &&
+    (user.can_fix_cross ?? db.permissions?.fixCross?.[user.id]);
+  const isAdmin = isAdm(user) || hasGrant;
+  const canMark = user.role === "teacher" || isAdmin;
+  const course = courseById(courses, sel);
+
+  const load = async () => {
     if (!sel) return setLoading(false);
     try {
-      setLectures(
-        (await api.lectures(sel, forStudent?.id)).map(adaptLecture),
+      let rows = await api.lessonSections(sel, forStudent?.id);
+      // কোর্সে এখনো হেডিং না থাকলে সাতটি ডিফল্ট বানিয়ে নিই (কেবল পরিচালক)
+      if (!rows.length && isDir(user)) rows = await api.ensureSections(sel);
+      setSections(rows || []);
+    } catch (e) {
+      setSections([]);
+      notice(
+        T(
+          "দারস পরিকল্পনা আনা যায়নি — " +
+            (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+          "Couldn't load the lesson plan — " + (e?.message || "please try again"),
+        ),
       );
-    } catch {
-      const c = courseById(courses, sel);
-      setLectures(c.lectures || []);
     } finally {
       setLoading(false);
     }
   };
   useEffect(() => {
-    loadData();
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel, forStudent]);
 
-  // কোর্স বদলালে আগের শিক্ষার্থী আর প্রযোজ্য নয় — তালিকা নতুন করে এনে
-  // বাছাই খালি করি, নইলে এক কোর্সের ছাত্রের নামে অন্য কোর্সে টিক পড়ত
+  // কোর্স বদলালে আগের শিক্ষার্থী আর প্রযোজ্য নয়
   useEffect(() => {
     if (!sel || !needsStudent) return;
     setForStudent(null);
@@ -4295,36 +4308,89 @@ function LecturePlan({ db, courses, user, refresh }) {
       })
       .catch(() => {
         setCourseStudents([]);
-        setPickOpen(true); // তালিকা না এলেও পপআপে কারণটা জানানো হবে
+        setPickOpen(true);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel]);
 
-  // প্রতিটি টগলের একটা স্থায়ী পরিচয় — এডিটরের key হিসেবে লাগে। ক্রম (index)
-  // দিয়ে key দিলে উপরে-নিচে সরানোর পর এডিটরে আগের লেখাই রয়ে যেত।
+  // ── কভার মার্ক ──
+  const mark = async (tp, val) => {
+    if (!canMark && !isAdmin) return;
+    if (!forStudent) {
+      setPickOpen(true);
+      return notice("আগে কোন শিক্ষার্থীর জন্য টিক দিচ্ছেন তা বেছে নিন।");
+    }
+    if (canMark && !isAdmin && tp.covered === "missed")
+      return notice("লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করতে পারবেন।");
+    try {
+      await api.markTopic(tp.id, val, forStudent.id);
+      await load();
+    } catch (e) {
+      notice(
+        "টপিক মার্ক করতে ব্যর্থ — " +
+          (e?.data?.error || e?.data?.detail || e?.message || "আবার চেষ্টা করুন"),
+      );
+    }
+  };
+
+  // ── হেডিং ──
+  const addSection = () => {
+    const name = (window.prompt("নতুন হেডিংয়ের নাম?", "") || "").trim();
+    if (!name) return;
+    api
+      .addSection(sel, name, sections.length)
+      .then(load)
+      .catch((e) =>
+        notice("হেডিং যোগ করা যায়নি — " + (e?.data?.error || e?.message || "")),
+      );
+  };
+  const renameSection = (sec) => {
+    const name = (window.prompt("হেডিংয়ের নাম", sec.name) || "").trim();
+    if (!name || name === sec.name) return;
+    api
+      .renameSection(sec.id, name)
+      .then(load)
+      .catch((e) =>
+        notice("নাম বদলানো যায়নি — " + (e?.data?.error || e?.message || "")),
+      );
+  };
+  const delSection = (sec) =>
+    askConfirm(
+      `"${sec.name}" হেডিংটি মুছে ফেলবেন?` +
+        (sec.topics.length
+          ? `\n\nএর নিচের ${bn(sec.topics.length)}টি টপিক ও সেগুলোর কভার-টিকও মুছে যাবে।`
+          : ""),
+      () =>
+        api
+          .delSection(sec.id)
+          .then(load)
+          .catch((e) =>
+            notice("মুছে ফেলা যায়নি — " + (e?.data?.error || e?.message || "")),
+          ),
+    );
+  const moveSection = (i, d) => {
+    const j = i + d;
+    if (j < 0 || j >= sections.length) return;
+    const ids = sections.map((x) => x.id);
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    api
+      .reorderSections(ids)
+      .then(load)
+      .catch((e) =>
+        notice("ক্রম বদলানো যায়নি — " + (e?.data?.error || e?.message || "")),
+      );
+  };
+
+  // ── টপিক সম্পাদনা ──
   const uidRef = useRef(0);
-  const blankBlock = () => ({
-    _uid: `n${++uidRef.current}`,
-    text: "",
-    content: "",
-    open: true,
-  });
-  const openNew = () =>
-    setForm({
-      mode: "new",
-      no: String(lectures.length + 1),
-      title: "",
-      blocks: [blankBlock()],
-    });
-  const openEdit = (lec) =>
-    setForm({
-      mode: "edit",
-      lecId: lec.id,
-      no: String(lec.no),
-      title: lec.title,
-      // আইডি সাথে রাখি — নইলে সংরক্ষণের সময় পুরনো টপিক মুছে নতুন তৈরি হতো
-      // আর তার কভারের টিক (✔/✘) হারিয়ে যেত
-      blocks: (lec.topics || []).map((t) => ({
+  const blank = () => ({ _uid: `n${++uidRef.current}`, text: "", content: "", open: true });
+  const openTopicEditor = (sec) =>
+    setEdit({
+      sectionId: sec.id,
+      name: sec.name,
+      // আইডি সাথে রাখি — নইলে সংরক্ষণে পুরনো টপিক মুছে নতুন হতো আর
+      // প্রতি শিক্ষার্থীর কভার-টিক হারিয়ে যেত
+      blocks: sec.topics.map((t) => ({
         _uid: `t${t.id}`,
         id: t.id,
         text: t.text || "",
@@ -4332,210 +4398,60 @@ function LecturePlan({ db, courses, user, refresh }) {
         open: false,
       })),
     });
-  // ── টগল সম্পাদনা ──
-  /* ⚠️ f.blocks সবসময় আছে ধরে নেওয়া যায় না। খোলা ফর্ম ডিভাইসে সংরক্ষিত
-     থাকে (usePersistedState "lec_form"), আর টগল ব্যবস্থা আসার আগের খসড়ায়
-     blocks ঘরটাই ছিল না — সেখানে blocks ছাড়াই ফর্ম খুলত, আর "টপিক যোগ
-     করুন" চাপলেই অ্যাপ ক্র্যাশ করত। তাই সবখানে খালি তালিকার ফলব্যাক। */
   const setBlock = (i, patch) =>
-    setForm((f) => ({
+    setEdit((f) => ({
       ...f,
       blocks: (f.blocks || []).map((b, j) => (j === i ? { ...b, ...patch } : b)),
     }));
   const addBlock = () =>
-    setForm((f) => ({ ...f, blocks: [...(f.blocks || []), blankBlock()] }));
+    setEdit((f) => ({ ...f, blocks: [...(f.blocks || []), blank()] }));
   const delBlock = (i) =>
-    setForm((f) => ({ ...f, blocks: (f.blocks || []).filter((_, j) => j !== i) }));
+    setEdit((f) => ({ ...f, blocks: (f.blocks || []).filter((_, j) => j !== i) }));
   const moveBlock = (i, d) =>
-    setForm((f) => {
+    setEdit((f) => {
       const b = [...(f.blocks || [])];
       const j = i + d;
       if (j < 0 || j >= b.length) return f;
       [b[i], b[j]] = [b[j], b[i]];
       return { ...f, blocks: b };
     });
-  const saveForm = async () => {
-    // শিরোনামহীন টগল বাদ — ওগুলো রাখার কোনো মানে নেই
-    const blocks = (form.blocks || [])
+  const saveTopics = async () => {
+    const topics = (edit.blocks || [])
       .filter((b) => (b.text || "").trim())
       .map((b) => ({
         ...(b.id ? { id: b.id } : {}),
         text: b.text.trim(),
         content: b.content || "",
       }));
-    if (!blocks.length) return notice("অন্তত একটি টপিক লিখুন।");
-    const noVal = parseInt(form.no, 10);
+    setSaving(true);
     try {
-      if (form.mode === "new") {
-        await api.createLectureBlocks(
-          sel,
-          (form.title || "").trim(),
-          blocks,
-          noVal ? { no: noVal } : {},
-        );
-      } else {
-        await api.editLecture(form.lecId, {
-          title: (form.title || "").trim(),
-          topic_blocks: blocks,
-          ...(noVal ? { no: noVal } : {}),
-        });
-      }
-      await loadData();
-      notice(form.mode === "new" ? "✔ দারস তৈরি হয়েছে।" : "✔ দারস আপডেট হয়েছে।");
+      await api.saveSectionTopics(edit.sectionId, topics);
+      await load();
+      setEdit(null);
+      notice("✔ সংরক্ষিত হয়েছে।");
     } catch (e) {
       notice(
-        "দারস সেভ করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
       );
-      return;
-    }
-    setForm(null);
-  };
-  const delLecture = (lec) =>
-    askConfirm(
-      `"লেকচার ${bn(lec.no)}: ${lec.title}" মুছে ফেলবেন?`,
-      async () => {
-        try {
-          await api.deleteLecture(lec.id);
-          await loadData();
-        } catch (e) {
-          notice(
-            "দারস মুছতে ব্যর্থ — " +
-              (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
-          );
-        }
-      },
-    );
-  const course = courseById(courses, sel);
-  const canMark =
-    user.role === "teacher" &&
-    (String(course.teacherId) === String(user.id) ||
-      String(course.teacher) === String(user.id));
-  const hasGrant =
-    user.role === "teacher" &&
-    (user.can_fix_cross ?? db.permissions?.fixCross?.[user.id]);
-  const isAdmin = isAdm(user) || hasGrant;
-  const mark = async (lec, topic, val) => {
-    if (!canMark && !isAdmin) return;
-    // শিক্ষার্থী না বেছে টিক দেওয়া যাবে না — নইলে সেটা সবার জন্য বসে যেত
-    if (!forStudent) {
-      setPickOpen(true);
-      return notice("আগে কোন শিক্ষার্থীর জন্য টিক দিচ্ছেন তা বেছে নিন।");
-    }
-    if (canMark && !isAdmin && topic.covered === false)
-      return notice(
-        "লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করতে পারবেন — অথবা পরিচালক আপনাকে অনুমতি দিলে।",
-      );
-    try {
-      await api.markTopic(topic.id, val, forStudent.id);
-      await loadData();
-    } catch (e) {
-      notice(
-        "টপিক মার্ক করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
-      );
+    } finally {
+      setSaving(false);
     }
   };
-  const markAll = async (lec) => {
-    if (!forStudent) {
-      setPickOpen(true);
-      return notice("আগে কোন শিক্ষার্থীর জন্য টিক দিচ্ছেন তা বেছে নিন।");
-    }
-    const uncovered = lec.topics.filter(
-      (t) => t.covered !== true && (isAdmin || t.covered !== false),
-    );
-    const failed = [];
-    for (const t of uncovered) {
-      try {
-        await api.markTopic(t.id, true, forStudent?.id);
-      } catch {
-        failed.push(t.text || t.id);
-      }
-    }
-    await loadData();
-    if (failed.length) {
-      notice(
-        `${failed.length}টা বিষয় কভার করতে ব্যর্থ হয়েছে — ${failed.join(", ")}। আবার চেষ্টা করুন।`,
-      );
-    }
-  };
-  const covFromLectures = () => {
-    const all = lectures.flatMap((l) => l.topics);
-    const done = all.filter((t) => t.covered === true).length;
-    return {
-      done,
-      total: all.length,
-      pct: all.length ? Math.round((done / all.length) * 100) : 0,
-    };
-  };
-  const cov = covFromLectures();
 
-  /* টপিকগুলো তিন ভাগে — দারস ধরে নয়, টিক ধরে।
-     উস্তাদ যে টপিকে টিক দিয়েছেন সেটাই "পড়ানো হয়েছে"; কোন দারসের অধীনে
-     ছিল তা দেখানোর দরকার নেই, তাই দারস-নং আর দেখাই না — বরং কোন তারিখে
-     পড়ানো হয়েছে সেটাই দেখাই (টিক দেওয়ার দিন, সার্ভার নিজেই বসায়)।
-
-       📌 আজকের টপিক  — আজ যেগুলোতে টিক পড়েছে (সবার উপরে, সর্বশেষটা আগে)
-       🗓️ সামনের টপিক — এখনো পড়ানো হয়নি (মাঝে)
-       🕓 বিগত টপিক   — আগের দিনগুলোতে পড়ানো (সবার নিচে, সাম্প্রতিকটা আগে)
-
-     ✘ "বাদ পড়েছে" চিহ্নিত টপিক সামনের ভাগেই থাকে — সেটা তো এখনো পড়ানো
-     হয়নি, তাই সামনে করারই বাকি। */
-  const _today = todayISO();
-  const allTopics = lectures.flatMap((l) =>
-    (l.topics || []).map((t) => ({ ...t, lecId: l.id, lecNo: l.no, lecDate: l.date })),
-  );
-  const newestFirst = (a, b) =>
-    String(b.markedAt || "").localeCompare(String(a.markedAt || "")) ||
-    (a.lecNo || 0) - (b.lecNo || 0);
-  const topicGroups = [
-    {
-      key: "today",
-      icon: "📌",
-      bn: "আজ যা পড়ানো হয়েছে",
-      en: "Covered today",
-      tone: C.emerald,
-      bg: C.greenBg,
-      items: allTopics
-        .filter((t) => t.covered === true && t.markedAt === _today)
-        .sort(newestFirst),
-    },
-    {
-      key: "upcoming",
-      icon: "🗓️",
-      bn: "সামনের টপিক",
-      en: "Upcoming topics",
-      tone: C.gold,
-      bg: C.amberBg,
-      items: allTopics
-        .filter((t) => t.covered !== true)
-        .sort((a, b) => (a.lecNo || 0) - (b.lecNo || 0) || (a.order || 0) - (b.order || 0)),
-    },
-    {
-      key: "past",
-      icon: "🕓",
-      bn: "বিগত টপিক",
-      en: "Past topics",
-      tone: C.muted,
-      bg: C.cream,
-      items: allTopics
-        .filter((t) => t.covered === true && t.markedAt !== _today)
-        .sort(newestFirst),
-    },
-  ];
+  const allTopics = sections.flatMap((s) => s.topics || []);
+  const done = allTopics.filter((t) => t.covered === "covered").length;
+  const pct = allTopics.length ? Math.round((done / allTopics.length) * 100) : 0;
 
   return (
     <Section
       title={T("দৈনিক পাঠ পরিকল্পনা ও টপিক কভারেজ", "Daily Lesson Plan & Topic Coverage")}
       sub={T(
-        "পরিচালক দারস তৈরি করবেন · কভার করা বিষয় ✔ সবুজ · বাদ পড়া ✘ লাল — লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করবেন",
-        "The director creates lessons · covered topics are ✔ green · missed ones are ✘ red",
+        "বিষয় অনুযায়ী হেডিং · প্রতিটির নিচে টপিক · কভার করা ✔ সবুজ · বাদ পড়া ✘ লাল",
+        "Topics grouped by subject · covered ✔ green · missed ✘ red",
       )}
-      action={isDir(user) && <Btn onClick={openNew}>+ দারস যোগ করুন</Btn>}
+      action={isDir(user) && <Btn onClick={addSection}>+ হেডিং যোগ করুন</Btn>}
     >
-      <div
-        style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}
-      >
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         {courses.map((c) => (
           <Btn
             key={c.id}
@@ -4547,6 +4463,7 @@ function LecturePlan({ db, courses, user, refresh }) {
           </Btn>
         ))}
       </div>
+
       <div
         style={{
           ...S.card,
@@ -4560,22 +4477,20 @@ function LecturePlan({ db, courses, user, refresh }) {
         <div style={{ flex: 1, minWidth: 180 }}>
           <div style={{ fontWeight: 800 }}>{course.name}</div>
           <div style={S.sub}>
-            {T("উস্তাদ", "Teacher")}:{" "}
-            {userById(course.teacherId || course.teacher)?.name || "—"}{" "}
-            · {T(`মোট দারস: ${bn(lectures.length)}`, `Total lessons: ${lectures.length}`)}
+            {T(`মোট টপিক: ${bn(allTopics.length)}`, `Total topics: ${allTopics.length}`)}
           </div>
         </div>
         <div style={{ minWidth: 200, flex: 1 }}>
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>
             {T(
-              `সিলেবাস অগ্রগতি — ${bn(cov.pct)}% (${bn(cov.done)}/${bn(cov.total)} টপিক)`,
-              `Syllabus progress — ${cov.pct}% (${cov.done}/${cov.total} topics)`,
+              `অগ্রগতি — ${bn(pct)}% (${bn(done)}/${bn(allTopics.length)})`,
+              `Progress — ${pct}% (${done}/${allTopics.length})`,
             )}
           </div>
           <div style={{ height: 10, background: C.cream, borderRadius: 99 }}>
             <div
               style={{
-                width: cov.pct + "%",
+                width: pct + "%",
                 height: "100%",
                 background: `linear-gradient(90deg, ${C.emerald}, ${C.gold})`,
                 borderRadius: 99,
@@ -4585,25 +4500,8 @@ function LecturePlan({ db, courses, user, refresh }) {
           </div>
         </div>
       </div>
-      {(canMark || isAdmin) && (
-        <div
-          style={{
-            padding: "10px 14px",
-            borderRadius: 12,
-            background: C.amberBg,
-            border: `1px solid ${C.goldL}`,
-            fontSize: 12.5,
-            marginBottom: 10,
-          }}
-        >
-          💡 প্রতিটি টপিকের পাশের{" "}
-          <b style={{ color: C.green }}>"✔ কভার হয়েছে"</b> বা{" "}
-          <b style={{ color: C.red }}>"✘ বাদ পড়েছে"</b> বাটনে ক্লিক করে মার্ক
-          করুন। মার্ক করলেই স্টুডেন্ট ও
-          এডমিন ড্যাশবোর্ডে সবুজ/লাল হয়ে দেখাবে।
-        </div>
-      )}
-      {/* ── কার জন্য টিক দিচ্ছি ── */}
+
+      {/* কার জন্য টিক */}
       {needsStudent && forStudent && (
         <div
           style={{
@@ -4619,14 +4517,10 @@ function LecturePlan({ db, courses, user, refresh }) {
             fontSize: 13,
           }}
         >
-          <span style={{ fontWeight: 800, color: C.emerald }}>
-            👤 এখন টিক পড়বে:
-          </span>
+          <span style={{ fontWeight: 800, color: C.emerald }}>👤 এখন টিক পড়বে:</span>
           <span style={{ fontWeight: 800 }}>{forStudent.name}</span>
           {forStudent.student_id && (
-            <span style={{ color: C.muted, fontSize: 12 }}>
-              ({forStudent.student_id})
-            </span>
+            <span style={{ color: C.muted, fontSize: 12 }}>({forStudent.student_id})</span>
           )}
           <div style={{ flex: 1 }} />
           <Btn sm kind="soft" onClick={() => setPickOpen(true)}>
@@ -4635,23 +4529,14 @@ function LecturePlan({ db, courses, user, refresh }) {
         </div>
       )}
 
-      {/* ── পর্দা ঢেকে শিক্ষার্থী বাছাই ──
-          বাছাই না করা পর্যন্ত লেকচার প্ল্যান দেখা যায় না, যাতে ভুল করে
-          একজনের ক্লাসে অন্যজনের টপিকে টিক না পড়ে। */}
       {needsStudent && pickOpen && (
         <BlockingPopup
           icon="👤"
           zIndex={306}
           title="কোন শিক্ষার্থীর জন্য?"
           footer={
-            /* ⚠️ বের হওয়ার পথ সবসময় থাকতেই হবে —
-               • কেউ বাছাই করা থাকলে সেটাই রেখে চালিয়ে যাওয়া যায়
-               • কোর্সে একজন শিক্ষার্থীও না থাকলে বাছার কিছু নেই, নইলে
-                 পরিচালক দারস তৈরি করতেই পারতেন না — চিরকাল আটকে থাকতেন
-               • পরিচালক/এডমিন দারস তৈরি করতে আসেন, তাই তাঁরা বাছাই ছাড়াও
-                 দেখতে পারেন; তবে টিক দিতে গেলে তখনো বাছতেই হবে
-               উস্তাদের ক্ষেত্রে (শিক্ষার্থী আছে এমন কোর্সে) বাছাই ছাড়া
-               পাতাটা খোলে না — এটাই আসল উদ্দেশ্য। */
+            /* বের হওয়ার পথ সবসময় থাকতেই হবে — কোর্সে শিক্ষার্থী না থাকলে
+               বাছার কিছু নেই, আর পরিচালক তো টপিক লিখতে আসেন */
             forStudent ? (
               <Btn
                 kind="soft"
@@ -4674,13 +4559,13 @@ function LecturePlan({ db, courses, user, refresh }) {
           }
         >
           <div style={{ marginBottom: 10 }}>
-            যাঁর দারস দেখছেন বা যাঁর টপিকে টিক দেবেন, তাঁকে বেছে নিন। টিক
-            কেবল <b>তাঁর নিজের পোর্টালেই</b> দেখাবে, অন্য কারও নয়।
+            যাঁর টপিকে টিক দেবেন তাঁকে বেছে নিন। টিক কেবল{" "}
+            <b>তাঁর নিজের পোর্টালেই</b> দেখাবে, অন্য কারও নয়।
           </div>
           {courseStudents.length === 0 ? (
             <div style={{ color: C.muted }}>
-              এই কোর্সে এখনো কোনো শিক্ষার্থী যুক্ত নেই — পরিচালক কোর্সে
-              শিক্ষার্থী যোগ করলে এখানে দেখা যাবে।
+              আপনার কোনো শিক্ষার্থী এই কোর্সে নেই — পরিচালক যুক্ত করলে এখানে
+              দেখা যাবে।
             </div>
           ) : (
             <div style={{ display: "grid", gap: 6, maxHeight: "46vh", overflowY: "auto" }}>
@@ -4701,23 +4586,13 @@ function LecturePlan({ db, courses, user, refresh }) {
                     fontSize: 13.5,
                     fontWeight: 700,
                     color: C.text,
-                    background:
-                      forStudent?.id === st.id ? C.greenBg : "#fff",
-                    border: `1.5px solid ${
-                      forStudent?.id === st.id ? C.emerald : C.line
-                    }`,
+                    background: forStudent?.id === st.id ? C.greenBg : "#fff",
+                    border: `1.5px solid ${forStudent?.id === st.id ? C.emerald : C.line}`,
                   }}
                 >
                   {st.name}
                   {st.student_id && (
-                    <span
-                      style={{
-                        color: C.muted,
-                        fontWeight: 600,
-                        fontSize: 12,
-                        marginLeft: 6,
-                      }}
-                    >
+                    <span style={{ color: C.muted, fontWeight: 600, fontSize: 12, marginLeft: 6 }}>
                       {st.student_id}
                     </span>
                   )}
@@ -4729,459 +4604,292 @@ function LecturePlan({ db, courses, user, refresh }) {
       )}
 
       {loading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
-      {!loading && lectures.length === 0 && (
-        <div
-          style={{
-            ...S.card,
-            textAlign: "center",
-            color: C.muted,
-            padding: 28,
-          }}
-        >
+      {!loading && sections.length === 0 && (
+        <div style={{ ...S.card, textAlign: "center", color: C.muted, padding: 28 }}>
           {T(
-            "📋 এই কোর্সের দৈনিক পাঠ পরিকল্পনা এখনো তৈরি হয়নি।",
-            "📋 The daily lesson plan for this course hasn't been created yet.",
+            "📋 এই কোর্সের দারস পরিকল্পনা এখনো তৈরি হয়নি।",
+            "📋 The lesson plan for this course hasn't been created yet.",
           )}
-          {isDir(user)
-            ? ' ওপরের "+ দারস যোগ করুন" বাটন দিয়ে শুরু করুন।'
-            : T(
-                " পরিচালক তৈরি করলে এখানে দেখা যাবে ইনশাআল্লাহ।",
-                " It will appear here once the director creates it, InshaAllah.",
-              )}
         </div>
       )}
-      {/* রুটিনের মতো তিন ভাগে — আজকের টপিক শুরুতে। খালি ভাগ দেখানো হয় না। */}
-      {topicGroups.map((g) =>
-        g.items.length === 0 ? null : (
-          <div key={g.key} style={{ marginBottom: 16 }}>
+
+      {/* ── হেডিং ধরে টপিক ── */}
+      <div style={{ display: "grid", gap: 14 }}>
+        {sections.map((sec, si) => (
+          <div key={sec.id} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
-                background: g.bg,
-                border: `1px solid ${g.tone}`,
-                borderRadius: 10,
-                padding: "7px 12px",
-                marginBottom: 8,
-                fontWeight: 800,
-                fontSize: 13.5,
-                color: g.tone,
+                flexWrap: "wrap",
+                padding: "10px 14px",
+                background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`,
+                color: "#fff",
               }}
             >
-              <span>{g.icon}</span>
-              <span style={{ flex: 1 }}>{T(g.bn, g.en)}</span>
+              <span style={{ fontWeight: 800, fontSize: 15, flex: 1, minWidth: 140 }}>
+                {sec.name}
+              </span>
               <span
                 style={{
-                  background: g.tone,
-                  color: "#fff",
+                  background: "rgba(255,255,255,.18)",
                   borderRadius: 99,
-                  fontSize: 11,
+                  fontSize: 11.5,
                   fontWeight: 800,
-                  padding: "1px 8px",
+                  padding: "2px 9px",
                 }}
               >
-                {T(bn(g.items.length), g.items.length)}
+                {T(bn((sec.topics || []).length), (sec.topics || []).length)}
               </span>
+              {isDir(user) && (
+                <>
+                  <Btn sm kind="soft" onClick={() => openTopicEditor(sec)}>
+                    ✏️ টপিক
+                  </Btn>
+                  <Btn sm kind="soft" onClick={() => renameSection(sec)}>
+                    নাম
+                  </Btn>
+                  <Btn sm kind="soft" onClick={() => moveSection(si, -1)}>
+                    ▲
+                  </Btn>
+                  <Btn sm kind="soft" onClick={() => moveSection(si, 1)}>
+                    ▼
+                  </Btn>
+                  <Btn sm kind="danger" onClick={() => delSection(sec)}>
+                    🗑
+                  </Btn>
+                </>
+              )}
             </div>
-            <div style={{ display: "grid", gap: 6 }}>
-              {g.items.map((tp) => (
-                <div key={tp.id}>
-                  {/* টগলের শিরোনাম — পুরো সারিতে চাপলেই খোলে/বন্ধ হয়।
-                      মার্ক করার বাটনে চাপলে যেন টগল খুলে না যায়, সেজন্য
-                      ওদের ঘেরাটোপে ক্লিক আটকে দেওয়া আছে। */}
-                  <div
-                    onClick={() => toggleOpen(tp.id)}
-                    title={openTopics[tp.id] ? "বন্ধ করুন" : "খুলে পড়ুন"}
-                    style={{
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "9px 12px",
-                      borderRadius: openTopics[tp.id] ? "10px 10px 0 0" : 10,
-                      flexWrap: "wrap",
-                      border: `1px solid ${C.line}`,
-                      background:
-                        tp.covered === true
-                          ? C.greenBg
-                          : tp.covered === false
-                            ? C.redBg
-                            : "#fff",
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: C.emerald,
-                        fontWeight: 800,
-                        fontSize: 12,
-                        width: 12,
-                      }}
-                    >
-                      {openTopics[tp.id] ? "▾" : "▸"}
-                    </span>
-                    <span
-                      style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 6,
-                        display: "grid",
-                        placeItems: "center",
-                        fontWeight: 900,
-                        fontSize: 13,
-                        background: "#fff",
-                        color:
-                          tp.covered === true
-                            ? C.green
-                            : tp.covered === false
-                              ? C.red
-                              : C.muted,
-                        border: `1.5px solid ${C.line}`,
-                      }}
-                    >
-                      {tp.covered === true ? "✔" : tp.covered === false ? "✘" : "–"}
-                    </span>
-                    <span
-                      style={{
-                        flex: 1,
-                        minWidth: 140,
-                        fontSize: 13.5,
-                        fontWeight: 700,
-                        color: tp.covered === false ? C.red : C.text,
-                      }}
-                    >
-                      {tp.text}
-                    </span>
-                    {/* দারস-নং নয় — কোন তারিখে পড়ানো হয়েছে সেটাই দেখাই।
-                        তারিখটা উস্তাদ টিক দেওয়ার দিনেই বসে যায়। */}
-                    {tp.markedAt && tp.covered === true && (
-                      <span
+
+            <div style={{ padding: 12, display: "grid", gap: 6 }}>
+              {(sec.topics || []).length === 0 ? (
+                <div style={{ color: C.muted, fontSize: 12.5, textAlign: "center", padding: 8 }}>
+                  {isDir(user)
+                    ? '"✏️ টপিক" চেপে এই হেডিংয়ের নিচে টপিক যোগ করুন'
+                    : "—"}
+                </div>
+              ) : (
+                (sec.topics || []).map((tp) => {
+                  const isDone = tp.covered === "covered";
+                  const isMissed = tp.covered === "missed";
+                  return (
+                    <div key={tp.id}>
+                      <div
+                        onClick={() => toggleOpen(tp.id)}
+                        title={openTopics[tp.id] ? "বন্ধ করুন" : "খুলে পড়ুন"}
                         style={{
-                          fontSize: 11.5,
-                          fontWeight: 700,
-                          color: C.emerald,
-                          background: "#fff",
-                          border: `1px solid ${C.green}`,
-                          borderRadius: 99,
-                          padding: "2px 9px",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        📅 {fmtDMY(tp.markedAt)}
-                      </span>
-                    )}
-                    {(canMark || isAdmin) && (
-                      <span
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
+                          cursor: "pointer",
                           display: "flex",
-                          gap: 5,
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "9px 12px",
+                          borderRadius: openTopics[tp.id] ? "10px 10px 0 0" : 10,
                           flexWrap: "wrap",
-                          justifyContent: "flex-end",
+                          // কভার হলে সবুজ, বাদ পড়লে লাল, বাকি থাকলে সাদা
+                          background: isDone ? C.greenBg : isMissed ? C.redBg : "#fff",
+                          border: `1.5px solid ${
+                            isDone ? C.green : isMissed ? C.red : C.line
+                          }`,
                         }}
                       >
-                        <Btn
-                          sm
-                          style={{
-                            background: tp.covered === true ? C.green : "#fff",
-                            color: tp.covered === true ? "#fff" : C.green,
-                            border: `1.5px solid ${C.green}`,
-                          }}
-                          onClick={() => mark(null, tp, true)}
-                        >
-                          ✔ কভার হয়েছে
-                        </Btn>
-                        <Btn
-                          sm
-                          style={{
-                            background: tp.covered === false ? C.red : "#fff",
-                            color: tp.covered === false ? "#fff" : C.red,
-                            border: `1.5px solid ${C.red}`,
-                          }}
-                          onClick={() => mark(null, tp, false)}
-                        >
-                          ✘ বাদ পড়েছে
-                        </Btn>
-                        {isAdmin && (
-                          <Btn sm kind="soft" onClick={() => mark(null, tp, null)}>
-                            রিসেট
-                          </Btn>
-                        )}
-                        {isDir(user) && (
-                          <Btn
-                            sm
-                            kind="soft"
-                            title="এই টপিকটি যে দারসে আছে সেটি এডিট করুন"
-                            onClick={() => {
-                              const lec = lectures.find((l) => l.id === tp.lecId);
-                              if (lec) openEdit(lec);
-                            }}
-                          >
-                            ✏️
-                          </Btn>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                  {openTopics[tp.id] && (
-                    <div
-                      style={{
-                        border: `1px solid ${C.line}`,
-                        borderTop: "none",
-                        borderRadius: "0 0 10px 10px",
-                        padding: "10px 12px",
-                        fontSize: 13.5,
-                        lineHeight: 1.9,
-                        wordWrap: "break-word",
-                        background: "#fff",
-                      }}
-                    >
-                      {tp.content ? (
-                        /* সার্ভারে ঢোকার মুখেই ছেঁকে নেওয়া হয়েছে
-                           (safe_html.clean_html) — স্ক্রিপ্ট বা বিপজ্জনক কিছু
-                           কখনো সংরক্ষিতই হয় না, তাই এখানে দেখানো নিরাপদ।
-                           পুরনো সাধারণ লেখায় ট্যাগ থাকে না — তখন লাইন-ব্রেক
-                           যেন হারিয়ে না যায়, সেজন্য নিচের whiteSpace। */
-                        <div
-                          className="tqaLessonBody"
-                          style={{ whiteSpace: /<[a-z]/i.test(tp.content) ? "normal" : "pre-wrap" }}
-                          dangerouslySetInnerHTML={{ __html: tp.content }}
-                        />
-                      ) : (
-                        <span style={{ color: C.muted, fontSize: 12.5 }}>
-                          {T(
-                            "— এই টপিকের ভেতরে এখনো কিছু লেখা হয়নি —",
-                            "— nothing has been written inside this topic yet —",
-                          )}
+                        <span style={{ color: C.emerald, fontWeight: 800, fontSize: 12, width: 12 }}>
+                          {openTopics[tp.id] ? "▾" : "▸"}
                         </span>
+                        <span
+                          style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 6,
+                            display: "grid",
+                            placeItems: "center",
+                            fontWeight: 900,
+                            fontSize: 13,
+                            background: "#fff",
+                            color: isDone ? C.green : isMissed ? C.red : C.muted,
+                            border: `1.5px solid ${isDone ? C.green : isMissed ? C.red : C.line}`,
+                          }}
+                        >
+                          {isDone ? "✔" : isMissed ? "✘" : "–"}
+                        </span>
+                        <span
+                          style={{
+                            flex: 1,
+                            minWidth: 140,
+                            fontSize: 13.5,
+                            fontWeight: 700,
+                            color: isMissed ? C.red : C.text,
+                          }}
+                        >
+                          {tp.text}
+                        </span>
+                        {(canMark || isAdmin) && (
+                          <span
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "flex-end" }}
+                          >
+                            <Btn
+                              sm
+                              style={{
+                                background: isDone ? C.green : "#fff",
+                                color: isDone ? "#fff" : C.green,
+                                border: `1.5px solid ${C.green}`,
+                              }}
+                              onClick={() => mark(tp, true)}
+                            >
+                              ✔ কভার
+                            </Btn>
+                            <Btn
+                              sm
+                              style={{
+                                background: isMissed ? C.red : "#fff",
+                                color: isMissed ? "#fff" : C.red,
+                                border: `1.5px solid ${C.red}`,
+                              }}
+                              onClick={() => mark(tp, false)}
+                            >
+                              ✘ বাদ
+                            </Btn>
+                            {isAdmin && (
+                              <Btn sm kind="soft" onClick={() => mark(tp, null)}>
+                                রিসেট
+                              </Btn>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      {openTopics[tp.id] && (
+                        <div
+                          style={{
+                            border: `1px solid ${C.line}`,
+                            borderTop: "none",
+                            borderRadius: "0 0 10px 10px",
+                            padding: "10px 12px",
+                            fontSize: 13.5,
+                            lineHeight: 1.9,
+                            wordWrap: "break-word",
+                            background: "#fff",
+                          }}
+                        >
+                          {tp.content ? (
+                            /* সার্ভারে ঢোকার মুখেই ছেঁকে নেওয়া (safe_html) */
+                            <div
+                              className="tqaLessonBody"
+                              style={{ whiteSpace: /<[a-z]/i.test(tp.content) ? "normal" : "pre-wrap" }}
+                              dangerouslySetInnerHTML={{ __html: tp.content }}
+                            />
+                          ) : (
+                            <span style={{ color: C.muted, fontSize: 12.5 }}>
+                              {T(
+                                "— এই টপিকের ভেতরে এখনো কিছু লেখা হয়নি —",
+                                "— nothing has been written inside this topic yet —",
+                              )}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-              ))}
+                  );
+                })
+              )}
             </div>
           </div>
-        ),
-      )}
+        ))}
+      </div>
 
-      {/* পরিচালকের জন্য দারস ব্যবস্থাপনা — উপরে টপিকগুলো তারিখ ধরে সাজানো
-          বলে দারস ধরে এডিট/মুছে ফেলার জায়গাটা এখানে আলাদা করে রাখা হলো */}
-      {isDir(user) && lectures.length > 0 && (
-        <div style={{ ...S.card, marginTop: 6 }}>
-          <div style={{ fontWeight: 800, marginBottom: 8, fontSize: 13.5 }}>
-            🗂️ দারস ব্যবস্থাপনা
-          </div>
-          <div style={{ display: "grid", gap: 6 }}>
-            {[...lectures]
-              .sort((a, b) => (a.no || 0) - (b.no || 0))
-              .map((lec) => (
+      {/* ── টপিক সম্পাদনার মডাল ── */}
+      {edit && (
+        <Modal title={`✏️ ${edit.name} — টপিক`} onClose={() => setEdit(null)} wide>
+          <div style={{ display: "grid", gap: 10 }}>
+            {(edit.blocks || []).map((b, i) => (
+              <div
+                key={b._uid || i}
+                style={{
+                  border: `1.5px solid ${C.line}`,
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  background: "#fff",
+                }}
+              >
                 <div
-                  key={lec.id}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 8,
-                    flexWrap: "wrap",
-                    padding: "7px 10px",
-                    borderRadius: 9,
-                    background: C.cream,
-                    fontSize: 13,
+                    gap: 6,
+                    padding: "8px 10px",
+                    background: C.greenBg,
+                    borderBottom: b.open ? `1px solid ${C.line}` : "none",
                   }}
                 >
-                  <span style={{ fontWeight: 700, flex: 1, minWidth: 140 }}>
-                    {/* নম্বর নয়, তারিখ — উস্তাদ যেদিন ক্লাসটি শেষ করেছেন
-                        (প্রথম টিক পড়ার দিন) সেটা সার্ভার নিজেই বসিয়ে দেয়।
-                        এখনো কেউ টিক না দিলে তারিখ থাকে না। */}
-                    লেকচার:{" "}
-                    {lec.date ? (
-                      fmtDMY(lec.date)
-                    ) : (
-                      <span style={{ color: C.muted, fontWeight: 600 }}>
-                        তারিখ এখনো বসেনি
-                      </span>
-                    )}
-                    <span style={{ color: C.muted, fontWeight: 600 }}>
-                      {" "}
-                      · {bn((lec.topics || []).length)}টি টপিক
-                    </span>
-                  </span>
-                  {/* এই বাটনটা আগে দারসের কার্ডে ছিল; কার্ড তুলে দেওয়ায়
-                      হারিয়ে গিয়েছিল — এখানে ফিরিয়ে আনা হলো */}
-                  {(canMark || isAdmin) &&
-                    (lec.topics || []).some((t) => t.covered !== true) && (
-                      <Btn sm kind="ghost" onClick={() => markAll(lec)}>
-                        ✔ পুরো দারস কভার
-                      </Btn>
-                    )}
-                  <Btn sm kind="soft" onClick={() => openEdit(lec)}>
-                    ✏️
-                  </Btn>
-                  <Btn sm kind="danger" onClick={() => delLecture(lec)}>
-                    🗑
-                  </Btn>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
-      {form && (
-        <Modal
-          title={
-            form.mode === "new"
-              ? `+ নতুন দারস — ${course.name}`
-              : `✏️ দারস এডিট (টিক/ক্রস অক্ষত থাকবে)`
-          }
-          onClose={() => setForm(null)}
-          wide
-        >
-          {/* দারসের শিরোনামের ঘরটি তুলে দেওয়া হয়েছে — টপিকগুলো এখন তারিখ
-              ধরে সাজানো হয়, শিরোনাম কোথাও দেখানো হয় না। ব্যাকএন্ডে ঘরটি
-              বাধ্যতামূলক, তাই না দিলে "দারস ৫" ধাঁচে নিজে থেকেই বসে যায়। */}
-          <div style={{ maxWidth: 160 }}>
-            <label style={S.label}>দারস-নং</label>
-            <input
-              type="number"
-              min="1"
-              style={S.input}
-              value={form.no}
-              onChange={(e) => setForm({ ...form, no: e.target.value })}
-              placeholder="যেমন: ৫"
-            />
-          </div>
-          {/* ── টপিকের টগল ──
-              পুরনো "সিলেবাস থেকে বিষয় বাছাই" ব্যবস্থা সরিয়ে দেওয়া হয়েছে।
-              এখন প্রতিটি টগল = একটি টপিক: উপরে শিরোনাম, ভেতরে কী পড়ানো
-              হবে তার বিস্তারিত। উস্তাদ ও শিক্ষার্থী পরে যেকোনো সময় টগল
-              খুলে পড়তে পারবেন। */}
-          <div style={{ marginTop: 14 }}>
-            <label style={S.label}>
-              টপিকসমূহ — {bn((form.blocks || []).length)}টি টগল
-            </label>
-            <div style={{ display: "grid", gap: 10 }}>
-              {(form.blocks || []).map((b, i) => (
-                <div
-                  key={b._uid || i}
-                  style={{
-                    border: `1.5px solid ${C.line}`,
-                    borderRadius: 12,
-                    overflow: "hidden",
-                    background: "#fff",
-                  }}
-                >
-                  <div
+                  <button
+                    type="button"
+                    onClick={() => setBlock(i, { open: !b.open })}
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      padding: "8px 10px",
-                      background: C.greenBg,
-                      borderBottom: b.open ? `1px solid ${C.line}` : "none",
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                      fontSize: 13,
+                      color: C.emerald,
+                      fontWeight: 800,
+                      width: 20,
                     }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setBlock(i, { open: !b.open })}
-                      title={b.open ? "বন্ধ করুন" : "খুলুন"}
-                      style={{
-                        border: "none",
-                        background: "none",
-                        cursor: "pointer",
-                        fontSize: 13,
-                        color: C.emerald,
-                        fontWeight: 800,
-                        width: 20,
-                      }}
-                    >
-                      {b.open ? "▾" : "▸"}
-                    </button>
-                    <input
-                      value={b.text}
-                      onChange={(e) => setBlock(i, { text: e.target.value })}
-                      placeholder={`টপিক ${bn(i + 1)} — যেমন: সূরা ইখলাস`}
-                      style={{
-                        ...S.input,
-                        flex: 1,
-                        fontWeight: 700,
-                        border: "none",
-                        background: "transparent",
-                        padding: "4px 2px",
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => moveBlock(i, -1)}
-                      title="উপরে"
-                      style={{
-                        border: "none",
-                        background: "none",
-                        cursor: "pointer",
-                        color: C.muted,
-                        fontSize: 13,
-                      }}
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveBlock(i, 1)}
-                      title="নিচে"
-                      style={{
-                        border: "none",
-                        background: "none",
-                        cursor: "pointer",
-                        color: C.muted,
-                        fontSize: 13,
-                      }}
-                    >
-                      ▼
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        askConfirm(
-                          `"${b.text || "নামহীন"}" টপিকটি সরিয়ে ফেলবেন?`,
-                          () => delBlock(i),
-                        )
-                      }
-                      title="এই টপিকটি সরান"
-                      style={{
-                        border: "none",
-                        background: "none",
-                        cursor: "pointer",
-                        color: C.red,
-                        fontSize: 14,
-                      }}
-                    >
-                      🗑
-                    </button>
-                  </div>
-                  {b.open && (
-                    <div style={{ padding: 10 }}>
-                      <RichText
-                        key={b._uid}
-                        value={b.content}
-                        onChange={(html) => setBlock(i, { content: html })}
-                        placeholder="এখানে লিখুন কী পড়াবেন — আরবি, বাংলা বা ইংরেজি।"
-                      />
-                    </div>
-                  )}
+                    {b.open ? "▾" : "▸"}
+                  </button>
+                  <input
+                    value={b.text}
+                    onChange={(e) => setBlock(i, { text: e.target.value })}
+                    placeholder={`টপিক ${bn(i + 1)} — যেমন: সূরা ইখলাস`}
+                    style={{
+                      ...S.input,
+                      flex: 1,
+                      fontWeight: 700,
+                      border: "none",
+                      background: "transparent",
+                      padding: "4px 2px",
+                    }}
+                  />
+                  <button type="button" onClick={() => moveBlock(i, -1)} title="উপরে"
+                    style={{ border: "none", background: "none", cursor: "pointer", color: C.muted, fontSize: 13 }}>
+                    ▲
+                  </button>
+                  <button type="button" onClick={() => moveBlock(i, 1)} title="নিচে"
+                    style={{ border: "none", background: "none", cursor: "pointer", color: C.muted, fontSize: 13 }}>
+                    ▼
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      askConfirm(`"${b.text || "নামহীন"}" টপিকটি সরাবেন?`, () => delBlock(i))
+                    }
+                    title="সরান"
+                    style={{ border: "none", background: "none", cursor: "pointer", color: C.red, fontSize: 14 }}
+                  >
+                    🗑
+                  </button>
                 </div>
-              ))}
-            </div>
-            <Btn
-              sm
-              kind="soft"
-              onClick={addBlock}
-              style={{ marginTop: 10 }}
-            >
-              ➕ টপিক যোগ করুন
-            </Btn>
+                {b.open && (
+                  <div style={{ padding: 10 }}>
+                    <RichText
+                      key={b._uid}
+                      value={b.content}
+                      onChange={(html) => setBlock(i, { content: html })}
+                      placeholder="এখানে লিখুন কী পড়াবেন — আরবি, বাংলা বা ইংরেজি।"
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
+          <Btn sm kind="soft" onClick={addBlock} style={{ marginTop: 10 }}>
+            ➕ টপিক যোগ করুন
+          </Btn>
           <Btn
-            style={{ marginTop: 16, width: "100%", justifyContent: "center" }}
-            onClick={saveForm}
+            style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: saving ? 0.7 : 1 }}
+            onClick={saving ? undefined : saveTopics}
           >
-            {form.mode === "new" ? "+ দারস যোগ করুন" : "✏️ সংরক্ষণ করুন"}
+            {saving ? "সংরক্ষণ হচ্ছে…" : "✔ সংরক্ষণ করুন"}
           </Btn>
         </Modal>
       )}
@@ -5189,7 +4897,6 @@ function LecturePlan({ db, courses, user, refresh }) {
   );
 }
 
-/* ═══════════════ হাজিরা রিপোর্ট (ফিচার ৪) ═══════════════ */
 function AttendanceView({ user }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const isDirector = user.role === "director" || user.role === "admin";
