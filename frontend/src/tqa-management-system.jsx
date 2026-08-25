@@ -310,8 +310,13 @@ const openPrintDoc = (html, filename) => {
 
 /* স্যান্ডবক্সে window.confirm/alert ব্লক থাকে — তাই নিজস্ব কনফার্ম-মডাল ও টোস্ট */
 let confirmHandler = null;
-const askConfirm = (message, onYes) => {
-  confirmHandler ? confirmHandler({ message, onYes }) : onYes();
+/* opts (ঐচ্ছিক) = { yes, no } — কোনো কোনো প্রশ্নে "হ্যাঁ, নিশ্চিত / না, থাক"
+   যথেষ্ট স্পষ্ট নয়, সেখানে নিজের মতো লেখা বসানো যায়। না দিলে আগের লেখাই
+   থাকে, তাই পুরনো সব কল অবিকল আগের মতোই চলে। */
+const askConfirm = (message, onYes, opts) => {
+  confirmHandler
+    ? confirmHandler({ message, onYes, ...(opts || {}) })
+    : onYes();
 };
 let toastHandler = null;
 const notice = (msg) => {
@@ -861,21 +866,34 @@ const Btn = ({ children, kind = "primary", sm, style, ...p }) => {
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
+    // হালকা ছায়া — বাটনটা পাতার সাথে মিশে না গিয়ে একটু উঁচু দেখায়, ফলে
+    // "এটা চাপা যায়" ব্যাপারটা এক নজরেই বোঝা যায়
+    boxShadow: "0 1px 2px rgba(18,63,40,.18)",
   };
+  /* ⚠️ আগে danger/soft/ghost — তিনটিরই পটভূমি এত হালকা ছিল যে সাদা কার্ডের
+     উপর সেগুলো বাটন বলে চেনাই যেত না, নিছক লেখা মনে হতো। বিশেষ করে কনফার্ম
+     পপআপে ("জুম হোস্ট অ্যাকাউন্ট" সতর্কতা ইত্যাদি) "না, থাক" ও "হ্যাঁ, নিশ্চিত"
+     দুটোই ফ্যাকাসে দেখাত। এখন প্রতিটিরই স্পষ্ট রং ও কিনারা আছে। */
   const kinds = {
     primary: { background: C.emerald, color: "#fff" },
     gold: { background: C.gold, color: "#fff" },
     ghost: {
-      background: "transparent",
-      color: C.emerald,
-      border: `1.5px solid ${C.emerald}`,
+      background: "#fff",
+      color: C.emeraldD,
+      border: `2px solid ${C.emerald}`,
     },
+    // ধ্বংসাত্মক কাজ — ভরাট লাল, সাদা লেখা। ভুল করে চাপার আগেই চোখে পড়ে।
     danger: {
-      background: C.redBg,
-      color: C.red,
-      border: `1.5px solid #f3c9b8`,
+      background: C.red,
+      color: "#fff",
+      border: `1.5px solid #9a330a`,
     },
-    soft: { background: C.cream, color: C.text, border: `1px solid ${C.line}` },
+    // পাশের/দ্বিতীয় পছন্দের বাটন — ভরাট ধূসর-সবুজ, স্পষ্ট কিনারা
+    soft: {
+      background: "#dde5e0",
+      color: C.emeraldD,
+      border: `1.5px solid #a9bcb0`,
+    },
   };
   return (
     <button style={{ ...base, ...kinds[kind], ...style }} {...p}>
@@ -2270,6 +2288,8 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
   // mode: "manual" (স্টুডেন্ট/উস্তাদ নিজে "বের হন" চেপেছেন — মাঝপথে বেরোনো,
   // রেটিং পপআপ আসবে না), "finish" (ক্লাসের নির্ধারিত সময় (dur) শেষ — কোনো
   // বাটন ছাড়াই অটো বের হয়ে রেটিং পপআপ দেখাবে)
+  // ক্লাস শেষ করার অনুরোধ সার্ভারে পাঠানো হয়েছে কিনা — বাটনটা দুবার চাপা ঠেকায়
+  const [ending, setEnding] = useState(false);
   const endSegment = async (mode) => {
     setInMeeting(false);
     // চেকপয়েন্টে ইতিমধ্যে সেভ হওয়া মিনিট বাদ দিয়ে শুধু বাকি (এখনো সেভ না হওয়া)
@@ -2294,10 +2314,68 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
           ),
         );
       }
-      await refreshPresence();
+      /* ⚠️ আগে এখানে await refreshPresence() ছিল। প্যানেল তো এখনই বন্ধ হয়ে
+         যাচ্ছে, তাই এই প্যানেলের presence হালনাগাদ করে কোনো লাভ নেই — শুধু
+         একটা বাড়তি নেটওয়ার্ক কল শেষ হওয়ার অপেক্ষায় পর্দা আটকে থাকত। বের
+         হওয়ার পর onPanelExit এমনিতেই ক্লাস-তালিকা নতুন করে আনে। */
     }
     onExit(mode === "finish");
   };
+
+  /* ক্লাস সত্যিই শেষ করা — নিছক বেরিয়ে যাওয়া নয়। সার্ভারে জমে থাকা মিনিট
+     হাজিরায় বসে, হাজিরা পাকা হয়, ক্লাসটি "সম্পন্ন" হিসেবে তালিকাবদ্ধ হয়, আর
+     শিক্ষার্থীর কাছে রিজয়েন লিংক খুলে যায়।
+
+     দেরির কারণ ছিল: leave → refreshPresence → loadClasses — তিনটি কল একের পর
+     এক শেষ হওয়ার পরই কেবল পর্দা বদলাত, ধীর নেটে কয়েক সেকেন্ড ঠায় বসে থাকতে
+     হতো এবং মনে হতো বাটনটাই কাজ করছে না। এখন পর্দা সাথে সাথেই বদলায়, সার্ভারের
+     কাজ পেছনে চলতে থাকে। মিনিটের হিসাব প্রতি ৬০ সেকেন্ডে এমনিতেই সেভ হয়ে
+     থাকে, তাই কিছু হারায় না। */
+  const finishClass = () =>
+    askConfirm(
+      T(
+        "সত্যিই কি ক্লাস শেষ করতে চান?" +
+          "\n\n" +
+          "শেষ করলে হাজিরা ও ক্লাসের হিসাব চূড়ান্ত হয়ে যাবে এবং ক্লাসটি " +
+          "\"সম্পন্ন\" হিসেবে তালিকাভুক্ত হবে।",
+        "Do you really want to end the class?" +
+          "\n\n" +
+          "The attendance and class record will be finalised and the class " +
+          "will be listed as completed.",
+      ),
+      async () => {
+        setEnding(true);
+        setInMeeting(false);
+        const min = Math.max(
+          0,
+          Math.round((computeSegSec() - savedSecRef.current) / 60),
+        );
+        activeSinceRef.current = null;
+        accumulatedMsRef.current = 0;
+        savedSecRef.current = 0;
+        onExit(true); // পর্দা এখনই বদলায়
+        if (!usingApi) return;
+        try {
+          if (min >= 1) await api.checkpointClass(k.id, min).catch(() => {});
+          await api.finishClass(k.id);
+        } catch (e) {
+          notice(
+            T(
+              "ক্লাস শেষ করার খবরটা সার্ভারে পৌঁছায়নি — " +
+                (e?.data?.detail || e?.data?.error || e?.message || "") +
+                " আবার চেষ্টা করুন, অথবা পরিচালককে ক্লাসটি \"সম্পন্ন\" " +
+                "চিহ্নিত করতে বলুন।",
+              "Ending the class didn't reach the server — please try again, " +
+                "or ask the director to mark the class as completed.",
+            ),
+          );
+        }
+      },
+      {
+        yes: T("হ্যাঁ, ক্লাস শেষ করুন", "Yes, end the class"),
+        no: T("না, ক্লাসে ফিরে যান", "No, back to class"),
+      },
+    );
 
   // জুম বাইরের অ্যাপ/ট্যাব — তাই "মিটিং শেষ হলো" এমন সরাসরি কোনো সিগন্যাল ব্রাউজার
   // পায় না। তবে জুমে গেলে এই ট্যাব/উইন্ডো ব্যাকগ্রাউন্ডে চলে যায় (hidden), আর
@@ -2492,16 +2570,53 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
           </span>
         )
       )}
-      {/* "ক্লাস শেষ করুন" আসলে নিজে বেরিয়ে যাওয়ার বাটন — ক্লাসটা সবার জন্য শেষ
-          করে না। শিক্ষার্থীর কাছে এই লেখাটা বিভ্রান্তিকর ছিল, তাই তাদের কাছে
-          দেখানো হয় না। উস্তাদ শেষ করলে উপরের হুক শিক্ষার্থীর ক্লাস আপনাআপনি
-          শেষ করে দেয়; আর জুম থেকে ফিরলে "Have you finished today's class?"
-          পপআপেই সে নিজে শেষ করতে পারে। */}
+      {/* উস্তাদের দুটি বাটন — কাজ দুরকম, তাই আলাদা:
+            ✅ ক্লাস শেষ করুন → সত্যিকারের সমাপ্তি। নিশ্চিত করার প্রশ্নের পর
+               সার্ভারে হাজিরা ও মিনিট চূড়ান্ত হয়, ক্লাস "সম্পন্ন" হয়, আর
+               শিক্ষার্থীর কাছে রিজয়েন লিংক খুলে যায়।
+            🔄 পুনঃসংযোগ → শুধু নিজে বেরিয়ে যাওয়া (আগে এটাই "ক্লাস শেষ করুন"
+               নামে ছিল)। নেট কেটে গেলে বেরিয়ে গিয়ে একই ক্লাসে ফেরার জন্য —
+               ক্লাস শেষ হয় না।
+          শিক্ষার্থীর কাছে কোনোটিই দেখানো হয় না — "ক্লাস শেষ" তাদের কাছে
+          বিভ্রান্তিকর ছিল। উস্তাদ শেষ করলে উপরের হুক শিক্ষার্থীর ক্লাস
+          আপনাআপনি শেষ করে দেয়; আর জুম থেকে ফিরলে "Have you finished today's
+          class?" পপআপেই সে নিজে শেষ করতে পারে। */}
       {user.role !== "student" && (
-        <div style={{ marginTop: 6 }}>
-          <Btn sm kind="danger" onClick={() => endSegment("manual")}>
-            {T("ক্লাস শেষ করুন", "End Class")}
-          </Btn>
+        <div style={{ marginTop: 10 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {/* সত্যিকারের "শেষ" — হাজিরা ও ক্লাসের হিসাব চূড়ান্ত হয় */}
+            <Btn
+              sm
+              kind="danger"
+              onClick={ending ? undefined : finishClass}
+              style={{ opacity: ending ? 0.6 : 1 }}
+            >
+              {ending
+                ? T("শেষ হচ্ছে…", "Ending…")
+                : T("✅ ক্লাস শেষ করুন", "✅ End Class")}
+            </Btn>
+            {/* নেট কেটে যাওয়া বা অন্য কারণে বেরিয়ে গিয়ে আবার একই ক্লাসে ফেরার
+                দরকার হলে — এতে ক্লাস শেষ হয় না, হাজিরাও চূড়ান্ত হয় না।
+                এটাই আগে "ক্লাস শেষ করুন" বাটনটা করত। */}
+            <Btn sm kind="soft" onClick={() => endSegment("manual")}>
+              {T("🔄 পুনঃসংযোগ", "🔄 Reconnect")}
+            </Btn>
+          </div>
+          <div
+            style={{
+              fontSize: 11.5,
+              color: C.muted,
+              marginTop: 6,
+              lineHeight: 1.55,
+            }}
+          >
+            {T(
+              "🔄 পুনঃসংযোগ — ক্লাস শেষ হবে না। নেট কেটে গেলে বা বেরিয়ে যেতে " +
+                "হলে এটি চাপুন, পরে একই ক্লাসে আবার জয়েন করতে পারবেন।",
+              "🔄 Reconnect — this does not end the class. Use it if your " +
+                "connection drops, then rejoin the same class.",
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -2815,8 +2930,12 @@ function ClassesView({
     // দুজনের হাজিরা নিশ্চিত হলেও এখানে পুরনো (খালি) ডেটাই থেকে যেত। ফলে
     // বের হওয়ার পর "দুজনেই জয়েন করেছেন" বোঝা যেত না, আর "🔁 রিজয়েন করুন"-এর
     // বদলে আবার "🎥 জুমে জয়েন করুন" দেখাত
-    if (usingApi) await loadClasses();
+    /* ⚠️ আগে এই loadClasses()-এর জন্য await করা হতো, ফলে ধীর নেটে বাটন চাপার
+       পরেও কয়েক সেকেন্ড প্যানেলটা খোলা থেকে যেত — ব্যবহারকারীর মনে হতো কিছুই
+       হয়নি। এখন প্যানেল আগে বন্ধ হয়, তালিকা পেছনে হালনাগাদ হয়ে নিজে থেকেই
+       "🔁 রিজয়েন করুন" দেখাতে শুরু করে। */
     setJoined(null);
+    if (usingApi) loadClasses().catch(() => {});
     if (finished && user.role === "student" && k) {
       const c = courseById(courses, k.courseId);
       setRate({
@@ -16773,7 +16892,7 @@ export default function App() {
                 style={{ flex: 1, justifyContent: "center" }}
                 onClick={() => setConfirmReq(null)}
               >
-                না, থাক
+                {confirmReq.no || "না, থাক"}
               </Btn>
               <Btn
                 kind="danger"
@@ -16784,7 +16903,7 @@ export default function App() {
                   fn();
                 }}
               >
-                হ্যাঁ, নিশ্চিত
+                {confirmReq.yes || "হ্যাঁ, নিশ্চিত"}
               </Btn>
             </div>
           </div>

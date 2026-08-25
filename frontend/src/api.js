@@ -230,6 +230,7 @@ export const api = {
   markAttendance: (id, student_id, present = true) => request(`/classes/${id}/mark_attendance/`, { method: "POST", body: { student_id, present } }), // পরিচালকের ম্যানুয়াল হাজিরা
   postponeClass: (id) => request(`/classes/${id}/postpone/`, { method: "POST" }), // ⛔ স্থগিত
   setClassJoinMode: (id, mode) => request(`/classes/${id}/set_join_mode/`, { method: "POST", body: { mode } }), // auto/join/rejoin — জয়েন/রিজয়েন লিংক ম্যানুয়ালি জোর করা (পরিচালক/এডমিন)
+  finishClass: (id) => request(`/classes/${id}/finish/`, { method: "POST" }), // ক্লাস সত্যিই শেষ — মিনিট বসে, হাজিরা পাকা হয়, ক্লাস "সম্পন্ন" হয়
   openRejoin: (id) => request(`/classes/${id}/open_rejoin/`, { method: "POST" }), // উস্তাদ রিজয়েন চাপলে — শিক্ষার্থীর কাছেও ২য় লিংক খোলে
   deleteClass: (id) => request(`/classes/${id}/`, { method: "DELETE" }),
 
