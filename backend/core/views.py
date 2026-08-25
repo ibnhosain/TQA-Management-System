@@ -939,6 +939,12 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
             "any_student_active": rows.filter(
                 segment_start__isnull=False, user__role="student"
             ).exclude(user_id=teacher_id).exists(),
+            # ⚠️ শিক্ষার্থীর পর্দার জন্য দরকারি দুটি খবর। "উস্তাদ আর নেই" দেখেই
+            # আগে শিক্ষার্থীর ক্লাস শেষ করে দেওয়া হতো — কিন্তু উস্তাদের সেগমেন্ট
+            # এখন তিনভাবে বন্ধ হতে পারে: ১ম পর্ব শেষ, 🔄 পুনঃসংযোগ, আর সত্যিকারের
+            # ক্লাস শেষ। তিনটিকে আলাদা করতে না পারলে শিক্ষার্থী ভুল বার্তা পান।
+            "rejoin_active": s.join_mode_override == "rejoin",
+            "done": s.status == "done",
         })
 
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])
