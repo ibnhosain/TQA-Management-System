@@ -7191,8 +7191,20 @@ function ProgressView({ db, setDb, courses, user }) {
               `${fmtDate(m.date)} · ${m.time}`,
               <Tag key="t" color={C.blue} bg={C.blueBg}>
                 {T(
-                  m.status === "done" ? "সম্পন্ন" : m.status === "postponed" ? "স্থগিত" : "নির্ধারিত",
-                  m.status === "done" ? "Completed" : m.status === "postponed" ? "Postponed" : "Scheduled",
+                  m.status === "done"
+                    ? "সম্পন্ন"
+                    : m.status === "postponed"
+                      ? "স্থগিত"
+                      : m.teacher_finished
+                        ? "যাচাই বাকি"
+                        : "নির্ধারিত",
+                  m.status === "done"
+                    ? "Completed"
+                    : m.status === "postponed"
+                      ? "Postponed"
+                      : m.teacher_finished
+                        ? "Awaiting review"
+                        : "Scheduled",
                 )}
               </Tag>,
             ])}
@@ -8018,10 +8030,13 @@ function TeacherReportView({ db, setDb, courses, user }) {
   const att = attendance.filter((a) => String(a.user) === String(tid));
   const present = att.filter((a) => (a.present ?? a.minutes >= 45)).length;
   const short = att.filter((a) => !(a.present ?? a.minutes >= 45)).length;
+  // উস্তাদ নিজে শেষ করে দেওয়া ক্লাসও গোনা হয় — কর্তৃপক্ষের যাচাইয়ের অপেক্ষায়
+  // থাকলেও ক্লাসটা তিনি নিয়েছেন। আগে শুধু status="done" বা বিগত তারিখ দেখা
+  // হতো, তাই আজকের নেওয়া ক্লাস আজ গণনায় আসত না — পরদিন গিয়ে আসত।
   const taken = classes.filter(
     (k) =>
       tCourses.some((c) => String(c.id) === String(k.course || k.courseId)) &&
-      (k.status === "done" || k.date < todayISO()),
+      (k.status === "done" || k.teacher_finished || k.date < todayISO()),
   ).length;
 
   const avg = ratingSummary ? ratingSummary.avg || 0 : 0;
