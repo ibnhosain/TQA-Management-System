@@ -2122,7 +2122,7 @@ async function enablePushNotifications(silent = false) {
 
 /* ═══════════════ ক্লাস ও জুম জয়েন (ফিচার ২ ও ৪) ═══════════════ */
 /* ইন-ক্লাস প্যানেল — দুজন-জয়েন গেটিং, জয়েন করা মাত্রই হাজিরা নিশ্চিত */
-function LiveClassPanel({ k, user, usingApi, onExit }) {
+function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [presence, setPresence] = useState(null);
   const [inMeeting, setInMeeting] = useState(true);
@@ -2331,18 +2331,41 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
      হতো এবং মনে হতো বাটনটাই কাজ করছে না। এখন পর্দা সাথে সাথেই বদলায়, সার্ভারের
      কাজ পেছনে চলতে থাকে। মিনিটের হিসাব প্রতি ৬০ সেকেন্ডে এমনিতেই সেভ হয়ে
      থাকে, তাই কিছু হারায় না। */
+  /* জুমের বিনামূল্যের মিটিংয়ের সময়সীমার কারণে একটি ক্লাস দুই পর্বে হয় — ১ম
+     লিংকে ১ম পর্ব, ২য় লিংকে ২য় পর্ব। দুই পর্ব মিলেই একটি পূর্ণ ক্লাস। রিজয়েন
+     খোলা আছে কিনা, সেটাই বলে দেয় এখন কোন পর্বে আছি। */
+  const lastPart = !!k.rejoinActive;
   const finishClass = () =>
     askConfirm(
-      T(
-        "সত্যিই কি ক্লাস শেষ করতে চান?" +
-          "\n\n" +
-          "শেষ করলে হাজিরা ও ক্লাসের হিসাব চূড়ান্ত হয়ে যাবে এবং ক্লাসটি " +
-          "\"সম্পন্ন\" হিসেবে তালিকাভুক্ত হবে।",
-        "Do you really want to end the class?" +
-          "\n\n" +
-          "The attendance and class record will be finalised and the class " +
-          "will be listed as completed.",
-      ),
+      lastPart
+        ? T(
+            "সত্যিই কি ক্লাস শেষ করতে চান?" +
+              "\n\n" +
+              "এবার পুরো ক্লাসটি শেষ হবে — হাজিরা ও ক্লাসের হিসাব চূড়ান্ত হয়ে " +
+              "ক্লাসটি \"সম্পন্ন\" হিসেবে তালিকাভুক্ত হবে এবং আজকের ক্লাসের " +
+              "তালিকা থেকে সরে যাবে।",
+            "Do you really want to end the class?" +
+              "\n\n" +
+              "This finishes the whole class — the attendance and class " +
+              "record will be finalised, the class marked as completed and " +
+              "removed from today's list.",
+          )
+        : T(
+            "সত্যিই কি ১ম পর্ব শেষ করতে চান?" +
+              "\n\n" +
+              "শেষ করলে শিক্ষার্থীদের পোর্টালে সাথে সাথেই রিজয়েন বাটন চলে " +
+              "যাবে। এরপর আপনি \"🔁 রিজয়েন করুন\" চেপে ২য় পর্ব শুরু করবেন।" +
+              "\n\n" +
+              "ক্লাসটি এখনো \"সম্পন্ন\" হবে না, আজকের তালিকাতেই থাকবে — ২য় " +
+              "পর্ব শেষ করলে তবেই সম্পন্ন হবে।",
+            "Do you really want to end the first part?" +
+              "\n\n" +
+              "Your students will get the rejoin button right away. Then " +
+              "press \"🔁 Rejoin\" to start the second part." +
+              "\n\n" +
+              "The class will not be marked completed yet — it stays in " +
+              "today's list until the second part is finished.",
+          ),
       async () => {
         setEnding(true);
         setInMeeting(false);
@@ -2358,6 +2381,7 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
         try {
           if (min >= 1) await api.checkpointClass(k.id, min).catch(() => {});
           await api.finishClass(k.id);
+          onFinished?.();
         } catch (e) {
           notice(
             T(
@@ -2372,7 +2396,9 @@ function LiveClassPanel({ k, user, usingApi, onExit }) {
         }
       },
       {
-        yes: T("হ্যাঁ, ক্লাস শেষ করুন", "Yes, end the class"),
+        yes: lastPart
+          ? T("হ্যাঁ, ক্লাস শেষ করুন", "Yes, end the class")
+          : T("হ্যাঁ, ১ম পর্ব শেষ করুন", "Yes, end the first part"),
         no: T("না, ক্লাসে ফিরে যান", "No, back to class"),
       },
     );
@@ -3280,6 +3306,9 @@ function ClassesView({
               user={user}
               usingApi={usingApi}
               onExit={onPanelExit}
+              /* পর্ব শেষ হওয়ার খবর সার্ভারে পৌঁছানোর পর তালিকা আবার আনি —
+                 নইলে উস্তাদের কাছে "🔁 রিজয়েন করুন" অবস্থাটা পুরনোই থেকে যেত */
+              onFinished={loadClasses}
             />
           )}
         </div>

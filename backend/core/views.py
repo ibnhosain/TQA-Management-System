@@ -762,18 +762,22 @@ def _assert_session_participant(s, user):
         raise PermissionDenied("শুধু ক্লাসের উস্তাদ বা শিক্ষার্থীই জয়েন করতে পারবেন")
 
 
-def _finalize_session(s, by=None):
-    """ক্লাস সত্যিই শেষ করা — একটাই জায়গা, সবাই এখান থেকেই ডাকে।
+def _finalize_session(s, by=None, mark_done=True):
+    """ক্লাসের একটি পর্ব শেষ করা — একটাই জায়গা, সবাই এখান থেকেই ডাকে।
 
-    "ক্লাস শেষ" মানে নিছক প্যানেল বন্ধ করা নয়। এখানে যা হয় —
+    এখানে যা হয় —
       ১) খোলা থাকা প্রত্যেকের সেগমেন্ট বন্ধ হয়ে জমে থাকা মিনিট হাজিরায় যোগ
          হয় (কারও তথ্য "জমা হওয়ার অপেক্ষায়" ঝুলে থাকে না),
       ২) দুজনেই এসে থাকলে হাজিরা পাকাপাকি নিশ্চিত হয়,
-      ৩) ক্লাসটি "সম্পন্ন" হিসেবে তালিকাবদ্ধ হয়।
+      ৩) mark_done=True হলে ক্লাসটি "সম্পন্ন" হিসেবে তালিকাবদ্ধ হয়।
 
-    উস্তাদ "ক্লাস শেষ করুন" চাপলে, আর পরিচালক/এডমিন ক্লাসকে "সম্পন্ন"
-    চিহ্নিত করলে — দুই পথেই একই কাজ হয়। তাই উস্তাদ ভুলে গেলে পরিচালক
-    চিহ্নিত করলেই ক্লাস শেষ হিসেবে গণ্য হয়।
+    mark_done কেন ঐচ্ছিক — একটি ক্লাস দুই পর্বে হয় (জুমের সময়সীমার কারণে
+    ১ম ও ২য় লিংক)। ১ম পর্ব শেষ হলে মিনিট-হাজিরা ঠিকই গুছিয়ে রাখতে হয়, কিন্তু
+    ক্লাসটি তখনো "সম্পন্ন" নয় — ২য় পর্ব বাকি। তাই তখন mark_done=False।
+
+    উস্তাদ শেষ পর্বে "ক্লাস শেষ করুন" চাপলে, আর পরিচালক/এডমিন ক্লাসকে
+    "সম্পন্ন" চিহ্নিত করলে — দুই পথেই পুরো ক্লাস শেষ হয়। তাই উস্তাদ ভুলে গেলে
+    পরিচালক চিহ্নিত করলেই ক্লাস শেষ হিসেবে গণ্য হয়।
     """
     _sync_mutual_presence(s)  # শেষ করার আগে হাজিরাটা পাকা করে নিই
     now = timezone.now()
@@ -785,7 +789,7 @@ def _finalize_session(s, by=None):
     if open_rows:
         Attendance.objects.bulk_update(open_rows, ["minutes", "segment_start", "left_at"])
     fields = []
-    if s.status != "done":
+    if mark_done and s.status != "done":
         s.status = "done"
         fields.append("status")
     if not s.date:
@@ -985,16 +989,24 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def finish(self, request, pk=None):
-        """ক্লাস সত্যিই শেষ করা — উস্তাদের "ক্লাস শেষ করুন" বাটন।
+        """উস্তাদের "ক্লাস শেষ করুন" বাটন — একটি ক্লাস দুই পর্বে হয়।
 
-        নিছক প্যানেল বন্ধ করা নয়: সবার জমে থাকা মিনিট হাজিরায় বসে, হাজিরা
-        পাকা হয়, আর ক্লাসটি "সম্পন্ন" হিসেবে তালিকাবদ্ধ হয়
-        (_finalize_session)। তাই উস্তাদ শেষ না করে লগআউট করলে ক্লাস শেষ হয়
-        না — তথ্য জমা হওয়ার অপেক্ষায় থাকে, আর পরিচালক পরে "সম্পন্ন"
-        চিহ্নিত করলেই সব গুছিয়ে যায়।
+        জুমের বিনামূল্যের মিটিংয়ের সময়সীমার কারণে একটি ক্লাস দুই পর্বে হয় —
+        ১ম লিংকে ১ম পর্ব, ২য় লিংকে ২য় পর্ব। দুই পর্ব মিলেই একটি পূর্ণ ক্লাস।
+        তাই এই বাটনটি কোন পর্বে চাপা হলো তার উপর কাজ নির্ভর করে:
 
-        সেই সাথে শিক্ষার্থীদের কাছে রিজয়েন লিংক খুলে দেওয়া হয় — ক্লাসটি
-        আবার শুরু করার দরকার পড়লে তাঁরা যেন সাথে সাথেই ফিরতে পারেন।
+        ১ম পর্ব শেষ (রিজয়েন এখনো খোলেনি) —
+          • সবার জমে থাকা মিনিট হাজিরায় বসে, হাজিরা পাকা হয়
+          • শিক্ষার্থীদের কাছে রিজয়েন লিংক খুলে যায় (join_mode_override),
+            ফলে তাঁদের পোর্টালে সাথে সাথেই রিজয়েন বাটন চলে আসে
+          • ⚠️ ক্লাসটি "সম্পন্ন" হয় না, আজকের তালিকা থেকেও সরে না — ২য় পর্ব বাকি
+
+        ২য় পর্ব শেষ (রিজয়েন ইতিমধ্যে খোলা) —
+          • আবারও মিনিট-হাজিরা গোছানো হয়
+          • এবার ক্লাসটি "সম্পন্ন" হিসেবে তালিকাবদ্ধ হয় ও আজকের তালিকা থেকে সরে
+
+        উস্তাদ শেষ না করে লগআউট করলে ক্লাস শেষ হয় না — তথ্য জমা হওয়ার
+        অপেক্ষায় থাকে, আর পরিচালক পরে "সম্পন্ন" চিহ্নিত করলেই সব গুছিয়ে যায়।
         """
         s_obj = self.get_object()
         u = request.user
@@ -1006,11 +1018,15 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
             and not s_obj.students.filter(teacher=u).exists()
         ):
             raise PermissionDenied("কেবল এই ক্লাসের উস্তাদ ক্লাস শেষ করতে পারবেন")
-        _finalize_session(s_obj, by=u)
-        if s_obj.join_mode_override != "rejoin":
+        # রিজয়েন খোলা আছে কিনা — এটাই বলে দেয় আমরা কোন পর্বে আছি
+        first_part = s_obj.join_mode_override != "rejoin"
+        _finalize_session(s_obj, by=u, mark_done=not first_part)
+        if first_part:
             s_obj.join_mode_override = "rejoin"
             s_obj.save(update_fields=["join_mode_override"])
-        return Response(self.get_serializer(s_obj).data)
+        data = self.get_serializer(s_obj).data
+        data["part_finished"] = 1 if first_part else 2
+        return Response(data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def open_rejoin(self, request, pk=None):
