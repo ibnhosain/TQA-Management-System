@@ -2617,9 +2617,14 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
               onClick={ending ? undefined : finishClass}
               style={{ opacity: ending ? 0.6 : 1 }}
             >
+              {/* কোন পর্বে আছি সেটা বাটনেই লেখা থাকে — উস্তাদ চাপার আগেই
+                  বোঝেন এই চাপে ক্লাসটা পুরোপুরি শেষ হবে, নাকি ২য় পর্ব বাকি
+                  থাকবে */}
               {ending
                 ? T("শেষ হচ্ছে…", "Ending…")
-                : T("✅ ক্লাস শেষ করুন", "✅ End Class")}
+                : lastPart
+                  ? T("✅ ক্লাস শেষ করুন", "✅ End Class")
+                  : T("✅ ১ম পর্ব শেষ করুন", "✅ End First Part")}
             </Btn>
             {/* নেট কেটে যাওয়া বা অন্য কারণে বেরিয়ে গিয়ে আবার একই ক্লাসে ফেরার
                 দরকার হলে — এতে ক্লাস শেষ হয় না, হাজিরাও চূড়ান্ত হয় না।
