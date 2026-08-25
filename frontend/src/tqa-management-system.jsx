@@ -1349,6 +1349,9 @@ const adaptClass = (k) => ({
   joinModeOverride: k.join_mode_override || "auto", // অটো ঠিক না হলে পরিচালক/এডমিনের ম্যানুয়াল ওভাররাইড (auto/join/rejoin)
   // ১ম নাকি ২য় জুম লিংক দেখাতে হবে — সার্ভারের সিদ্ধান্ত (দুজনের জন্য একই)
   rejoinActive: !!k.rejoin_active,
+  // উস্তাদ নিজে "ক্লাস শেষ করুন" চেপেছেন কিনা। ক্লাসটি তখনো আজকের তালিকাতেই
+  // থাকে (status বদলায় না) — পরিচালক/এডমিন যাচাই করে "সম্পন্ন" করলে তবেই সরে
+  teacherFinished: !!k.teacher_finished,
   kind: KEY_TO_KIND[k.kind] || "নিয়মিত ক্লাস",
   teacherId: k.teacher,
   studentIds: k.students || [],
@@ -3229,6 +3232,9 @@ function ClassesView({
         String(a.user) === String(user.id) && (a.present || a.marked_present),
     );
     // এই ক্লাসের উস্তাদ কিনা — উস্তাদই কেবল রিজয়েন চালু করতে পারেন
+    /* উস্তাদ ক্লাস শেষ করে দিয়েছেন — যাচাই বাকি থাকায় ক্লাসটি তালিকায়
+       থেকে যায়, কিন্তু আর জয়েন/রিজয়েন করার কিছু নেই */
+    const stillJoinable = joinable && !k.teacherFinished;
     const isTeacherOf =
       user.role === "teacher" &&
       [k.teacherId, c.teacherId].some((t) => String(t) === String(user.id));
@@ -3243,7 +3249,8 @@ function ClassesView({
     const withinClassWindow = (() => {
       // "সম্পন্ন" বা "স্থগিত" চিহ্নিত ক্লাসে কখনোই "চলছে" দেখাবে না — এডমিন
       // সম্পন্ন করে দেওয়া মানেই ক্লাস শেষ, কেউ "ক্লাস শেষ করুন" চাপুক বা না চাপুক
-      if (!isToday || k.status !== "upcoming") return false;
+      // উস্তাদ শেষ করে দিলে আর "চলছে" নয় — যাচাই বাকি থাকলেও নয়
+      if (!isToday || k.status !== "upcoming" || k.teacherFinished) return false;
       const n = new Date();
       // ক্লাসের সময় বাংলাদেশ সময়ে সংরক্ষিত — "এখন কয়টা" হিসাবও সেভাবেই
       const nowMin =
@@ -3389,7 +3396,7 @@ function ClassesView({
           {/* উস্তাদের জয়েন — আগে হোস্ট-অ্যাকাউন্ট মনে করিয়ে দেওয়ার পপআপ, তারপর
               জুম খোলে। শিক্ষার্থীর জয়েন আগের মতোই সরাসরি লিংক (তাদের হোস্ট
               অ্যাকাউন্টের ব্যাপার নেই) */}
-          {joinable && k.status !== "postponed" && isTeacherOf && (
+          {stillJoinable && k.status !== "postponed" && isTeacherOf && (
             <Btn
               style={{ background: C.red, color: "#fff" }}
               onClick={() => confirmJoin(k)}
@@ -3397,7 +3404,7 @@ function ClassesView({
               {T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}
             </Btn>
           )}
-          {joinable && k.status !== "postponed" && !isTeacherOf &&
+          {stillJoinable && k.status !== "postponed" && !isTeacherOf &&
             !alreadyBothJoined && (
               <a
                 href={k.zoom}
@@ -3411,12 +3418,12 @@ function ClassesView({
                 </Btn>
               </a>
             )}
-          {joinable && k.status !== "postponed" && isTeacherOf && (
+          {stillJoinable && k.status !== "postponed" && isTeacherOf && (
             <Btn kind="gold" onClick={() => confirmRejoin(k)}>
               {T("🔁 রিজয়েন করুন", "🔁 Rejoin")}
             </Btn>
           )}
-          {joinable && k.status !== "postponed" && !isTeacherOf &&
+          {stillJoinable && k.status !== "postponed" && !isTeacherOf &&
             (alreadyBothJoined ? (
               <a
                 href={k.zoom2 || k.zoom}
@@ -3515,6 +3522,13 @@ function ClassesView({
           {k.status === "postponed" && (
             <Tag color={C.red} bg={C.redBg}>
               {T("⛔ স্থগিত", "⛔ Postponed")}
+            </Tag>
+          )}
+          {/* উস্তাদ শেষ করেছেন, কিন্তু কর্তৃপক্ষের যাচাই এখনো বাকি — তাই
+              ক্লাসটি আজকের তালিকাতেই আছে, শুধু এই চিহ্নটি নিয়ে */}
+          {k.teacherFinished && k.status !== "done" && (
+            <Tag color={C.green} bg={C.greenBg}>
+              {T("✅ ক্লাস সম্পন্ন — যাচাই বাকি", "✅ Class completed")}
             </Tag>
           )}
           {(() => {
@@ -17066,9 +17080,12 @@ export default function App() {
           const st = h * 60 + m;
           return cur >= st - 15 && cur <= st + (c.duration_min || 60) + 180;
         };
+        // উস্তাদ শেষ করে দেওয়া ক্লাস বাদ — নইলে রিজয়েন খোলা থাকায় ক্লাস
+        // শেষ হওয়ার পরেও শিক্ষার্থীর পর্দা ঢেকে রিজয়েনের পপআপ আসত
+        const live = classes.filter((c) => !c.teacher_finished);
         const kk =
-          classes.find((c) => c.rejoin_active && nearby(c)) ||
-          classes.find(inWindow);
+          live.find((c) => c.rejoin_active && nearby(c)) ||
+          live.find(inWindow);
         setLivePopup(
           kk
             ? {

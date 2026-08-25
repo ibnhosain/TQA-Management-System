@@ -281,6 +281,12 @@ class ClassSession(models.Model):
     kind = models.CharField(max_length=10, choices=KINDS, default="regular")
     guardian_requirement = models.TextField(blank=True)  # অভিভাবকের রিকোয়ারমেন্ট
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.UPCOMING)
+    # উস্তাদ নিজে "ক্লাস শেষ করুন" চেপেছেন কিনা (২য় তথা শেষ পর্ব শেষ করে)।
+    # ⚠️ এটা status="done" নয় — ইচ্ছা করেই আলাদা রাখা। উস্তাদ শেষ করলে ক্লাসটি
+    # আজকের তালিকাতেই "✅ ক্লাস সম্পন্ন" চিহ্ন নিয়ে থেকে যায়; পরিচালক/এডমিন
+    # দেখে যাচাই করে "সম্পন্ন" চিহ্নিত করলে তবেই status="done" হয় এবং তালিকা
+    # থেকে সরে। অর্থাৎ দুটি আলাদা ধাপ — উস্তাদের শেষ করা, আর কর্তৃপক্ষের যাচাই।
+    teacher_finished = models.BooleanField(default=False)
     reminder_sent = models.BooleanField(default=False)  # ৫-মিনিট WhatsApp রিমাইন্ডার (Celery টাস্ক)
 
     class Meta:

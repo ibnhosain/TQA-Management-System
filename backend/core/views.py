@@ -944,7 +944,9 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
             # এখন তিনভাবে বন্ধ হতে পারে: ১ম পর্ব শেষ, 🔄 পুনঃসংযোগ, আর সত্যিকারের
             # ক্লাস শেষ। তিনটিকে আলাদা করতে না পারলে শিক্ষার্থী ভুল বার্তা পান।
             "rejoin_active": s.join_mode_override == "rejoin",
-            "done": s.status == "done",
+            # "ক্লাস আর চলছে না" — উস্তাদ শেষ করেছেন, অথবা কর্তৃপক্ষ "সম্পন্ন"
+            # চিহ্নিত করেছেন। শিক্ষার্থীর পর্দা এই একটি খবরেই ক্লাস গুটিয়ে নেয়।
+            "done": s.status == "done" or s.teacher_finished,
         })
 
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])
@@ -1009,7 +1011,10 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
 
         ২য় পর্ব শেষ (রিজয়েন ইতিমধ্যে খোলা) —
           • আবারও মিনিট-হাজিরা গোছানো হয়
-          • এবার ক্লাসটি "সম্পন্ন" হিসেবে তালিকাবদ্ধ হয় ও আজকের তালিকা থেকে সরে
+          • teacher_finished=True বসে — ক্লাসটি আজকের তালিকাতেই "✅ ক্লাস
+            সম্পন্ন" চিহ্ন নিয়ে থেকে যায়। ⚠️ status এখানে "done" করা হয় না;
+            পরিচালক/এডমিন দেখে যাচাই করে "সম্পন্ন" চিহ্নিত করলে তবেই তা হয়
+            এবং ক্লাসটি আজকের তালিকা থেকে সরে।
 
         উস্তাদ শেষ না করে লগআউট করলে ক্লাস শেষ হয় না — তথ্য জমা হওয়ার
         অপেক্ষায় থাকে, আর পরিচালক পরে "সম্পন্ন" চিহ্নিত করলেই সব গুছিয়ে যায়।
@@ -1026,10 +1031,17 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("কেবল এই ক্লাসের উস্তাদ ক্লাস শেষ করতে পারবেন")
         # রিজয়েন খোলা আছে কিনা — এটাই বলে দেয় আমরা কোন পর্বে আছি
         first_part = s_obj.join_mode_override != "rejoin"
-        _finalize_session(s_obj, by=u, mark_done=not first_part)
+        # উস্তাদের বাটন কখনোই ক্লাসকে "সম্পন্ন" করে না — সেটা কর্তৃপক্ষের কাজ
+        _finalize_session(s_obj, by=u, mark_done=False)
+        fields = []
         if first_part:
             s_obj.join_mode_override = "rejoin"
-            s_obj.save(update_fields=["join_mode_override"])
+            fields.append("join_mode_override")
+        elif not s_obj.teacher_finished:
+            s_obj.teacher_finished = True
+            fields.append("teacher_finished")
+        if fields:
+            s_obj.save(update_fields=fields)
         data = self.get_serializer(s_obj).data
         data["part_finished"] = 1 if first_part else 2
         return Response(data)
