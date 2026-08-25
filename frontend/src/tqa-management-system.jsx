@@ -3551,7 +3551,13 @@ function ClassesView({
             // আজকের ক্লাস এডমিন/পরিচালক কেউ "সম্পন্ন" চিহ্নিত না করলে সময় পার হয়ে
             // "বিগত"-এ চলে যাওয়ার পরও status="upcoming"-ই থেকে যায় — তখন সেটাকে
             // "আসন্ন" (যা এখন আর সত্যি না) না বলে "অসম্পন্ন" দেখানো হচ্ছে
-            const incomplete = k.status === "upcoming" && k.date < todayISO();
+            // ⚠️ উস্তাদ শেষ করে দিলে সেটা "অসম্পন্ন" নয় — শুধু কর্তৃপক্ষের
+            // যাচাই বাকি। নইলে পুরনো দিনের যাচাই-না-হওয়া ক্লাসে একসাথে
+            // "✅ ক্লাস সম্পন্ন — যাচাই বাকি" আর লাল "অসম্পন্ন" দুটোই দেখাত
+            const incomplete =
+              k.status === "upcoming" && k.date < todayISO() && !k.teacherFinished;
+            // উস্তাদ শেষ করেছেন, কর্তৃপক্ষের যাচাই এখনো বাকি
+            const awaitingReview = k.teacherFinished && k.status !== "done";
             // আজকের ক্লাস "সম্পন্ন" চিহ্নিত করা এডমিন+পরিচালক দুজনেই পারবেন, কিন্তু
             // বিগত (পুরনো) ক্লাসের স্ট্যাটাস সংশোধন কেবল পরিচালকের এখতিয়ার
             const canEditStatus = k.date === todayISO() ? isAdm(user) : isDir(user);
@@ -3559,17 +3565,34 @@ function ClassesView({
               return (
                 <select
                   style={{ ...S.input, width: "auto", padding: "6px 10px", fontSize: 12.5 }}
-                  value={k.status}
+                  /* উস্তাদ শেষ করেছেন অথচ যাচাই বাকি — এটা কোনো স্ট্যাটাস নয়,
+                     তাই দেখানোর জন্য আলাদা একটি মান। এখান থেকে দুই দিকেই যাওয়া
+                     যায়: "সম্পন্ন" (যাচাই শেষ) অথবা "আবার চালু" (ভুলে শেষ হয়ে
+                     গেলে ফেরার পথ — সার্ভারে যাচাই-বাকি অবস্থাটাও মুছে যায়)। */
+                  value={awaitingReview ? "review" : k.status}
                   onChange={(e) => setStatus(k, e.target.value)}
                 >
+                  {awaitingReview && (
+                    <option value="review" disabled>
+                      {T("⏳ যাচাই বাকি", "⏳ Awaiting review")}
+                    </option>
+                  )}
                   <option value="upcoming">
-                    {incomplete ? T("অসম্পন্ন", "Incomplete") : T("আসন্ন", "Upcoming")}
+                    {awaitingReview
+                      ? T("↩️ আবার চালু করুন", "↩️ Reopen class")
+                      : incomplete
+                        ? T("অসম্পন্ন", "Incomplete")
+                        : T("আসন্ন", "Upcoming")}
                   </option>
                   <option value="done">{T("সম্পন্ন", "Done")}</option>
                 </select>
               );
             }
-            if (!joinable && k.status !== "postponed") {
+            // উস্তাদ শেষ করেছেন অথচ যাচাই বাকি — এই অবস্থায় উপরে
+            // "✅ ক্লাস সম্পন্ন — যাচাই বাকি" ট্যাগটাই আছে, তাই এখানে আবার
+            // একই কথা লেখা হয় না। কিন্তু যাচাই হয়ে গেলে ওই ট্যাগটা সরে যায়,
+            // তখন এখানে "সম্পন্ন" দেখাতেই হবে — নইলে কোনো চিহ্নই থাকত না।
+            if (!joinable && k.status !== "postponed" && !awaitingReview) {
               return (
                 <Tag
                   color={k.status === "done" ? C.green : incomplete ? C.red : C.blue}

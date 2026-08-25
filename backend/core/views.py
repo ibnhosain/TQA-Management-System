@@ -868,6 +868,18 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         # (জমে থাকা মিনিট বসে, হাজিরা পাকা হয়)
         if obj.status == "done" and was != "done":
             _finalize_session(obj, by=self.request.user)
+        # উস্তাদ ভুল করে "ক্লাস শেষ করুন" চেপে ফেললে ফেরার পথ — কর্তৃপক্ষ
+        # ক্লাসটিকে আবার "আসন্ন" করে দিলে যাচাই-বাকি অবস্থাও মুছে যায়, ফলে
+        # জয়েন/রিজয়েন বাটন ফিরে আসে এবং ক্লাসটি আবার চালানো যায়।
+        # ⚠️ কেবল স্ট্যাটাস বদলানোর অনুরোধেই — নইলে জুম লিংক বা সময় এডিট
+        # করতে গেলেই যাচাই-বাকি অবস্থাটা অজান্তে মুছে যেত।
+        if (
+            "status" in self.request.data
+            and obj.status == "upcoming"
+            and obj.teacher_finished
+        ):
+            obj.teacher_finished = False
+            obj.save(update_fields=["teacher_finished"])
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def today(self, request):  # লাইভ পপআপ + "আজকের ক্লাস"
