@@ -2358,14 +2358,18 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
         ? T(
             "সত্যিই কি ক্লাস শেষ করতে চান?" +
               "\n\n" +
-              "এবার পুরো ক্লাসটি শেষ হবে — হাজিরা ও ক্লাসের হিসাব চূড়ান্ত হয়ে " +
-              "ক্লাসটি \"সম্পন্ন\" হিসেবে তালিকাভুক্ত হবে এবং আজকের ক্লাসের " +
-              "তালিকা থেকে সরে যাবে।",
+              "শেষ করলে আজকের হাজিরা ও ক্লাসের হিসাব চূড়ান্ত হবে এবং ক্লাসটি " +
+              "কর্তৃপক্ষের যাচাইয়ের জন্য জমা পড়বে।" +
+              "\n\n" +
+              "যাচাই না হওয়া পর্যন্ত ক্লাসটি আজকের তালিকাতেই থাকবে। কর্তৃপক্ষ " +
+              "যাচাই শেষে \"সম্পন্ন\" চিহ্নিত করলে তবেই এটি তালিকা থেকে সরবে।",
             "Do you really want to end the class?" +
               "\n\n" +
-              "This finishes the whole class — the attendance and class " +
-              "record will be finalised, the class marked as completed and " +
-              "removed from today's list.",
+              "Today's attendance and class record will be finalised, and " +
+              "the class will be submitted for review by the administration." +
+              "\n\n" +
+              "Until it is reviewed, the class stays in today's list. It " +
+              "moves out only after the administration marks it completed.",
           )
         : T(
             "সত্যিই কি ১ম পর্ব শেষ করতে চান?" +
@@ -2373,15 +2377,13 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
               "শেষ করলে শিক্ষার্থীদের পোর্টালে সাথে সাথেই রিজয়েন বাটন চলে " +
               "যাবে। এরপর আপনি \"🔁 রিজয়েন করুন\" চেপে ২য় পর্ব শুরু করবেন।" +
               "\n\n" +
-              "ক্লাসটি এখনো \"সম্পন্ন\" হবে না, আজকের তালিকাতেই থাকবে — ২য় " +
-              "পর্ব শেষ করলে তবেই সম্পন্ন হবে।",
+              "এতে ক্লাস শেষ হবে না — ক্লাসটি আজকের তালিকাতেই থাকবে।",
             "Do you really want to end the first part?" +
               "\n\n" +
               "Your students will get the rejoin button right away. Then " +
               "press \"🔁 Rejoin\" to start the second part." +
               "\n\n" +
-              "The class will not be marked completed yet — it stays in " +
-              "today's list until the second part is finished.",
+              "This does not end the class — it stays in today's list.",
           ),
       async () => {
         setEnding(true);
