@@ -2399,8 +2399,22 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
         if (!usingApi) return;
         try {
           if (min >= 1) await api.checkpointClass(k.id, min).catch(() => {});
-          await api.finishClass(k.id);
+          const res = await api.finishClass(k.id);
           onFinished?.();
+          /* সার্ভারে পৌঁছেছে বলে জানিয়ে দিই — প্যানেল তো সাথে সাথেই বন্ধ হয়ে
+             যায়, তাই কোনো বার্তা না দিলে উস্তাদ বুঝতেন না কাজটা হলো কি না।
+             কোন পর্ব শেষ হলো তা সার্ভারই বলে দেয় (part_finished)। */
+          notice(
+            res?.part_finished === 1
+              ? T(
+                  "✅ ১ম পর্ব শেষ — এবার \"🔁 রিজয়েন করুন\" চেপে ২য় পর্ব শুরু করুন।",
+                  "✅ First part ended — now press \"🔁 Rejoin\" to start the second part.",
+                )
+              : T(
+                  "✅ ক্লাস শেষ হয়েছে — কর্তৃপক্ষের যাচাইয়ের জন্য জমা হলো।",
+                  "✅ Class ended — submitted for review by the administration.",
+                ),
+          );
         } catch (e) {
           notice(
             T(
