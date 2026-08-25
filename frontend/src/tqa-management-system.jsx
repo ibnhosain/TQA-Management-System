@@ -2194,6 +2194,18 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
   }, [k.id]);
 
   const bothIn = user.role === "teacher" ? !!presence?.sa : !!presence?.ta;
+  /* এই পর্বে দুজনে অন্তত একবার সত্যিই মিলেছেন কিনা।
+
+     ⚠️ আগে সবুজ লেখাটা presence.myPresent দেখে বসত — সেটা একবার সত্য হলে সারা
+     দিনই সত্য থাকে। ফলে ২য় পর্বে উস্তাদ জুম খুলে বসে আছেন, শিক্ষার্থী এখনো
+     আসেননি — তবুও উপরে "✓ Teacher & student join confirmed" আর ঠিক নিচে
+     "⏳ শিক্ষার্থীর জয়েনের অপেক্ষায়…" একসাথে দেখাত। এখন এটা কেবল চলতি পর্বের
+     কথা বলে। প্যানেল প্রতি পর্বে নতুন করে মাউন্ট হয়, তাই আলাদা করে রিসেট
+     করার দরকার নেই — নতুন পর্ব মানেই নতুন করে শুরু। */
+  const [metThisPart, setMetThisPart] = useState(false);
+  useEffect(() => {
+    if (bothIn) setMetThisPart(true);
+  }, [bothIn]);
 
   // bothIn/inMeeting বদলালেই accumulatedMsRef/activeSinceRef হালনাগাদ করি —
   // এটাই "সত্যিকারের" হিসাব, টাইমার-নির্ভর নয়
@@ -2573,18 +2585,22 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
           )}
         </div>
       )}
-      {/* দুটো আলাদা তথ্য, তাই আলাদা করেই দেখাই —
-          (১) হাজিরা: একবার নিশ্চিত হলে চিরকালের জন্য নিশ্চিত, কখনো ফিরিয়ে
-              নেওয়া হয় না। তাই সবুজ লেখাটা থেকেই যায়।
-          (২) এই মুহূর্তে অন্যজন মিটিংয়ে আছেন কিনা — এটা বদলাতে থাকে।
-          আগে দুটোকে এক করে ফেলা হয়েছিল: হাজিরা নিশ্চিত হয়ে গেলে লাইভ
-          অবস্থার লেখাটা চাপা পড়ে যেত, ফলে অন্যজন সত্যিই না থাকলেও
-          "✓ হাজিরা নিশ্চিত" দেখে মনে হতো তিনি আছেন। */}
-      {done && (
+      {/* উপরের সবুজ লেখাটা চলতি পর্বের খবর দেয়, আর নিচের হলুদ লেখাটা এই
+          মুহূর্তের অবস্থা — দুটো আলাদা তথ্য, তাই আলাদা করেই দেখাই। (একসাথে
+          মিলিয়ে ফেলা যাবে না: আগে তাতে সবুজ লেখাটা লাইভ অবস্থাকে চাপা দিয়ে
+          দিত, ফলে অন্যজন না থাকলেও মনে হতো তিনি আছেন।)
+            • এই পর্বে দুজনে মিলে গেছেন   → "Teacher & student join confirmed"
+            • ২য় পর্ব চলছে, এখনো মেলেননি  → "The first part of the class has ended"
+            • ১ম পর্ব, এখনো মেলেননি        → কিছুই না, শুধু নিচের অপেক্ষার লেখা */}
+      {metThisPart ? (
         <div style={{ fontWeight: 800, color: C.green }}>
           ✓ Teacher &amp; student join confirmed
         </div>
-      )}
+      ) : presence?.rejoin ? (
+        <div style={{ fontWeight: 800, color: C.green }}>
+          ✅ The first part of the class has ended
+        </div>
+      ) : null}
       {!bothIn ? (
         <span style={{ fontWeight: 700, color: C.gold }}>
           {T(
