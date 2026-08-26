@@ -3509,6 +3509,12 @@ function ClassesView({
               )}
             </>
           )}
+          {/* দারস পড়ানোর পর্দা — ক্লাসের পাশ থেকেই, আলাদা মেনুতে না গিয়ে।
+              উস্তাদ নিজের ক্লাসে, আর পরিচালক/এডমিন যেকোনো ক্লাসে। */}
+          {k.status !== "postponed" && k.courseId &&
+            (isTeacherOf || isAdm(user)) && (
+              <TeachFromClass courseId={k.courseId} label={k.courseName} />
+            )}
           {/* ট্রায়াল ক্লাসের উস্তাদ এখান থেকেই মূল্যায়ন লিখতে পারেন —
               তাঁর আলাদা কোনো পর্দা নেই, তাই ক্লাসের পাশেই */}
           {k.kind === "ট্রায়াল ক্লাস" &&
@@ -17899,6 +17905,92 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
             + নতুন ধাপ
           </Btn>
         </div>
+      )}
+    </>
+  );
+}
+
+/* ক্লাসের পাশ থেকেই শিক্ষক মোড — উস্তাদকে আর আলাদা মেনুতে গিয়ে দারস
+   খুঁজতে হয় না।
+
+   ⚠️ বোতামটি চাপার আগে সার্ভারে কোনো অনুরোধ যায় না — ক্লাসের পাতায়
+   অনেকগুলো ক্লাস থাকে, প্রত্যেকটির জন্য আগেভাগে দারস আনলে পাতা খোলার
+   খরচই বেড়ে যেত। */
+function TeachFromClass({ courseId, label }) {
+  const [pick, setPick] = useState(null); // একাধিক দারস — কোনটি?
+  const [teachId, setTeachId] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const open = async () => {
+    setBusy(true);
+    try {
+      const rows = (await api.lessons(courseId)) || [];
+      // পড়ানোর জন্য তৈরি বলতে — প্রকাশিত, আর ধাপ লেখা আছে
+      const ready = rows.filter(
+        (l) => l.status === "published" && (l.step_count || 0) > 0,
+      );
+      if (!ready.length) {
+        notice(
+          "এই কোর্সে পড়ানোর জন্য তৈরি কোনো দারস নেই — “📗 দারস স্ক্রিপ্ট” " +
+            "পাতা থেকে লিখে “প্রকাশিত” করে নিন।",
+        );
+      } else if (ready.length === 1) {
+        setTeachId(ready[0].id);
+      } else {
+        ready.sort(
+          (a, b) =>
+            a.title.localeCompare(b.title) || a.age_from - b.age_from,
+        );
+        setPick(ready);
+      }
+    } catch (e) {
+      notice("দারস আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <Btn sm kind="soft" onClick={open} disabled={busy}>
+        {busy ? "…" : "📗 শিক্ষক মোড"}
+      </Btn>
+
+      {pick && (
+        <Modal
+          title={"📗 কোন দারসটি পড়াবেন?" + (label ? ` — ${label}` : "")}
+          onClose={() => setPick(null)}
+        >
+          <div style={{ display: "grid", gap: 8 }}>
+            {pick.map((l) => (
+              <button
+                key={l.id}
+                onClick={() => {
+                  setPick(null);
+                  setTeachId(l.id);
+                }}
+                style={{
+                  ...S.card,
+                  padding: 12,
+                  textAlign: "left",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  border: `1.5px solid ${C.emerald}`,
+                }}
+              >
+                <div style={{ fontWeight: 800, color: C.text }}>{l.title}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
+                  {bandLabel(l)} · {bn(l.step_count || 0)} ধাপ ·{" "}
+                  {bn(l.duration_min)} মিনিট
+                </div>
+              </button>
+            ))}
+          </div>
+        </Modal>
+      )}
+
+      {teachId && (
+        <TeacherMode id={teachId} onClose={() => setTeachId(null)} />
       )}
     </>
   );
