@@ -7,7 +7,7 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      Submission, ExamResult, FeePayment, DueMonth, TeacherPayment,
                      SentReceipt, Admission, LeaveRequest, Rating, StudentRemark, Notice,
                      Notification, PushSubscription, WaMessage, LibraryBook,
-                     CourseSyllabusSheet, LessonSection)
+                     CourseSyllabusSheet, LessonSection, TrialReport)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -32,6 +32,30 @@ class UserSerializer(serializers.ModelSerializer):
         # .values_list()-এর বদলে .all() ইটারেট — prefetch_related("due_months") এর ক্যাশ
         # ব্যবহার হয়, নইলে প্রতি ব্যবহারকারীতে আলাদা কোয়েরি হতো (N+1)
         return [d.month_label for d in obj.due_months.all()]
+
+
+class TrialReportSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source="student.name_bn", read_only=True)
+    student_username = serializers.CharField(source="student.username", read_only=True)
+    guardian = serializers.CharField(source="student.guardian", read_only=True)
+    phone = serializers.CharField(source="student.phone", read_only=True)
+    course_name = serializers.CharField(source="student.trial_course.name", read_only=True)
+    teacher_name = serializers.CharField(source="student.teacher.name_bn", read_only=True)
+    written_by = serializers.CharField(source="created_by.name_bn", read_only=True)
+    reviewed_by_name = serializers.CharField(source="reviewed_by.name_bn", read_only=True)
+    recommended_course_name = serializers.CharField(
+        source="recommended_course.name", read_only=True)
+
+    class Meta:
+        model = TrialReport
+        fields = ["id", "student", "student_name", "student_username", "guardian",
+                  "phone", "course_name", "teacher_name", "scores", "strengths",
+                  "work_on", "advice", "recommended_course",
+                  "recommended_course_name", "recommended_level", "written_by",
+                  "reviewed_by_name", "created_at", "updated_at", "reviewed_at",
+                  "sent_at"]
+        # এই তিনটি কেবল যাচাই/পাঠানোর অ্যাকশন দিয়েই বসে, সরাসরি লেখা যায় না
+        read_only_fields = ["created_at", "updated_at", "reviewed_at", "sent_at"]
 
 
 class TrialSerializer(serializers.ModelSerializer):

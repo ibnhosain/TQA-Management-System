@@ -445,6 +445,15 @@ export const api = {
   editTrial: (id, d) => request(`/trials/${id}/`, { method: "PATCH", body: d }),
   resetTrialPassword: (id) =>
     request(`/trials/${id}/reset_password/`, { method: "POST" }),
+  // ── ট্রায়াল মূল্যায়ন — উস্তাদ লেখেন, কর্তৃপক্ষ যাচাই করে পাঠান ──
+  trialReports: () => request("/trial-reports/"),
+  createTrialReport: (d) => request("/trial-reports/", { method: "POST", body: d }),
+  editTrialReport: (id, d) =>
+    request(`/trial-reports/${id}/`, { method: "PATCH", body: d }),
+  reviewTrialReport: (id) =>
+    request(`/trial-reports/${id}/review/`, { method: "POST" }),
+  sendTrialReport: (id) =>
+    request(`/trial-reports/${id}/send/`, { method: "POST" }),
   // যাদের এখনো স্টুডেন্ট আইডি নেই তাদের সবার জন্য তৈরি (কেবল পরিচালক)
   backfillStudentIds: () => request("/users/backfill_student_ids/", { method: "POST" }),
   allTeachers: () => request("/users/teachers/"),

@@ -527,6 +527,47 @@ class Admission(models.Model):
     applied_at = models.DateField(auto_now_add=True)
 
 
+class TrialReport(models.Model):
+    """ট্রায়াল শেষে উস্তাদের মূল্যায়ন — পরিবারের হাতে যাওয়া লিখিত রিপোর্ট।
+
+    প্রতি অতিথির একটিমাত্র রিপোর্ট (OneToOne) — উস্তাদ ১ম পর্বের পর লিখে
+    রাখতে পারেন, ২য় ক্লাসের পর হালনাগাদ করতে পারেন; দুবার আলাদা রিপোর্ট
+    তৈরি হয় না।
+
+    তিনটি ধাপ, তিনটি সময়ের ঘর —
+      created_at  : উস্তাদ লিখেছেন
+      reviewed_at : পরিচালক/এডমিন যাচাই করেছেন
+      sent_at     : পরিবারের কাছে পাঠানো হয়েছে
+    যাচাই না হওয়া পর্যন্ত পরিবারের কাছে যায় না — ক্লাস "সম্পন্ন" চিহ্নিত
+    করার নিয়মে যেভাবে কর্তৃপক্ষের ধাপ রাখা আছে, ঠিক সেভাবেই।
+    """
+    student = models.OneToOneField(User, on_delete=models.CASCADE,
+                                   related_name="trial_report",
+                                   limit_choices_to={"role": "trial"})
+    # {"letters": 4, "makhraj": 3, ...} — নামগুলো ঘরের ভেতরেই থাকে, তাই পরে
+    # নতুন মাপকাঠি যোগ বা নাম বদলাতে ডাটাবেস ছুঁতে হবে না
+    scores = models.JSONField(default=dict, blank=True)
+    strengths = models.TextField("শক্তির দিক", blank=True, default="")
+    work_on = models.TextField("যা নিয়ে কাজ করতে হবে", blank=True, default="")
+    advice = models.TextField("উস্তাদের পরামর্শ", blank=True, default="")
+    recommended_course = models.ForeignKey(
+        Course, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="trial_recommendations", verbose_name="উপযুক্ত কোর্স")
+    recommended_level = models.CharField("উপযুক্ত স্তর", max_length=60,
+                                         blank=True, default="")
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                   blank=True, related_name="trial_reports_written")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                    blank=True, related_name="trial_reports_reviewed")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"ট্রায়াল রিপোর্ট — {self.student.name_bn}"
+
+
 class LeaveRequest(models.Model):
     STATUS = [("pending_admin", "এডমিনের কাছে"), ("forwarded", "পরিচালকের কাছে"),
               ("approved", "মঞ্জুর"), ("rejected", "নামঞ্জুর")]

@@ -1468,6 +1468,87 @@ class _PublicFormThrottle(AnonRateThrottle):
     rate = "5/min"  # একই ভিজিটর মিনিটে সর্বোচ্চ ৫টি ফরম — spam ঠেকাতে
 
 
+class TrialReportViewSet(viewsets.ModelViewSet):
+    """ট্রায়াল মূল্যায়ন — উস্তাদ লেখেন, কর্তৃপক্ষ যাচাই করে পাঠান।
+
+    কে কী পারেন —
+      উস্তাদ        : নিজের ট্রায়াল অতিথির রিপোর্ট লেখা ও হালনাগাদ (যাচাইয়ের আগ পর্যন্ত)
+      পরিচালক/এডমিন : সব রিপোর্ট দেখা, সম্পাদনা, যাচাই ও পাঠানো
+      অতিথি         : কেবল নিজেরটি, আর কেবল পাঠানোর পর
+      শিক্ষার্থী     : কিছুই নয়
+    """
+    serializer_class = TrialReportSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        u = self.request.user
+        qs = TrialReport.objects.select_related(
+            "student", "student__trial_course", "student__teacher",
+            "created_by", "reviewed_by", "recommended_course")
+        if u.role in ("director", "admin"):
+            return qs
+        if u.role == "teacher":
+            # নিজের অতিথি, অথবা নিজে যে রিপোর্টটি লিখেছেন
+            return qs.filter(Q(student__teacher=u) | Q(created_by=u)).distinct()
+        if u.role == "trial":
+            # ⚠️ পাঠানোর আগে অতিথি নিজের রিপোর্টও দেখতে পাবেন না — খসড়া
+            # অবস্থায় কারও চোখে পড়া চলবে না
+            return qs.filter(student=u, sent_at__isnull=False)
+        return qs.none()
+
+    def _may_write(self, student):
+        u = self.request.user
+        if u.role in ("director", "admin"):
+            return True
+        return u.role == "teacher" and student.teacher_id == u.id
+
+    def perform_create(self, serializer):
+        student = serializer.validated_data.get("student")
+        if not student or student.role != "trial":
+            raise PermissionDenied("রিপোর্ট কেবল ট্রায়াল অতিথির জন্য")
+        if not self._may_write(student):
+            raise PermissionDenied("এই অতিথির উস্তাদ আপনি নন")
+        serializer.save(created_by=self.request.user)
+
+    def perform_update(self, serializer):
+        obj = serializer.instance
+        u = self.request.user
+        if not self._may_write(obj.student):
+            raise PermissionDenied("এই রিপোর্ট সম্পাদনার অনুমতি নেই")
+        # যাচাই হয়ে যাওয়ার পর উস্তাদ আর বদলাতে পারবেন না — কর্তৃপক্ষ পারবেন
+        if obj.reviewed_at and u.role not in ("director", "admin"):
+            raise PermissionDenied(
+                "রিপোর্টটি যাচাই হয়ে গেছে — বদলাতে হলে পরিচালককে বলুন")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if self.request.user.role != "director":
+            raise PermissionDenied("রিপোর্ট মোছা কেবল পরিচালকের এখতিয়ার")
+        instance.delete()
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAdminLevel])
+    def review(self, request, pk=None):
+        """যাচাই সম্পন্ন — এরপর অতিথির কাছে পাঠানো যাবে।"""
+        r = self.get_object()
+        r.reviewed_by = request.user
+        r.reviewed_at = timezone.now()
+        r.save(update_fields=["reviewed_by", "reviewed_at"])
+        return Response(self.get_serializer(r).data)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAdminLevel])
+    def send(self, request, pk=None):
+        """পরিবারের কাছে পাঠানো হলো — এরপর অতিথি নিজের পোর্টালে দেখতে পান।"""
+        r = self.get_object()
+        if not r.reviewed_at:
+            return Response(
+                {"error": "আগে যাচাই করুন — যাচাই ছাড়া রিপোর্ট পাঠানো যাবে না"},
+                status=400)
+        if not r.sent_at:
+            r.sent_at = timezone.now()
+            r.save(update_fields=["sent_at"])
+        return Response(self.get_serializer(r).data)
+
+
 class TrialViewSet(viewsets.ModelViewSet):
     """ট্রায়াল (সাময়িক অতিথি) অ্যাকাউন্ট — তৈরি, তালিকা, মেয়াদ/কোর্স বদল।
 
