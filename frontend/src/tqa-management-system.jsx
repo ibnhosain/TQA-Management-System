@@ -16458,6 +16458,373 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   );
 }
 
+/* ═══════════ ট্রায়াল অতিথির নিজের পোর্টাল (ইংরেজি) ═══════════
+   ছোট ও পরিষ্কার — মেয়াদ, আজকের ট্রায়াল ক্লাস, পরিচালকের সাজানো ট্রায়াল
+   দারস পরিকল্পনা, কোর্সের সিলেবাস আর বই। এর বাইরে কিছুই নয়: ফি, পরীক্ষা,
+   অ্যাসাইনমেন্ট, রিপোর্ট — কোনোটাই অতিথির জন্য নয়, আর সার্ভারও সেগুলো
+   তাঁকে দেয় না। */
+function TrialPortal({ user }) {
+  const [tab, setTab] = useState("home");
+  const [classes, setClasses] = useState([]);
+  const [course, setCourse] = useState(null);
+  const [sections, setSections] = useState([]);
+  const [sheet, setSheet] = useState(null);
+  const [books, setBooks] = useState([]);
+  const [openTopic, setOpenTopic] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  const daysLeft = (() => {
+    if (!user.trial_until) return null;
+    const end = new Date(user.trial_until + "T00:00:00");
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return Math.round((end - now) / 86400000);
+  })();
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        /* কোর্স আগে — সার্ভার অতিথিকে কেবল তাঁর নিজের কোর্সটিই দেয়, তাই
+           তালিকার প্রথমটাই তাঁর কোর্স */
+        const [cs, todays, allBooks] = await Promise.all([
+          api.courses().catch(() => []),
+          api.todayClasses().catch(() => []),
+          api.books().catch(() => []),
+        ]);
+        if (!alive) return;
+        const c = (cs || [])[0] || null;
+        setCourse(c);
+        setClasses(todays || []);
+        const ids = new Set((c?.books || []).map(String));
+        setBooks((allBooks || []).filter((b) => ids.has(String(b.id))));
+        if (c) {
+          const [secs, sh] = await Promise.all([
+            api.lessonSections(c.id).catch(() => []),
+            api.syllabusSheet(c.id).catch(() => null),
+          ]);
+          if (!alive) return;
+          setSections(secs || []);
+          setSheet(sh || null);
+        }
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const covered = sections.reduce(
+    (n, sec) =>
+      n + (sec.topics || []).filter((t) => t.covered === "covered").length,
+    0,
+  );
+  const totalTopics = sections.reduce(
+    (n, sec) => n + (sec.topics || []).length,
+    0,
+  );
+
+  const tabBtn = (id, label) => (
+    <Btn
+      sm
+      kind={tab === id ? "gold" : "soft"}
+      onClick={() => setTab(id)}
+    >
+      {label}
+    </Btn>
+  );
+
+  if (loading) return <Loader text="Loading your trial" />;
+
+  return (
+    <>
+      {/* ───── মেয়াদ ও ভর্তির ডাক ───── */}
+      <div
+        style={{
+          ...S.card,
+          padding: 16,
+          marginBottom: 14,
+          background: C.amberBg,
+          border: `1.5px solid ${C.goldL}`,
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ fontWeight: 800, color: C.gold }}>
+            🌱 Free trial
+            {daysLeft != null &&
+              (daysLeft > 0
+                ? ` · ${daysLeft} day${daysLeft === 1 ? "" : "s"} left`
+                : daysLeft === 0
+                  ? " · last day"
+                  : " · ended")}
+          </div>
+          <div style={{ fontSize: 12.5, color: C.text }}>
+            {course
+              ? `You are trying ${course.name}` +
+                (course.teacher_name ? ` with ${course.teacher_name}` : "")
+              : "Your course will be set up shortly, in shaa Allah."}
+            {user.trial_until
+              ? ` · until ${fmtDate(user.trial_until)}`
+              : ""}
+          </div>
+        </div>
+        <a
+          href="https://tarbiyatulquran.org/admission.html"
+          target="_blank"
+          rel="noreferrer"
+          style={{ textDecoration: "none" }}
+        >
+          <Btn kind="gold">✍️ Join the Academy</Btn>
+        </a>
+      </div>
+
+      {/* ───── আজকের ক্লাস ───── */}
+      <Section title="Your trial class">
+        {classes.length === 0 && (
+          <div style={{ color: C.muted, fontSize: 14 }}>
+            No class scheduled for today. Your teacher will let you know the
+            next one, in shaa Allah.
+          </div>
+        )}
+        {classes.map((k) => (
+          <div
+            key={k.id}
+            style={{
+              ...S.card,
+              padding: 15,
+              display: "flex",
+              gap: 12,
+              alignItems: "center",
+              flexWrap: "wrap",
+              border: `1.5px solid ${C.emerald}`,
+              background: C.greenBg,
+              marginBottom: 8,
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 190 }}>
+              <div style={{ fontWeight: 800 }}>
+                {k.course_name || course?.name} — Trial Class
+              </div>
+              <div style={{ fontSize: 12.5, color: C.muted }}>
+                {[k.time, k.teacher_name, `${k.duration_min || 60} min`]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </div>
+            </div>
+            <a
+              href={k.rejoin_active ? k.zoom_link_2 || k.zoom_link : k.zoom_link}
+              target="_blank"
+              rel="noreferrer"
+              style={{ textDecoration: "none" }}
+            >
+              <Btn kind="primary">
+                {k.rejoin_active ? "🔁 Rejoin Zoom" : "🎥 Join Zoom"}
+              </Btn>
+            </a>
+          </div>
+        ))}
+      </Section>
+
+      {/* ───── তিনটি ট্যাব ───── */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "4px 0 14px" }}>
+        {tabBtn("home", "🗂️ Trial Lesson Plan")}
+        {tabBtn("syllabus", "📜 Course Syllabus")}
+        {tabBtn("books", `📚 Books (${books.length})`)}
+      </div>
+
+      {tab === "home" && (
+        <Section
+          title="Trial Lesson Plan"
+          sub={
+            totalTopics
+              ? `Prepared by the Academy for your trial · ${covered} of ${totalTopics} covered`
+              : "Prepared by the Academy for your trial"
+          }
+        >
+          {sections.length === 0 && (
+            <div style={{ color: C.muted, fontSize: 14 }}>
+              Your lesson plan will appear here shortly, in shaa Allah.
+            </div>
+          )}
+          {sections.map((sec) => (
+            <div key={sec.id} style={{ marginBottom: 14 }}>
+              <div
+                style={{
+                  fontWeight: 800,
+                  fontSize: 13,
+                  color: C.emerald,
+                  marginBottom: 6,
+                }}
+              >
+                {sec.name}
+              </div>
+              {(sec.topics || []).length === 0 && (
+                <div style={{ fontSize: 12.5, color: C.muted, paddingLeft: 4 }}>
+                  —
+                </div>
+              )}
+              {(sec.topics || []).map((tp) => {
+                const done = tp.covered === "covered";
+                return (
+                  <div
+                    key={tp.id}
+                    style={{
+                      border: `1px solid ${done ? C.emerald : C.line}`,
+                      background: done ? C.greenBg : "#fff",
+                      borderRadius: 10,
+                      padding: "9px 12px",
+                      marginBottom: 6,
+                    }}
+                  >
+                    <div
+                      onClick={() =>
+                        setOpenTopic((o) => ({ ...o, [tp.id]: !o[tp.id] }))
+                      }
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        cursor: tp.content ? "pointer" : "default",
+                        fontWeight: 600,
+                        fontSize: 13,
+                      }}
+                    >
+                      <span style={{ color: C.muted }}>
+                        {tp.content ? (openTopic[tp.id] ? "▾" : "▸") : "•"}
+                      </span>
+                      <span style={{ flex: 1 }}>{tp.text}</span>
+                      {done && (
+                        <span style={{ color: C.emerald, fontWeight: 800 }}>✔</span>
+                      )}
+                    </div>
+                    {openTopic[tp.id] && tp.content && (
+                      <div
+                        style={{ fontSize: 12.5, marginTop: 7, paddingLeft: 20 }}
+                        dangerouslySetInnerHTML={{ __html: tp.content }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>
+            Tap a topic to read what it covers. Green means your teacher has
+            already covered it with you.
+          </div>
+        </Section>
+      )}
+
+      {tab === "syllabus" && (
+        <Section
+          title="Course Syllabus"
+          sub={course ? `The full ${course.name} course` : ""}
+        >
+          {!sheet || !(sheet.rows || []).length ? (
+            <div style={{ color: C.muted, fontSize: 14 }}>
+              The syllabus for this course is being prepared.
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  borderCollapse: "collapse",
+                  width: "100%",
+                  minWidth: 480,
+                  fontSize: 13,
+                }}
+              >
+                <thead>
+                  <tr>
+                    {(sheet.headers || []).map((h, i) => (
+                      <th
+                        key={i}
+                        style={{
+                          textAlign: "left",
+                          padding: "8px 11px",
+                          background: C.greenBg,
+                          color: C.emerald,
+                          border: `1px solid ${C.line}`,
+                          fontWeight: 800,
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(sheet.rows || []).map((row, ri) => (
+                    <tr key={ri}>
+                      {(sheet.headers || []).map((_, ci) => (
+                        <td
+                          key={ci}
+                          style={{
+                            padding: "8px 11px",
+                            border: `1px solid ${C.line}`,
+                            verticalAlign: "top",
+                          }}
+                        >
+                          {(row || [])[ci] || ""}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Section>
+      )}
+
+      {tab === "books" && (
+        <Section title="Books" sub="Open or download">
+          {books.length === 0 && (
+            <div style={{ color: C.muted, fontSize: 14 }}>
+              No books have been attached to this course yet.
+            </div>
+          )}
+          <div style={{ display: "grid", gap: 8 }}>
+            {books.map((b) => (
+              <div
+                key={b.id}
+                style={{
+                  ...S.card,
+                  padding: 13,
+                  display: "flex",
+                  gap: 12,
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 160, fontWeight: 700 }}>
+                  📘 {b.name}
+                </div>
+                {b.file && (
+                  <a
+                    href={b.file}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ textDecoration: "none" }}
+                  >
+                    <Btn sm kind="soft">Open PDF</Btn>
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+    </>
+  );
+}
+
 /* ═══════════════ অ্যাপ শেল ═══════════════ */
 const NAV = [
   {
@@ -16465,7 +16832,8 @@ const NAV = [
     icon: "🏠",
     label: "ড্যাশবোর্ড",
     labelEn: "Dashboard",
-    roles: ["director", "admin", "teacher", "student"],
+    // ট্রায়াল অতিথির জন্য এই একটিমাত্র পাতা — তাঁর সবকিছু এখানেই
+    roles: ["director", "admin", "teacher", "student", "trial"],
   },
   {
     id: "classes",
@@ -17249,7 +17617,9 @@ function UpdateBanner({ lang }) {
 export default function App() {
   const [user, setUser] = useState(null);
   const T = (bnText, enText) => (user?.role === "student" ? enText : bnText);
-  CURRENT_LANG = user?.role === "student" ? "en" : "bn"; // fmtDate সব জায়গায় এই ভাষা মেনে চলে
+  // ট্রায়াল অতিথিরাও শিক্ষার্থীদের মতোই ইংরেজি পোর্টাল দেখেন
+  CURRENT_LANG =
+    user?.role === "student" || user?.role === "trial" ? "en" : "bn"; // fmtDate সব জায়গায় এই ভাষা মেনে চলে
   const [restoring, setRestoring] = useState(hasToken());
   const [db, setDb] = useState(seedDB);
   // কোন পেজে ছিলেন তা মনে রাখি — মোবাইলে ব্যাকগ্রাউন্ডে গেলে ব্রাউজার পেজটা
@@ -18138,7 +18508,12 @@ export default function App() {
 
         {/* কনটেন্ট */}
         <main style={{ flex: 1, padding: "20px 18px", minWidth: 0 }}>
-          {view === "overview" && <Overview {...props} goTo={setView} />}
+          {view === "overview" &&
+            (user.role === "trial" ? (
+              <TrialPortal user={user} />
+            ) : (
+              <Overview {...props} goTo={setView} />
+            ))}
           {view === "classes" && (
             <ClassesView
               {...props}

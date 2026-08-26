@@ -205,6 +205,13 @@ class CourseViewSet(viewsets.ModelViewSet):
             return qs.filter(Q(teacher=u) | Q(students__teacher=u)).distinct()
         if u.role == "student":
             return qs.filter(students=u)
+        # ⚠️ ট্রায়াল অতিথিকে আলাদা করে ধরতেই হবে। নিচের শেষ "return qs"
+        # পরিচালক/এডমিনের জন্য — কোনো ছাঁকনি ছাড়া সব। নতুন ভূমিকা যোগ করার
+        # পর ট্রায়ালও সেখানে গিয়ে পড়ত, অর্থাৎ একজন সাময়িক অতিথি একাডেমির
+        # সবকিছু দেখে ফেলতেন।
+        if u.role == "trial":
+            # অতিথি কেবল যে কোর্সটি দেখার জন্য তাঁকে ডাকা হয়েছে সেটিই
+            return qs.filter(pk=u.trial_course_id) if u.trial_course_id else qs.none()
         return qs
 
     def perform_update(self, serializer):
@@ -518,11 +525,19 @@ class LectureViewSet(viewsets.ModelViewSet):
     # prefetch_related("topics") → নেস্টেড topics প্রতি লেকচারে আলাদা কোয়েরি না করে
     # prefetch cache ব্যবহার করে (N+1 এড়ায়) — লেকচার প্ল্যান পেজে সব দারসের টপিক দেখায়
     queryset = Lecture.objects.prefetch_related(
-        "topics", "topics__coverages"
+        "topics", "topics__coverages", "topics__section"
     ).all()
     serializer_class = LectureSerializer
     permission_classes = [ReadAllWriteDirector]
     filterset_fields = ["course"]
+
+    def get_queryset(self):
+        """⚠️ ট্রায়াল অতিথির জন্য এই পুরনো পথটি বন্ধ। বাকি সবার জন্য আগের
+        মতোই — এখানে ভূমিকা দেখে কোনো ছাঁকনি ছিল না, নতুন করেও বসানো হয়নি,
+        যাতে কারও কিছু বদলে না যায়।"""
+        if self.request.user.role == "trial":
+            return Lecture.objects.none()
+        return super().get_queryset()
 
     def _student_id(self):
         """কোন শিক্ষার্থীর টিক দেখানো হবে।
@@ -626,6 +641,12 @@ class RoutineViewSet(viewsets.ModelViewSet):
             return qs.filter(Q(teacher=u) | Q(students__teacher=u)).distinct()
         if u.role == "student":
             return qs.filter(students=u)
+        # ⚠️ ট্রায়াল অতিথিকে আলাদা করে ধরতেই হবে। নিচের শেষ "return qs"
+        # পরিচালক/এডমিনের জন্য — কোনো ছাঁকনি ছাড়া সব। নতুন ভূমিকা যোগ করার
+        # পর ট্রায়ালও সেখানে গিয়ে পড়ত, অর্থাৎ একজন সাময়িক অতিথি একাডেমির
+        # সবকিছু দেখে ফেলতেন।
+        if u.role == "trial":
+            return qs.none()  # অতিথির নিজের রুটিন নেই, ক্লাসের সময় বলে দেওয়া হয়
         return qs
 
     def _generate_now(self, routine):
@@ -781,7 +802,9 @@ def _assert_session_participant(s, user):
         # এক কোর্সে একাধিক উস্তাদ থাকলে এটাই আসল সূত্র
         if user.id not in allowed and not s.students.filter(teacher=user).exists():
             raise PermissionDenied("এই ক্লাসের উস্তাদ আপনি নন")
-    elif user.role == "student":
+    elif user.role in ("student", "trial"):
+        # ট্রায়াল অতিথিও ঠিক শিক্ষার্থীর মতোই — এই ক্লাসের তালিকায় থাকলে
+        # জয়েন করতে পারবেন, না থাকলে নয়
         if not s.students.filter(pk=user.id).exists():
             raise PermissionDenied("এই ক্লাসে আপনি যুক্ত নন")
     else:
@@ -886,6 +909,12 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
             ).distinct()
         if u.role == "student":
             return qs.filter(students=u)
+        # ⚠️ ট্রায়াল অতিথিকে আলাদা করে ধরতেই হবে। নিচের শেষ "return qs"
+        # পরিচালক/এডমিনের জন্য — কোনো ছাঁকনি ছাড়া সব। নতুন ভূমিকা যোগ করার
+        # পর ট্রায়ালও সেখানে গিয়ে পড়ত, অর্থাৎ একজন সাময়িক অতিথি একাডেমির
+        # সবকিছু দেখে ফেলতেন।
+        if u.role == "trial":
+            return qs.filter(students=u)  # কেবল তাঁর নিজের ট্রায়াল ক্লাস
         return qs
 
     def perform_update(self, serializer):
@@ -1161,6 +1190,12 @@ class AssignmentViewSet(viewsets.ModelViewSet):
         if u.role == "teacher":
             # কোর্সের উস্তাদ, অথবা কোর্সে তাঁর নিজের শিক্ষার্থী আছে
             return qs.filter(_q_course_teacher_or_own(u)).distinct()
+        # ⚠️ ট্রায়াল অতিথিকে আলাদা করে ধরতেই হবে। নিচের শেষ "return qs"
+        # পরিচালক/এডমিনের জন্য — কোনো ছাঁকনি ছাড়া সব। নতুন ভূমিকা যোগ করার
+        # পর ট্রায়ালও সেখানে গিয়ে পড়ত, অর্থাৎ একজন সাময়িক অতিথি একাডেমির
+        # সবকিছু দেখে ফেলতেন।
+        if u.role == "trial":
+            return qs.none()  # ট্রায়ালে অ্যাসাইনমেন্ট নেই
         return qs
 
     def perform_create(self, serializer):
@@ -1202,6 +1237,12 @@ class ExamViewSet(viewsets.ModelViewSet):
         if u.role == "teacher":
             # কোর্সের উস্তাদ, অথবা কোর্সে তাঁর নিজের শিক্ষার্থী আছে
             return qs.filter(_q_course_teacher_or_own(u)).distinct()
+        # ⚠️ ট্রায়াল অতিথিকে আলাদা করে ধরতেই হবে। নিচের শেষ "return qs"
+        # পরিচালক/এডমিনের জন্য — কোনো ছাঁকনি ছাড়া সব। নতুন ভূমিকা যোগ করার
+        # পর ট্রায়ালও সেখানে গিয়ে পড়ত, অর্থাৎ একজন সাময়িক অতিথি একাডেমির
+        # সবকিছু দেখে ফেলতেন।
+        if u.role == "trial":
+            return qs.none()  # ট্রায়ালে পরীক্ষা নেই
         return qs
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
@@ -1706,6 +1747,9 @@ class StudentRemarkViewSet(viewsets.ModelViewSet):
         u = self.request.user
         qs = StudentRemark.objects.select_related("teacher", "student")
         student_id = self.request.query_params.get("student")
+        if u.role == "trial":
+            # অতিথি সম্পর্কে বা অন্য কারও সম্পর্কে কোনো মন্তব্যই তাঁর দেখার নয়
+            return qs.none()
         if u.role == "student":
             qs = qs.filter(student=u)
         elif u.role == "teacher":

@@ -23,7 +23,10 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ["id", "username", "role", "name", "name_bn", "sub", "sub_title",
                   "phone", "country", "guardian", "email", "monthly_fee",
                   "monthly_salary", "class_days", "can_fix_cross", "due_months",
-                  "student_id", "teacher", "teacher_name"]
+                  "student_id", "teacher", "teacher_name",
+                  # ট্রায়াল অতিথির নিজের পোর্টালে মেয়াদ ও কোর্স দেখাতে লাগে।
+                  # অন্য সব ভূমিকায় ঘর দুটি খালি (null) যায়, তাই কারও কিছু বদলায় না।
+                  "trial_until", "trial_course"]
 
     def get_due_months(self, obj):
         # .values_list()-এর বদলে .all() ইটারেট — prefetch_related("due_months") এর ক্যাশ
@@ -209,7 +212,7 @@ class LessonSectionSerializer(serializers.ModelSerializer):
 
 
 class LectureSerializer(serializers.ModelSerializer):
-    topics = LectureTopicSerializer(many=True, read_only=True)
+    topics = serializers.SerializerMethodField()
     # পুরনো পথ — সিলেবাস থেকে টপিক বাছাই। ফ্রন্টএন্ড আর ব্যবহার করে না, তবু
     # রেখে দেওয়া হলো যাতে পুরনো কোনো ক্লায়েন্ট/স্ক্রিপ্ট হঠাৎ ভেঙে না পড়ে।
     syllabus_item_ids = serializers.ListField(child=serializers.IntegerField(),
@@ -225,6 +228,20 @@ class LectureSerializer(serializers.ModelSerializer):
         # ধাঁচে নিজে থেকেই বসে যায় (নিচে _fill_title)
         extra_kwargs = {"no": {"required": False},
                         "title": {"required": False, "allow_blank": True}}
+
+    def get_topics(self, obj):
+        """⚠️ ট্রায়াল পরিকল্পনার টপিক এখানে আসে না।
+
+        দারস (Lecture) এখন কেবল লুকানো ধারক — নিয়মিত ও ট্রায়াল দুই
+        পরিকল্পনার টপিকই একই ধারকের নিচে বসে। এই পুরনো পথটি বরাবরই নিয়মিত
+        পরিকল্পনার, তাই ট্রায়ালের টপিক ছেঁকে বাদ দেওয়া হয় — নইলে
+        শিক্ষার্থী বা উস্তাদ এখান দিয়ে ট্রায়ালের পরিকল্পনা দেখে ফেলতেন।
+        """
+        rows = [
+            t for t in obj.topics.all()
+            if not (t.section_id and t.section and t.section.is_trial)
+        ]
+        return LectureTopicSerializer(rows, many=True, context=self.context).data
 
     @staticmethod
     def _fill_title(validated):
