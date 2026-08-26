@@ -17541,7 +17541,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
 }
 
 /* একটি দারস খোলা — উপরে দারসের নিজের তথ্য, নিচে ধাপগুলো */
-function LessonEditor({ id, canEdit, onClose, onChanged }) {
+function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
   const [lesson, setLesson] = useState(null);
   const [head, setHead] = useState(null); // উপরের ঘরগুলোর খসড়া
   const [loading, setLoading] = useState(true);
@@ -17690,6 +17690,11 @@ function LessonEditor({ id, canEdit, onClose, onChanged }) {
         <Btn sm kind="soft" onClick={onClose}>
           ← দারসের তালিকা
         </Btn>
+        {onTeach && steps.length > 0 && (
+          <Btn sm kind="gold" onClick={onTeach}>
+            ▶️ শিক্ষক মোড
+          </Btn>
+        )}
         <div style={{ flex: 1, minWidth: 160 }}>
           <div style={{ fontWeight: 800, fontSize: 16 }}>{lesson.title}</div>
           <div style={{ fontSize: 12, color: C.muted }}>
@@ -17902,6 +17907,8 @@ function LessonEditor({ id, canEdit, onClose, onChanged }) {
 /* দারসের তালিকা ও সম্পাদক */
 function LessonsView({ user, courses }) {
   const canEdit = isDir(user);
+  // কোন দারসটি এই মুহূর্তে শিক্ষক মোডে খোলা (খোলা না থাকলে null)
+  const [teachId, setTeachId] = useState(null);
   const [courseId, setCourseId] = useState("");
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18013,19 +18020,27 @@ function LessonsView({ user, courses }) {
     return <Tag color={C.gold} bg={C.amberBg}>খসড়া</Tag>;
   };
 
+  const teachOverlay = teachId && (
+    <TeacherMode id={teachId} onClose={() => setTeachId(null)} />
+  );
+
   if (openId)
     return (
-      <Section title="📗 দারস স্ক্রিপ্ট">
-        <LessonEditor
-          id={openId}
-          canEdit={canEdit}
-          onClose={() => {
-            setOpenId(null);
-            load();
-          }}
-          onChanged={load}
-        />
-      </Section>
+      <>
+        <Section title="📗 দারস স্ক্রিপ্ট">
+          <LessonEditor
+            id={openId}
+            canEdit={canEdit}
+            onClose={() => {
+              setOpenId(null);
+              load();
+            }}
+            onChanged={load}
+            onTeach={() => setTeachId(openId)}
+          />
+        </Section>
+        {teachOverlay}
+      </>
     );
 
   return (
@@ -18070,6 +18085,8 @@ function LessonsView({ user, courses }) {
 
       {loading && <Loader text="দারস লোড হচ্ছে" />}
 
+      {teachOverlay}
+
       {!loading && (
         <div style={{ display: "grid", gap: 8 }}>
           {lessons.length === 0 && (
@@ -18104,7 +18121,12 @@ function LessonsView({ user, courses }) {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                <Btn sm onClick={() => setOpenId(l.id)}>
+                {(l.step_count || 0) > 0 && (
+                  <Btn sm kind="gold" onClick={() => setTeachId(l.id)}>
+                    ▶️ শিক্ষক মোড
+                  </Btn>
+                )}
+                <Btn sm kind="soft" onClick={() => setOpenId(l.id)}>
                   {canEdit ? "✏️ খুলুন" : "👁️ দেখুন"}
                 </Btn>
                 {canEdit && (
@@ -18123,6 +18145,546 @@ function LessonsView({ user, courses }) {
         </div>
       )}
     </Section>
+  );
+}
+
+/* ═══════════════════ 🧑‍🏫 শিক্ষক মোড ═══════════════════
+   ক্লাস চলাকালে উস্তাদের সামনের পর্দা — একবারে একটি ধাপ, বড় করে,
+   পড়তে সহজ করে। ডান পাশে ওই মুহূর্তে শিক্ষার্থী ঠিক কী দেখছেন তাও
+   থাকে, যাতে উস্তাদকে আন্দাজ করতে না হয়।
+
+   ⚠️ এটি কেবল উস্তাদের নিজের যন্ত্রে চলে। শিক্ষার্থীর সাথে শেয়ার করার
+   জন্য নয় — ধাপ ৪-এ আলাদা "উপস্থাপনা উইন্ডো" আসবে, জুমে কেবল সেটিই
+   শেয়ার করা হবে, এই পর্দাটি কখনো নয়। */
+
+/* উস্তাদের স্ক্রিপ্টের সহায়ক ঘরগুলো — মূল বলার লাইনের নিচে ছোট করে */
+const TM_BLOCKS = [
+  ["teacher_does", "🤲 উস্তাদ করবেন", "#ffffff"],
+  ["student_does", "🧒 শিক্ষার্থী করবে", "#ffffff"],
+  ["expected", "✅ প্রত্যাশিত সাড়া", "#a7e8c4"],
+  ["correction", "🔧 ভুল হলে", "#ffd7a8"],
+  ["note", "📌 টীকা", "#cfd8e3"],
+];
+
+const mmss = (s) =>
+  `${bn(String(Math.floor(s / 60)).padStart(2, "0"))}:${bn(String(s % 60).padStart(2, "0"))}`;
+
+function TeacherMode({ id, onClose }) {
+  const [lesson, setLesson] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [i, setI] = useState(0);
+  const [drawer, setDrawer] = useState(false);
+  const [goal, setGoal] = useState(false); // দারসের লক্ষ্য খোলা আছে কিনা
+  const [total, setTotal] = useState(0); // ক্লাস শুরুর পর কত সেকেন্ড
+  const [inStep, setInStep] = useState(0); // এই ধাপে কত সেকেন্ড
+  const [running, setRunning] = useState(true);
+  // অক্ষরের আকার উস্তাদের নিজের পছন্দ — পরেরবারও যেন মনে থাকে
+  const [zoom, setZoom] = usePersistedState("tm_zoom", 1);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLesson(await api.lesson(id));
+      } catch (e) {
+        notice("দারসটি আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+        onClose();
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  /* ঘড়ি — মোট সময় ও এই ধাপের সময়, দুটোই */
+  useEffect(() => {
+    if (!running) return;
+    const iv = setInterval(() => {
+      setTotal((t) => t + 1);
+      setInStep((t) => t + 1);
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [running]);
+
+  /* পড়ানোর সময় পর্দা যেন নিজে থেকে নিভে না যায়। ব্রাউজার না চিনলে
+     কিছুই হয় না — আগের মতোই চলে। */
+  useEffect(() => {
+    let lock = null;
+    (async () => {
+      try {
+        lock = await navigator.wakeLock?.request("screen");
+      } catch (e) {
+        /* অনুমতি নেই বা ব্রাউজার চেনে না — উপেক্ষা */
+      }
+    })();
+    return () => {
+      try {
+        lock && lock.release();
+      } catch (e) {}
+    };
+  }, []);
+
+  /* খোলা থাকলে পেছনের পাতা যেন স্ক্রল না করে */
+  useEffect(() => {
+    const was = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = was;
+    };
+  }, []);
+
+  const steps = lesson?.steps || [];
+  const step = steps[i];
+
+  const go = (n) => {
+    if (n < 0 || n >= steps.length) return;
+    setI(n);
+    setInStep(0);
+    setDrawer(false);
+  };
+
+  /* কীবোর্ড — উস্তাদের হাত মাউসে না গিয়েও ধাপ বদলানো যায় */
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+      if (e.key === "Escape") return onClose();
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") {
+        e.preventDefault();
+        go(i + 1);
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        go(i - 1);
+      } else if (e.key === "Home") go(0);
+      else if (e.key === "End") go(steps.length - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i, steps.length]);
+
+  const wide = window.innerWidth > 1000;
+  const planned = step?.seconds || 0;
+  const over = planned > 0 && inStep > planned;
+
+  const shell = {
+    position: "fixed",
+    inset: 0,
+    zIndex: 120,
+    background: C.emeraldD,
+    color: "#fff",
+    display: "flex",
+    flexDirection: "column",
+    fontFamily: "inherit",
+  };
+
+  if (loading)
+    return (
+      <div style={{ ...shell, display: "grid", placeItems: "center" }}>
+        <div style={{ color: "#ffffffaa" }}>দারস লোড হচ্ছে…</div>
+      </div>
+    );
+
+  if (!steps.length)
+    return (
+      <div style={{ ...shell, display: "grid", placeItems: "center", gap: 14 }}>
+        <div style={{ fontSize: 16 }}>এই দারসে এখনো কোনো ধাপ লেখা হয়নি।</div>
+        <Btn kind="gold" onClick={onClose}>
+          ফিরে যান
+        </Btn>
+      </div>
+    );
+
+  const barBtn = {
+    border: "1px solid #ffffff33",
+    background: "#ffffff14",
+    color: "#fff",
+    borderRadius: 9,
+    padding: "6px 11px",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  };
+
+  return (
+    <div style={shell}>
+      {/* ───────── উপরের পট্টি ───────── */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "10px 14px",
+          borderBottom: "1px solid #ffffff1f",
+          flexWrap: "wrap",
+          flexShrink: 0,
+        }}
+      >
+        <button style={barBtn} onClick={() => setDrawer((d) => !d)}>
+          ☰ ধাপ
+        </button>
+        <div style={{ flex: 1, minWidth: 120 }}>
+          <div style={{ fontWeight: 800, fontSize: 14.5 }}>{lesson.title}</div>
+          <div style={{ fontSize: 11.5, color: "#ffffff99" }}>
+            {lesson.course_name} · {bn(lesson.age_from)}–{bn(lesson.age_to)} বছর
+          </div>
+        </div>
+
+        <span
+          style={{
+            background: C.gold,
+            color: "#fff",
+            borderRadius: 99,
+            padding: "4px 12px",
+            fontSize: 12.5,
+            fontWeight: 800,
+          }}
+        >
+          ধাপ {bn(i + 1)} / {bn(steps.length)}
+        </span>
+
+        {/* এই ধাপে কত সময় গেল — পরিকল্পনার চেয়ে বেশি হলে রঙ বদলায় */}
+        <span
+          style={{
+            background: over ? "#8a5a12" : "#ffffff14",
+            border: `1px solid ${over ? C.goldL : "#ffffff33"}`,
+            borderRadius: 9,
+            padding: "5px 10px",
+            fontSize: 12.5,
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+          }}
+          title="এই ধাপে কত সময় গেল / কত ধরা ছিল"
+        >
+          ⏱ {mmss(inStep)}
+          {planned ? (
+            <span style={{ color: over ? C.goldL : "#ffffff88" }}>
+              {" "}
+              / {mmss(planned)}
+            </span>
+          ) : null}
+        </span>
+        <span
+          style={{ fontSize: 12, color: "#ffffff88", whiteSpace: "nowrap" }}
+          title="ক্লাস শুরুর পর মোট সময়"
+        >
+          মোট {mmss(total)}
+        </span>
+
+        <button style={barBtn} onClick={() => setRunning((r) => !r)}>
+          {running ? "⏸" : "▶"}
+        </button>
+        <button
+          style={barBtn}
+          onClick={() => setZoom((z) => Math.max(0.75, +(z - 0.15).toFixed(2)))}
+        >
+          A−
+        </button>
+        <button
+          style={barBtn}
+          onClick={() => setZoom((z) => Math.min(2, +(z + 0.15).toFixed(2)))}
+        >
+          A+
+        </button>
+        {lesson.objectives && (
+          <button style={barBtn} onClick={() => setGoal((g) => !g)}>
+            🎯 লক্ষ্য
+          </button>
+        )}
+        <button
+          style={{ ...barBtn, background: "#ffffff26" }}
+          onClick={onClose}
+        >
+          ✕ বন্ধ
+        </button>
+      </div>
+
+      {/* অগ্রগতির রেখা */}
+      <div style={{ height: 4, background: "#ffffff1a", flexShrink: 0 }}>
+        <div
+          style={{
+            height: "100%",
+            width: `${((i + 1) / steps.length) * 100}%`,
+            background: C.goldL,
+            transition: "width .25s",
+          }}
+        />
+      </div>
+
+      {/* দারসের লক্ষ্য — চাইলে খোলা যায়, ⚠️ কেবল উস্তাদের জন্য */}
+      {goal && (
+        <div
+          style={{
+            padding: "12px 18px",
+            background: "#ffffff10",
+            borderBottom: "1px solid #ffffff1f",
+            fontSize: 13.5,
+            lineHeight: 1.85,
+            maxHeight: "30vh",
+            overflowY: "auto",
+            flexShrink: 0,
+          }}
+          dangerouslySetInnerHTML={{ __html: lesson.objectives }}
+        />
+      )}
+
+      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+        {/* ───────── ধাপের তালিকা ───────── */}
+        {drawer && (
+          <div
+            style={{
+              width: 250,
+              flexShrink: 0,
+              borderRight: "1px solid #ffffff1f",
+              overflowY: "auto",
+              background: "#00000026",
+            }}
+          >
+            {steps.map((st, n) => (
+              <button
+                key={st.id}
+                onClick={() => go(n)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  border: "none",
+                  borderBottom: "1px solid #ffffff14",
+                  background: n === i ? "#ffffff1f" : "transparent",
+                  color: n === i ? C.goldL : "#ffffffcc",
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ fontWeight: 800 }}>{bn(n + 1)}.</span>{" "}
+                {st.section || "নামহীন ধাপ"}
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: 11,
+                    color: "#ffffff77",
+                    marginTop: 2,
+                  }}
+                >
+                  {slideKindLabel(st.slide?.kind || "title")}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ───────── মূল অংশ ───────── */}
+        <div
+          style={{
+            flex: 1,
+            display: "grid",
+            gridTemplateColumns: wide ? "1.4fr 1fr" : "1fr",
+            minHeight: 0,
+            overflowY: "auto",
+          }}
+        >
+          {/* উস্তাদের স্ক্রিপ্ট */}
+          <div style={{ padding: wide ? "22px 26px" : "16px 14px", minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 12.5,
+                color: C.goldL,
+                fontWeight: 800,
+                letterSpacing: ".04em",
+                marginBottom: 10,
+              }}
+            >
+              {step.section || "নামহীন ধাপ"}
+            </div>
+
+            {/* মূল লাইন — উস্তাদ যা মুখে বলবেন */}
+            {step.teacher_says ? (
+              <div
+                style={{
+                  background: "#ffffff12",
+                  border: `1px solid ${C.goldL}55`,
+                  borderRadius: 14,
+                  padding: wide ? "20px 22px" : "14px 16px",
+                  fontSize: (wide ? 26 : 20) * zoom,
+                  lineHeight: 1.6,
+                  fontWeight: 600,
+                  whiteSpace: "pre-wrap",
+                  marginBottom: 16,
+                }}
+              >
+                🗣️ {step.teacher_says}
+              </div>
+            ) : (
+              <div
+                style={{
+                  color: "#ffffff66",
+                  fontSize: 14,
+                  marginBottom: 16,
+                  fontStyle: "italic",
+                }}
+              >
+                এই ধাপে বলার মতো কিছু লেখা নেই।
+              </div>
+            )}
+
+            <div style={{ display: "grid", gap: 10 }}>
+              {TM_BLOCKS.filter(([k]) => step[k]).map(([k, label, col]) => (
+                <div
+                  key={k}
+                  style={{
+                    background: "#ffffff0d",
+                    borderLeft: `3px solid ${col}66`,
+                    borderRadius: 10,
+                    padding: "10px 14px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: 800,
+                      color: col,
+                      marginBottom: 3,
+                    }}
+                  >
+                    {label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 15 * zoom,
+                      lineHeight: 1.65,
+                      whiteSpace: "pre-wrap",
+                      color: "#ffffffe6",
+                    }}
+                  >
+                    {step[k]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* শিক্ষার্থী এই মুহূর্তে যা দেখছেন */}
+          <div
+            style={{
+              padding: wide ? "22px 26px 22px 0" : "0 14px 16px",
+              minWidth: 0,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 12,
+                color: "#ffffff99",
+                fontWeight: 700,
+                marginBottom: 8,
+              }}
+            >
+              🖥️ শিক্ষার্থী এখন যা দেখছেন
+            </div>
+            <div
+              style={{
+                background: "#00000033",
+                borderRadius: 16,
+                padding: 10,
+                border: "1px solid #ffffff1f",
+              }}
+            >
+              <SlidePreview slide={step.slide} />
+            </div>
+
+            {steps[i + 1] && (
+              <div style={{ marginTop: 16 }}>
+                <div
+                  style={{
+                    fontSize: 11.5,
+                    color: "#ffffff77",
+                    fontWeight: 700,
+                    marginBottom: 6,
+                  }}
+                >
+                  ⏭️ এরপর — {steps[i + 1].section || "নামহীন ধাপ"}
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "#ffffffaa",
+                    lineHeight: 1.6,
+                    background: "#ffffff0a",
+                    borderRadius: 10,
+                    padding: "9px 12px",
+                  }}
+                >
+                  {(steps[i + 1].teacher_says || "—").slice(0, 120)}
+                  {(steps[i + 1].teacher_says || "").length > 120 ? "…" : ""}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ───────── নিচের পট্টি ───────── */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 14px",
+          borderTop: "1px solid #ffffff1f",
+          flexShrink: 0,
+        }}
+      >
+        <button
+          style={{
+            ...barBtn,
+            padding: "10px 18px",
+            fontSize: 14,
+            opacity: i === 0 ? 0.4 : 1,
+          }}
+          disabled={i === 0}
+          onClick={() => go(i - 1)}
+        >
+          ← আগের ধাপ
+        </button>
+        <div
+          style={{
+            flex: 1,
+            textAlign: "center",
+            fontSize: 11.5,
+            color: "#ffffff77",
+          }}
+        >
+          কীবোর্ড: ← → বা স্পেস · Esc বন্ধ
+        </div>
+        {i === steps.length - 1 ? (
+          <button
+            style={{
+              ...barBtn,
+              padding: "10px 18px",
+              fontSize: 14,
+              background: C.gold,
+              border: "none",
+            }}
+            onClick={onClose}
+          >
+            ✓ দারস শেষ
+          </button>
+        ) : (
+          <button
+            style={{
+              ...barBtn,
+              padding: "10px 18px",
+              fontSize: 14,
+              background: C.emeraldL,
+              border: "none",
+            }}
+            onClick={() => go(i + 1)}
+          >
+            পরের ধাপ →
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

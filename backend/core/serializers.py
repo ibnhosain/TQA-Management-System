@@ -138,6 +138,11 @@ class LessonSerializer(serializers.ModelSerializer):
     def get_step_count(self, obj):
         return len([x for x in obj.steps.all() if x.is_active])
 
+    def validate_objectives(self, v):
+        # এই লেখাটি HTML হিসেবেই উস্তাদের পর্দায় বসানো হয়, তাই কোডবেসের
+        # বাকি রিচ-টেক্সটের মতো এখানেও অনুমোদিত ট্যাগ ছাড়া সব ছেঁকে ফেলি
+        return clean_html(str(v or "")[:100000])
+
 
 class StageStepSerializer(serializers.ModelSerializer):
     """⚠️ শিক্ষার্থীর পর্দার জন্য — কেবল ক্রম ও স্লাইড।
