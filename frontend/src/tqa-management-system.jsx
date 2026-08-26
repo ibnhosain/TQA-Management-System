@@ -8696,7 +8696,11 @@ function AdmissionsView({ db, setDb, user, refresh }) {
       await loadData();
       if (res.username)
         notice(
-          `✔ ভর্তি সম্পন্ন — লগইন: ${res.username} · পাস: ${res.password}`,
+          res.converted
+            ? // ট্রায়াল অতিথিকে ভর্তি করা হলো — নতুন অ্যাকাউন্ট তৈরি হয়নি,
+              // তাই নতুন পাসওয়ার্ডও নেই; পুরনোটাই চলবে
+              `✔ ভর্তি সম্পন্ন — ট্রায়ালের আইডি ${res.username} দিয়েই চলবে, পাসওয়ার্ড আগেরটাই`
+            : `✔ ভর্তি সম্পন্ন — লগইন: ${res.username} · পাস: ${res.password}`,
         );
       if (refresh) refresh();
     } catch (e) {
@@ -18878,14 +18882,18 @@ export default function App() {
         ? "এডমিন"
         : user.role === "teacher"
           ? "উস্তাদ/উস্তাদা"
-          : "Student";
+          : // ট্রায়াল অতিথি ভর্তি হওয়া শিক্ষার্থী নন — তাঁর পাশে "Student"
+            // লেখা থাকলে বিভ্রান্তিকর হতো
+            user.role === "trial"
+            ? "Trial Student"
+            : "Student";
   const roleColor =
     user.role === "director"
       ? C.red
       : user.role === "admin"
         ? C.emerald
-        : user.role === "teacher"
-          ? C.gold
+        : user.role === "teacher" || user.role === "trial"
+          ? C.gold // অ্যাপে সোনালি মানেই ট্রায়াল/সাময়িক
           : C.blue;
   const nav = NAV.filter((n) => n.roles.includes(user.role));
   const props = { db, setDb, user, courses, refresh };

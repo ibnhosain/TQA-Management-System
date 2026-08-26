@@ -1473,6 +1473,35 @@ class _PublicFormThrottle(AnonRateThrottle):
     rate = "5/min"  # একই ভিজিটর মিনিটে সর্বোচ্চ ৫টি ফরম — spam ঠেকাতে
 
 
+def _convert_trial_to_student(u, course=None, fee=None):
+    """ট্রায়াল অতিথিকে নিয়মিত শিক্ষার্থী বানানো — একটাই জায়গা, দুই পথেই ডাকা।
+
+    দুই পথ: পরিচালকের "🎓 ভর্তি করুন" (ট্রায়াল পর্দা), আর ভর্তি আবেদন
+    গ্রহণ করা (ভর্তি আবেদন পর্দা)। দুটোই এখানে এসে মেলে, তাই একই ব্যক্তির
+    দুটো অ্যাকাউন্ট কখনো তৈরি হয় না।
+
+    ⚠️ নতুন অ্যাকাউন্ট বানানো হয় না — একই অ্যাকাউন্টেই ভূমিকা বদলায়। ফলে
+    ট্রায়ালের হাজিরা ও রিপোর্ট তাঁর সাথেই থাকে, আর পরিবারকে নতুন
+    আইডি-পাসওয়ার্ড পাঠাতেও হয় না।
+    ⚠️ trial_until/trial_course মোছা হয় না — কবে কোন কোর্সে ট্রায়াল
+    করেছিলেন সেই ইতিহাসটা থেকে যায়।
+    """
+    course = course or u.trial_course
+    try:
+        fee = int(fee) if fee is not None else DEFAULT_STUDENT_FEE
+    except (TypeError, ValueError):
+        fee = DEFAULT_STUDENT_FEE
+    u.role = "student"
+    u.monthly_fee = max(0, fee)
+    u.save(update_fields=["role", "monthly_fee"])
+    if course:
+        course.students.add(u)
+    from .student_id import assign_student_id
+    if assign_student_id(u, User):
+        u.save(update_fields=["student_id"])
+    return u
+
+
 class TrialReportViewSet(viewsets.ModelViewSet):
     """ট্রায়াল মূল্যায়ন — উস্তাদ লেখেন, কর্তৃপক্ষ যাচাই করে পাঠান।
 
@@ -1590,6 +1619,10 @@ class TrialReportViewSet(viewsets.ModelViewSet):
             return Response(self.get_serializer(r).data)  # দুবার চাপলেও একটাই আবেদন
         g = r.student
         Admission.objects.create(
+            # ⚠️ আবেদনটি অতিথির সাথে বেঁধে দেওয়া হয় — নইলে পরিচালক "ভর্তি
+            # আবেদন" পর্দা থেকে গ্রহণ করলে একই মানুষের দ্বিতীয় একটি নতুন
+            # অ্যাকাউন্ট তৈরি হয়ে যেত
+            created_student=g,
             kind="admission", name=g.name_bn, guardian=g.guardian or "",
             country=g.country or "", contact=g.phone or "", email=g.email or "",
             course_name=(r.recommended_course.name if r.recommended_course_id else ""),
@@ -1700,17 +1733,11 @@ class TrialViewSet(viewsets.ModelViewSet):
             or u.trial_course
         if not course:
             return Response({"error": "কোন কোর্সে ভর্তি হবেন তা বেছে দিন"}, status=400)
-        try:
-            fee = int(request.data.get("fee") or DEFAULT_STUDENT_FEE)
-        except (TypeError, ValueError):
-            fee = DEFAULT_STUDENT_FEE
-        u.role = "student"
-        u.monthly_fee = max(0, fee)
-        u.save(update_fields=["role", "monthly_fee"])
-        course.students.add(u)
-        from .student_id import assign_student_id
-        if assign_student_id(u, User):
-            u.save(update_fields=["student_id"])
+        _convert_trial_to_student(u, course, request.data.get("fee"))
+        # তাঁর ট্রায়াল থেকে আসা আবেদনটিও (থাকলে) গৃহীত হিসেবে বন্ধ করে দিই,
+        # নইলে "ভর্তি আবেদন" পর্দায় ঝুলে থেকে দ্বিতীয়বার গ্রহণের সুযোগ দিত
+        Admission.objects.filter(created_student=u, status="pending").update(
+            status="accepted")
         return Response(UserSerializer(u).data)
 
     def destroy(self, request, *args, **kwargs):
@@ -1792,6 +1819,19 @@ class AdmissionViewSet(viewsets.ModelViewSet):
             # স্টুডেন্ট অ্যাকাউন্ট তৈরি হওয়া ঠেকাতে — একবার গ্রহণ হয়ে গেলে
             # আর দ্বিতীয়বার গ্রহণ করা যাবে না
             return Response({"error": "এই আবেদনটি ইতিমধ্যে সিদ্ধান্ত নেওয়া হয়ে গেছে"}, status=400)
+        # ট্রায়াল থেকে আসা আবেদন — ওই অতিথিকেই ভর্তি করা হয়, নতুন অ্যাকাউন্ট
+        # নয়। তাই তাঁর আইডি-পাসওয়ার্ড আগেরটাই থাকে এবং ট্রায়ালের হাজিরা ও
+        # রিপোর্ট হারায় না।
+        guest = a.created_student
+        if guest and guest.role == "trial":
+            course = Course.objects.filter(name=a.course_name).first() \
+                or guest.trial_course
+            _convert_trial_to_student(guest, course, request.data.get("fee"))
+            a.status = "accepted"
+            a.save(update_fields=["status"])
+            return Response({"username": guest.username, "password": None,
+                             "converted": True})
+
         from .utils import make_password_str
         pwd = make_password_str(8)
         username = request.data.get("username") or f"student{User.objects.filter(role='student').count() + 1}"
