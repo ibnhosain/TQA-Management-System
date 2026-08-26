@@ -16880,6 +16880,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(null); // আইডি তৈরির ফর্ম খোলা আছে কিনা
   const [made, setMade] = useState(null); // সদ্য তৈরি — আইডি/পাসওয়ার্ড দেখানোর জন্য
+  const [sendFor, setSendFor] = useState(null); // কাকে বার্তা পাঠানো হচ্ছে
   const [reportFor, setReportFor] = useState(null); // মূল্যায়ন খোলা আছে কার
   const [reports, setReports] = useState([]); // কোন অতিথির রিপোর্ট কোন ধাপে
   const [busy, setBusy] = useState(false);
@@ -16926,6 +16927,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
       guardian: a ? a.guardian || "" : "",
       country: a ? a.country || "" : "",
       phone: a ? a.contact || "" : "",
+      email: a ? a.email || "" : "",
       course:
         (a &&
           (courses.find((c) => c.name === a.course_name) || {}).id) ||
@@ -16944,6 +16946,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
         guardian: form.guardian,
         country: form.country,
         phone: form.phone,
+        email: form.email,
         course: form.course || undefined,
         teacher: form.teacher || undefined,
         days: form.days,
@@ -16988,25 +16991,28 @@ function TrialView({ db, setDb, user, courses, refresh }) {
     }
   };
 
-  /* স্বাগত বার্তা — আইডি, পাসওয়ার্ড, কোর্স, উস্তাদ ও মেয়াদসহ একসাথে */
-  const waText = (t) =>
+  /* স্বাগত বার্তা — ইংরেজিতে, কারণ ট্রায়াল অতিথিদের বেশির ভাগই বিদেশে
+     এবং তাঁদের পোর্টালও ইংরেজি। আইডি, পাসওয়ার্ড, কোর্স, উস্তাদ ও মেয়াদ
+     একসাথেই থাকে, তাই আলাদা করে কিছু লিখতে হয় না। */
+  const WELCOME_SUBJECT = "Your free trial at Tarbiyatul Quran Academy";
+  const welcomeText = (t) =>
     [
-      `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম ${t.guardian || "অভিভাবক"},`,
+      `Assalamu Alaikum wa Rahmatullah, respected ${t.guardian || "Guardian"},`,
       "",
-      `আলহামদুলিল্লাহ — তারবিয়াতুল কুরআন একাডেমিতে ${t.name || t.name_bn}-এর ফ্রি ট্রায়ালের ব্যবস্থা হয়েছে।`,
+      `Alhamdulillah — a free trial has been arranged for ${t.name || t.name_bn} at Tarbiyatul Quran Academy.`,
       "",
-      "আমাদের পোর্টালে লগইন করুন:",
+      "Please log in to our portal:",
       "🔗 https://app.tarbiyatulquran.org",
-      `👤 আইডি: ${t.username}`,
-      `🔑 পাসওয়ার্ড: ${t.plain_password || ""}`,
+      `👤 ID: ${t.username}`,
+      `🔑 Password: ${t.plain_password || ""}`,
       "",
-      t.course_name ? `📘 কোর্স: ${t.course_name}` : "",
-      t.teacher_name ? `🧕 উস্তাদ/উস্তাদা: ${t.teacher_name}` : "",
-      t.trial_until ? `📅 ট্রায়ালের মেয়াদ: ${fmtDate(t.trial_until)} পর্যন্ত` : "",
+      t.course_name ? `📘 Course: ${t.course_name}` : "",
+      t.teacher_name ? `🧕 Teacher: ${t.teacher_name}` : "",
+      t.trial_until ? `📅 Trial valid until: ${fmtDate(t.trial_until)}` : "",
       "",
-      "পোর্টালে ঢুকে কোর্সের সিলেবাস, দারস পরিকল্পনা ও বই দেখতে পারবেন, আর নির্ধারিত সময়ে ক্লাসে যুক্ত হতে পারবেন ইনশাআল্লাহ।",
+      "Inside the portal you can read the course syllabus, the trial lesson plan and the books, and join your class at the scheduled time in shaa Allah.",
       "",
-      "জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি",
+      "Jazakumullahu khairan. — Tarbiyatul Quran Academy",
     ]
       .filter((x) => x !== "")
       .join("\n");
@@ -17016,9 +17022,27 @@ function TrialView({ db, setDb, user, courses, refresh }) {
     if (phone.length < 8)
       return notice("এই ট্রায়ালের কোনো WhatsApp নম্বর নেই — আগে নম্বরটি যোগ করুন।");
     window.open(
-      `https://wa.me/${phone}?text=${encodeURIComponent(waText(t))}`,
+      `https://wa.me/${phone}?text=${encodeURIComponent(welcomeText(t))}`,
       "_blank",
     );
+    setSendFor(null);
+  };
+
+  /* Gmail-এর লেখার পাতা খুলে দিই — প্রাপক, বিষয় ও পুরো বার্তা বসানো
+     অবস্থায়। ব্রাউজার নতুন ট্যাব খুলতে না দিলে ডিভাইসের নিজের মেইল
+     অ্যাপ (mailto) খোলার চেষ্টা করা হয়, যাতে কাজটা আটকে না থাকে। */
+  const sendMail = (t) => {
+    const to = String(t.email || "").trim();
+    if (!to || !to.includes("@"))
+      return notice("এই ট্রায়ালের কোনো ইমেইল নেই — আগে ইমেইলটি যোগ করুন।");
+    const su = encodeURIComponent(WELCOME_SUBJECT);
+    const body = encodeURIComponent(welcomeText(t));
+    const w = window.open(
+      `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${su}&body=${body}`,
+      "_blank",
+    );
+    if (!w) window.location.href = `mailto:${to}?subject=${su}&body=${body}`;
+    setSendFor(null);
   };
 
   const copyCreds = (t) => {
@@ -17181,8 +17205,8 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 <Btn sm kind="soft" onClick={() => copyCreds(t)}>
                   📋 আইডি-পাসওয়ার্ড
                 </Btn>
-                <Btn sm kind="soft" onClick={() => sendWa(t)}>
-                  💬 বার্তা
+                <Btn sm kind="soft" onClick={() => setSendFor(t)}>
+                  📨 বার্তা
                 </Btn>
                 <Btn sm kind="soft" onClick={() => resetPass(t)}>
                   🔄 পাসওয়ার্ড
@@ -17244,13 +17268,25 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 />
               </div>
             </div>
-            <div>
-              <label style={S.label}>WhatsApp নম্বর (কান্ট্রি কোডসহ)</label>
-              <input
-                style={S.input}
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <label style={S.label}>WhatsApp নম্বর (কান্ট্রি কোডসহ)</label>
+                <input
+                  style={S.input}
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                />
+              </div>
+              <div>
+                <label style={S.label}>ইমেইল (Gmail-এ বার্তা পাঠাতে)</label>
+                <input
+                  style={S.input}
+                  type="email"
+                  placeholder="name@example.com"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                />
+              </div>
             </div>
             <div>
               <label style={S.label}>কোন কোর্স দেখতে পাবেন</label>
@@ -17303,6 +17339,39 @@ function TrialView({ db, setDb, user, courses, refresh }) {
         </Modal>
       )}
 
+      {/* কোথায় পাঠাবেন — WhatsApp নাকি Gmail। যেটি বাছবেন সেই অ্যাপই খোলে,
+          আর বার্তাটাও সেই অনুযায়ী তৈরি হয়ে বসে থাকে। */}
+      {sendFor && (
+        <Modal
+          title={`📨 স্বাগত বার্তা — ${sendFor.name || sendFor.name_bn}`}
+          onClose={() => setSendFor(null)}
+        >
+          <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
+              বার্তাটি ইংরেজিতে তৈরি হয়ে যাবে — আইডি, পাসওয়ার্ড, কোর্স,
+              উস্তাদ ও মেয়াদসহ। কোথায় পাঠাবেন বেছে নিন।
+            </div>
+            <Btn
+              kind="gold"
+              onClick={() => sendWa(sendFor)}
+              style={{ justifyContent: "center", opacity: sendFor.phone ? 1 : 0.5 }}
+            >
+              💬 WhatsApp — {sendFor.phone || "নম্বর নেই"}
+            </Btn>
+            <Btn
+              kind="primary"
+              onClick={() => sendMail(sendFor)}
+              style={{ justifyContent: "center", opacity: sendFor.email ? 1 : 0.5 }}
+            >
+              📧 Gmail — {sendFor.email || "ইমেইল নেই"}
+            </Btn>
+            <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.6 }}>
+              নম্বর বা ইমেইল না থাকলে “✏️ এডিট” থেকে যোগ করে নিন।
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {reportFor && (
         <TrialReportModal
           user={user}
@@ -17336,8 +17405,8 @@ function TrialView({ db, setDb, user, courses, refresh }) {
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
-            <Btn kind="gold" onClick={() => sendWa(made)}>
-              💬 স্বাগত বার্তা পাঠান
+            <Btn kind="gold" onClick={() => setSendFor(made)}>
+              📨 স্বাগত বার্তা পাঠান
             </Btn>
             <Btn kind="soft" onClick={() => copyCreds(made)}>
               📋 কপি করুন
