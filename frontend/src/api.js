@@ -472,6 +472,30 @@ export const api = {
   restoreTrialScoreItems: () =>
     request("/trial-score-items/restore_defaults/", { method: "POST" }),
 
+  /* ── দারস স্ক্রিপ্ট — "এক দারস, দুই পর্দা" ──
+     ⚠️ দুটি সম্পূর্ণ আলাদা পথ, আর সেটাই এই ব্যবস্থার নিরাপত্তার ভিত্তি:
+       lesson(id)      → উস্তাদের জন্য, পুরো স্ক্রিপ্টসহ
+       lessonStage(id) → উপস্থাপনার জন্য, কেবল শিক্ষার্থী যা দেখবেন
+     উপস্থাপনার পর্দা কখনোই প্রথমটি ডাকবে না। */
+  lessons: (courseId) =>
+    request("/lessons/" + (courseId ? `?course=${courseId}` : "")),
+  lesson: (id) => request(`/lessons/${id}/`),
+  lessonStage: (id) => request(`/lessons/${id}/stage/`),
+  addLesson: (d) => request("/lessons/", { method: "POST", body: d }),
+  editLesson: (id, d) => request(`/lessons/${id}/`, { method: "PATCH", body: d }),
+  delLesson: (id) => request(`/lessons/${id}/`, { method: "DELETE" }),
+  // নকল — একই বিষয়ের আলাদা বয়সের সংস্করণ বানানোর সহজ পথ
+  duplicateLesson: (id, d) =>
+    request(`/lessons/${id}/duplicate/`, { method: "POST", body: d || {} }),
+  seedSampleLesson: (course, which) =>
+    request("/lessons/seed_sample/", { method: "POST", body: { course, which } }),
+  addLessonStep: (d) => request("/lesson-steps/", { method: "POST", body: d }),
+  editLessonStep: (id, d) =>
+    request(`/lesson-steps/${id}/`, { method: "PATCH", body: d }),
+  delLessonStep: (id) => request(`/lesson-steps/${id}/`, { method: "DELETE" }),
+  reorderLessonSteps: (ids) =>
+    request("/lesson-steps/reorder/", { method: "POST", body: { ids } }),
+
   offerTrialReport: (id) =>
     request(`/trial-reports/${id}/offer/`, { method: "POST" }),
   acceptTrialOffer: (id) =>

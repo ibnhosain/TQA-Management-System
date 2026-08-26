@@ -16994,6 +16994,1138 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
    ফি, বকেয়া, বেতন বা মাসিক রিপোর্টে কোথাও আসেন না — সার্ভারের ওই সব
    কোয়েরি role="student" ধরে চলে, আর ট্রায়ালের ভূমিকা আলাদা। এখানেই
    তাঁদের সব কিছু: আবেদন থেকে আইডি বানানো, মেয়াদ, কোর্স ও উস্তাদ। */
+/* ═══════════════ দারস স্ক্রিপ্ট — "এক দারস, দুই পর্দা" ═══════════════
+   পরিচালক এখানে দারস লেখেন। প্রতিটি ধাপের দুটি দিক পাশাপাশি দেখা যায় —
+   বাঁয়ে উস্তাদ যা দেখবেন (পুরো স্ক্রিপ্ট), ডানে শিক্ষার্থী যা দেখবেন
+   (কেবল স্লাইড)। ⚠️ দুটো মেশানো যাবে না; ডান পাশে যা বসানো হয় কেবল
+   সেটুকুই শিক্ষার্থীর পর্দায় যায়, বাঁ পাশের কিছুই কখনো যায় না। */
+
+const LESSON_KINDS = [
+  ["memorization", "মুখস্থ (হিফজ)"],
+  ["qaida", "কায়েদা"],
+  ["tajweed", "তাজবীদ"],
+  ["reading", "তিলাওয়াত"],
+  ["islamic", "ইসলামিক শিক্ষা"],
+  ["other", "অন্যান্য"],
+];
+
+const LESSON_STATUS = [
+  ["draft", "খসড়া"],
+  ["ready", "প্রস্তুত"],
+  ["published", "প্রকাশিত"],
+  ["archived", "সংরক্ষিত"],
+];
+
+/* স্লাইডের ধরন — নামগুলো বাংলায়, কিন্তু পর্দায় বাচ্চা যা দেখবে তা
+   স্লাইডের নিজের লেখা থেকেই আসে, এই নাম থেকে নয়। */
+const SLIDE_KINDS = [
+  ["title", "🏷️ শিরোনাম"],
+  ["verse", "📖 আয়াত"],
+  ["letters", "🔤 হরফ"],
+  ["listen", "👂 শোনো"],
+  ["repeat", "🔁 আমার সাথে বলো"],
+  ["your_turn", "🎤 তুমি বলো"],
+  ["question", "❓ প্রশ্ন"],
+  ["meaning", "💡 অর্থ"],
+  ["visual", "🖼️ ছবি"],
+  ["activity", "🎲 খেলা"],
+  ["reminder", "🌙 মনে রেখো"],
+  ["praise", "🌟 শাবাশ"],
+  ["review", "🔄 পুনরাবৃত্তি"],
+  ["homework", "📚 বাড়ির কাজ"],
+  ["end", "👋 সমাপ্তি"],
+  ["blank", "⬛ খালি পর্দা"],
+];
+
+const slideKindLabel = (k) =>
+  (SLIDE_KINDS.find((x) => x[0] === k) || [k, k])[1];
+
+const EMPTY_SLIDE = {
+  kind: "title",
+  heading: "",
+  arabic: "",
+  arabic_locked: false,
+  translit: "",
+  text: "",
+  image: "",
+  audio: "",
+};
+
+/* শিক্ষার্থীর পর্দা কেমন দেখাবে তার হুবহু নমুনা।
+   ⚠️ এখানে কেবল slide-এর ঘরগুলোই ব্যবহার করা হয় — উস্তাদের স্ক্রিপ্টের
+   কোনো ঘর এখানে ছুঁয়েও দেখা হয় না। ধাপ ৪-এর উপস্থাপনা উইন্ডোও ঠিক
+   এই একই জিনিসই বড় করে দেখাবে। */
+function SlidePreview({ slide, small }) {
+  const sl = slide || EMPTY_SLIDE;
+  const empty =
+    !sl.heading && !sl.arabic && !sl.translit && !sl.text && !sl.image;
+  return (
+    <div
+      style={{
+        background: C.emeraldD,
+        color: "#fff",
+        borderRadius: 14,
+        padding: small ? "18px 14px" : "28px 20px",
+        minHeight: small ? 150 : 220,
+        display: "grid",
+        placeItems: "center",
+        textAlign: "center",
+        gap: 10,
+      }}
+    >
+      {empty ? (
+        <div style={{ color: "#ffffff66", fontSize: 13 }}>
+          এই ধাপে শিক্ষার্থীর পর্দা এখনো খালি
+        </div>
+      ) : (
+        <div style={{ display: "grid", gap: 12, width: "100%" }}>
+          {sl.heading && (
+            <div
+              style={{
+                fontSize: small ? 17 : 22,
+                fontWeight: 800,
+                color: C.goldL,
+              }}
+            >
+              {sl.heading}
+            </div>
+          )}
+          {sl.arabic && (
+            <div
+              dir="rtl"
+              style={{
+                fontFamily: "'Amiri', serif",
+                fontSize: small ? 26 : 38,
+                lineHeight: 1.9,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {sl.arabic}
+            </div>
+          )}
+          {sl.translit && (
+            <div
+              style={{
+                fontSize: small ? 13 : 16,
+                fontStyle: "italic",
+                color: "#ffffffbb",
+              }}
+            >
+              {sl.translit}
+            </div>
+          )}
+          {sl.image && (
+            <img
+              src={sl.image}
+              alt=""
+              style={{
+                maxWidth: "100%",
+                maxHeight: small ? 110 : 200,
+                borderRadius: 10,
+                margin: "0 auto",
+              }}
+            />
+          )}
+          {sl.text && (
+            <div
+              style={{
+                fontSize: small ? 14 : 18,
+                whiteSpace: "pre-wrap",
+                lineHeight: 1.6,
+              }}
+            >
+              {sl.text}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ⚠️ এই দুটি কম্পোনেন্ট ইচ্ছা করেই StepCard-এর বাইরে। রেন্ডারের ভেতরে
+   কম্পোনেন্ট বানালে প্রতি রেন্ডারে সেটি নতুন ধরন হয়ে যায়, ফলে React
+   পুরনো ঘরটি সরিয়ে নতুন বসায় — টাইপ করতে গিয়ে প্রতিটি অক্ষরের পর কার্সর
+   হারিয়ে যেত। */
+const Lbl = ({ children }) => (
+  <label style={{ ...S.label, marginBottom: 4 }}>{children}</label>
+);
+
+const Area = ({ value, onChange, rows = 2, ph, disabled }) => (
+  <textarea
+    style={{ ...S.input, resize: "vertical", lineHeight: 1.6 }}
+    rows={rows}
+    placeholder={ph}
+    disabled={disabled}
+    value={value || ""}
+    onChange={(e) => onChange(e.target.value)}
+  />
+);
+
+/* একটি ধাপ — খোলা অবস্থায় বাঁয়ে উস্তাদের স্ক্রিপ্ট, ডানে শিক্ষার্থীর পর্দা */
+function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
+  const [open, setOpen] = useState(false);
+  const [d, setD] = useState(step);
+  const [busy, setBusy] = useState(false);
+  // সার্ভার থেকে নতুন তথ্য এলে (সংরক্ষণ/পুনরায় লোডের পর) পর্দাও মিলিয়ে নিই
+  useEffect(() => setD(step), [step]);
+
+  const sl = d.slide || EMPTY_SLIDE;
+  const set = (k, v) => setD((x) => ({ ...x, [k]: v }));
+  const setSlide = (k, v) =>
+    setD((x) => ({ ...x, slide: { ...(x.slide || EMPTY_SLIDE), [k]: v } }));
+
+  const dirty = JSON.stringify(d) !== JSON.stringify(step);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      await onSave(d);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* যাচাই করা আরবির তালা — খোলার আগে কেন সাবধান হতে হবে তা বলে দিই */
+  const unlock = () =>
+    askConfirm(
+      "এই আরবি লেখাটি যাচাই করে সুরক্ষিত রাখা হয়েছে — উসমানী রসম, " +
+        "যের-যবর-তানভীন সব হুবহু।" +
+        "\n\n" +
+        "তালা খুললে লেখাটি সম্পাদনা করা যাবে। একটি মাত্র চিহ্ন এদিক-ওদিক " +
+        "হলেও অর্থ বদলে যেতে পারে, আর তা পর্দায় শিক্ষার্থীর সামনেই যাবে। " +
+        "নিশ্চিত হয়ে তবেই খুলুন।",
+      () => setSlide("arabic_locked", false),
+      { yes: "বুঝেছি, তালা খুলুন", no: "না, থাক" },
+    );
+
+  return (
+    <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+      {/* মাথা — বন্ধ অবস্থায় এক নজরে যা জানা দরকার */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "12px 14px",
+          background: open ? C.greenBg : "#fff",
+          borderBottom: open ? `1px solid ${C.line}` : "none",
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          onClick={() => setOpen((o) => !o)}
+          style={{
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            fontSize: 15,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flex: 1,
+            minWidth: 180,
+            textAlign: "left",
+            fontFamily: "inherit",
+            padding: 0,
+          }}
+        >
+          <span
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              background: C.emerald,
+              color: "#fff",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 12.5,
+              fontWeight: 800,
+              flexShrink: 0,
+            }}
+          >
+            {bn(n)}
+          </span>
+          <span style={{ minWidth: 0 }}>
+            <span style={{ fontWeight: 700, color: C.text }}>
+              {d.section || "নামহীন ধাপ"}
+            </span>
+            <span
+              style={{
+                display: "block",
+                fontSize: 12,
+                color: C.muted,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {slideKindLabel(sl.kind)}
+              {d.seconds ? ` · ${bn(d.seconds)} সেকেন্ড` : ""}
+              {d.teacher_says ? ` · ${d.teacher_says.slice(0, 40)}…` : ""}
+            </span>
+          </span>
+        </button>
+        {dirty && <Tag color={C.red} bg={C.redBg}>অসংরক্ষিত</Tag>}
+        {canEdit && (
+          <span style={{ display: "flex", gap: 4 }}>
+            <Btn
+              sm
+              kind="soft"
+              onClick={() => onMove(-1)}
+              disabled={n === 1}
+              style={{ opacity: n === 1 ? 0.4 : 1 }}
+            >
+              ↑
+            </Btn>
+            <Btn
+              sm
+              kind="soft"
+              onClick={() => onMove(1)}
+              disabled={n === total}
+              style={{ opacity: n === total ? 0.4 : 1 }}
+            >
+              ↓
+            </Btn>
+            <Btn sm kind="danger" onClick={onDelete}>
+              🗑️
+            </Btn>
+          </span>
+        )}
+        <Btn sm kind="ghost" onClick={() => setOpen((o) => !o)}>
+          {open ? "গুটিয়ে নিন" : "খুলুন"}
+        </Btn>
+      </div>
+
+      {open && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              window.innerWidth > 980 ? "1fr 1fr" : "1fr",
+            gap: 0,
+          }}
+        >
+          {/* ───── বাঁ পাশ — কেবল উস্তাদ দেখবেন ───── */}
+          <div style={{ padding: 16, display: "grid", gap: 10 }}>
+            <div
+              style={{
+                fontWeight: 800,
+                color: C.emeraldD,
+                fontSize: 13.5,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              🧑‍🏫 উস্তাদ যা দেখবেন
+              <span style={{ fontWeight: 500, color: C.muted, fontSize: 11.5 }}>
+                — শিক্ষার্থীর পর্দায় এর কিছুই যায় না
+              </span>
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <Lbl>এই ধাপের অংশ</Lbl>
+                <input
+                  style={S.input}
+                  disabled={!canEdit}
+                  placeholder="যেমন: Verse 1 — Repeat"
+                  value={d.section || ""}
+                  onChange={(e) => set("section", e.target.value)}
+                />
+              </div>
+              <div style={{ width: 110 }}>
+                <Lbl>সময় (সেকেন্ড)</Lbl>
+                <input
+                  style={S.input}
+                  type="number"
+                  min="0"
+                  disabled={!canEdit}
+                  value={d.seconds ?? 0}
+                  onChange={(e) => set("seconds", Number(e.target.value) || 0)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Lbl>🗣️ উস্তাদ বলবেন — বাচ্চা এটাই কানে শুনবে</Lbl>
+              <Area value={d.teacher_says} onChange={(v) => set("teacher_says", v)} disabled={!canEdit} rows={3} ph="ছোট ছোট বাক্যে, বাচ্চার ভাষায়" />
+            </div>
+            <div>
+              <Lbl>🤲 উস্তাদ করবেন</Lbl>
+              <Area value={d.teacher_does} onChange={(v) => set("teacher_does", v)} disabled={!canEdit} ph="যেমন: চার আঙুল দেখান" />
+            </div>
+            <div>
+              <Lbl>🧒 শিক্ষার্থী করবে</Lbl>
+              <Area value={d.student_does} onChange={(v) => set("student_does", v)} disabled={!canEdit} />
+            </div>
+            <div>
+              <Lbl>✅ প্রত্যাশিত সাড়া — এখানেই যাচাই</Lbl>
+              <Area value={d.expected} onChange={(v) => set("expected", v)} disabled={!canEdit} />
+            </div>
+            <div>
+              <Lbl>🔧 ভুল হলে</Lbl>
+              <Area value={d.correction} onChange={(v) => set("correction", v)} disabled={!canEdit} />
+            </div>
+            <div>
+              <Lbl>📌 উস্তাদের টীকা — মাখরাজ, সূত্র, অভিভাবকের জন্য কথা</Lbl>
+              <Area value={d.note} onChange={(v) => set("note", v)} disabled={!canEdit} />
+            </div>
+          </div>
+
+          {/* ───── ডান পাশ — শিক্ষার্থীর পর্দা ───── */}
+          <div
+            style={{
+              padding: 16,
+              display: "grid",
+              gap: 10,
+              background: C.cream,
+              borderLeft:
+                window.innerWidth > 980 ? `1px solid ${C.line}` : "none",
+              borderTop:
+                window.innerWidth > 980 ? "none" : `1px solid ${C.line}`,
+              alignContent: "start",
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 800,
+                color: C.emeraldD,
+                fontSize: 13.5,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              🖥️ শিক্ষার্থী যা দেখবেন
+              <span style={{ fontWeight: 500, color: C.muted, fontSize: 11.5 }}>
+                — কেবল এটুকুই
+              </span>
+            </div>
+
+            <div>
+              <Lbl>স্লাইডের ধরন</Lbl>
+              <select
+                style={S.input}
+                disabled={!canEdit}
+                value={sl.kind}
+                onChange={(e) => setSlide("kind", e.target.value)}
+              >
+                {SLIDE_KINDS.map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Lbl>শিরোনাম</Lbl>
+              <input
+                style={S.input}
+                disabled={!canEdit}
+                value={sl.heading || ""}
+                onChange={(e) => setSlide("heading", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Lbl>
+                আরবি{" "}
+                {sl.arabic_locked ? (
+                  <span style={{ color: C.green }}>🔒 যাচাই করা ও সুরক্ষিত</span>
+                ) : (
+                  <span style={{ color: C.red }}>🔓 তালা খোলা</span>
+                )}
+              </Lbl>
+              <textarea
+                dir="rtl"
+                rows={2}
+                readOnly={sl.arabic_locked || !canEdit}
+                style={{
+                  ...S.input,
+                  fontFamily: "'Amiri', serif",
+                  fontSize: 20,
+                  lineHeight: 2,
+                  resize: "vertical",
+                  background: sl.arabic_locked ? "#eef3ef" : "#fff",
+                }}
+                value={sl.arabic || ""}
+                onChange={(e) => setSlide("arabic", e.target.value)}
+              />
+              {canEdit && (
+                <div style={{ marginTop: 5 }}>
+                  {sl.arabic_locked ? (
+                    <Btn sm kind="soft" onClick={unlock}>
+                      🔓 তালা খুলুন
+                    </Btn>
+                  ) : (
+                    <Btn
+                      sm
+                      kind="ghost"
+                      onClick={() => setSlide("arabic_locked", true)}
+                    >
+                      🔒 যাচাই করেছি, তালা দিন
+                    </Btn>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Lbl>উচ্চারণ (ইংরেজি হরফে)</Lbl>
+              <input
+                style={S.input}
+                disabled={!canEdit}
+                value={sl.translit || ""}
+                onChange={(e) => setSlide("translit", e.target.value)}
+              />
+            </div>
+            <div>
+              <Lbl>পর্দার লেখা</Lbl>
+              <textarea
+                rows={2}
+                style={{ ...S.input, resize: "vertical" }}
+                disabled={!canEdit}
+                value={sl.text || ""}
+                onChange={(e) => setSlide("text", e.target.value)}
+              />
+            </div>
+            <div>
+              <Lbl>ছবির ঠিকানা (ঐচ্ছিক)</Lbl>
+              <input
+                style={S.input}
+                disabled={!canEdit}
+                placeholder="https://…"
+                value={sl.image || ""}
+                onChange={(e) => setSlide("image", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Lbl>👁️ পর্দায় এভাবে দেখাবে</Lbl>
+              <SlidePreview slide={sl} small />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {open && canEdit && (
+        <div
+          style={{
+            padding: "10px 14px",
+            borderTop: `1px solid ${C.line}`,
+            display: "flex",
+            gap: 8,
+            justifyContent: "flex-end",
+            background: "#fff",
+          }}
+        >
+          {dirty && (
+            <Btn sm kind="soft" onClick={() => setD(step)}>
+              বাতিল
+            </Btn>
+          )}
+          <Btn
+            sm
+            kind={dirty ? "primary" : "soft"}
+            onClick={save}
+            disabled={!dirty || busy}
+          >
+            {busy ? "সংরক্ষণ হচ্ছে…" : dirty ? "💾 সংরক্ষণ করুন" : "✓ সংরক্ষিত"}
+          </Btn>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* একটি দারস খোলা — উপরে দারসের নিজের তথ্য, নিচে ধাপগুলো */
+function LessonEditor({ id, canEdit, onClose, onChanged }) {
+  const [lesson, setLesson] = useState(null);
+  const [head, setHead] = useState(null); // উপরের ঘরগুলোর খসড়া
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const l = await api.lesson(id);
+      setLesson(l);
+      setHead(l);
+    } catch (e) {
+      notice("দারসটি আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (loading) return <Loader text="দারস লোড হচ্ছে" />;
+  if (!lesson) return null;
+
+  const setH = (k, v) => setHead((x) => ({ ...x, [k]: v }));
+  const headDirty =
+    head &&
+    [
+      "title",
+      "title_ar",
+      "kind",
+      "age_from",
+      "age_to",
+      "duration_min",
+      "status",
+      "objectives",
+    ].some((k) => head[k] !== lesson[k]);
+
+  const saveHead = async () => {
+    setBusy(true);
+    try {
+      await api.editLesson(lesson.id, {
+        title: head.title,
+        title_ar: head.title_ar,
+        kind: head.kind,
+        age_from: head.age_from,
+        age_to: head.age_to,
+        duration_min: head.duration_min,
+        status: head.status,
+        objectives: head.objectives,
+      });
+      await load();
+      onChanged && onChanged();
+      notice("✅ দারসের তথ্য সংরক্ষিত");
+    } catch (e) {
+      notice("সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveStep = async (d) => {
+    try {
+      await api.editLessonStep(d.id, {
+        section: d.section,
+        teacher_says: d.teacher_says,
+        teacher_does: d.teacher_does,
+        student_does: d.student_does,
+        expected: d.expected,
+        correction: d.correction,
+        note: d.note,
+        seconds: d.seconds,
+        slide: d.slide || EMPTY_SLIDE,
+      });
+      await load();
+      notice("✅ ধাপটি সংরক্ষিত");
+    } catch (e) {
+      notice("সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
+  const addStep = async () => {
+    try {
+      await api.addLessonStep({
+        lesson: lesson.id,
+        section: "নতুন ধাপ",
+        slide: { ...EMPTY_SLIDE },
+      });
+      await load();
+      onChanged && onChanged();
+    } catch (e) {
+      notice("ধাপ যোগ করা যায়নি — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
+  const delStep = (st, n) =>
+    askConfirm(
+      `${bn(n)} নং ধাপ — "${st.section || "নামহীন"}" মুছে ফেলা হবে।` +
+        "\n\n" +
+        "উস্তাদের স্ক্রিপ্ট ও শিক্ষার্থীর পর্দা — দুটোই একসাথে মুছে যাবে, " +
+        "আর ফেরানো যাবে না।",
+      async () => {
+        try {
+          await api.delLessonStep(st.id);
+          await load();
+          onChanged && onChanged();
+          notice("🗑️ ধাপটি মুছে ফেলা হয়েছে");
+        } catch (e) {
+          notice("মোছা যায়নি — " + (e?.data?.error || e?.message || ""));
+        }
+      },
+      { yes: "হ্যাঁ, মুছে ফেলুন", no: "না, থাক" },
+    );
+
+  const moveStep = async (i, dir) => {
+    const steps = lesson.steps || [];
+    const j = i + dir;
+    if (j < 0 || j >= steps.length) return;
+    const ids = steps.map((x) => x.id);
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    try {
+      await api.reorderLessonSteps(ids);
+      await load();
+    } catch (e) {
+      notice("ক্রম বদলানো যায়নি — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
+  const steps = lesson.steps || [];
+  const totalMin = Math.round(
+    steps.reduce((a, x) => a + (x.seconds || 0), 0) / 60,
+  );
+
+  return (
+    <>
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          marginBottom: 14,
+          flexWrap: "wrap",
+        }}
+      >
+        <Btn sm kind="soft" onClick={onClose}>
+          ← দারসের তালিকা
+        </Btn>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>{lesson.title}</div>
+          <div style={{ fontSize: 12, color: C.muted }}>
+            {lesson.course_name} · {bn(lesson.age_from)}–{bn(lesson.age_to)} বছর ·{" "}
+            {bn(steps.length)} ধাপ
+            {totalMin ? ` · আনুমানিক ${bn(totalMin)} মিনিট` : ""}
+          </div>
+        </div>
+      </div>
+
+      {/* ── দারসের নিজের তথ্য ── */}
+      <div style={{ ...S.card, marginBottom: 16 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              window.innerWidth > 760 ? "2fr 1fr" : "1fr",
+            gap: 10,
+            marginBottom: 10,
+          }}
+        >
+          <div>
+            <label style={S.label}>দারসের শিরোনাম</label>
+            <input
+              style={S.input}
+              disabled={!canEdit}
+              value={head.title || ""}
+              onChange={(e) => setH("title", e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={S.label}>আরবি শিরোনাম</label>
+            <input
+              style={{ ...S.input, fontFamily: "'Amiri', serif", fontSize: 17 }}
+              dir="rtl"
+              disabled={!canEdit}
+              value={head.title_ar || ""}
+              onChange={(e) => setH("title_ar", e.target.value)}
+            />
+          </div>
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              window.innerWidth > 760 ? "repeat(5, 1fr)" : "1fr 1fr",
+            gap: 10,
+            marginBottom: 10,
+          }}
+        >
+          <div>
+            <label style={S.label}>ধরন</label>
+            <select
+              style={S.input}
+              disabled={!canEdit}
+              value={head.kind}
+              onChange={(e) => setH("kind", e.target.value)}
+            >
+              {LESSON_KINDS.map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={S.label}>বয়স — থেকে</label>
+            <input
+              style={S.input}
+              type="number"
+              min="3"
+              max="18"
+              disabled={!canEdit}
+              value={head.age_from}
+              onChange={(e) => setH("age_from", Number(e.target.value) || 5)}
+            />
+          </div>
+          <div>
+            <label style={S.label}>বয়স — পর্যন্ত</label>
+            <input
+              style={S.input}
+              type="number"
+              min="3"
+              max="18"
+              disabled={!canEdit}
+              value={head.age_to}
+              onChange={(e) => setH("age_to", Number(e.target.value) || 7)}
+            />
+          </div>
+          <div>
+            <label style={S.label}>সময় (মিনিট)</label>
+            <input
+              style={S.input}
+              type="number"
+              min="5"
+              disabled={!canEdit}
+              value={head.duration_min}
+              onChange={(e) => setH("duration_min", Number(e.target.value) || 25)}
+            />
+          </div>
+          <div>
+            <label style={S.label}>অবস্থা</label>
+            <select
+              style={S.input}
+              disabled={!canEdit}
+              value={head.status}
+              onChange={(e) => setH("status", e.target.value)}
+            >
+              {LESSON_STATUS.map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <label style={S.label}>
+          কাঙ্ক্ষিত ফল, মাপকাঠি ও পুনরাবৃত্তির পরিকল্পনা — কেবল উস্তাদ দেখবেন
+        </label>
+        {canEdit ? (
+          <RichText
+            value={head.objectives || ""}
+            onChange={(v) => setH("objectives", v)}
+            placeholder="এই দারস শেষে শিক্ষার্থী যা পারবে…"
+          />
+        ) : (
+          <div
+            style={{ fontSize: 14, lineHeight: 1.8 }}
+            dangerouslySetInnerHTML={{ __html: lesson.objectives || "—" }}
+          />
+        )}
+        {canEdit && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 8,
+              marginTop: 12,
+            }}
+          >
+            {headDirty && (
+              <Btn sm kind="soft" onClick={() => setHead(lesson)}>
+                বাতিল
+              </Btn>
+            )}
+            <Btn
+              sm
+              kind={headDirty ? "primary" : "soft"}
+              onClick={saveHead}
+              disabled={!headDirty || busy}
+            >
+              {busy ? "সংরক্ষণ হচ্ছে…" : headDirty ? "💾 সংরক্ষণ করুন" : "✓ সংরক্ষিত"}
+            </Btn>
+          </div>
+        )}
+      </div>
+
+      {/* ── ধাপগুলো ── */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 10,
+          gap: 8,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ fontWeight: 800, fontSize: 15 }}>
+          📋 পড়ানোর ধাপ ({bn(steps.length)})
+        </div>
+        {canEdit && (
+          <Btn sm kind="gold" onClick={addStep}>
+            + নতুন ধাপ
+          </Btn>
+        )}
+      </div>
+
+      <div style={{ display: "grid", gap: 10 }}>
+        {steps.length === 0 && (
+          <div style={{ ...S.card, color: C.muted, fontSize: 14 }}>
+            এই দারসে এখনো কোনো ধাপ নেই। “+ নতুন ধাপ” দিয়ে শুরু করুন।
+          </div>
+        )}
+        {steps.map((st, i) => (
+          <StepCard
+            key={st.id}
+            step={st}
+            n={i + 1}
+            total={steps.length}
+            canEdit={canEdit}
+            onSave={saveStep}
+            onDelete={() => delStep(st, i + 1)}
+            onMove={(dir) => moveStep(i, dir)}
+          />
+        ))}
+      </div>
+
+      {canEdit && steps.length > 0 && (
+        <div style={{ marginTop: 12, textAlign: "center" }}>
+          <Btn sm kind="gold" onClick={addStep}>
+            + নতুন ধাপ
+          </Btn>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* দারসের তালিকা ও সম্পাদক */
+function LessonsView({ user, courses }) {
+  const canEdit = isDir(user);
+  const [courseId, setCourseId] = useState("");
+  const [lessons, setLessons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState(null);
+
+  const mine = (courses || []).filter(
+    (c) => isAdm(user) || c.teacher === user.id,
+  );
+
+  useEffect(() => {
+    if (!courseId && mine.length) setCourseId(String(mine[0].id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courses]);
+
+  const load = async () => {
+    if (!courseId) return setLoading(false);
+    setLoading(true);
+    try {
+      setLessons((await api.lessons(courseId)) || []);
+    } catch (e) {
+      notice("দারস আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId]);
+
+  const create = async () => {
+    try {
+      const l = await api.addLesson({
+        course: Number(courseId),
+        title: "নতুন দারস",
+        status: "draft",
+      });
+      await load();
+      setOpenId(l.id);
+    } catch (e) {
+      notice("তৈরি করা যায়নি — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
+  const seed = (which) =>
+    askConfirm(
+      which === "ikhlas"
+        ? "সূরা আল-ইখলাসের নমুনা দারসটি এই কোর্সে যোগ করা হবে — ২৫ ধাপ, " +
+            "৫–৭ বছরের জন্য। আপনি পড়ে দেখে নিজের মতো বদলে নিতে পারবেন।"
+        : "Easy Noorani Qaida দারস ১-এর নমুনাটি এই কোর্সে যোগ করা হবে — " +
+            "২৪ ধাপ, প্রথম সাত হরফ, ৫–৭ বছরের জন্য।",
+      async () => {
+        try {
+          await api.seedSampleLesson(Number(courseId), which);
+          await load();
+          notice("✅ নমুনা দারসটি যোগ হয়েছে");
+        } catch (e) {
+          notice("যোগ করা যায়নি — " + (e?.data?.error || e?.message || ""));
+        }
+      },
+      { yes: "হ্যাঁ, যোগ করুন", no: "না, থাক" },
+    );
+
+  const duplicate = (l) =>
+    askConfirm(
+      `"${l.title}" দারসটির একটি নকল তৈরি হবে — সব ধাপ ও পর্দাসহ।` +
+        "\n\n" +
+        "একই বিষয়ের আলাদা বয়সের সংস্করণ বানানোর সহজ পথ এটি: নকল করে " +
+        "বয়সসীমা বদলে ভাষাটা ওই বয়সের মতো সাজিয়ে নিন। নকলটি খসড়া " +
+        "হিসেবেই শুরু হবে, তাই আধা-সম্পাদিত অবস্থায় কারও সামনে পড়বে না।",
+      async () => {
+        try {
+          const n = await api.duplicateLesson(l.id);
+          await load();
+          setOpenId(n.id);
+          notice("📄 নকল তৈরি হয়েছে — এখন বয়স ও ভাষা সাজিয়ে নিন");
+        } catch (e) {
+          notice("নকল করা যায়নি — " + (e?.data?.error || e?.message || ""));
+        }
+      },
+      { yes: "হ্যাঁ, নকল করুন", no: "না, থাক" },
+    );
+
+  const remove = (l) =>
+    askConfirm(
+      `"${l.title}" দারসটি চিরতরে মুছে ফেলা হবে — এর ${bn(l.step_count || 0)}টি ` +
+        "ধাপ, উস্তাদের পুরো স্ক্রিপ্ট ও শিক্ষার্থীর সব পর্দাসহ।" +
+        "\n\n" +
+        "এটি আর ফেরানো যাবে না। আপাতত সরিয়ে রাখতে চাইলে মোছার দরকার নেই — " +
+        "অবস্থা “সংরক্ষিত” করে দিলেই তালিকা থেকে সরে যায়।",
+      async () => {
+        try {
+          await api.delLesson(l.id);
+          await load();
+          notice("🗑️ দারসটি মুছে ফেলা হয়েছে");
+        } catch (e) {
+          notice("মোছা যায়নি — " + (e?.data?.error || e?.message || ""));
+        }
+      },
+      { yes: "হ্যাঁ, চিরতরে মুছুন", no: "না, থাক" },
+    );
+
+  const statusTag = (st) => {
+    if (st === "published") return <Tag>প্রকাশিত</Tag>;
+    if (st === "ready")
+      return <Tag color={C.blue} bg={C.blueBg}>প্রস্তুত</Tag>;
+    if (st === "archived")
+      return <Tag color={C.muted} bg={C.cream}>সংরক্ষিত</Tag>;
+    return <Tag color={C.gold} bg={C.amberBg}>খসড়া</Tag>;
+  };
+
+  if (openId)
+    return (
+      <Section title="📗 দারস স্ক্রিপ্ট">
+        <LessonEditor
+          id={openId}
+          canEdit={canEdit}
+          onClose={() => {
+            setOpenId(null);
+            load();
+          }}
+          onChanged={load}
+        />
+      </Section>
+    );
+
+  return (
+    <Section
+      title="📗 দারস স্ক্রিপ্ট"
+      sub="এক দারস, দুই পর্দা — উস্তাদ পড়ানোর পুরো নির্দেশনা দেখেন, শিক্ষার্থী দেখেন কেবল শেখার জিনিসটুকু"
+      action={
+        canEdit && courseId ? (
+          <Btn sm onClick={create}>
+            + নতুন দারস
+          </Btn>
+        ) : null
+      }
+    >
+      <div style={{ ...S.card, padding: 14, marginBottom: 14 }}>
+        <label style={S.label}>কোন কোর্সের দারস</label>
+        <select
+          style={{ ...S.input, maxWidth: 380 }}
+          value={courseId}
+          onChange={(e) => setCourseId(e.target.value)}
+        >
+          {mine.length === 0 && <option value="">কোনো কোর্স নেই</option>}
+          {mine.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        {canEdit && courseId && (
+          <div
+            style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}
+          >
+            <Btn sm kind="soft" onClick={() => seed("ikhlas")}>
+              📥 নমুনা — সূরা আল-ইখলাস
+            </Btn>
+            <Btn sm kind="soft" onClick={() => seed("qaida")}>
+              📥 নমুনা — Noorani Qaida দারস ১
+            </Btn>
+          </div>
+        )}
+      </div>
+
+      {loading && <Loader text="দারস লোড হচ্ছে" />}
+
+      {!loading && (
+        <div style={{ display: "grid", gap: 8 }}>
+          {lessons.length === 0 && (
+            <div style={{ ...S.card, color: C.muted, fontSize: 14 }}>
+              এই কোর্সে এখনো কোনো দারস লেখা হয়নি।
+              {canEdit &&
+                " উপরের নমুনা দুটির একটি এনে দেখতে পারেন — কেমন হওয়া উচিত তার ধারণা পাবেন।"}
+            </div>
+          )}
+          {lessons.map((l) => (
+            <div
+              key={l.id}
+              style={{
+                ...S.card,
+                padding: 14,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div
+                  style={{ fontWeight: 800, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}
+                >
+                  {l.title} {statusTag(l.status)}
+                </div>
+                <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>
+                  {bn(l.age_from)}–{bn(l.age_to)} বছর · {bn(l.step_count || 0)} ধাপ ·{" "}
+                  {bn(l.duration_min)} মিনিট ·{" "}
+                  {(LESSON_KINDS.find((x) => x[0] === l.kind) || [, l.kind])[1]}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <Btn sm onClick={() => setOpenId(l.id)}>
+                  {canEdit ? "✏️ খুলুন" : "👁️ দেখুন"}
+                </Btn>
+                {canEdit && (
+                  <>
+                    <Btn sm kind="soft" onClick={() => duplicate(l)}>
+                      📄 নকল
+                    </Btn>
+                    <Btn sm kind="danger" onClick={() => remove(l)}>
+                      🗑️
+                    </Btn>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Section>
+  );
+}
+
 function TrialView({ db, setDb, user, courses, refresh }) {
   const [tab, setTab] = useState("students");
   const [trials, setTrials] = useState([]);
@@ -18644,6 +19776,16 @@ const NAV = [
     label: "লেকচার প্ল্যান",
     labelEn: "Lecture Plan",
     roles: ["director", "admin", "teacher", "student"],
+  },
+  {
+    // দারস স্ক্রিপ্ট — লেকচার প্ল্যানের পাশেই, কারণ দুটো একসাথে কাজে লাগে।
+    // শিক্ষার্থী ও ট্রায়াল অতিথি এখনো নয় — ক্লাসের পর নিজে দেখার ব্যবস্থা
+    // ধাপ ৫-এ আসবে, তখনও কেবল পর্দাটুকু, উস্তাদের স্ক্রিপ্ট নয়।
+    id: "lessons",
+    icon: "📗",
+    label: "দারস স্ক্রিপ্ট",
+    labelEn: "Lesson Script",
+    roles: ["director", "admin", "teacher"],
   },
   {
     id: "syllabus",
@@ -20306,6 +21448,9 @@ export default function App() {
           {view === "postponed" && <PostponedClassesView user={user} />}
           {view === "routine" && <RoutineView {...props} />}
           {view === "lectures" && <LecturePlan {...props} />}
+          {view === "lessons" && user.role !== "student" && user.role !== "trial" && (
+            <LessonsView user={user} courses={courses} />
+          )}
           {view === "syllabus" && <SyllabusView {...props} />}
           {view === "attendance" && <AttendanceView {...props} />}
           {view === "assignments" && <AssignmentsView {...props} />}

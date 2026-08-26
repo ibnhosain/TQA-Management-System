@@ -1563,6 +1563,47 @@ class LessonViewSet(viewsets.ModelViewSet):
         ctx["with_steps"] = True
         return Response(LessonSerializer(lesson, context=ctx).data, status=201)
 
+    @action(detail=True, methods=["post"], permission_classes=[IsDirector])
+    def duplicate(self, request, pk=None):
+        """দারসটির হুবহু নকল — ধাপ ও স্লাইডসহ।
+
+        একই বিষয়ের আলাদা বয়সের সংস্করণ বানানোর সহজ পথ: নকল করে বয়সসীমা
+        বদলে নিয়ে ভাষাটা ওই বয়সের মতো করে সাজিয়ে নিলেই হলো। নকলটি সবসময়
+        খসড়া হিসেবে শুরু হয়, যাতে আধা-সম্পাদিত অবস্থায় কারও সামনে না পড়ে।
+        """
+        src = self.get_object()
+        last = Lesson.objects.filter(
+            course=src.course).order_by("-order").first()
+        new = Lesson.objects.create(
+            course=src.course,
+            title=request.data.get("title") or (src.title + " (নকল)"),
+            title_ar=src.title_ar, kind=src.kind,
+            age_from=request.data.get("age_from") or src.age_from,
+            age_to=request.data.get("age_to") or src.age_to,
+            duration_min=src.duration_min, objectives=src.objectives,
+            status=Lesson.Status.DRAFT,
+            order=(last.order + 1) if last else 0,
+        )
+        for st in src.steps.all().order_by("order", "id"):
+            copy = LessonStep.objects.create(
+                lesson=new, order=st.order, section=st.section,
+                teacher_says=st.teacher_says, teacher_does=st.teacher_does,
+                student_does=st.student_does, expected=st.expected,
+                correction=st.correction, note=st.note, seconds=st.seconds,
+                topic=st.topic, is_active=st.is_active,
+            )
+            sl = getattr(st, "slide", None)
+            if sl:
+                StepSlide.objects.create(
+                    step=copy, kind=sl.kind, heading=sl.heading,
+                    arabic=sl.arabic, arabic_locked=sl.arabic_locked,
+                    translit=sl.translit, text=sl.text,
+                    image=sl.image, audio=sl.audio,
+                )
+        ctx = self.get_serializer_context()
+        ctx["with_steps"] = True
+        return Response(LessonSerializer(new, context=ctx).data, status=201)
+
     @action(detail=True, permission_classes=[IsAuthenticated])
     def stage(self, request, pk=None):
         """উপস্থাপনা উইন্ডোর জন্য — কেবল শিক্ষার্থী যা দেখবেন।

@@ -49,15 +49,71 @@ class SlideSerializer(serializers.ModelSerializer):
                   "text", "image", "audio"]
 
 
+def _slide_of(step):
+    """ধাপের স্লাইড, না থাকলে None।
+
+    OneToOne-এর উল্টো দিকটা না থাকলে Django AttributeError তোলে, তাই
+    getattr-এর ডিফল্টই যথেষ্ট — আলাদা try লাগে না।
+    """
+    return getattr(step, "slide", None)
+
+
 class LessonStepSerializer(serializers.ModelSerializer):
-    """উস্তাদের জন্য — পুরো স্ক্রিপ্ট।"""
-    slide = SlideSerializer(read_only=True)
+    """উস্তাদের জন্য — পুরো স্ক্রিপ্ট, সাথে পর্দার স্লাইডটিও।"""
+    slide = SlideSerializer(required=False)
 
     class Meta:
         model = LessonStep
-        fields = ["id", "order", "section", "teacher_says", "teacher_does",
-                  "student_does", "expected", "correction", "note", "seconds",
-                  "topic", "is_active", "slide"]
+        fields = ["id", "lesson", "order", "section", "teacher_says",
+                  "teacher_does", "student_does", "expected", "correction",
+                  "note", "seconds", "topic", "is_active", "slide"]
+
+    def to_representation(self, obj):
+        d = super().to_representation(obj)
+        # স্লাইড না থাকলে DRF-এর নিজের পাঠ ভেঙে পড়ত — তাই নিজেই বসাই
+        sl = _slide_of(obj)
+        d["slide"] = SlideSerializer(sl).data if sl else None
+        return d
+
+    def _save_slide(self, step, data):
+        """ধাপের সাথে তার স্লাইডটিও রাখা।
+
+        ⚠️ যাচাই করা আরবি সুরক্ষিত — `arabic_locked` চালু থাকা অবস্থায়
+        আরবির বদল চুপচাপ উপেক্ষা করা হয়। পরিচালক আগে তালা খুলবেন
+        (arabic_locked=false পাঠিয়ে), তারপর বদলাতে পারবেন। এতে সম্পাদনার
+        সময় ভুলবশত একটি যের-যবরও নড়ে যেতে পারে না।
+        """
+        sl = _slide_of(step)
+        if sl is None:
+            StepSlide.objects.create(step=step, **(data or {}))
+            return
+        if data is None:
+            return
+        data = dict(data)
+        if sl.arabic_locked and data.get("arabic_locked", True):
+            data.pop("arabic", None)
+        for k, v in data.items():
+            setattr(sl, k, v)
+        sl.save()
+
+    def create(self, validated):
+        slide = validated.pop("slide", None) or {}
+        # নতুন ধাপ সবসময় দারসের শেষে বসে, আলাদা করে ক্রম দিতে হয় না
+        if "order" not in validated and validated.get("lesson"):
+            last = LessonStep.objects.filter(
+                lesson=validated["lesson"]).order_by("-order").first()
+            validated["order"] = (last.order + 1) if last else 0
+        step = super().create(validated)
+        self._save_slide(step, slide)
+        step.refresh_from_db()
+        return step
+
+    def update(self, instance, validated):
+        slide = validated.pop("slide", None)
+        step = super().update(instance, validated)
+        if slide is not None:
+            self._save_slide(step, slide)
+        return step
 
 
 class LessonSerializer(serializers.ModelSerializer):
@@ -89,11 +145,15 @@ class StageStepSerializer(serializers.ModelSerializer):
     এখানে teacher_says/teacher_does/expected/correction/note-এর একটিও নেই,
     আর কখনো যোগ করাও যাবে না।
     """
-    slide = SlideSerializer(read_only=True)
+    slide = serializers.SerializerMethodField()
 
     class Meta:
         model = LessonStep
         fields = ["id", "order", "slide"]
+
+    def get_slide(self, obj):
+        sl = _slide_of(obj)
+        return SlideSerializer(sl).data if sl else None
 
 
 class StageSerializer(serializers.ModelSerializer):
