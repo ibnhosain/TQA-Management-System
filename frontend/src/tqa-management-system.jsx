@@ -182,7 +182,12 @@ const sheetHTML = (courseName, books, headers, rows, en) => {
         )
         .join("")
     : `<tr><td class="em" colspan="${cols}">—</td></tr>`;
-  return `<!DOCTYPE html><html lang="bn"><head><meta charset="utf-8"><title>কোর্স সিলেবাস — ${esc(courseName)}</title>
+  // ⚠️ পুরো কাগজটাই এক ভাষায় থাকা চাই। আগে কেবল "কোর্স:" ও বইয়ের
+  // শিরোনামটুকু ইংরেজি হতো, আর ব্যানার-শিরোনাম-ফুটার বাংলাই থেকে যেত —
+  // ফলে শিক্ষার্থী প্রিন্ট করলে অর্ধেক বাংলা অর্ধেক ইংরেজি একটা কাগজ বেরোত।
+  const ttl = en ? "Course Syllabus" : "কোর্স সিলেবাস";
+  const acad = en ? "Tarbiyatul Quran Academy" : "তারবিয়াতুল কুরআন একাডেমী";
+  return `<!DOCTYPE html><html lang="${en ? "en" : "bn"}"><head><meta charset="utf-8"><title>${ttl} — ${esc(courseName)}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700;800&display=swap');
 *{box-sizing:border-box}
@@ -204,9 +209,9 @@ td.em{text-align:center;color:#9ca3af}
 .f{text-align:center;font-size:11px;color:#9ca3af;padding:10px;border-top:1px solid #eef0ee}
 @media print{body{background:#fff;padding:0}.v{border:none;border-radius:0;max-width:100%}}
 </style></head><body><div class="v">
-<div class="h"><div class="ar">تربية القرآن</div><h1>তারবিয়াতুল কুরআন একাডেমী</h1>
+<div class="h"><div class="ar">تربية القرآن</div><h1>${acad}</h1>
 <div class="s">tarbiyatulquran.org · WhatsApp: +880 140 249 9027</div></div>
-<div class="k">কোর্স সিলেবাস</div>
+<div class="k">${ttl}</div>
 <div class="cn">${en ? "Course:" : "কোর্স:"} ${esc(courseName)}</div>${
     (books || []).length
       ? `<div class="bw"><div class="bt">${
@@ -217,7 +222,7 @@ td.em{text-align:center;color:#9ca3af}
       : ""
   }
 <table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>
-<div class="f">তারবিয়াতুল কুরআন একাডেমী · tarbiyatulquran.org</div>
+<div class="f">${acad} · tarbiyatulquran.org</div>
 </div></body></html>`;
 };
 
