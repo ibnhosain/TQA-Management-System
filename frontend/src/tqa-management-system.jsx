@@ -4395,7 +4395,28 @@ const LESSON_BODY_CSS = `
 .tqaLessonBody th, [contenteditable] th { background: #eafaf1; }
 .tqaLessonBody a { color: #1a5c3a; font-weight: 700; }
 .tqaLessonBody ul, .tqaLessonBody ol, [contenteditable] ul, [contenteditable] ol { padding-left: 24px; margin: 6px 0; }
+.tqaLessonBody h1, [contenteditable] h1 { font-size: 1.7em; font-weight: 800; line-height: 1.4; margin: 12px 0 6px; }
+.tqaLessonBody h2, [contenteditable] h2 { font-size: 1.45em; font-weight: 800; line-height: 1.4; margin: 11px 0 5px; }
+.tqaLessonBody h3, [contenteditable] h3 { font-size: 1.22em; font-weight: 700; line-height: 1.45; margin: 10px 0 4px; }
+.tqaLessonBody h4, [contenteditable] h4 { font-size: 1.08em; font-weight: 700; line-height: 1.5; margin: 9px 0 4px; }
+.tqaLessonBody p, [contenteditable] p { margin: 6px 0; }
+.tqaLessonBody blockquote, [contenteditable] blockquote { margin: 8px 0; padding: 6px 14px; border-left: 3px solid #c9962a; background: #fdf6e7; border-radius: 0 8px 8px 0; }
 `;
+
+/* টগলের ভেতরে বসানো লেখার বাক্স — তিন রকম, তিন কাজের জন্য */
+const RT_BOXES = [
+  { k: "green", label: "🟢 সবুজ বাক্স (গুরুত্বপূর্ণ)", border: "#1a5c3a", bg: "#eafaf1" },
+  { k: "gold", label: "🟡 হলুদ বাক্স (সতর্কতা)", border: "#c9962a", bg: "#fdf6e7" },
+  { k: "grey", label: "⚪ ধূসর বাক্স (নোট)", border: "#d5dbd6", bg: "#f4f6f4" },
+];
+/* লেখার ধরন — প্যারাগ্রাফ ও তিন মাপের শিরোনাম */
+const RT_BLOCKS = [
+  { v: "p", label: "সাধারণ লেখা" },
+  { v: "h2", label: "শিরোনাম — বড়" },
+  { v: "h3", label: "শিরোনাম — মাঝারি" },
+  { v: "h4", label: "শিরোনাম — ছোট" },
+  { v: "blockquote", label: "উদ্ধৃতি" },
+];
 
 /* নির্বাচিত ছবির চারপাশে যে দাগটা দেখানো হয় — এটি কখনো সংরক্ষিত হয় না,
    লেখা পড়ার ঠিক আগে সরিয়ে নেওয়া হয় (নিচে readHTML দেখুন) */
@@ -4501,6 +4522,24 @@ function RichText({ value, onChange, placeholder }) {
     push();
   };
 
+  /* কার্সার যে অনুচ্ছেদে আছে সেটিকে শিরোনাম বা সাধারণ লেখা বানানো।
+     ⚠️ ট্যাগের নাম কোণ-বন্ধনীসহ দিতে হয় — কিছু ব্রাউজার নইলে কিছুই করে না। */
+  const blockAs = (tag) => cmd("formatBlock", "<" + tag + ">");
+
+  /* লেখার বাক্স — চারপাশে কিনারা ও হালকা রং। ভেতরের নমুনা লেখাটা মুছে
+     নিজের লেখা বসিয়ে নিলেই হলো; বাক্সের পরে একটি খালি লাইন রেখে দিই
+     যাতে বাক্সের বাইরে লেখা চালিয়ে যাওয়া যায়। */
+  const insertBox = (kind) => {
+    const b = RT_BOXES.find((x) => x.k === kind);
+    if (!b) return;
+    cmd(
+      "insertHTML",
+      `<div style="border: 1.5px solid ${b.border}; background-color: ${b.bg}; ` +
+        `border-radius: 10px; padding: 10px 14px; margin: 10px 0">` +
+        `এখানে লিখুন…</div><p><br /></p>`,
+    );
+  };
+
   /* লেখার পেছনের রং — ব্রাউজারভেদে কমান্ডের নাম আলাদা */
   const bgColor = (col) => {
     ref.current?.focus();
@@ -4603,6 +4642,34 @@ function RichText({ value, onChange, placeholder }) {
         <button type="button" title="মোটা" style={{ ...tool, fontWeight: 900 }} onClick={() => cmd("bold")}>B</button>
         <button type="button" title="বাঁকা" style={{ ...tool, fontStyle: "italic" }} onClick={() => cmd("italic")}>I</button>
         <button type="button" title="আন্ডারলাইন" style={{ ...tool, textDecoration: "underline" }} onClick={() => cmd("underline")}>U</button>
+        <select
+          title="লেখার ধরন — শিরোনাম নাকি সাধারণ লেখা"
+          defaultValue=""
+          onChange={(e) => {
+            if (e.target.value) blockAs(e.target.value);
+            e.target.value = "";
+          }}
+          style={{ ...tool, padding: "5px 6px" }}
+        >
+          <option value="">ধরন</option>
+          {RT_BLOCKS.map((b) => (
+            <option key={b.v} value={b.v}>{b.label}</option>
+          ))}
+        </select>
+        <select
+          title="লেখার বাক্স বসান"
+          defaultValue=""
+          onChange={(e) => {
+            if (e.target.value) insertBox(e.target.value);
+            e.target.value = "";
+          }}
+          style={{ ...tool, padding: "5px 6px" }}
+        >
+          <option value="">▭ বাক্স</option>
+          {RT_BOXES.map((b) => (
+            <option key={b.k} value={b.k}>{b.label}</option>
+          ))}
+        </select>
         <select
           title="অক্ষরের আকার"
           defaultValue=""
