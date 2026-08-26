@@ -17911,6 +17911,8 @@ function LessonsView({ user, courses }) {
   const [teachId, setTeachId] = useState(null);
   // কোন দারসের অগ্রগতির পাতা খোলা
   const [progFor, setProgFor] = useState(null);
+  // কোন দারসের নতুন বয়সের সংস্করণ বানানো হচ্ছে
+  const [ageFor, setAgeFor] = useState(null);
   // এই কোর্সের সব অগ্রগতি — তালিকায় এক নজরে দেখানোর জন্য
   const [prog, setProg] = useState([]);
   const [courseId, setCourseId] = useState("");
@@ -18021,6 +18023,16 @@ function LessonsView({ user, courses }) {
       { yes: "হ্যাঁ, চিরতরে মুছুন", no: "না, থাক" },
     );
 
+  /* একই শিরোনামের দারসগুলো এক দলে — এগুলোই এক বিষয়ের কয়েকটি
+     বয়সের সংস্করণ। ছোট বয়স আগে। */
+  const groups = [];
+  lessons.forEach((l) => {
+    const g = groups.find((x) => x.title === l.title);
+    if (g) g.items.push(l);
+    else groups.push({ title: l.title, items: [l] });
+  });
+  groups.forEach((g) => g.items.sort((a, b) => a.age_from - b.age_from));
+
   const statusTag = (st) => {
     if (st === "published") return <Tag>প্রকাশিত</Tag>;
     if (st === "ready")
@@ -18032,6 +18044,19 @@ function LessonsView({ user, courses }) {
 
   const teachOverlay = teachId && (
     <TeacherMode id={teachId} onClose={() => setTeachId(null)} />
+  );
+
+  const ageOverlay = ageFor && (
+    <AgeVersionModal
+      lesson={ageFor.lesson}
+      existing={ageFor.siblings}
+      onClose={() => setAgeFor(null)}
+      onDone={(n) => {
+        setAgeFor(null);
+        load();
+        setOpenId(n.id);
+      }}
+    />
   );
 
   const progOverlay = progFor && (
@@ -18107,69 +18132,469 @@ function LessonsView({ user, courses }) {
 
       {teachOverlay}
       {progOverlay}
+      {ageOverlay}
 
       {!loading && (
         <div style={{ display: "grid", gap: 8 }}>
-          {lessons.length === 0 && (
+          {groups.length === 0 && (
             <div style={{ ...S.card, color: C.muted, fontSize: 14 }}>
               এই কোর্সে এখনো কোনো দারস লেখা হয়নি।
               {canEdit &&
                 " উপরের নমুনা দুটির একটি এনে দেখতে পারেন — কেমন হওয়া উচিত তার ধারণা পাবেন।"}
             </div>
           )}
-          {lessons.map((l) => (
-            <div
-              key={l.id}
-              style={{
-                ...S.card,
-                padding: 14,
-                display: "flex",
-                gap: 12,
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <div
-                  style={{ fontWeight: 800, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}
-                >
-                  {l.title} {statusTag(l.status)}
-                </div>
-                <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>
-                  {bn(l.age_from)}–{bn(l.age_to)} বছর · {bn(l.step_count || 0)} ধাপ ·{" "}
-                  {bn(l.duration_min)} মিনিট ·{" "}
-                  {(LESSON_KINDS.find((x) => x[0] === l.kind) || [, l.kind])[1]}{" "}
-                  <ProgressSummary lessonId={l.id} rows={prog} />
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {(l.step_count || 0) > 0 && (
-                  <Btn sm kind="gold" onClick={() => setTeachId(l.id)}>
-                    ▶️ শিক্ষক মোড
-                  </Btn>
-                )}
-                <Btn sm kind="soft" onClick={() => setProgFor(l)}>
-                  📈 অগ্রগতি
-                </Btn>
-                <Btn sm kind="soft" onClick={() => setOpenId(l.id)}>
-                  {canEdit ? "✏️ খুলুন" : "👁️ দেখুন"}
-                </Btn>
-                {canEdit && (
-                  <>
-                    <Btn sm kind="soft" onClick={() => duplicate(l)}>
-                      📄 নকল
-                    </Btn>
-                    <Btn sm kind="danger" onClick={() => remove(l)}>
-                      🗑️
-                    </Btn>
-                  </>
-                )}
-              </div>
-            </div>
+          {groups.map((g) => (
+            <LessonRow
+              key={g.title}
+              group={g}
+              canEdit={canEdit}
+              prog={prog}
+              onOpen={(l) => setOpenId(l.id)}
+              onTeach={(l) => setTeachId(l.id)}
+              onProgress={(l) => setProgFor(l)}
+              onDuplicate={duplicate}
+              onAgeVersion={(l, siblings) => setAgeFor({ lesson: l, siblings })}
+              onRemove={remove}
+            />
           ))}
         </div>
       )}
     </Section>
+  );
+}
+
+/* ═══════════ বয়সভিত্তিক সংস্করণ ও শিক্ষার্থীর পুনরাবৃত্তি ═══════════ */
+
+/* একই বিষয়, আলাদা বয়স — শেখানোর ধরনটাই বদলায়, কেবল শব্দ নয়।
+   এই চারটি ভাগ একাডেমির স্থায়ী নিয়ম। */
+const AGE_BANDS = [
+  [5, 7, "৫–৭ বছর", "শোনা ও নকল করা, ছোট বাক্য, ছবি, খেলা"],
+  [7, 9, "৭–৯ বছর", "পড়া ও মনে করা, সহজ অর্থ, ছোট কাজ"],
+  [9, 12, "৯–১২ বছর", "অর্থ ও চিন্তা, তাজবীদের ধারণা, নিজে মনে করা"],
+  [12, 15, "১২–১৫ বছর", "গভীর অর্থ, দলিল, নিজে নিজে মুখস্থ"],
+];
+
+const bandLabel = (l) => {
+  const b = AGE_BANDS.find((x) => x[0] === l.age_from && x[1] === l.age_to);
+  return b ? b[2] : `${bn(l.age_from)}–${bn(l.age_to)} বছর`;
+};
+
+/* নতুন বয়সের সংস্করণ বানানোর পাতা */
+function AgeVersionModal({ lesson, existing, onClose, onDone }) {
+  const [busy, setBusy] = useState(false);
+  const taken = (a, b) =>
+    existing.some((x) => x.age_from === a && x.age_to === b);
+
+  const make = async (a, b, label) => {
+    setBusy(true);
+    try {
+      const n = await api.duplicateLesson(lesson.id, {
+        // ⚠️ শিরোনাম একই রাখি — তাতেই দুটো এক দারসের দুই সংস্করণ হিসেবে
+        // পাশাপাশি দেখায়, আলাদা দুটো দারস হিসেবে নয়
+        title: lesson.title,
+        age_from: a,
+        age_to: b,
+      });
+      notice(`📄 ${label}-এর সংস্করণ তৈরি — এখন ভাষা ও ধরন সাজিয়ে নিন`);
+      onDone(n);
+    } catch (e) {
+      notice("তৈরি করা যায়নি — " + (e?.data?.error || e?.message || ""));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title={`➕ বয়সের সংস্করণ — ${lesson.title}`} onClose={onClose}>
+      <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.8, marginBottom: 12 }}>
+        এখনকার দারসটির হুবহু নকল হবে, কেবল বয়সসীমা বদলে। তারপর ওই বয়সের
+        উপযোগী করে ভাষা ও শেখানোর ধরনটা সাজিয়ে নেবেন — <b>শুধু শব্দ বদলালে
+        হবে না</b>, পড়ানোর কায়দাটাই বদলাতে হবে।
+      </div>
+      <div style={{ display: "grid", gap: 8 }}>
+        {AGE_BANDS.map(([a, b, label, how]) => {
+          const has = taken(a, b);
+          return (
+            <button
+              key={label}
+              disabled={has || busy}
+              onClick={() => make(a, b, label)}
+              style={{
+                ...S.card,
+                padding: 12,
+                textAlign: "left",
+                cursor: has ? "default" : "pointer",
+                fontFamily: "inherit",
+                opacity: has ? 0.5 : 1,
+                border: `1.5px solid ${has ? C.line : C.emerald}`,
+              }}
+            >
+              <div style={{ fontWeight: 800, color: C.text }}>
+                {label} {has && <Tag color={C.muted} bg={C.cream}>আছে</Tag>}
+              </div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
+                {how}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}
+
+/* ─────────── শিক্ষার্থীর নিজের দারস ও পুনরাবৃত্তি ───────────
+   ⚠️ এখানে শিক্ষার্থী কেবল পর্দাটুকুই দেখেন — যা ক্লাসে তাঁর সামনে ছিল।
+   উস্তাদের স্ক্রিপ্ট এই পাতার কোথাও নেই, সার্ভারও তা পাঠায় না। */
+function StudentLessonPlayer({ lessonId, title, onClose }) {
+  const [stage, setStage] = useState(null);
+  const [i, setI] = useState(0);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setStage(await api.lessonStage(lessonId));
+      } catch (e) {
+        setErr(e?.data?.error || e?.message || "Could not open this lesson");
+      }
+    })();
+  }, [lessonId]);
+
+  const steps = stage?.steps || [];
+  const go = (n) => n >= 0 && n < steps.length && setI(n);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight" || e.key === " ") go(i + 1);
+      else if (e.key === "ArrowLeft") go(i - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i, steps.length]);
+
+  const btn = {
+    border: "1px solid #ffffff33",
+    background: "#ffffff14",
+    color: "#fff",
+    borderRadius: 10,
+    padding: "10px 18px",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 120,
+        background: C.emeraldD,
+        color: "#fff",
+        display: "flex",
+        flexDirection: "column",
+        fontFamily: "inherit",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 14px",
+          borderBottom: "1px solid #ffffff1f",
+        }}
+      >
+        <div style={{ flex: 1, fontWeight: 800, fontSize: 14.5 }}>{title}</div>
+        {steps.length > 0 && (
+          <span style={{ fontSize: 12.5, color: "#ffffff99" }}>
+            {i + 1} / {steps.length}
+          </span>
+        )}
+        <button style={btn} onClick={onClose}>
+          ✕ Close
+        </button>
+      </div>
+
+      <div style={{ height: 4, background: "#ffffff1a" }}>
+        <div
+          style={{
+            height: "100%",
+            width: steps.length ? `${((i + 1) / steps.length) * 100}%` : "0%",
+            background: C.goldL,
+            transition: "width .25s",
+          }}
+        />
+      </div>
+
+      <div
+        style={{
+          flex: 1,
+          display: "grid",
+          placeItems: "center",
+          overflowY: "auto",
+          padding: "18px 0",
+        }}
+      >
+        {err ? (
+          <div style={{ color: "#ffffffbb", fontSize: 15 }}>{err}</div>
+        ) : !stage ? (
+          <div style={{ color: "#ffffff88" }}>Loading…</div>
+        ) : (
+          <StageSlide slide={steps[i]?.slide} />
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          padding: "10px 14px",
+          borderTop: "1px solid #ffffff1f",
+        }}
+      >
+        <button
+          style={{ ...btn, opacity: i === 0 ? 0.4 : 1 }}
+          disabled={i === 0}
+          onClick={() => go(i - 1)}
+        >
+          ← Back
+        </button>
+        <div style={{ flex: 1 }} />
+        {i === steps.length - 1 ? (
+          <button
+            style={{ ...btn, background: C.gold, border: "none" }}
+            onClick={onClose}
+          >
+            ✓ Done
+          </button>
+        ) : (
+          <button
+            style={{ ...btn, background: C.emeraldL, border: "none" }}
+            onClick={() => go(i + 1)}
+            disabled={!steps.length}
+          >
+            Next →
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const STUDENT_STATUS = {
+  learning: ["Still learning", C.gold, C.amberBg],
+  review: ["Needs revision", C.blue, C.blueBg],
+  mastered: ["Memorised 🌟", C.green, C.greenBg],
+};
+
+function StudentLessonsView({ user }) {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [play, setPlay] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setRows((await api.lessonProgress()) || []);
+      } catch (e) {
+        notice("Could not load your lessons.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const todo = rows.filter((r) => r.status !== "mastered").length;
+
+  return (
+    <Section
+      title="📗 My Lessons"
+      sub="Go through a lesson again, at your own pace"
+    >
+      {play && (
+        <StudentLessonPlayer
+          lessonId={play.lesson}
+          title={play.lesson_title}
+          onClose={() => setPlay(null)}
+        />
+      )}
+
+      {loading && <Loader text="Loading your lessons" />}
+
+      {!loading && rows.length === 0 && (
+        <div style={{ ...S.card, color: C.muted, fontSize: 14 }}>
+          Your lessons will appear here after your teacher marks them.
+        </div>
+      )}
+
+      {!loading && rows.length > 0 && (
+        <>
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}>
+            {rows.length} lesson{rows.length > 1 ? "s" : ""} ·{" "}
+            {todo ? `${todo} still to revise` : "all memorised, mashaa Allah 🌟"}
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {rows.map((r) => {
+              const st = STUDENT_STATUS[r.status] || ["", C.muted, C.cream];
+              return (
+                <div
+                  key={r.id}
+                  style={{
+                    ...S.card,
+                    padding: 14,
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 190 }}>
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {r.lesson_title}
+                      <Tag color={st[1]} bg={st[2]}>
+                        {st[0]}
+                      </Tag>
+                    </div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
+                      Studied {r.times_taught} time
+                      {r.times_taught > 1 ? "s" : ""}
+                      {r.last_taught ? ` · last on ${fmtDate(r.last_taught)}` : ""}
+                    </div>
+                    {r.note && (
+                      <div
+                        style={{
+                          fontSize: 12.5,
+                          color: C.text,
+                          background: C.cream,
+                          borderRadius: 8,
+                          padding: "6px 10px",
+                          marginTop: 6,
+                        }}
+                      >
+                        🧕 {r.note}
+                      </div>
+                    )}
+                  </div>
+                  <Btn sm kind="gold" onClick={() => setPlay(r)}>
+                    🔁 Revise
+                  </Btn>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </Section>
+  );
+}
+
+
+/* একটি দারস — একই শিরোনামের কয়েকটি বয়সের সংস্করণ থাকলে সেগুলো একসাথে,
+   আলাদা আলাদা সারি হিসেবে নয়। উস্তাদ এক চাপে বয়স বেছে নেন। */
+function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
+                     onDuplicate, onAgeVersion, onRemove }) {
+  const [pick, setPick] = useState(0);
+  const items = group.items;
+  const l = items[Math.min(pick, items.length - 1)];
+  return (
+    <div style={{ ...S.card, padding: 14 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div
+            style={{
+              fontWeight: 800,
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            {group.title} {statusTag(l.status)}
+            {items.length > 1 && (
+              <Tag color={C.blue} bg={C.blueBg}>
+                {bn(items.length)}টি বয়সের সংস্করণ
+              </Tag>
+            )}
+          </div>
+          <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>
+            {bandLabel(l)} · {bn(l.step_count || 0)} ধাপ · {bn(l.duration_min)}{" "}
+            মিনিট ·{" "}
+            {(LESSON_KINDS.find((x) => x[0] === l.kind) || [, l.kind])[1]}{" "}
+            <ProgressSummary lessonId={l.id} rows={prog} />
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {(l.step_count || 0) > 0 && (
+            <Btn sm kind="gold" onClick={() => onTeach(l)}>
+              ▶️ শিক্ষক মোড
+            </Btn>
+          )}
+          <Btn sm kind="soft" onClick={() => onProgress(l)}>
+            📈 অগ্রগতি
+          </Btn>
+          <Btn sm kind="soft" onClick={() => onOpen(l)}>
+            {canEdit ? "✏️ খুলুন" : "👁️ দেখুন"}
+          </Btn>
+          {canEdit && (
+            <>
+              <Btn sm kind="soft" onClick={() => onAgeVersion(l, items)}>
+                ➕ বয়সের সংস্করণ
+              </Btn>
+              <Btn sm kind="soft" onClick={() => onDuplicate(l)}>
+                📄 নকল
+              </Btn>
+              <Btn sm kind="danger" onClick={() => onRemove(l)}>
+                🗑️
+              </Btn>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* বয়স বেছে নেওয়া — একাধিক সংস্করণ থাকলেই কেবল */}
+      {items.length > 1 && (
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            flexWrap: "wrap",
+            marginTop: 10,
+            paddingTop: 10,
+            borderTop: `1px solid ${C.line}`,
+          }}
+        >
+          {items.map((x, n) => (
+            <Btn
+              key={x.id}
+              sm
+              kind={n === pick ? "primary" : "soft"}
+              onClick={() => setPick(n)}
+            >
+              {bandLabel(x)}
+            </Btn>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -20980,6 +21405,16 @@ const NAV = [
     roles: ["director", "admin", "teacher"],
   },
   {
+    // ⚠️ শিক্ষার্থীর নিজের পাতা — এখানে কেবল ক্লাসে তাঁর সামনে যা ছিল
+    // সেই পর্দাটুকুই, উস্তাদের স্ক্রিপ্ট নয়। ট্রায়াল অতিথির পোর্টাল
+    // ইচ্ছা করেই একটিমাত্র পাতার, তাই সেখানে যোগ করা হয়নি।
+    id: "mylessons",
+    icon: "📗",
+    label: "আমার দারস",
+    labelEn: "My Lessons",
+    roles: ["student"],
+  },
+  {
     id: "syllabus",
     icon: "📜",
     label: "সিলেবাস",
@@ -22642,6 +23077,9 @@ export default function App() {
           {view === "lectures" && <LecturePlan {...props} />}
           {view === "lessons" && user.role !== "student" && user.role !== "trial" && (
             <LessonsView user={user} courses={courses} />
+          )}
+          {view === "mylessons" && user.role === "student" && (
+            <StudentLessonsView user={user} />
           )}
           {view === "syllabus" && <SyllabusView {...props} />}
           {view === "attendance" && <AttendanceView {...props} />}

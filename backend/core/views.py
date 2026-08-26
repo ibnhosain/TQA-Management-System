@@ -1649,9 +1649,15 @@ class LessonViewSet(viewsets.ModelViewSet):
         if u.role == "teacher":
             # নিজের কোর্স, অথবা কোর্সে নিজের শিক্ষার্থী আছে
             return qs.filter(_q_course_teacher_or_own(u)).distinct()
-        # ⚠️ শিক্ষার্থী ও ট্রায়াল অতিথি এখনো কিছুই পান না। ক্লাসের পর নিজে
-        # দেখার ব্যবস্থাটি ধাপ ৫-এ ইচ্ছা করে খোলা হবে — তখন কেবল
-        # প্রকাশিত দারসের stage-টুকু, স্ক্রিপ্ট নয়।
+        # ⚠️ শিক্ষার্থী ও ট্রায়াল অতিথি — দরজাটি ইচ্ছা করেই খুব সরু।
+        # খোলা কেবল /stage/-এর জন্য, অর্থাৎ যে পথে উস্তাদের স্ক্রিপ্টের
+        # একটি ঘরও যায় না। তালিকা ও পুরো দারস (retrieve) আগের মতোই বন্ধ।
+        # তার উপর দুটি শর্ত — দারসটি প্রকাশিত হতে হবে, আর তাঁকে সেটি
+        # সত্যিই পড়ানো হয়ে থাকতে হবে (অগ্রগতির রেকর্ড আছে)। ফলে না-পড়া
+        # বা খসড়া দারস কেউ ঘেঁটে দেখতে পারেন না।
+        if self.action == "stage":
+            return qs.filter(status=Lesson.Status.PUBLISHED,
+                             progress__student=u).distinct()
         return qs.none()
 
     def get_serializer_context(self):
