@@ -16880,6 +16880,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(null); // আইডি তৈরির ফর্ম খোলা আছে কিনা
   const [made, setMade] = useState(null); // সদ্য তৈরি — আইডি/পাসওয়ার্ড দেখানোর জন্য
+  const [editFor, setEditFor] = useState(null); // কার তথ্য বদলানো হচ্ছে
   const [sendFor, setSendFor] = useState(null); // কাকে বার্তা পাঠানো হচ্ছে
   const [reportFor, setReportFor] = useState(null); // মূল্যায়ন খোলা আছে কার
   const [reports, setReports] = useState([]); // কোন অতিথির রিপোর্ট কোন ধাপে
@@ -16961,6 +16962,86 @@ function TrialView({ db, setDb, user, courses, refresh }) {
       setBusy(false);
     }
   };
+
+  /* এডিটের ফর্ম খোলা — আইডি ও পাসওয়ার্ড আলাদা রাখা হয়, কারণ সেগুলো
+     আলাদা পথে (credentials) সংরক্ষিত হয়। পাসওয়ার্ডের ঘর খালি রাখলে
+     পুরনোটাই থাকে, তাই ভুল করে বদলে যাওয়ার ভয় নেই। */
+  const openEdit = (t) =>
+    setEditFor({
+      id: t.id,
+      name: t.name || t.name_bn || "",
+      guardian: t.guardian || "",
+      country: t.country || "",
+      phone: t.phone || "",
+      email: t.email || "",
+      course: t.trial_course || "",
+      teacher: t.teacher || "",
+      trial_until: t.trial_until || "",
+      username: t.username || "",
+      oldUsername: t.username || "",
+      password: "",
+    });
+
+  const saveEdit = async () => {
+    const f = editFor;
+    if (!f.name.trim()) return notice("নাম খালি রাখা যাবে না");
+    if (!f.username.trim()) return notice("আইডি খালি রাখা যাবে না");
+    setBusy(true);
+    try {
+      // আগে সাধারণ তথ্য, তারপর আইডি/পাসওয়ার্ড — দুটি আলাদা পথ
+      await api.editTrial(f.id, {
+        name: f.name.trim(),
+        guardian: f.guardian,
+        country: f.country,
+        phone: f.phone,
+        email: f.email,
+        trial_course: f.course || null,
+        teacher: f.teacher || null,
+        trial_until: f.trial_until || null,
+      });
+      const cred = {};
+      if (f.username.trim() !== f.oldUsername) cred.username = f.username.trim();
+      if (f.password.trim()) cred.password = f.password.trim();
+      if (Object.keys(cred).length) await api.setTrialCredentials(f.id, cred);
+      setEditFor(null);
+      await load();
+      notice(
+        Object.keys(cred).length
+          ? "✅ সংরক্ষিত — নতুন আইডি/পাসওয়ার্ড পরিবারকে জানিয়ে দিন"
+          : "✅ সংরক্ষিত হয়েছে",
+      );
+    } catch (e) {
+      notice(
+        "সংরক্ষণ ব্যর্থ — " +
+          (e?.data?.error || e?.data?.detail || e?.message || "যাচাই করুন"),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* মুছে ফেলা — কেবল পরিচালক, আর কী কী হারাবে তা স্পষ্ট বলে দিয়ে */
+  const removeTrial = (t) =>
+    askConfirm(
+      `${t.name || t.name_bn} (${t.username}) — এই ট্রায়াল অ্যাকাউন্টটি ` +
+        "চিরতরে মুছে ফেলা হবে।" +
+        "\n\n" +
+        "সাথে তাঁর ট্রায়ালের হাজিরা ও মূল্যায়নের রিপোর্টও মুছে যাবে। " +
+        "এটি আর ফেরানো যাবে না।" +
+        "\n\n" +
+        "শুধু মেয়াদ শেষ করতে চাইলে মোছার দরকার নেই — মেয়াদ ফুরালে " +
+        "অ্যাকাউন্টটি নিজেই সংরক্ষণে চলে যায়।",
+      async () => {
+        try {
+          await api.deleteTrial(t.id);
+          await load();
+          notice("🗑️ ট্রায়াল অ্যাকাউন্টটি মুছে ফেলা হয়েছে");
+        } catch (e) {
+          notice("মুছতে ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+        }
+      },
+      { yes: "হ্যাঁ, চিরতরে মুছে ফেলুন", no: "না, থাক" },
+    );
 
   const resetPass = (t) =>
     askConfirm(
@@ -17208,6 +17289,9 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 <Btn sm kind="soft" onClick={() => setSendFor(t)}>
                   📨 বার্তা
                 </Btn>
+                <Btn sm kind="soft" onClick={() => openEdit(t)}>
+                  ✏️ এডিট
+                </Btn>
                 <Btn sm kind="soft" onClick={() => resetPass(t)}>
                   🔄 পাসওয়ার্ড
                 </Btn>
@@ -17230,6 +17314,11 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 {isDir(user) && accepted(t.id) && (
                   <Btn sm kind="primary" onClick={() => convert(t)}>
                     🎓 ভর্তি করুন
+                  </Btn>
+                )}
+                {isDir(user) && (
+                  <Btn sm kind="danger" onClick={() => removeTrial(t)}>
+                    🗑️
                   </Btn>
                 )}
               </div>
@@ -17334,6 +17423,141 @@ function TrialView({ db, setDb, user, courses, refresh }) {
             </div>
             <Btn kind="gold" onClick={busy ? undefined : save} style={{ opacity: busy ? 0.6 : 1 }}>
               {busy ? "তৈরি হচ্ছে…" : "🎓 আইডি তৈরি করুন"}
+            </Btn>
+          </div>
+        </Modal>
+      )}
+
+      {editFor && (
+        <Modal title="✏️ ট্রায়ালের তথ্য বদলান" onClose={() => setEditFor(null)} wide>
+          <div style={{ display: "grid", gap: 10 }}>
+            <div>
+              <label style={S.label}>নাম *</label>
+              <input
+                style={S.input}
+                value={editFor.name}
+                onChange={(e) => setEditFor({ ...editFor, name: e.target.value })}
+              />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <label style={S.label}>অভিভাবক</label>
+                <input
+                  style={S.input}
+                  value={editFor.guardian}
+                  onChange={(e) => setEditFor({ ...editFor, guardian: e.target.value })}
+                />
+              </div>
+              <div>
+                <label style={S.label}>দেশ</label>
+                <input
+                  style={S.input}
+                  value={editFor.country}
+                  onChange={(e) => setEditFor({ ...editFor, country: e.target.value })}
+                />
+              </div>
+              <div>
+                <label style={S.label}>WhatsApp নম্বর</label>
+                <input
+                  style={S.input}
+                  value={editFor.phone}
+                  onChange={(e) => setEditFor({ ...editFor, phone: e.target.value })}
+                />
+              </div>
+              <div>
+                <label style={S.label}>ইমেইল</label>
+                <input
+                  style={S.input}
+                  type="email"
+                  value={editFor.email}
+                  onChange={(e) => setEditFor({ ...editFor, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <label style={S.label}>কোর্স</label>
+                <select
+                  style={S.input}
+                  value={editFor.course || ""}
+                  onChange={(e) => setEditFor({ ...editFor, course: e.target.value })}
+                >
+                  <option value="">— নেই —</option>
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={S.label}>উস্তাদ</label>
+                <select
+                  style={S.input}
+                  value={editFor.teacher || ""}
+                  onChange={(e) => setEditFor({ ...editFor, teacher: e.target.value })}
+                >
+                  <option value="">— নেই —</option>
+                  {teachers.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name || t.name_bn}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style={S.label}>মেয়াদ শেষের তারিখ</label>
+              <input
+                style={S.input}
+                type="date"
+                value={editFor.trial_until || ""}
+                onChange={(e) => setEditFor({ ...editFor, trial_until: e.target.value })}
+              />
+            </div>
+
+            <div
+              style={{
+                border: `1.5px solid ${C.goldL}`,
+                background: C.amberBg,
+                borderRadius: 12,
+                padding: 13,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+              }}
+            >
+              <div>
+                <label style={S.label}>লগইন আইডি</label>
+                <input
+                  style={S.input}
+                  value={editFor.username}
+                  onChange={(e) => setEditFor({ ...editFor, username: e.target.value })}
+                />
+              </div>
+              <div>
+                <label style={S.label}>নতুন পাসওয়ার্ড</label>
+                <input
+                  style={S.input}
+                  placeholder="বদলাতে না চাইলে খালি রাখুন"
+                  value={editFor.password}
+                  onChange={(e) => setEditFor({ ...editFor, password: e.target.value })}
+                />
+              </div>
+              <div
+                style={{
+                  gridColumn: "1 / -1",
+                  fontSize: 11.5,
+                  color: C.muted,
+                  lineHeight: 1.6,
+                }}
+              >
+                আইডি বা পাসওয়ার্ড বদলালে পুরনোটিতে আর লগইন হবে না — নতুনটি
+                পরিবারকে জানিয়ে দিতে ভুলবেন না। পাসওয়ার্ডের ঘর খালি রাখলে
+                পুরনোটাই থাকবে।
+              </div>
+            </div>
+
+            <Btn
+              kind="gold"
+              onClick={busy ? undefined : saveEdit}
+              style={{ opacity: busy ? 0.6 : 1 }}
+            >
+              {busy ? "সংরক্ষণ হচ্ছে…" : "💾 সংরক্ষণ করুন"}
             </Btn>
           </div>
         </Modal>

@@ -445,6 +445,9 @@ export const api = {
   editTrial: (id, d) => request(`/trials/${id}/`, { method: "PATCH", body: d }),
   resetTrialPassword: (id) =>
     request(`/trials/${id}/reset_password/`, { method: "POST" }),
+  setTrialCredentials: (id, d) =>
+    request(`/trials/${id}/credentials/`, { method: "POST", body: d }),
+  deleteTrial: (id) => request(`/trials/${id}/`, { method: "DELETE" }),
   // ── ট্রায়াল মূল্যায়ন — উস্তাদ লেখেন, কর্তৃপক্ষ যাচাই করে পাঠান ──
   trialReports: () => request("/trial-reports/"),
   createTrialReport: (d) => request("/trial-reports/", { method: "POST", body: d }),

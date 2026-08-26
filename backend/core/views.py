@@ -1,5 +1,6 @@
 """TQA-MS — DRF ViewSets ও workflow actions (অ্যাপ: core)"""
 import json
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q, Avg, Count, Sum
 from django.http import HttpResponse
 from django.utils import timezone
@@ -1740,11 +1741,66 @@ class TrialViewSet(viewsets.ModelViewSet):
             status="accepted")
         return Response(UserSerializer(u).data)
 
+    @action(detail=True, methods=["post"], permission_classes=[IsDirector])
+    def credentials(self, request, pk=None):
+        """অতিথির আইডি ও পাসওয়ার্ড বদলানো — কেবল পরিচালক।
+
+        দুটোর যেকোনো একটি দিলেই চলে; যেটি দেওয়া হয়নি সেটি অপরিবর্তিত থাকে।
+        আইডি বদলালে পুরনো আইডিতে আর লগইন হয় না, তাই পরিবারকে নতুন আইডি
+        জানিয়ে দিতে হবে — পর্দায় সেই কথাটি মনে করিয়ে দেওয়া হয়।
+        """
+        u = self.get_object()
+        fields = []
+        raw_name = request.data.get("username")
+        if raw_name is not None:
+            name = str(raw_name).strip()
+            if not name:
+                return Response({"error": "আইডি খালি রাখা যাবে না"}, status=400)
+            if len(name) > 150:
+                return Response({"error": "আইডি অনেক লম্বা হয়ে গেছে"}, status=400)
+            # ⚠️ বড়-ছোট হাতের অক্ষর আলাদা করে দেখা হয় না — নইলে "ayesha" ও
+            # "Ayesha" দুটো আলাদা অ্যাকাউন্ট হয়ে লগইনে গোলমাল বাধত
+            if User.objects.filter(username__iexact=name).exclude(pk=u.pk).exists():
+                return Response({"error": "এই আইডিতে আগে থেকেই একটি অ্যাকাউন্ট আছে"},
+                                status=400)
+            try:
+                for v in User._meta.get_field("username").validators:
+                    v(name)
+            except DjangoValidationError:
+                return Response(
+                    {"error": "আইডিতে ফাঁকা জায়গা বা বিশেষ চিহ্ন চলবে না — "
+                              "অক্ষর, সংখ্যা এবং @ . + - _ ব্যবহার করুন"},
+                    status=400)
+            u.username = name
+            fields.append("username")
+
+        raw_pw = request.data.get("password")
+        if raw_pw is not None:
+            pw = str(raw_pw).strip()
+            if len(pw) < 4:
+                return Response({"error": "পাসওয়ার্ড অন্তত ৪ অক্ষরের হতে হবে"},
+                                status=400)
+            u.set_password(pw)
+            u.plain_password = pw  # পরিচালক পরিবারকে জানাবেন
+            fields += ["password", "plain_password"]
+
+        if not fields:
+            return Response({"error": "আইডি বা পাসওয়ার্ড — অন্তত একটি দিন"},
+                            status=400)
+        u.save(update_fields=fields)
+        return Response(self.get_serializer(u).data)
+
     def destroy(self, request, *args, **kwargs):
-        return Response(
-            {"error": "ট্রায়াল অ্যাকাউন্ট মোছা যায় না — মেয়াদ ফুরালে নিজেই "
-                      "সংরক্ষণে চলে যায়, তথ্য অক্ষত থাকে"},
-            status=400)
+        """ট্রায়াল অ্যাকাউন্ট মুছে ফেলা — কেবল পরিচালক।
+
+        ⚠️ এর সাথে তাঁর ট্রায়ালের হাজিরা ও মূল্যায়নের রিপোর্টও চিরতরে
+        মুছে যায় (ডাটাবেসের নিয়মেই)। তাই পর্দায় স্পষ্ট করে জানিয়ে দিয়ে
+        নিশ্চিত করা হয়। ভর্তি আবেদন থাকলে সেটি থেকে যায়, শুধু অ্যাকাউন্টের
+        সংযোগটি খালি হয়ে যায়।
+        """
+        if request.user.role != "director":
+            raise PermissionDenied("ট্রায়াল অ্যাকাউন্ট মোছা কেবল পরিচালকের এখতিয়ার")
+        return super().destroy(request, *args, **kwargs)
 
 
 class AdmissionViewSet(viewsets.ModelViewSet):
