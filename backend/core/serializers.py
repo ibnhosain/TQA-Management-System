@@ -7,7 +7,8 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      Submission, ExamResult, FeePayment, DueMonth, TeacherPayment,
                      SentReceipt, Admission, LeaveRequest, Rating, StudentRemark, Notice,
                      Notification, PushSubscription, WaMessage, LibraryBook,
-                     CourseSyllabusSheet, LessonSection, TrialReport)
+                     CourseSyllabusSheet, LessonSection, TrialReport,
+                     TrialScoreItem)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -32,6 +33,15 @@ class UserSerializer(serializers.ModelSerializer):
         # .values_list()-এর বদলে .all() ইটারেট — prefetch_related("due_months") এর ক্যাশ
         # ব্যবহার হয়, নইলে প্রতি ব্যবহারকারীতে আলাদা কোয়েরি হতো (N+1)
         return [d.month_label for d in obj.due_months.all()]
+
+
+class TrialScoreItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TrialScoreItem
+        fields = ["id", "key", "label_bn", "label_en", "order"]
+        # key সার্ভারই বানায় ও আর বদলায় না — পুরনো রিপোর্টের নম্বর
+        # এই key ধরেই রাখা, তাই বদলালে সেগুলো হারিয়ে যেত
+        read_only_fields = ["key"]
 
 
 class TrialReportSerializer(serializers.ModelSerializer):

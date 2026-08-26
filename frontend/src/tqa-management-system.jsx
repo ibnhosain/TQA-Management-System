@@ -16532,17 +16532,35 @@ function Overview({ db, courses, user, goTo }) {
 }
 
 /* ═══════════ ট্রায়াল মূল্যায়ন ও রিপোর্ট ═══════════
-   মাপকাঠিগুলো এক জায়গায় — নাম বদলাতে বা নতুন যোগ করতে কেবল এই তালিকাটাই
-   বদলাতে হবে, ডাটাবেসে হাত দিতে হবে না (নম্বরগুলো নামসহ সংরক্ষিত থাকে)। */
+   মাপকাঠিগুলো এখন সার্ভারে রাখা — পরিচালক নিজেই নাম বদলাতে, নতুন যোগ
+   করতে বা ক্রম সাজাতে পারেন (🌱 ট্রায়াল → ⚙️ মাপকাঠি)।
+   নিচের তালিকাটি কেবল শেষ ভরসা — সার্ভার থেকে আনা না গেলে যেন পর্দা
+   ফাঁকা না থাকে। */
 const TRIAL_SCORES = [
   { key: "letters", bn: "হরফ চেনা", en: "Recognising letters" },
   { key: "makhraj", bn: "মাখরাজ ও উচ্চারণ", en: "Makhraj & pronunciation" },
   { key: "fluency", bn: "তিলাওয়াতের সাবলীলতা", en: "Fluency" },
   { key: "attentiveness", bn: "মনোযোগ", en: "Attentiveness" },
 ];
+/* সার্ভারের সারিকে পর্দার চেনা আকারে আনা */
+const adaptScoreItem = (x) => ({
+  id: x.id,
+  key: x.key,
+  bn: x.label_bn,
+  en: x.label_en || x.label_bn,
+});
+/* মাপকাঠির তালিকা আনা — ব্যর্থ হলে উপরের শেষ-ভরসা তালিকাটাই */
+const loadScoreItems = () =>
+  api
+    .trialScoreItems()
+    .then((rows) =>
+      rows && rows.length ? rows.map(adaptScoreItem) : TRIAL_SCORES,
+    )
+    .catch(() => TRIAL_SCORES);
 
 /* একাডেমির লেটারহেডে ছাপার উপযোগী রিপোর্ট — রিসিট ছাপার মতোই নতুন ট্যাবে */
-const trialReportHTML = (r) => {
+const trialReportHTML = (r, items) => {
+  const SC = items && items.length ? items : TRIAL_SCORES;
   const esc = (x) =>
     String(x == null ? "" : x).replace(
       /[&<>"]/g,
@@ -16552,7 +16570,7 @@ const trialReportHTML = (r) => {
     const n = Math.max(0, Math.min(5, +v || 0));
     return `<span class="bar"><i style="width:${n * 20}%"></i></span><b>${n}/5</b>`;
   };
-  const rows = TRIAL_SCORES.map(
+  const rows = SC.map(
     (sc) =>
       `<tr><td>${esc(sc.en)}</td><td class="sc">${bar((r.scores || {})[sc.key])}</td></tr>`,
   ).join("");
@@ -16612,10 +16630,19 @@ ${
 function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
   const [rep, setRep] = useState(null);
   const [teachers, setTeachers] = useState([]);
+  const [scoreItems, setScoreItems] = useState(TRIAL_SCORES);
   const [f, setF] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const canReview = isAdm(user);
+
+  useEffect(() => {
+    let alive = true;
+    loadScoreItems().then((rows) => alive && setScoreItems(rows));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     // প্রস্তাবে উস্তাদ বাছতে লাগে — কেবল কর্তৃপক্ষই এই তালিকা পান
@@ -16776,7 +16803,7 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
           <div>
             <label style={S.label}>নম্বর (৫-এর মধ্যে)</label>
             <div style={{ display: "grid", gap: 7 }}>
-              {TRIAL_SCORES.map((sc) => (
+              {scoreItems.map((sc) => (
                 <div
                   key={sc.key}
                   style={{ display: "flex", gap: 9, alignItems: "center", flexWrap: "wrap" }}
@@ -16918,7 +16945,10 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
               <Btn
                 kind="soft"
                 onClick={() =>
-                  openPrintDoc(trialReportHTML(rep), `trial-report-${rep.id}.html`)
+                  openPrintDoc(
+                    trialReportHTML(rep, scoreItems),
+                    `trial-report-${rep.id}.html`,
+                  )
                 }
               >
                 🖨️ রিপোর্ট দেখুন
@@ -16967,6 +16997,8 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(null); // আইডি তৈরির ফর্ম খোলা আছে কিনা
   const [made, setMade] = useState(null); // সদ্য তৈরি — আইডি/পাসওয়ার্ড দেখানোর জন্য
+  const [points, setPoints] = useState([]); // মূল্যায়নের মাপকাঠি
+  const [newPt, setNewPt] = useState({ bn: "", en: "" });
   const [editFor, setEditFor] = useState(null); // কার তথ্য বদলানো হচ্ছে
   const [sendFor, setSendFor] = useState(null); // কাকে বার্তা পাঠানো হচ্ছে
   const [reportFor, setReportFor] = useState(null); // মূল্যায়ন খোলা আছে কার
@@ -16976,14 +17008,16 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   const load = async () => {
     setLoading(true);
     try {
-      const [tr, ad, te, rep] = await Promise.all([
+      const [tr, ad, te, rep, pts] = await Promise.all([
         api.trials(),
         api.admissions().catch(() => []),
         api.allTeachers().catch(() => []),
         api.trialReports().catch(() => []),
+        api.trialScoreItems().catch(() => []),
       ]);
       setTrials(tr || []);
       setReports(rep || []);
+      setPoints(pts || []);
       setApplications((ad || []).filter((a) => a.kind === "trial"));
       setTeachers(te || []);
     } catch (e) {
@@ -16995,6 +17029,69 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   useEffect(() => {
     load();
   }, []);
+
+  /* ───── মূল্যায়নের মাপকাঠি সাজানো ───── */
+  const addPoint = async () => {
+    const bn = newPt.bn.trim();
+    if (!bn) return notice("বাংলা নামটি লিখুন");
+    try {
+      await api.addTrialScoreItem({ label_bn: bn, label_en: newPt.en.trim() });
+      setNewPt({ bn: "", en: "" });
+      await load();
+      notice("✅ নতুন মাপকাঠি যোগ হয়েছে");
+    } catch (e) {
+      notice("যোগ করা যায়নি — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
+  /* লেখা শেষ করে সরে গেলেই সংরক্ষণ — আলাদা "সেভ" চাপতে হয় না।
+     বদলায়নি এমন হলে সার্ভারে কিছুই পাঠানো হয় না। */
+  const savePoint = async (pt, patch) => {
+    if (
+      (patch.label_bn ?? pt.label_bn) === pt.label_bn &&
+      (patch.label_en ?? pt.label_en) === pt.label_en
+    )
+      return;
+    try {
+      await api.editTrialScoreItem(pt.id, patch);
+      await load();
+    } catch (e) {
+      notice("সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+      await load(); // পর্দা যেন সার্ভারের সাথেই মেলে
+    }
+  };
+
+  const movePoint = async (i, d) => {
+    const j = i + d;
+    if (j < 0 || j >= points.length) return;
+    const ids = points.map((x) => x.id);
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    try {
+      await api.reorderTrialScoreItems(ids);
+      await load();
+    } catch (e) {
+      notice("ক্রম বদলানো যায়নি — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
+  const removePoint = (pt) =>
+    askConfirm(
+      `"${pt.label_bn}" মাপকাঠিটি সরিয়ে ফেলা হবে।` +
+        "\n\n" +
+        "এরপর থেকে উস্তাদের ফরমে ও রিপোর্টে এটি আর দেখাবে না। আগে লেখা " +
+        "রিপোর্টগুলোতে দেওয়া নম্বর ডাটাবেসে থেকেই যাবে, তাই মাপকাঠিটি " +
+        "আবার যোগ করলে সেগুলো ফিরে আসবে।",
+      async () => {
+        try {
+          await api.delTrialScoreItem(pt.id);
+          await load();
+          notice("🗑️ সরিয়ে ফেলা হয়েছে");
+        } catch (e) {
+          notice("সরানো যায়নি — " + (e?.data?.error || e?.message || ""));
+        }
+      },
+      { yes: "হ্যাঁ, সরিয়ে ফেলুন", no: "না, থাক" },
+    );
 
   const courseName = (id) =>
     (courses.find((c) => String(c.id) === String(id)) || {}).name || "";
@@ -17299,6 +17396,15 @@ function TrialView({ db, setDb, user, courses, refresh }) {
           >
             👤 ট্রায়াল শিক্ষার্থী ({bn(trials.length)})
           </Btn>
+          {isDir(user) && (
+            <Btn
+              sm
+              kind={tab === "points" ? "gold" : "soft"}
+              onClick={() => setTab("points")}
+            >
+              ⚙️ মূল্যায়নের মাপকাঠি ({bn(points.length)})
+            </Btn>
+          )}
         </div>
 
         {loading && <Loader text="ট্রায়ালের তথ্য লোড হচ্ছে" />}
@@ -17413,6 +17519,87 @@ function TrialView({ db, setDb, user, courses, refresh }) {
           </div>
         )}
       </Section>
+
+      {!loading && tab === "points" && isDir(user) && (
+        <div style={{ display: "grid", gap: 8 }}>
+          <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
+            উস্তাদ ট্রায়াল শেষে এই মাপকাঠিগুলোতেই ১–৫ নম্বর দেন, আর পরিবার
+            রিপোর্টে ইংরেজি নামটি দেখেন। ইংরেজি ঘর খালি রাখলে বাংলা নামটাই
+            বসে যাবে। লেখা শেষ করে অন্য ঘরে গেলেই নিজে থেকে সংরক্ষিত হয়।
+          </div>
+          {points.map((pt, i) => (
+            <div
+              key={pt.id}
+              style={{
+                ...S.card,
+                padding: 12,
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <span style={{ color: C.muted, fontSize: 12, minWidth: 18 }}>
+                {bn(i + 1)}.
+              </span>
+              <input
+                style={{ ...S.input, flex: 1, minWidth: 150 }}
+                defaultValue={pt.label_bn}
+                placeholder="বাংলা নাম"
+                onBlur={(e) => savePoint(pt, { label_bn: e.target.value.trim() })}
+              />
+              <input
+                style={{ ...S.input, flex: 1, minWidth: 150 }}
+                defaultValue={pt.label_en}
+                placeholder="ইংরেজি নাম"
+                onBlur={(e) => savePoint(pt, { label_en: e.target.value.trim() })}
+              />
+              <Btn sm kind="soft" title="উপরে" onClick={() => movePoint(i, -1)}>
+                ↑
+              </Btn>
+              <Btn sm kind="soft" title="নিচে" onClick={() => movePoint(i, 1)}>
+                ↓
+              </Btn>
+              <Btn sm kind="danger" title="সরিয়ে ফেলুন" onClick={() => removePoint(pt)}>
+                🗑️
+              </Btn>
+            </div>
+          ))}
+          {points.length === 0 && (
+            <div style={{ color: C.muted, fontSize: 14 }}>
+              কোনো মাপকাঠি নেই — নিচ থেকে যোগ করুন।
+            </div>
+          )}
+          <div
+            style={{
+              ...S.card,
+              padding: 12,
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+              flexWrap: "wrap",
+              border: `1.5px dashed ${C.goldL}`,
+              background: C.amberBg,
+            }}
+          >
+            <input
+              style={{ ...S.input, flex: 1, minWidth: 150 }}
+              placeholder="বাংলা নাম — যেমন: মুখস্থের গতি"
+              value={newPt.bn}
+              onChange={(e) => setNewPt({ ...newPt, bn: e.target.value })}
+            />
+            <input
+              style={{ ...S.input, flex: 1, minWidth: 150 }}
+              placeholder="ইংরেজি নাম — যেমন: Memorisation speed"
+              value={newPt.en}
+              onChange={(e) => setNewPt({ ...newPt, en: e.target.value })}
+            />
+            <Btn sm kind="gold" onClick={addPoint}>
+              + যোগ করুন
+            </Btn>
+          </div>
+        </div>
+      )}
 
       {/* ───── আইডি তৈরির ফর্ম ───── */}
       {form && (
@@ -17746,6 +17933,7 @@ function TrialPortal({ user }) {
   const [sheet, setSheet] = useState(null);
   const [books, setBooks] = useState([]);
   const [report, setReport] = useState(null); // পাঠানোর পরই কেবল আসে
+  const [scoreItems, setScoreItems] = useState(TRIAL_SCORES);
   const [openTopic, setOpenTopic] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -17771,6 +17959,7 @@ function TrialPortal({ user }) {
         ]);
         if (!alive) return;
         setReport((reps || [])[0] || null);
+        loadScoreItems().then((rows) => alive && setScoreItems(rows));
         const c = (cs || [])[0] || null;
         setCourse(c);
         setClasses(todays || []);
@@ -17809,7 +17998,7 @@ function TrialPortal({ user }) {
   const reportCard = () => (
       <div style={{ ...S.card, padding: 15 }}>
         <div style={{ display: "grid", gap: 6 }}>
-          {TRIAL_SCORES.map((sc) => {
+          {scoreItems.map((sc) => {
             const n = (report.scores || {})[sc.key] || 0;
             return (
               <div
@@ -17876,7 +18065,10 @@ function TrialPortal({ user }) {
             sm
             kind="soft"
             onClick={() =>
-              openPrintDoc(trialReportHTML(report), `trial-report.html`)
+              openPrintDoc(
+                trialReportHTML(report, scoreItems),
+                `trial-report.html`,
+              )
             }
           >
             🖨️ Print / Save as PDF

@@ -527,6 +527,32 @@ class Admission(models.Model):
     applied_at = models.DateField(auto_now_add=True)
 
 
+class TrialScoreItem(models.Model):
+    """মূল্যায়নের একেকটি মাপকাঠি — পরিচালক নিজে সাজাতে পারেন।
+
+    আগে চারটি মাপকাঠি কোডেই লেখা ছিল, তাই নাম বদলাতে বা নতুন যোগ করতে
+    কোড ছুঁতে হতো। এখন এটি একটি সাধারণ তালিকা।
+
+    key কেন আলাদা: উস্তাদের দেওয়া নম্বরগুলো TrialReport.scores-এ
+    {"makhraj": 4, ...} আকারে বসে। নাম বদলালেও যেন পুরনো রিপোর্টের নম্বর
+    হারিয়ে না যায়, তাই নামের বদলে এই স্থায়ী key দিয়েই নম্বর রাখা হয় —
+    একবার তৈরি হলে key আর বদলায় না।
+    """
+    key = models.CharField(max_length=40, unique=True)
+    label_bn = models.CharField("বাংলা নাম (উস্তাদ দেখবেন)", max_length=80)
+    # খালি রাখলে বাংলা নামটাই বসে যায় — পরিচালককে অনুবাদ করতে বাধ্য করা
+    # হয় না, আবার রিপোর্টে ঘরটা খালিও থাকে না
+    label_en = models.CharField("ইংরেজি নাম (পরিবার দেখবেন)", max_length=80,
+                                blank=True, default="")
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.label_bn
+
+
 class TrialReport(models.Model):
     """ট্রায়াল শেষে উস্তাদের মূল্যায়ন — পরিবারের হাতে যাওয়া লিখিত রিপোর্ট।
 

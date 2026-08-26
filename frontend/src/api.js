@@ -459,6 +459,17 @@ export const api = {
     request(`/trial-reports/${id}/review/`, { method: "POST" }),
   sendTrialReport: (id) =>
     request(`/trial-reports/${id}/send/`, { method: "POST" }),
+  // ── মূল্যায়নের মাপকাঠি — পরিচালক সাজান, বাকিরা কেবল দেখেন ──
+  trialScoreItems: () => request("/trial-score-items/"),
+  addTrialScoreItem: (d) =>
+    request("/trial-score-items/", { method: "POST", body: d }),
+  editTrialScoreItem: (id, d) =>
+    request(`/trial-score-items/${id}/`, { method: "PATCH", body: d }),
+  delTrialScoreItem: (id) =>
+    request(`/trial-score-items/${id}/`, { method: "DELETE" }),
+  reorderTrialScoreItems: (ids) =>
+    request("/trial-score-items/reorder/", { method: "POST", body: { ids } }),
+
   offerTrialReport: (id) =>
     request(`/trial-reports/${id}/offer/`, { method: "POST" }),
   acceptTrialOffer: (id) =>

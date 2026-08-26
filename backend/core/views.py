@@ -1503,6 +1503,69 @@ def _convert_trial_to_student(u, course=None, fee=None):
     return u
 
 
+class TrialScoreItemViewSet(viewsets.ModelViewSet):
+    """মূল্যায়নের মাপকাঠি — পরিচালক সাজান, বাকিরা কেবল দেখেন।
+
+    উস্তাদের ফরম, পরিবারের রিপোর্ট ও ছাপা কাগজ — তিন জায়গাতেই এই একই
+    তালিকা ব্যবহার হয়, তাই সবার পড়ার অনুমতি লাগে।
+    """
+    serializer_class = TrialScoreItemSerializer
+    permission_classes = [ReadAllWriteDirector]
+
+    def get_queryset(self):
+        return TrialScoreItem.objects.all()
+
+    def _make_key(self, label_en, label_bn):
+        """স্থায়ী key তৈরি — ইংরেজি নাম থেকে, না থাকলে ক্রমিক নম্বরে।"""
+        import re
+        base = re.sub(r"[^a-z0-9]+", "_",
+                      str(label_en or "").strip().lower()).strip("_")[:32]
+        if not base:
+            base = "point"
+        key, n = base, 1
+        while TrialScoreItem.objects.filter(key=key).exists():
+            n += 1
+            key = f"{base}_{n}"[:40]
+        return key
+
+    @staticmethod
+    def _fill_en(data):
+        """ইংরেজি নাম না দিলে বাংলাটাই বসে — রিপোর্টে ঘর খালি থাকা চলবে না।"""
+        bn = str(data.get("label_bn") or "").strip()
+        en = str(data.get("label_en") or "").strip()
+        return en or bn
+
+    def perform_create(self, serializer):
+        d = self.request.data
+        last = TrialScoreItem.objects.order_by("-order").first()
+        serializer.save(
+            key=self._make_key(d.get("label_en"), d.get("label_bn")),
+            label_en=self._fill_en(d),
+            order=(last.order + 1) if last else 0,
+        )
+
+    def perform_update(self, serializer):
+        obj = serializer.save()
+        if not (obj.label_en or "").strip() and obj.label_bn:
+            obj.label_en = obj.label_bn
+            obj.save(update_fields=["label_en"])
+
+    @action(detail=False, methods=["post"], permission_classes=[IsDirector])
+    def reorder(self, request):
+        """যে ক্রমে আইডি পাঠানো হয়, সেই ক্রমেই বসে।"""
+        ids = request.data.get("ids") or []
+        rows = {x.id: x for x in TrialScoreItem.objects.filter(id__in=ids)}
+        changed = []
+        for i, sid in enumerate(ids):
+            r = rows.get(sid)
+            if r and r.order != i:
+                r.order = i
+                changed.append(r)
+        if changed:
+            TrialScoreItem.objects.bulk_update(changed, ["order"])
+        return Response({"ok": True})
+
+
 class TrialReportViewSet(viewsets.ModelViewSet):
     """ট্রায়াল মূল্যায়ন — উস্তাদ লেখেন, কর্তৃপক্ষ যাচাই করে পাঠান।
 
