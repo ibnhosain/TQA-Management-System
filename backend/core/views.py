@@ -2081,6 +2081,35 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         # এই এন্ডপয়েন্ট প্রায় প্রতি পেজেই (নোটিফিকেশন বেল) চলে, তাই প্রভাব বড়
         return self.request.user.notifications.prefetch_related("read_by").all()
 
+    # প্রত্যেকের কাছে কেবল সবশেষ এতগুলো নোটিফিকেশন থাকবে
+    KEEP_NOTIFICATIONS = 3
+
+    def list(self, request, *args, **kwargs):
+        """নিজের সবশেষ ৩টি নোটিফিকেশন — পুরনোগুলো এখানেই ছেঁটে ফেলা হয়।
+
+        ⚠️ এটি সত্যিই মুছে ফেলে, কেবল লুকায় না — পরিচালকের নির্দেশ।
+        তবে ছাঁটাইটা প্রত্যেকের নিজের তালিকা ধরে: একজনের পুরনো হয়ে গেলেও
+        অন্যজনের না-পড়া নোটিফিকেশন হারায় না। কোনো নোটিফিকেশনের আর একজন
+        প্রাপকও বাকি না থাকলে তবেই সেটি ডাটাবেস থেকে মুছে যায়।
+
+        তালিকাটা এমনিতেই পড়া হচ্ছে, তাই "৩টির বেশি আছে কি না" জানতে বাড়তি
+        কোনো কোয়েরি লাগে না — ৩টি বা কম হলে কিছুই করা হয় না, অর্থাৎ
+        স্বাভাবিক অবস্থায় ডাটাবেসে কোনো বাড়তি চাপ পড়ে না।
+        """
+        rows = list(self.get_queryset())
+        if len(rows) > self.KEEP_NOTIFICATIONS:
+            old_ids = [n.id for n in rows[self.KEEP_NOTIFICATIONS:]]
+            u = request.user
+            Notification.recipients.through.objects.filter(
+                user_id=u.id, notification_id__in=old_ids).delete()
+            Notification.read_by.through.objects.filter(
+                user_id=u.id, notification_id__in=old_ids).delete()
+            # আর কোনো প্রাপক নেই এমনগুলো সম্পূর্ণ মুছে ফেলি
+            Notification.objects.filter(
+                id__in=old_ids, recipients__isnull=True).delete()
+            rows = rows[: self.KEEP_NOTIFICATIONS]
+        return Response(self.get_serializer(rows, many=True).data)
+
     @action(detail=False, methods=["post"])
     def mark_all_read(self, request):
         for n in self.get_queryset():
