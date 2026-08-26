@@ -812,6 +812,20 @@ def _q_teacher_course(u):
     return Q(teacher=u) | Q(students__teacher=u)
 
 
+def _by_pk(model, pk):
+    """আইডি ধরে একটি সারি — আইডিটা সংখ্যা না হলে চুপচাপ None।
+
+    ⚠️ Model.objects.filter(pk=<সংখ্যা নয়>) Django-তে ValueError/TypeError
+    ছুড়ে দেয়, ফলে অনুরোধটাই ৫০০ হয়ে ভেঙে পড়ে। কেউ ইচ্ছা করে বা ভুল করে
+    course="abc" পাঠালেই সার্ভার এরর — তাই আগেই ছেঁকে নেওয়া।
+    """
+    try:
+        pk = int(pk)
+    except (TypeError, ValueError):
+        return None
+    return model.objects.filter(pk=pk).first()
+
+
 def _q_course_teacher_or_own_lesson(u):
     """ধাপ → দারস → কোর্স — উস্তাদ নিজের কোর্সের ধাপগুলোই দেখেন।"""
     return (Q(lesson__course__teacher=u)
@@ -1636,10 +1650,8 @@ class LessonProgressViewSet(viewsets.ModelViewSet):
         একই দিনে কয়েকবার সংরক্ষণ করলেও "কয় দিন পড়ানো হয়েছে" একবারই
         বাড়ে — তারিখ দেখে গোনা হয়, সংরক্ষণের সংখ্যা দিয়ে নয়।
         """
-        sid = request.data.get("student")
-        lid = request.data.get("lesson")
-        lesson = Lesson.objects.filter(pk=lid).first()
-        student = User.objects.filter(pk=sid).first()
+        lesson = _by_pk(Lesson, request.data.get("lesson"))
+        student = _by_pk(User, request.data.get("student"))
         if not lesson or not student:
             return Response({"error": "শিক্ষার্থী বা দারসটি পাওয়া যায়নি"},
                             status=400)
@@ -1738,7 +1750,7 @@ class LessonViewSet(viewsets.ModelViewSet):
             return Response(
                 {"error": "কোন নমুনা তা বেছে দিন: " + ", ".join(SAMPLES)},
                 status=400)
-        course = Course.objects.filter(pk=request.data.get("course")).first()
+        course = _by_pk(Course, request.data.get("course"))
         if not course:
             return Response({"error": "কোর্সটি পাওয়া যায়নি"}, status=400)
         lesson = create_sample(Lesson, LessonStep, StepSlide, course, key)
