@@ -200,7 +200,7 @@ class LessonSectionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LessonSection
-        fields = ["id", "course", "name", "order", "topics"]
+        fields = ["id", "course", "name", "order", "is_trial", "topics"]
 
     def get_topics(self, obj):
         # prefetch করা topics থেকেই — প্রতি হেডিংয়ে আলাদা কোয়েরি হয় না

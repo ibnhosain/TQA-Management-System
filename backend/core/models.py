@@ -193,6 +193,12 @@ class LessonSection(models.Model):
                                related_name="lesson_sections")
     name = models.CharField(max_length=120)
     order = models.PositiveIntegerField(default=0)
+    # এই হেডিংটি ট্রায়ালের পরিকল্পনার, নাকি নিয়মিত পরিকল্পনার।
+    # একই কোর্সে দুটি আলাদা পরিকল্পনা পাশাপাশি থাকে — নিয়মিত শিক্ষার্থীরা
+    # শুধু নিয়মিতটি দেখেন, ট্রায়াল অতিথিরা শুধু ট্রায়ালেরটি। কোনোটাই
+    # অন্যটির টপিক বা কভারের টিক ছোঁয় না।
+    # ⚠️ পুরনো সব হেডিং False হয়ে বসে, তাই বিদ্যমান পরিকল্পনা অবিকল আগের মতোই।
+    is_trial = models.BooleanField("ট্রায়ালের পরিকল্পনা", default=False)
 
     class Meta:
         ordering = ["order", "id"]

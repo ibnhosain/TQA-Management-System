@@ -380,8 +380,29 @@ class LessonSectionViewSet(viewsets.ModelViewSet):
         qs = LessonSection.objects.prefetch_related(
             "topics", "topics__coverages"
         ).select_related("course")
+        # ⚠️ নিয়মিত ও ট্রায়াল — দুটি আলাদা পরিকল্পনা। কোনটি চাওয়া হচ্ছে তা
+        # ?is_trial=1 দিয়ে বলতে হয়। না বললে নিয়মিতটাই, অর্থাৎ পুরনো সব কল
+        # অবিকল আগের মতোই কাজ করে — ট্রায়ালের হেডিং ভুল করে সেখানে ঢোকে না।
+        # ⚠️ ছাঁকনিটা কেবল তালিকা দেখানোর সময় — আইডি ধরে সম্পাদনা/মোছার
+        # সময় নয়। নইলে ট্রায়ালের হেডিং সম্পাদনা করতে গেলেই "খুঁজে পাওয়া
+        # যায়নি" আসত, কারণ ওই কলে ?is_trial=1 থাকে না।
+        want_trial = str(
+            self.request.query_params.get("is_trial") or ""
+        ).lower() in ("1", "true", "yes")
+        list_only = self.action in ("list", "ensure")
+        if u.role == "trial":
+            # ট্রায়াল অতিথি কেবল নিজের কোর্সের ট্রায়াল-পরিকল্পনাই দেখেন —
+            # নিয়মিত পরিকল্পনা তাঁর জন্য নয়, অন্য কোর্সও নয়
+            if not u.trial_course_id:
+                return qs.none()
+            return qs.filter(course_id=u.trial_course_id, is_trial=True)
         if u.role == "student":
-            return qs.filter(course__students=u).distinct()
+            # ⚠️ ভর্তি হওয়া শিক্ষার্থী সবসময় নিয়মিত পরিকল্পনাই দেখেন। ?is_trial=1
+            # চেয়েও পাবেন না — ট্রায়ালের পরিকল্পনা অতিথিদের জন্য সাজানো
+            # (একাডেমির প্রথম পরিচয়), নিয়মিত পাঠ্যসূচি নয়।
+            return qs.filter(is_trial=False, course__students=u).distinct()
+        if list_only:
+            qs = qs.filter(is_trial=want_trial)
         if u.role == "teacher":
             return qs.filter(
                 Q(course__teacher=u) | Q(course__students__teacher=u)
@@ -415,12 +436,17 @@ class LessonSectionViewSet(viewsets.ModelViewSet):
         course = Course.objects.filter(pk=cid).first()
         if not course:
             return Response({"error": "কোর্স খুঁজে পাওয়া যায়নি"}, status=400)
-        if not LessonSection.objects.filter(course=course).exists():
+        # নিয়মিত ও ট্রায়াল — দুটোর হেডিং আলাদাভাবে গোনা হয়, তাই একটির
+        # হেডিং থাকলেও অন্যটির ডিফল্টগুলো ঠিকই তৈরি হবে
+        trial = bool(request.data.get("is_trial"))
+        if not LessonSection.objects.filter(course=course, is_trial=trial).exists():
             LessonSection.objects.bulk_create([
-                LessonSection(course=course, name=n, order=i)
+                LessonSection(course=course, name=n, order=i, is_trial=trial)
                 for i, n in enumerate(DEFAULT_SECTIONS)
             ])
-        rows = self.get_queryset().filter(course=course)
+        rows = LessonSection.objects.filter(
+            course=course, is_trial=trial
+        ).prefetch_related("topics", "topics__coverages").select_related("course")
         return Response(self.get_serializer(rows, many=True).data)
 
     @action(detail=True, methods=["put"], permission_classes=[IsDirector])

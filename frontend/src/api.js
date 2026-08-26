@@ -384,15 +384,24 @@ export const api = {
   },
   // ── দারস পরিকল্পনার হেডিং ও তার নিচের টপিক ──
   // studentId দিলে ওই শিক্ষার্থীর নিজের কভার-টিক নিয়ে আসে
-  lessonSections: (courseId, studentId) =>
+  // trial=true দিলে ট্রায়াল অতিথিদের জন্য পরিচালকের সাজানো আলাদা পরিকল্পনা।
+  // না দিলে আগের মতোই নিয়মিত পরিকল্পনা — দুটো কখনো মেশে না।
+  lessonSections: (courseId, studentId, trial) =>
     request(
       `/lesson-sections/?course=${courseId}` +
-        (studentId ? `&student=${studentId}` : ""),
+        (studentId ? `&student=${studentId}` : "") +
+        (trial ? "&is_trial=1" : ""),
     ),
-  ensureSections: (course) =>
-    request("/lesson-sections/ensure/", { method: "POST", body: { course } }),
-  addSection: (course, name, order) =>
-    request("/lesson-sections/", { method: "POST", body: { course, name, order } }),
+  ensureSections: (course, trial) =>
+    request("/lesson-sections/ensure/", {
+      method: "POST",
+      body: { course, ...(trial ? { is_trial: true } : {}) },
+    }),
+  addSection: (course, name, order, trial) =>
+    request("/lesson-sections/", {
+      method: "POST",
+      body: { course, name, order, ...(trial ? { is_trial: true } : {}) },
+    }),
   renameSection: (id, name) =>
     request(`/lesson-sections/${id}/`, { method: "PATCH", body: { name } }),
   delSection: (id) => request(`/lesson-sections/${id}/`, { method: "DELETE" }),

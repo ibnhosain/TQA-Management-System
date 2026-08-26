@@ -4545,6 +4545,10 @@ function LecturePlan({ db, courses, user, refresh }) {
      কভারের টিক প্রতি শিক্ষার্থীর আলাদা, আগের মতোই। */
   const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
   const [sel, setSel] = useState(courses[0]?.id);
+  /* কোন পরিকল্পনাটি দেখা/সাজানো হচ্ছে — নিয়মিত, নাকি ট্রায়াল অতিথিদের জন্য
+     পরিচালকের আলাদা করে সাজানো ছোট পরিকল্পনা। ট্যাবটা কেবল পরিচালকের কাছে;
+     উস্তাদ ও শিক্ষার্থীর পর্দা হুবহু আগের মতোই থাকে। */
+  const [trialTab, setTrialTab] = useState(false);
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openTopics, setOpenTopics] = useState({});
@@ -4570,9 +4574,12 @@ function LecturePlan({ db, courses, user, refresh }) {
   const load = async () => {
     if (!sel) return setLoading(false);
     try {
-      let rows = await api.lessonSections(sel, forStudent?.id);
-      // কোর্সে এখনো হেডিং না থাকলে সাতটি ডিফল্ট বানিয়ে নিই (কেবল পরিচালক)
-      if (!rows.length && isDir(user)) rows = await api.ensureSections(sel);
+      let rows = await api.lessonSections(sel, forStudent?.id, trialTab);
+      // কোর্সে এখনো হেডিং না থাকলে সাতটি ডিফল্ট বানিয়ে নিই (কেবল পরিচালক)।
+      // নিয়মিত ও ট্রায়াল — দুটোর হিসাব আলাদা, তাই একটির হেডিং থাকলেও
+      // অন্যটির ডিফল্টগুলো ঠিকই তৈরি হবে।
+      if (!rows.length && isDir(user))
+        rows = await api.ensureSections(sel, trialTab);
       setSections(rows || []);
     } catch (e) {
       setSections([]);
@@ -4590,11 +4597,13 @@ function LecturePlan({ db, courses, user, refresh }) {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sel, forStudent]);
+  }, [sel, forStudent, trialTab]);
 
   // কোর্স বদলালে আগের শিক্ষার্থী আর প্রযোজ্য নয়
   useEffect(() => {
-    if (!sel || !needsStudent) return;
+    // ট্রায়াল পরিকল্পনা সাজানোর সময় কারও জন্য টিক দেওয়া হয় না — পরিচালক
+    // শুধু লিখছেন। তাই তখন শিক্ষার্থী বাছাইয়ের পর্দা আসে না।
+    if (!sel || !needsStudent || trialTab) return;
     setForStudent(null);
     setCourseStudents([]);
     api
@@ -4635,7 +4644,7 @@ function LecturePlan({ db, courses, user, refresh }) {
     const name = (window.prompt("নতুন হেডিংয়ের নাম?", "") || "").trim();
     if (!name) return;
     api
-      .addSection(sel, name, sections.length)
+      .addSection(sel, name, sections.length, trialTab)
       .then(load)
       .catch((e) =>
         notice("হেডিং যোগ করা যায়নি — " + (e?.data?.error || e?.message || "")),
@@ -4748,6 +4757,45 @@ function LecturePlan({ db, courses, user, refresh }) {
       )}
       action={isDir(user) && <Btn onClick={addSection}>+ হেডিং যোগ করুন</Btn>}
     >
+      {isDir(user) && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Btn
+              sm
+              kind={trialTab ? "soft" : "primary"}
+              onClick={() => setTrialTab(false)}
+            >
+              নিয়মিত দারস পরিকল্পনা
+            </Btn>
+            <Btn
+              sm
+              kind={trialTab ? "gold" : "soft"}
+              onClick={() => setTrialTab(true)}
+            >
+              🌱 ট্রায়াল দারস পরিকল্পনা
+            </Btn>
+          </div>
+          {trialTab && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "10px 14px",
+                borderRadius: 10,
+                background: C.amberBg,
+                border: `1px solid ${C.goldL}`,
+                fontSize: 12.5,
+                lineHeight: 1.6,
+                color: C.text,
+              }}
+            >
+              <b style={{ color: C.gold }}>এটি কেবল ট্রায়াল অতিথিরা দেখবেন।</b>{" "}
+              নিয়মিত শিক্ষার্থীদের পরিকল্পনায় এর কোনো প্রভাব নেই — দুটি
+              সম্পূর্ণ আলাদা, টপিক বা কভারের টিক কখনো মেশে না। একবার সাজিয়ে
+              রাখলেই এই কোর্সের সব ট্রায়াল অতিথি এটাই পাবেন।
+            </div>
+          )}
+        </div>
+      )}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         {courses.map((c) => (
           <Btn
@@ -4798,8 +4846,9 @@ function LecturePlan({ db, courses, user, refresh }) {
         </div>
       </div>
 
-      {/* কার জন্য টিক */}
-      {needsStudent && forStudent && (
+      {/* কার জন্য টিক — ট্রায়াল পরিকল্পনায় কারও জন্য টিক পড়ে না, তাই
+          সেখানে এই বার্তাটাও দেখানো হয় না */}
+      {needsStudent && forStudent && !trialTab && (
         <div
           style={{
             display: "flex",
