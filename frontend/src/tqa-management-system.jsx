@@ -23279,3 +23279,32 @@ export default function App() {
     </div>
   );
 }
+
+
+/* ─────────────────────────────────────────────────────────────────
+   পরীক্ষার জন্য রপ্তানি (test/lesson-ui চালায়)।
+
+   ⚠️ অ্যাপ কেবল ডিফল্ট export-টাই ব্যবহার করে (App.jsx), তাই এই
+   লাইনগুলো চালু সাইটে কোনো প্রভাব ফেলে না — শুধু পরীক্ষার হারনেস
+   কম্পোনেন্টগুলোকে ধরতে পারে।
+   ───────────────────────────────────────────────────────────────── */
+export {
+  SlidePreview,
+  StageSlide,
+  StepCard,
+  LessonRow,
+  LessonEditor,
+  LessonsView,
+  ProgressPanel,
+  ProgressSummary,
+  AgeVersionModal,
+  TeacherMode,
+  StudentLessonPlayer,
+  StudentLessonsView,
+  TeachFromClass,
+  statusTag,
+  kindLabel,
+  bandLabel,
+  slideKindLabel,
+  progressTag,
+};
