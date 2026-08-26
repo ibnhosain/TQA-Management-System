@@ -4447,37 +4447,111 @@ function RichText({ value, onChange, placeholder }) {
   };
   const push = () => onChange(readHTML());
 
+  /* কার্সার কোথায় ছিল তা মনে রাখি।
+     ⚠️ টুলবারের <select> (ফন্ট, ধরন, বাক্স, আকার) খুললেই লেখার ঘর ফোকাস
+     হারায়। বাটনে preventDefault দিয়ে সেটা ঠেকানো যায়, কিন্তু select-এ
+     দিলে ড্রপডাউনই খোলে না। তাই কার্সারটা আলাদা করে মনে রেখে কমান্ড
+     চালানোর ঠিক আগে ফিরিয়ে আনা হয় — নইলে বাছাই করা সাজ ভুল জায়গায়
+     বসত, বা কোথাওই বসত না। */
+  const savedRange = useRef(null);
+  const rememberCaret = () => {
+    try {
+      const sel = window.getSelection();
+      if (
+        sel &&
+        sel.rangeCount &&
+        ref.current &&
+        ref.current.contains(sel.anchorNode)
+      )
+        savedRange.current = sel.getRangeAt(0).cloneRange();
+    } catch (e) {
+      /* কোনো ব্রাউজারে না চললে আগের মতোই চলবে */
+    }
+  };
+  const restoreCaret = () => {
+    const r = savedRange.current;
+    if (!r || !ref.current) return;
+    try {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+    } catch (e) {
+      /* পুরনো জায়গাটা আর নেই — তখন যেখানে আছে সেখানেই বসবে */
+    }
+  };
+
   /* ছবিতে ক্লিক করলেই সেটি নির্বাচিত হয়, অন্য কোথাও ক্লিক করলে ছেড়ে দেয় */
-  const onClickArea = (e) => {
+  const [imgPct, setImgPct] = useState(100); // নির্বাচিত ছবির বর্তমান প্রস্থ
+
+  /* এই মুহূর্তে সত্যিই একটা ছবি নির্বাচিত আছে কিনা।
+     ⚠️ শুধু selImg.current দেখা যথেষ্ট নয় — লেখা নতুন করে আঁকা হলে পুরনো
+     নোডটি DOM থেকে খুলে যেতে পারে, তখন তার উপর কাজ করলে পর্দায় কিছুই
+     বদলাত না (বাটন চাপলে "কিছু হচ্ছে না" মনে হতো)। */
+  const liveImg = () => {
+    const img = selImg.current;
+    if (img && img.isConnected && ref.current && ref.current.contains(img))
+      return img;
+    selImg.current = null;
+    setHasSel(false);
+    return null;
+  };
+
+  /* ছবির বর্তমান প্রস্থ শতাংশে। style-এ শতাংশ না থাকলে (পুরনো ছবি) পর্দায়
+     সে আসলে যত জায়গা নিচ্ছে তা থেকেই হিসাব করি — তাই প্রথম ক্লিকেই আকার
+     লাফ দিয়ে বদলায় না। */
+  const pctOf = (img) => {
+    const m = /^(\d+(?:\.\d+)?)%$/.exec(img.style.width || "");
+    if (m) return Math.max(10, Math.min(100, Math.round(+m[1])));
+    const box =
+      (img.parentElement && img.parentElement.clientWidth) ||
+      (ref.current && ref.current.clientWidth) ||
+      0;
+    if (box > 0 && img.clientWidth > 0)
+      return Math.max(10, Math.min(100, Math.round((img.clientWidth / box) * 100)));
+    return 100;
+  };
+
+  const selectImg = (el) => {
     const prev = selImg.current;
     if (prev) prev.style.outline = "";
-    if (e.target && e.target.tagName === "IMG") {
-      selImg.current = e.target;
-      e.target.style.outline = RT_IMG_SEL;
-      e.target.style.outlineOffset = "2px";
+    if (el && el.tagName === "IMG") {
+      selImg.current = el;
+      el.style.outline = RT_IMG_SEL;
+      el.style.outlineOffset = "2px";
+      setImgPct(pctOf(el));
       setHasSel(true);
     } else {
       selImg.current = null;
       setHasSel(false);
     }
   };
+  // ক্লিক ও স্পর্শ — দুটোতেই, যাতে ফোন-ট্যাবেও ছবি বাছা যায়
+  const onClickArea = (e) => selectImg(e.target);
 
   /* ছবির আকার — শতাংশে, ১০% থেকে ১০০% পর্যন্ত */
-  const resizeImg = (step) => {
-    const img = selImg.current;
+  const setImgWidth = (pct) => {
+    const img = liveImg();
     if (!img) return;
-    const cur = parseInt(img.style.width, 10);
-    const now = Number.isFinite(cur) ? cur : 100;
-    const next = Math.max(10, Math.min(100, now + step));
+    const next = Math.max(10, Math.min(100, Math.round(pct)));
+    // পুরনো width/height অ্যাট্রিবিউট থাকলে সেগুলো আগে সরাই — নইলে
+    // ব্রাউজারভেদে সেগুলোই জিতে যেতে পারে
+    img.removeAttribute("width");
+    img.removeAttribute("height");
     img.style.width = next + "%";
     img.style.height = "auto";
     img.style.maxWidth = "100%";
+    setImgPct(next);
     push();
+  };
+  const resizeImg = (step) => {
+    const img = liveImg();
+    if (!img) return;
+    setImgWidth(pctOf(img) + step);
   };
 
   /* বাঁয়ে/ডানে ভাসানো, নাকি মাঝবরাবর — লেখা তার পাশ দিয়ে বইবে */
   const alignImg = (where) => {
-    const img = selImg.current;
+    const img = liveImg();
     if (!img) return;
     img.style.maxWidth = "100%";
     if (where === "center") {
@@ -4493,8 +4567,11 @@ function RichText({ value, onChange, placeholder }) {
     push();
   };
 
+  /* টুলবারের বাটনে চাপলে লেখার ঘর যেন ফোকাস (ও কার্সার) না হারায় */
+  const noBlur = (e) => e.preventDefault();
+
   const removeImg = () => {
-    const img = selImg.current;
+    const img = liveImg();
     if (!img) return;
     img.remove();
     selImg.current = null;
@@ -4504,6 +4581,7 @@ function RichText({ value, onChange, placeholder }) {
 
   const cmd = (c, v) => {
     ref.current?.focus();
+    restoreCaret();
     try {
       /* ⚠️ এই লাইনটাই আসল। এটা ছাড়া ব্রাউজার সাজসজ্জা পুরনো ধাঁচের
          <font size color face> ট্যাগে লেখে, আর সার্ভারের HTML-ছাঁকনি সেই
@@ -4543,6 +4621,7 @@ function RichText({ value, onChange, placeholder }) {
   /* লেখার পেছনের রং — ব্রাউজারভেদে কমান্ডের নাম আলাদা */
   const bgColor = (col) => {
     ref.current?.focus();
+    restoreCaret();
     try {
       document.execCommand("styleWithCSS", false, true);
     } catch (e) {}
@@ -4639,9 +4718,9 @@ function RichText({ value, onChange, placeholder }) {
           borderBottom: `1px solid ${C.line}`,
         }}
       >
-        <button type="button" title="মোটা" style={{ ...tool, fontWeight: 900 }} onClick={() => cmd("bold")}>B</button>
-        <button type="button" title="বাঁকা" style={{ ...tool, fontStyle: "italic" }} onClick={() => cmd("italic")}>I</button>
-        <button type="button" title="আন্ডারলাইন" style={{ ...tool, textDecoration: "underline" }} onClick={() => cmd("underline")}>U</button>
+        <button type="button" onMouseDown={noBlur} title="মোটা" style={{ ...tool, fontWeight: 900 }} onClick={() => cmd("bold")}>B</button>
+        <button type="button" onMouseDown={noBlur} title="বাঁকা" style={{ ...tool, fontStyle: "italic" }} onClick={() => cmd("italic")}>I</button>
+        <button type="button" onMouseDown={noBlur} title="আন্ডারলাইন" style={{ ...tool, textDecoration: "underline" }} onClick={() => cmd("underline")}>U</button>
         <select
           title="লেখার ধরন — শিরোনাম নাকি সাধারণ লেখা"
           defaultValue=""
@@ -4740,7 +4819,7 @@ function RichText({ value, onChange, placeholder }) {
             />
           ))}
           <button
-            type="button"
+            type="button" onMouseDown={noBlur}
             title="পেছনের রঙ তুলে দিন"
             onClick={() => bgColor("transparent")}
             style={{
@@ -4759,24 +4838,24 @@ function RichText({ value, onChange, placeholder }) {
             ✕
           </button>
         </span>
-        <button type="button" title="বুলেট তালিকা" style={tool} onClick={() => cmd("insertUnorderedList")}>• তালিকা</button>
-        <button type="button" title="নম্বর তালিকা" style={tool} onClick={() => cmd("insertOrderedList")}>১. তালিকা</button>
-        <button type="button" title="বাঁয়ে" style={tool} onClick={() => cmd("justifyLeft")}>⇤</button>
-        <button type="button" title="মাঝবরাবর" style={tool} onClick={() => cmd("justifyCenter")}>⇔</button>
-        <button type="button" title="ডানে" style={tool} onClick={() => cmd("justifyRight")}>⇥</button>
+        <button type="button" onMouseDown={noBlur} title="বুলেট তালিকা" style={tool} onClick={() => cmd("insertUnorderedList")}>• তালিকা</button>
+        <button type="button" onMouseDown={noBlur} title="নম্বর তালিকা" style={tool} onClick={() => cmd("insertOrderedList")}>১. তালিকা</button>
+        <button type="button" onMouseDown={noBlur} title="বাঁয়ে" style={tool} onClick={() => cmd("justifyLeft")}>⇤</button>
+        <button type="button" onMouseDown={noBlur} title="মাঝবরাবর" style={tool} onClick={() => cmd("justifyCenter")}>⇔</button>
+        <button type="button" onMouseDown={noBlur} title="ডানে" style={tool} onClick={() => cmd("justifyRight")}>⇥</button>
         <button
-          type="button"
+          type="button" onMouseDown={noBlur}
           title="নির্বাচিত লেখাকে আরবি করুন (ডান থেকে বাঁ)"
           style={{ ...tool, fontFamily: "Amiri, serif", fontSize: 15 }}
           onClick={arabic}
         >
           ع
         </button>
-        <button type="button" title="ছবি বা PDF যোগ করুন" style={tool} onClick={busy ? undefined : pickFile}>
+        <button type="button" onMouseDown={noBlur} title="ছবি বা PDF যোগ করুন" style={tool} onClick={busy ? undefined : pickFile}>
           {busy ? "⏳ যাচ্ছে…" : "🖼️ ছবি/PDF"}
         </button>
-        <button type="button" title="টেবিল বসান" style={tool} onClick={insertTable}>▦ টেবিল</button>
-        <button type="button" title="সাজসজ্জা মুছুন" style={tool} onClick={() => cmd("removeFormat")}>✕ সাজ</button>
+        <button type="button" onMouseDown={noBlur} title="টেবিল বসান" style={tool} onClick={insertTable}>▦ টেবিল</button>
+        <button type="button" onMouseDown={noBlur} title="সাজসজ্জা মুছুন" style={tool} onClick={() => cmd("removeFormat")}>✕ সাজ</button>
         <input
           ref={fileRef}
           type="file"
@@ -4799,17 +4878,32 @@ function RichText({ value, onChange, placeholder }) {
           }}
         >
           <span style={{ fontSize: 12, fontWeight: 700, color: C.gold, marginRight: 4 }}>
-            🖼️ নির্বাচিত ছবি:
+            🖼️ ছবি {bn(imgPct)}%
           </span>
-          <button type="button" title="ছোট করুন" style={tool} onClick={() => resizeImg(-10)}>➖ ছোট</button>
-          <button type="button" title="বড় করুন" style={tool} onClick={() => resizeImg(10)}>➕ বড়</button>
-          <button type="button" title="বাঁয়ে, লেখা পাশ দিয়ে যাবে" style={tool} onClick={() => alignImg("left")}>⇤ বাঁয়ে</button>
-          <button type="button" title="মাঝবরাবর" style={tool} onClick={() => alignImg("center")}>⇔ মাঝে</button>
-          <button type="button" title="ডানে, লেখা পাশ দিয়ে যাবে" style={tool} onClick={() => alignImg("right")}>⇥ ডানে</button>
+          {/* ⚠️ onMouseDown-এ preventDefault — নইলে বাটনে চাপা মাত্র লেখার ঘর
+              ফোকাস হারাত, আর কোনো কোনো ব্রাউজারে নির্বাচিত ছবিটাও ছুটে যেত */}
+          <button type="button" title="ছোট করুন" style={tool} onMouseDown={noBlur} onClick={() => resizeImg(-10)}>➖ ছোট</button>
+          <button type="button" title="বড় করুন" style={tool} onMouseDown={noBlur} onClick={() => resizeImg(10)}>➕ বড়</button>
+          {[25, 50, 75, 100].map((z) => (
+            <button
+              key={z}
+              type="button"
+              title={`ছবিটি ${z}% চওড়া করুন`}
+              style={{ ...tool, fontWeight: imgPct === z ? 800 : 400 }}
+              onMouseDown={noBlur}
+              onClick={() => setImgWidth(z)}
+            >
+              {bn(z)}%
+            </button>
+          ))}
+          <button type="button" title="বাঁয়ে, লেখা পাশ দিয়ে যাবে" style={tool} onMouseDown={noBlur} onClick={() => alignImg("left")}>⇤ বাঁয়ে</button>
+          <button type="button" title="মাঝবরাবর" style={tool} onMouseDown={noBlur} onClick={() => alignImg("center")}>⇔ মাঝে</button>
+          <button type="button" title="ডানে, লেখা পাশ দিয়ে যাবে" style={tool} onMouseDown={noBlur} onClick={() => alignImg("right")}>⇥ ডানে</button>
           <button
             type="button"
             title="এই ছবিটি মুছে ফেলুন"
             style={{ ...tool, color: C.red, borderColor: C.red }}
+            onMouseDown={noBlur}
             onClick={removeImg}
           >
             🗑️ মুছুন
@@ -4821,8 +4915,13 @@ function RichText({ value, onChange, placeholder }) {
         contentEditable
         suppressContentEditableWarning
         onClick={onClickArea}
+        onKeyUp={rememberCaret}
+        onMouseUp={rememberCaret}
         onInput={push}
-        onBlur={push}
+        onBlur={() => {
+          rememberCaret();
+          push();
+        }}
         data-ph={placeholder || ""}
         style={{
           minHeight: 110,
