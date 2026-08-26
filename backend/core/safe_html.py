@@ -18,6 +18,12 @@ ALLOWED_TAGS = {
     "ul", "ol", "li", "h1", "h2", "h3", "h4", "blockquote", "pre", "code",
     "table", "thead", "tbody", "tr", "td", "th", "a", "img", "figure",
     "figcaption", "hr",
+    # ⚠️ ব্রাউজার সাজসজ্জা দুইভাবে লিখতে পারে — <span style="..."> অথবা
+    # পুরনো ধাঁচের <font face size color>। আমরা এডিটরে প্রথমটাই চালু করে
+    # রেখেছি (styleWithCSS), তবু কোনো ব্রাউজার সেটা না মানলে যেন লেখার সাজ
+    # নিঃশব্দে মুছে না যায় — তাই <font>-ও গ্রহণ করা হয়। এটি নিছক
+    # সাজসজ্জার ট্যাগ, কোনো স্ক্রিপ্ট চালাতে পারে না।
+    "font",
 }
 # যে ট্যাগগুলোর বন্ধ-ট্যাগ লাগে না
 VOID_TAGS = {"br", "img", "hr"}
@@ -26,6 +32,7 @@ ALLOWED_ATTRS = {
     "*": {"style", "dir"},
     "a": {"href", "target", "rel"},
     "img": {"src", "alt", "width", "height"},
+    "font": {"face", "size", "color"},
     "td": {"colspan", "rowspan"},
     "th": {"colspan", "rowspan"},
 }

@@ -4371,6 +4371,20 @@ const RT_SIZES = [
 const RT_COLORS = [
   "#1a1f2e", "#1a5c3a", "#c9962a", "#d92626", "#1d4ed8", "#7c3aed", "#6b7280",
 ];
+/* ব্যাকগ্রাউন্ডের জন্য হালকা রং — গাঢ় রং দিলে তার উপরের কালো লেখা পড়া যেত না */
+const RT_BG_COLORS = [
+  "#fff9c4", "#eafaf1", "#eef5fb", "#fdf6e7", "#fbeee9", "#ede9fe", "#f3f4f6",
+];
+/* index.html-এ যে ফন্টগুলো সত্যিই লোড করা আছে, কেবল সেগুলোই — নইলে বেছে
+   নিলেও কিছুই বদলাত না। শেষ তিনটি সব ডিভাইসেই থাকে। */
+const RT_FONTS = [
+  { v: "'Hind Siliguri', sans-serif", label: "বাংলা (Hind Siliguri)" },
+  { v: "Amiri, serif", label: "আরবি (Amiri)" },
+  { v: "'Playfair Display', serif", label: "ইংরেজি শিরোনাম (Playfair)" },
+  { v: "Georgia, serif", label: "ইংরেজি সেরিফ (Georgia)" },
+  { v: "Arial, Helvetica, sans-serif", label: "ইংরেজি সাধারণ (Arial)" },
+  { v: "'Courier New', monospace", label: "টাইপরাইটার (Courier)" },
+];
 
 /* টগলের ভেতরের লেখায় বসানো ছবি ও টেবিল যেন বাক্স ছাপিয়ে না যায় —
    এডিটরে ও দেখার জায়গায় দুটোতেই এক নিয়ম। */
@@ -4470,9 +4484,36 @@ function RichText({ value, onChange, placeholder }) {
   const cmd = (c, v) => {
     ref.current?.focus();
     try {
+      /* ⚠️ এই লাইনটাই আসল। এটা ছাড়া ব্রাউজার সাজসজ্জা পুরনো ধাঁচের
+         <font size color face> ট্যাগে লেখে, আর সার্ভারের HTML-ছাঁকনি সেই
+         ট্যাগ চেনে না বলে সংরক্ষণের সময় পুরো সাজটাই নিঃশব্দে মুছে যেত —
+         তাই আকার ও রঙের বাটনগুলোও এতদিন কাজ করছিল না। styleWithCSS চালু
+         থাকলে ব্রাউজার <span style="..."> লেখে, যা ছাঁকনি অক্ষত রাখে। */
+      document.execCommand("styleWithCSS", false, true);
+    } catch (e) {
+      /* পুরনো ব্রাউজারে না চললেও ক্ষতি নেই — <font> এখন সার্ভারেও গ্রহণযোগ্য */
+    }
+    try {
       document.execCommand(c, false, v);
     } catch (e) {
       /* কোনো ব্রাউজারে না চললে চুপচাপ — লেখা তবু ঠিকই থাকে */
+    }
+    push();
+  };
+
+  /* লেখার পেছনের রং — ব্রাউজারভেদে কমান্ডের নাম আলাদা */
+  const bgColor = (col) => {
+    ref.current?.focus();
+    try {
+      document.execCommand("styleWithCSS", false, true);
+    } catch (e) {}
+    try {
+      if (!document.execCommand("hiliteColor", false, col))
+        document.execCommand("backColor", false, col);
+    } catch (e) {
+      try {
+        document.execCommand("backColor", false, col);
+      } catch (e2) {}
     }
     push();
   };
@@ -4576,12 +4617,29 @@ function RichText({ value, onChange, placeholder }) {
             <option key={z.v} value={z.v}>{z.label}</option>
           ))}
         </select>
+        <select
+          title="লেখার ফন্ট"
+          defaultValue=""
+          onChange={(e) => {
+            if (e.target.value) cmd("fontName", e.target.value);
+            e.target.value = "";
+          }}
+          style={{ ...tool, padding: "5px 6px", maxWidth: 150 }}
+        >
+          <option value="">ফন্ট</option>
+          {RT_FONTS.map((f) => (
+            <option key={f.v} value={f.v} style={{ fontFamily: f.v }}>
+              {f.label}
+            </option>
+          ))}
+        </select>
         <span style={{ display: "flex", gap: 3, alignItems: "center" }}>
+          <span style={{ fontSize: 11, color: C.muted, marginRight: 1 }}>ক</span>
           {RT_COLORS.map((col) => (
             <button
               key={col}
               type="button"
-              title="এই রঙ দিন"
+              title="লেখার রঙ"
               onClick={() => cmd("foreColor", col)}
               style={{
                 width: 18,
@@ -4594,6 +4652,45 @@ function RichText({ value, onChange, placeholder }) {
               }}
             />
           ))}
+        </span>
+        <span style={{ display: "flex", gap: 3, alignItems: "center" }}>
+          <span style={{ fontSize: 11, color: C.muted, marginRight: 1 }}>▨</span>
+          {RT_BG_COLORS.map((col) => (
+            <button
+              key={col}
+              type="button"
+              title="লেখার পেছনের রঙ"
+              onClick={() => bgColor(col)}
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 5,
+                border: `1px solid ${C.line}`,
+                background: col,
+                cursor: "pointer",
+                padding: 0,
+              }}
+            />
+          ))}
+          <button
+            type="button"
+            title="পেছনের রঙ তুলে দিন"
+            onClick={() => bgColor("transparent")}
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: 5,
+              border: `1px solid ${C.line}`,
+              background: "#fff",
+              cursor: "pointer",
+              padding: 0,
+              fontSize: 10,
+              lineHeight: 1,
+              color: C.muted,
+            }}
+          >
+            ✕
+          </button>
         </span>
         <button type="button" title="বুলেট তালিকা" style={tool} onClick={() => cmd("insertUnorderedList")}>• তালিকা</button>
         <button type="button" title="নম্বর তালিকা" style={tool} onClick={() => cmd("insertOrderedList")}>১. তালিকা</button>
