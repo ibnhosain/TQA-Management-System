@@ -5092,8 +5092,11 @@ function LecturePlan({ db, courses, user, refresh }) {
                           style={{
                             flex: 1,
                             minWidth: 140,
-                            fontSize: 13.5,
-                            fontWeight: 700,
+                            // টগলের শিরোনাম H2-এর মতো বড় ও মোটা — খুলে না
+                            // দেখেও তালিকা এক নজরে পড়া যায়
+                            fontSize: 18.5,
+                            fontWeight: 800,
+                            lineHeight: 1.45,
                             color: isMissed ? C.red : C.text,
                           }}
                         >
@@ -17438,11 +17441,13 @@ function TrialPortal({ user }) {
                         gap: 8,
                         alignItems: "center",
                         cursor: tp.content ? "pointer" : "default",
-                        fontWeight: 600,
-                        fontSize: 13,
+                        // দারস পরিকল্পনার টগল-শিরোনাম সব জায়গাতেই এক মাপের
+                        fontWeight: 800,
+                        fontSize: 18.5,
+                        lineHeight: 1.45,
                       }}
                     >
-                      <span style={{ color: C.muted }}>
+                      <span style={{ color: C.muted, fontSize: 14 }}>
                         {tp.content ? (openTopic[tp.id] ? "▾" : "▸") : "•"}
                       </span>
                       <span style={{ flex: 1 }}>{tp.text}</span>
