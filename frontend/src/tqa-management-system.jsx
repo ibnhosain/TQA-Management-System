@@ -17578,7 +17578,8 @@ const HEAD_FIELDS = [
 /* একটি দারস খোলা — উপরে দারসের নিজের তথ্য, নিচে ধাপগুলো */
 function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
   const [lesson, setLesson] = useState(null);
-  const [head, setHead] = useState(null); // উপরের ঘরগুলোর খসড়া
+  // উপরের ঘরগুলোর খসড়া — পরিচালক কিছু বদলানোর আগ পর্যন্ত null
+  const [draft, setDraft] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -17600,18 +17601,23 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  /* একই কারণে উপরের ঘরগুলোও কেবল সত্যিই বদলালে মেলানো হয় — নইলে কোনো
+  /* উপরের ঘরগুলো কেবল সত্যিই বদলালে সার্ভারের সাথে মেলানো হয় — নইলে কোনো
      ধাপ সংরক্ষণ করলেই শিরোনাম/লক্ষ্যের অসংরক্ষিত লেখা মুছে যেত। */
   const headJson = lesson && JSON.stringify(HEAD_FIELDS.map((k) => lesson[k]));
   useEffect(() => {
-    if (lesson) setHead(lesson);
+    if (lesson) setDraft(null); // সার্ভারেরটাই এখন সত্য
   }, [headJson]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <Loader text="দারস লোড হচ্ছে" />;
   if (!lesson) return null;
 
-  const setH = (k, v) => setHead((x) => ({ ...x, [k]: v }));
-  const headDirty = head && HEAD_FIELDS.some((k) => head[k] !== lesson[k]);
+  /* ⚠️ খসড়া না থাকলে সার্ভারের দারসটিই দেখানো হয়।
+     আগে head আলাদা state ছিল আর সেটি বসত এফেক্টে, অর্থাৎ রেন্ডারের পরে —
+     ফলে দারস আসার পরের প্রথম রেন্ডারে head তখনো খালি, আর head.title
+     পড়তে গিয়ে পাতা ভেঙে পড়ত ("Cannot read properties of null")। */
+  const head = draft || lesson;
+  const setH = (k, v) => setDraft((x) => ({ ...(x || lesson), [k]: v }));
+  const headDirty = !!draft && HEAD_FIELDS.some((k) => head[k] !== lesson[k]);
 
   const saveHead = async () => {
     setBusy(true);
@@ -17862,7 +17868,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
             }}
           >
             {headDirty && (
-              <Btn sm kind="soft" onClick={() => setHead(lesson)}>
+              <Btn sm kind="soft" onClick={() => setDraft(null)}>
                 বাতিল
               </Btn>
             )}
