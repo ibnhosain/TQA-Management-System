@@ -400,8 +400,8 @@ class LessonSectionViewSet(viewsets.ModelViewSet):
         if u.role == "trial":
             # ট্রায়াল অতিথি কেবল নিজের কোর্সের ট্রায়াল-পরিকল্পনাই দেখেন —
             # নিয়মিত পরিকল্পনা তাঁর জন্য নয়, অন্য কোর্সও নয়
-            if not u.trial_course_id:
-                return qs.none()
+            if not u.trial_course_id or u.trial_expired:
+                return qs.none()  # মেয়াদ ফুরালে দারস পরিকল্পনাও সরে যায়
             return qs.filter(course_id=u.trial_course_id, is_trial=True)
         if u.role == "student":
             # ⚠️ ভর্তি হওয়া শিক্ষার্থী সবসময় নিয়মিত পরিকল্পনাই দেখেন। ?is_trial=1
@@ -803,6 +803,8 @@ def _assert_session_participant(s, user):
         if user.id not in allowed and not s.students.filter(teacher=user).exists():
             raise PermissionDenied("এই ক্লাসের উস্তাদ আপনি নন")
     elif user.role in ("student", "trial"):
+        if user.role == "trial" and user.trial_expired:
+            raise PermissionDenied("আপনার ট্রায়ালের মেয়াদ শেষ হয়েছে")
         # ট্রায়াল অতিথিও ঠিক শিক্ষার্থীর মতোই — এই ক্লাসের তালিকায় থাকলে
         # জয়েন করতে পারবেন, না থাকলে নয়
         if not s.students.filter(pk=user.id).exists():
@@ -914,6 +916,9 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         # পর ট্রায়ালও সেখানে গিয়ে পড়ত, অর্থাৎ একজন সাময়িক অতিথি একাডেমির
         # সবকিছু দেখে ফেলতেন।
         if u.role == "trial":
+            # মেয়াদ ফুরালে ক্লাস সরে যায় — রিপোর্ট ও প্রস্তাব থেকে যায়
+            if u.trial_expired:
+                return qs.none()
             return qs.filter(students=u)  # কেবল তাঁর নিজের ট্রায়াল ক্লাস
         return qs
 
@@ -1548,6 +1553,57 @@ class TrialReportViewSet(viewsets.ModelViewSet):
             r.save(update_fields=["sent_at"])
         return Response(self.get_serializer(r).data)
 
+    @action(detail=True, methods=["post"], permission_classes=[IsAdminLevel])
+    def offer(self, request, pk=None):
+        """ভর্তির প্রস্তাব পাঠানো — এরপর অতিথি নিজের পোর্টালে দেখতে পান।
+
+        যাচাই হওয়ার আগে প্রস্তাব যায় না — রিপোর্ট আর প্রস্তাব একসাথেই
+        পরিবারের কাছে পৌঁছায়।
+        """
+        r = self.get_object()
+        if not r.reviewed_at:
+            return Response(
+                {"error": "আগে মূল্যায়ন যাচাই করুন — যাচাই ছাড়া প্রস্তাব যাবে না"},
+                status=400)
+        if not r.recommended_course_id:
+            return Response({"error": "প্রস্তাবে কোন কোর্স তা বেছে দিন"}, status=400)
+        if not r.offered_at:
+            r.offered_at = timezone.now()
+            r.save(update_fields=["offered_at"])
+        return Response(self.get_serializer(r).data)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
+    def accept(self, request, pk=None):
+        """অতিথি "Accept & apply" চাপলেন — ভর্তির আবেদন তৈরি হয়ে কর্তৃপক্ষের
+        কাছে চলে যায়, তথ্য আর নতুন করে লিখতে হয় না।
+
+        ⚠️ এখানে কাউকে ভর্তি করা হয় না — কেবল আবেদন তৈরি হয়। ভর্তির
+        সিদ্ধান্ত আগের মতোই কর্তৃপক্ষের।
+        """
+        r = self.get_object()
+        u = request.user
+        if u.role != "trial" or r.student_id != u.id:
+            raise PermissionDenied("এটি আপনার প্রস্তাব নয়")
+        if not r.offered_at:
+            return Response({"error": "এখনো কোনো প্রস্তাব পাঠানো হয়নি"}, status=400)
+        if r.accepted_at:
+            return Response(self.get_serializer(r).data)  # দুবার চাপলেও একটাই আবেদন
+        g = r.student
+        Admission.objects.create(
+            kind="admission", name=g.name_bn, guardian=g.guardian or "",
+            country=g.country or "", contact=g.phone or "", email=g.email or "",
+            course_name=(r.recommended_course.name if r.recommended_course_id else ""),
+            preferred_time=r.offer_schedule or "",
+            message=("ট্রায়াল থেকে — অতিথি প্রস্তাব গ্রহণ করেছেন। "
+                     f"আইডি: {g.username}"
+                     + (f" · স্তর: {r.recommended_level}" if r.recommended_level else "")),
+        )
+        r.accepted_at = timezone.now()
+        r.save(update_fields=["accepted_at"])
+        notify(f"🌱 ট্রায়াল থেকে ভর্তির আবেদন এসেছে: {g.name_bn}",
+               User.objects.filter(role__in=["director", "admin"]))
+        return Response(self.get_serializer(r).data)
+
 
 class TrialViewSet(viewsets.ModelViewSet):
     """ট্রায়াল (সাময়িক অতিথি) অ্যাকাউন্ট — তৈরি, তালিকা, মেয়াদ/কোর্স বদল।
@@ -1625,6 +1681,37 @@ class TrialViewSet(viewsets.ModelViewSet):
         u.plain_password = pwd
         u.save(update_fields=["password", "plain_password"])
         return Response(self.get_serializer(u).data)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsDirector])
+    def convert(self, request, pk=None):
+        """অতিথিকে নিয়মিত শিক্ষার্থী বানানো — একই অ্যাকাউন্টেই।
+
+        নতুন অ্যাকাউন্ট তৈরি হয় না, তাই ট্রায়ালের হাজিরা, রিপোর্ট ও সব
+        তথ্য তাঁর সাথেই থেকে যায় — আর পরিবারকে নতুন আইডি-পাসওয়ার্ডও
+        পাঠাতে হয় না, পুরনোটাই চলতে থাকে।
+
+        ⚠️ trial_until/trial_course মোছা হয় না — কবে কোন কোর্সে ট্রায়াল
+        করেছিলেন সেই ইতিহাসটা থেকে যায়।
+        """
+        u = self.get_object()
+        if u.role != "trial":
+            return Response({"error": "ইনি ট্রায়াল অতিথি নন"}, status=400)
+        course = Course.objects.filter(pk=request.data.get("course")).first() \
+            or u.trial_course
+        if not course:
+            return Response({"error": "কোন কোর্সে ভর্তি হবেন তা বেছে দিন"}, status=400)
+        try:
+            fee = int(request.data.get("fee") or DEFAULT_STUDENT_FEE)
+        except (TypeError, ValueError):
+            fee = DEFAULT_STUDENT_FEE
+        u.role = "student"
+        u.monthly_fee = max(0, fee)
+        u.save(update_fields=["role", "monthly_fee"])
+        course.students.add(u)
+        from .student_id import assign_student_id
+        if assign_student_id(u, User):
+            u.save(update_fields=["student_id"])
+        return Response(UserSerializer(u).data)
 
     def destroy(self, request, *args, **kwargs):
         return Response(

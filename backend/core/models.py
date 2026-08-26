@@ -564,6 +564,20 @@ class TrialReport(models.Model):
     reviewed_at = models.DateTimeField(null=True, blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)
 
+    # ─────────── ভর্তির প্রস্তাব ───────────
+    # মূল্যায়ন থেকেই প্রস্তাব তৈরি হয়, তাই আলাদা তালিকা না বানিয়ে এখানেই।
+    # খালি থাকলে বুঝতে হবে প্রস্তাব এখনো সাজানো হয়নি।
+    offer_teacher = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        limit_choices_to={"role": "teacher"},
+        related_name="trial_offers", verbose_name="প্রস্তাবিত উস্তাদ")
+    # "Sun, Tue, Thu · 17:00" ধাঁচে — কোর্সভেদে নিয়ম আলাদা, তাই বাঁধা ছক নয়
+    offer_schedule = models.CharField("প্রস্তাবিত দিন ও সময়", max_length=160,
+                                      blank=True, default="")
+    offer_fee = models.PositiveIntegerField("মাসিক ফি", default=0)
+    offered_at = models.DateTimeField(null=True, blank=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
         return f"ট্রায়াল রিপোর্ট — {self.student.name_bn}"
 

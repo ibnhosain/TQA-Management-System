@@ -454,6 +454,12 @@ export const api = {
     request(`/trial-reports/${id}/review/`, { method: "POST" }),
   sendTrialReport: (id) =>
     request(`/trial-reports/${id}/send/`, { method: "POST" }),
+  offerTrialReport: (id) =>
+    request(`/trial-reports/${id}/offer/`, { method: "POST" }),
+  acceptTrialOffer: (id) =>
+    request(`/trial-reports/${id}/accept/`, { method: "POST" }),
+  convertTrial: (id, d) =>
+    request(`/trials/${id}/convert/`, { method: "POST", body: d }),
   // যাদের এখনো স্টুডেন্ট আইডি নেই তাদের সবার জন্য তৈরি (কেবল পরিচালক)
   backfillStudentIds: () => request("/users/backfill_student_ids/", { method: "POST" }),
   allTeachers: () => request("/users/teachers/"),

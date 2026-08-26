@@ -29,16 +29,10 @@ class FlexTokenObtainPairSerializer(TokenObtainPairSerializer):
                 chosen = next((u for u in candidates if u.check_password(pwd)), candidates[0])
                 attrs[self.username_field] = chosen.username
         data = super().validate(attrs)
-        # ট্রায়ালের মেয়াদ ফুরালে আর ঢোকা যাবে না। পাসওয়ার্ড যাচাইয়ের পরে
-        # দেখা হয়, তাই ভুল পাসওয়ার্ড দিয়ে কেউ বুঝতে পারবেন না কোন আইডি
-        # ট্রায়ালের আর কোনটা নয়।
-        # ⚠️ পরে (ধাপ ৫) এটি বদলে যাবে — তখন মেয়াদ শেষ হলেও ঢোকা যাবে,
-        # তবে শুধু নিজের রিপোর্ট ও ভর্তির প্রস্তাব দেখার জন্য।
-        if getattr(self.user, "trial_expired", False):
-            from rest_framework_simplejwt.exceptions import AuthenticationFailed
-            raise AuthenticationFailed(
-                "আপনার ট্রায়ালের মেয়াদ শেষ হয়েছে। ভর্তির ব্যাপারে জানতে "
-                "একাডেমিতে যোগাযোগ করুন।")
+        # ⚠️ মেয়াদ ফুরালেও ট্রায়াল অতিথি ঢুকতে পারেন — দরজা বন্ধ করে দেওয়া
+        # সবচেয়ে সহজ, কিন্তু সবচেয়ে খারাপ ব্যবহার। তাঁর ক্লাস ও দারস
+        # পরিকল্পনা সার্ভারেই সরে যায় (get_queryset), কিন্তু নিজের রিপোর্ট ও
+        # ভর্তির প্রস্তাব থেকে যায় — কেউ ছয় মাস পরে ফিরে এলেও।
         return data
 
 

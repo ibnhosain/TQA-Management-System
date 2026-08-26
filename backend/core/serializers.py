@@ -45,6 +45,8 @@ class TrialReportSerializer(serializers.ModelSerializer):
     reviewed_by_name = serializers.CharField(source="reviewed_by.name_bn", read_only=True)
     recommended_course_name = serializers.CharField(
         source="recommended_course.name", read_only=True)
+    offer_teacher_name = serializers.CharField(
+        source="offer_teacher.name_bn", read_only=True)
 
     class Meta:
         model = TrialReport
@@ -53,9 +55,12 @@ class TrialReportSerializer(serializers.ModelSerializer):
                   "work_on", "advice", "recommended_course",
                   "recommended_course_name", "recommended_level", "written_by",
                   "reviewed_by_name", "created_at", "updated_at", "reviewed_at",
-                  "sent_at"]
-        # এই তিনটি কেবল যাচাই/পাঠানোর অ্যাকশন দিয়েই বসে, সরাসরি লেখা যায় না
-        read_only_fields = ["created_at", "updated_at", "reviewed_at", "sent_at"]
+                  "sent_at", "offer_teacher", "offer_teacher_name",
+                  "offer_schedule", "offer_fee", "offered_at", "accepted_at"]
+        # এই সময়ের ঘরগুলো কেবল যাচাই/পাঠানো/প্রস্তাব/গ্রহণের অ্যাকশন দিয়েই
+        # বসে — সরাসরি লেখা যায় না, তাই তারিখগুলো কখনো বানানো হয় না
+        read_only_fields = ["created_at", "updated_at", "reviewed_at",
+                            "sent_at", "offered_at", "accepted_at"]
 
 
 class TrialSerializer(serializers.ModelSerializer):

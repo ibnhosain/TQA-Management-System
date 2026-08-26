@@ -16146,10 +16146,17 @@ ${
    ভেতরেই ঠিক হয়, আর সার্ভারেও একই নিয়ম আলাদা করে যাচাই হয়। */
 function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
   const [rep, setRep] = useState(null);
+  const [teachers, setTeachers] = useState([]);
   const [f, setF] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const canReview = isAdm(user);
+
+  useEffect(() => {
+    // প্রস্তাবে উস্তাদ বাছতে লাগে — কেবল কর্তৃপক্ষই এই তালিকা পান
+    if (!isAdm(user)) return;
+    api.allTeachers().then((r) => setTeachers(r || [])).catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     let alive = true;
@@ -16169,6 +16176,9 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
                 advice: mine.advice || "",
                 recommended_course: mine.recommended_course || "",
                 recommended_level: mine.recommended_level || "",
+                offer_teacher: mine.offer_teacher || "",
+                offer_schedule: mine.offer_schedule || "",
+                offer_fee: mine.offer_fee || "",
               }
             : {
                 scores: {},
@@ -16177,11 +16187,17 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
                 advice: "",
                 recommended_course: guest.trial_course || "",
                 recommended_level: "",
+                offer_teacher: guest.teacher || "",
+                offer_schedule: "",
+                offer_fee: "",
               },
         );
       })
-      .catch(() => setF({ scores: {}, strengths: "", work_on: "", advice: "",
-                          recommended_course: "", recommended_level: "" }))
+      .catch(() =>
+        setF({ scores: {}, strengths: "", work_on: "", advice: "",
+               recommended_course: "", recommended_level: "",
+               offer_teacher: "", offer_schedule: "", offer_fee: "" }),
+      )
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
@@ -16194,7 +16210,12 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
   const save = async () => {
     setBusy(true);
     try {
-      const body = { ...f, recommended_course: f.recommended_course || null };
+      const body = {
+        ...f,
+        recommended_course: f.recommended_course || null,
+        offer_teacher: f.offer_teacher || null,
+        offer_fee: +f.offer_fee || 0,
+      };
       const saved = rep
         ? await api.editTrialReport(rep.id, body)
         : await api.createTrialReport({ ...body, student: guest.id });
@@ -16212,6 +16233,16 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
     try {
       setRep(await api.reviewTrialReport(rep.id));
       notice("✅ যাচাই সম্পন্ন — এবার পরিবারের কাছে পাঠাতে পারেন");
+      onSaved && onSaved();
+    } catch (e) {
+      notice("ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
+  const doOffer = async () => {
+    try {
+      setRep(await api.offerTrialReport(rep.id));
+      notice("🎁 প্রস্তাব পাঠানো হলো — অতিথি এখন পোর্টালে দেখতে পাবেন");
       onSaved && onSaved();
     } catch (e) {
       notice("ব্যর্থ — " + (e?.data?.error || e?.message || ""));
@@ -16352,6 +16383,66 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
             </div>
           </div>
 
+          {/* ───── ভর্তির প্রস্তাব ───── */}
+          {canReview && (
+            <div
+              style={{
+                border: `1.5px solid ${C.goldL}`,
+                background: C.amberBg,
+                borderRadius: 12,
+                padding: 14,
+              }}
+            >
+              <div style={{ fontWeight: 800, color: C.gold, marginBottom: 8 }}>
+                ভর্তির প্রস্তাব
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label style={S.label}>প্রস্তাবিত উস্তাদ</label>
+                  <select
+                    style={S.input}
+                    value={f.offer_teacher || ""}
+                    onChange={(e) => setF({ ...f, offer_teacher: e.target.value })}
+                  >
+                    <option value="">— বাছাই করুন —</option>
+                    {(teachers || []).map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name || t.name_bn}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={S.label}>মাসিক ফি (৳)</label>
+                  <input
+                    style={S.input}
+                    type="number"
+                    value={f.offer_fee}
+                    onChange={(e) => setF({ ...f, offer_fee: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <label style={S.label}>দিন ও সময় (পরিবার এটাই পড়বেন)</label>
+                <input
+                  style={S.input}
+                  value={f.offer_schedule}
+                  placeholder="Sun, Tue, Thu · 17:00"
+                  onChange={(e) => setF({ ...f, offer_schedule: e.target.value })}
+                />
+              </div>
+              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 7, lineHeight: 1.6 }}>
+                সংরক্ষণ করার পর “🎁 প্রস্তাব পাঠান” চাপলে অতিথি নিজের পোর্টালে
+                এটি দেখতে পাবেন ও এক ক্লিকে ভর্তির আবেদন করতে পারবেন।
+                {rep?.accepted_at && (
+                  <b style={{ color: C.green, display: "block", marginTop: 4 }}>
+                    ✅ পরিবার রাজি হয়েছেন — ভর্তি আবেদনে চলে এসেছে
+                  </b>
+                )}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
             {!locked && (
               <Btn kind="primary" onClick={busy ? undefined : save} style={{ opacity: busy ? 0.6 : 1 }}>
@@ -16376,6 +16467,11 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
             {rep && canReview && rep.reviewed_at && (
               <Btn kind="gold" onClick={doSend}>
                 {rep.sent_at ? "💬 আবার পাঠান" : "💬 পরিবারকে পাঠান"}
+              </Btn>
+            )}
+            {rep && canReview && rep.reviewed_at && !rep.offered_at && (
+              <Btn kind="primary" onClick={doOffer}>
+                🎁 প্রস্তাব পাঠান
               </Btn>
             )}
           </div>
@@ -16566,6 +16662,30 @@ function TrialView({ db, setDb, user, courses, refresh }) {
     return "পাঠানো হয়েছে";
   };
 
+  const accepted = (guestId) => {
+    const r = reports.find((x) => String(x.student) === String(guestId));
+    return !!r?.accepted_at;
+  };
+
+  /* অতিথিকে নিয়মিত শিক্ষার্থী বানানো — নতুন অ্যাকাউন্ট নয়, একই অ্যাকাউন্টেই */
+  const convert = (t) =>
+    askConfirm(
+      `${t.name || t.name_bn}-কে নিয়মিত শিক্ষার্থী হিসেবে ভর্তি করা হবে।` +
+        "\n\n" +
+        "একই অ্যাকাউন্টেই হবে — তাই তাঁর আইডি-পাসওয়ার্ড আগেরটাই থাকবে, আর " +
+        "ট্রায়ালের হাজিরা ও রিপোর্ট সব তাঁর সাথেই থেকে যাবে।",
+      async () => {
+        try {
+          await api.convertTrial(t.id, { course: t.trial_course });
+          notice("🎓 ভর্তি সম্পন্ন — এখন থেকে তিনি নিয়মিত শিক্ষার্থী");
+          await load();
+        } catch (e) {
+          notice("ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+        }
+      },
+      { yes: "হ্যাঁ, ভর্তি করুন", no: "থাক" },
+    );
+
   /* মেয়াদের অবস্থা — একই হিসাব তালিকা ও ট্যাগ দুই জায়গাতেই */
   const statusTag = (t) => {
     if (t.expired)
@@ -16703,6 +16823,13 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 >
                   📋 {reportStage(t.id)}
                 </Btn>
+                {/* পরিবার প্রস্তাব গ্রহণ করলে এক ক্লিকেই নিয়মিত শিক্ষার্থী —
+                    একই অ্যাকাউন্টে, তাই হাজিরা-রিপোর্ট সব থেকে যায় */}
+                {isDir(user) && accepted(t.id) && (
+                  <Btn sm kind="primary" onClick={() => convert(t)}>
+                    🎓 ভর্তি করুন
+                  </Btn>
+                )}
               </div>
             ))}
           </div>
@@ -16919,6 +17046,168 @@ function TrialPortal({ user }) {
     0,
   );
 
+  /* রিপোর্টের কার্ডটা দুই জায়গায় লাগে — চলতি ট্রায়ালে ও মেয়াদ শেষের
+     পর্দায়। তাই একবারই লেখা। */
+  const reportCard = () => (
+      <div style={{ ...S.card, padding: 15 }}>
+        <div style={{ display: "grid", gap: 6 }}>
+          {TRIAL_SCORES.map((sc) => {
+            const n = (report.scores || {})[sc.key] || 0;
+            return (
+              <div
+                key={sc.key}
+                style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 13 }}
+              >
+                <span style={{ flex: 1 }}>{sc.en}</span>
+                <span
+                  style={{
+                    width: 92,
+                    height: 7,
+                    borderRadius: 99,
+                    background: C.cream,
+                    overflow: "hidden",
+                  }}
+                >
+                  <i
+                    style={{
+                      display: "block",
+                      height: "100%",
+                      width: `${Math.max(0, Math.min(5, n)) * 20}%`,
+                      background: C.emerald,
+                      borderRadius: 99,
+                    }}
+                  />
+                </span>
+                <b style={{ minWidth: 28, textAlign: "right" }}>{n}/5</b>
+              </div>
+            );
+          })}
+        </div>
+        {[
+          ["Strengths", report.strengths],
+          ["What to work on", report.work_on],
+          ["Teacher's advice", report.advice],
+        ]
+          .filter(([, v]) => v)
+          .map(([label, v]) => (
+            <div key={label} style={{ marginTop: 11, fontSize: 13 }}>
+              <div style={{ fontSize: 11.5, color: C.muted, fontWeight: 700 }}>
+                {label}
+              </div>
+              <div>{v}</div>
+            </div>
+          ))}
+        {report.recommended_course_name && (
+          <div
+            style={{
+              marginTop: 13,
+              padding: "11px 14px",
+              borderRadius: 10,
+              background: C.greenBg,
+              border: `1.5px solid ${C.emerald}`,
+              fontSize: 13.5,
+            }}
+          >
+            <b style={{ color: C.emerald }}>Recommended: </b>
+            {report.recommended_course_name}
+            {report.recommended_level ? ` — ${report.recommended_level}` : ""}
+          </div>
+        )}
+        <div style={{ marginTop: 13 }}>
+          <Btn
+            sm
+            kind="soft"
+            onClick={() =>
+              openPrintDoc(trialReportHTML(report), `trial-report.html`)
+            }
+          >
+            🖨️ Print / Save as PDF
+          </Btn>
+        </div>
+      </div>
+  );
+
+  const expired = daysLeft != null && daysLeft < 0;
+
+  /* প্রস্তাব গ্রহণ — ভর্তির আবেদন তৈরি হয়ে কর্তৃপক্ষের কাছে চলে যায়।
+     এখানে কেউ ভর্তি হয়ে যান না, সিদ্ধান্ত আগের মতোই একাডেমির। */
+  const acceptOffer = () =>
+    askConfirm(
+      "Shall we send your application to the Academy?" +
+        "\n\n" +
+        "Your details are already with us, so nothing more to fill in. " +
+        "The Academy will contact you to complete the admission, in shaa Allah.",
+      async () => {
+        try {
+          setReport(await api.acceptTrialOffer(report.id));
+          notice("✅ Your application has been sent. Jazakumullahu khairan.");
+        } catch (e) {
+          notice("Couldn't send — " + (e?.data?.error || e?.message || ""));
+        }
+      },
+      { yes: "Yes, apply", no: "Not yet" },
+    );
+
+  const offerCard = () =>
+    !report?.offered_at ? null : (
+      <div
+        style={{
+          ...S.card,
+          padding: 17,
+          marginBottom: 14,
+          border: `1.5px solid ${C.emerald}`,
+          background: C.greenBg,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            letterSpacing: 1.2,
+            textTransform: "uppercase",
+            color: C.emerald,
+            fontWeight: 800,
+          }}
+        >
+          Recommended for you
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4 }}>
+          {report.recommended_course_name}
+          {report.recommended_level ? ` — ${report.recommended_level}` : ""}
+        </div>
+        <div style={{ fontSize: 12.5, color: C.text, marginTop: 4 }}>
+          {[
+            report.offer_teacher_name ? `with ${report.offer_teacher_name}` : "",
+            report.offer_schedule,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </div>
+        {report.offer_fee > 0 && (
+          <div style={{ marginTop: 11, fontSize: 13 }}>
+            <span style={{ color: C.muted, fontSize: 11.5 }}>Monthly fee</span>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>৳ {report.offer_fee}</div>
+          </div>
+        )}
+        <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {report.accepted_at ? (
+            <Tag>✅ Application sent — we will contact you</Tag>
+          ) : (
+            <Btn kind="primary" onClick={acceptOffer}>
+              ✍️ Accept &amp; apply
+            </Btn>
+          )}
+          <a
+            href="https://wa.me/8801402499027"
+            target="_blank"
+            rel="noreferrer"
+            style={{ textDecoration: "none" }}
+          >
+            <Btn kind="soft">💬 I have a question</Btn>
+          </a>
+        </div>
+      </div>
+    );
+
   const tabBtn = (id, label) => (
     <Btn
       sm
@@ -16930,6 +17219,53 @@ function TrialPortal({ user }) {
   );
 
   if (loading) return <Loader text="Loading your trial" />;
+
+  /* মেয়াদ ফুরিয়ে গেলে দরজা বন্ধ করে দেওয়া হয় না। ক্লাস ও দারস পরিকল্পনা
+     সার্ভারেই সরে যায়, কিন্তু রিপোর্ট ও ভর্তির প্রস্তাব থেকে যায় — কেউ
+     ছয় মাস পরে ফিরে এলেও। */
+  if (expired)
+    return (
+      <>
+        <div
+          style={{
+            ...S.card,
+            padding: 18,
+            marginBottom: 14,
+            background: C.amberBg,
+            border: `1.5px solid ${C.goldL}`,
+          }}
+        >
+          <div style={{ fontWeight: 800, color: C.gold, fontSize: 16 }}>
+            Your trial has ended
+          </div>
+          <div style={{ fontSize: 13, color: C.text, marginTop: 5, lineHeight: 1.7 }}>
+            Jazakumullahu khairan, {user.name || user.name_bn}. Your trial
+            report and our recommendation are still here whenever you are
+            ready. May Allah make it easy for you.
+          </div>
+        </div>
+        {offerCard()}
+        {report ? (
+          <Section title="Your Trial Report">{reportCard()}</Section>
+        ) : (
+          <Section title="Your Trial Report">
+            <div style={{ color: C.muted, fontSize: 14 }}>
+              No report was recorded for your trial.
+            </div>
+          </Section>
+        )}
+        <div style={{ textAlign: "center", marginTop: 6 }}>
+          <a
+            href="https://wa.me/8801402499027"
+            target="_blank"
+            rel="noreferrer"
+            style={{ textDecoration: "none" }}
+          >
+            <Btn kind="soft">💬 Talk to us</Btn>
+          </a>
+        </div>
+      </>
+    );
 
   return (
     <>
@@ -17024,6 +17360,9 @@ function TrialPortal({ user }) {
         ))}
       </Section>
 
+      {/* ───── ভর্তির প্রস্তাব ───── */}
+      {offerCard()}
+
       {/* ───── ট্রায়াল রিপোর্ট ───── */}
       <Section title="Your Trial Report">
         {!report ? (
@@ -17032,85 +17371,9 @@ function TrialPortal({ user }) {
             write it and the Academy will send it to you.
           </div>
         ) : (
-          <div style={{ ...S.card, padding: 15 }}>
-            <div style={{ display: "grid", gap: 6 }}>
-              {TRIAL_SCORES.map((sc) => {
-                const n = (report.scores || {})[sc.key] || 0;
-                return (
-                  <div
-                    key={sc.key}
-                    style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 13 }}
-                  >
-                    <span style={{ flex: 1 }}>{sc.en}</span>
-                    <span
-                      style={{
-                        width: 92,
-                        height: 7,
-                        borderRadius: 99,
-                        background: C.cream,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <i
-                        style={{
-                          display: "block",
-                          height: "100%",
-                          width: `${Math.max(0, Math.min(5, n)) * 20}%`,
-                          background: C.emerald,
-                          borderRadius: 99,
-                        }}
-                      />
-                    </span>
-                    <b style={{ minWidth: 28, textAlign: "right" }}>{n}/5</b>
-                  </div>
-                );
-              })}
-            </div>
-            {[
-              ["Strengths", report.strengths],
-              ["What to work on", report.work_on],
-              ["Teacher's advice", report.advice],
-            ]
-              .filter(([, v]) => v)
-              .map(([label, v]) => (
-                <div key={label} style={{ marginTop: 11, fontSize: 13 }}>
-                  <div style={{ fontSize: 11.5, color: C.muted, fontWeight: 700 }}>
-                    {label}
-                  </div>
-                  <div>{v}</div>
-                </div>
-              ))}
-            {report.recommended_course_name && (
-              <div
-                style={{
-                  marginTop: 13,
-                  padding: "11px 14px",
-                  borderRadius: 10,
-                  background: C.greenBg,
-                  border: `1.5px solid ${C.emerald}`,
-                  fontSize: 13.5,
-                }}
-              >
-                <b style={{ color: C.emerald }}>Recommended: </b>
-                {report.recommended_course_name}
-                {report.recommended_level ? ` — ${report.recommended_level}` : ""}
-              </div>
-            )}
-            <div style={{ marginTop: 13 }}>
-              <Btn
-                sm
-                kind="soft"
-                onClick={() =>
-                  openPrintDoc(trialReportHTML(report), `trial-report.html`)
-                }
-              >
-                🖨️ Print / Save as PDF
-              </Btn>
-            </div>
-          </div>
+          reportCard()
         )}
       </Section>
-
       {/* ───── তিনটি ট্যাব ───── */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "4px 0 14px" }}>
         {tabBtn("home", "🗂️ Trial Lesson Plan")}
