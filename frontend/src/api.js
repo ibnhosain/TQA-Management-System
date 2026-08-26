@@ -469,6 +469,8 @@ export const api = {
     request(`/trial-score-items/${id}/`, { method: "DELETE" }),
   reorderTrialScoreItems: (ids) =>
     request("/trial-score-items/reorder/", { method: "POST", body: { ids } }),
+  restoreTrialScoreItems: () =>
+    request("/trial-score-items/restore_defaults/", { method: "POST" }),
 
   offerTrialReport: (id) =>
     request(`/trial-reports/${id}/offer/`, { method: "POST" }),

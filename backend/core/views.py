@@ -1503,6 +1503,16 @@ def _convert_trial_to_student(u, course=None, fee=None):
     return u
 
 
+# একাডেমির চারটি মূল মাপকাঠি — প্রথমবার এগুলোই বসে (মাইগ্রেশন 0033), আর
+# কখনো হারিয়ে গেলে "ফিরিয়ে আনুন" দিয়ে এখান থেকেই ফেরত আসে।
+DEFAULT_TRIAL_SCORES = [
+    ("letters", "হরফ চেনা", "Recognising letters"),
+    ("makhraj", "মাখরাজ ও উচ্চারণ", "Makhraj & pronunciation"),
+    ("fluency", "তিলাওয়াতের সাবলীলতা", "Fluency"),
+    ("attentiveness", "মনোযোগ", "Attentiveness"),
+]
+
+
 class TrialScoreItemViewSet(viewsets.ModelViewSet):
     """মূল্যায়নের মাপকাঠি — পরিচালক সাজান, বাকিরা কেবল দেখেন।
 
@@ -1549,6 +1559,27 @@ class TrialScoreItemViewSet(viewsets.ModelViewSet):
         if not (obj.label_en or "").strip() and obj.label_bn:
             obj.label_en = obj.label_bn
             obj.save(update_fields=["label_en"])
+
+    @action(detail=False, methods=["post"], permission_classes=[IsDirector])
+    def restore_defaults(self, request):
+        """একাডেমির চারটি মূল মাপকাঠি ফিরিয়ে আনা।
+
+        যেগুলো তালিকায় নেই কেবল সেগুলোই যোগ হয় — পরিচালকের নিজের যোগ করা
+        মাপকাঠি বা বদলানো নাম কিছুই ছোঁয়া হয় না। আগের key-ই ব্যবহার হয়, তাই
+        পুরনো রিপোর্টে দেওয়া নম্বরগুলোও সাথে সাথে আবার দেখা যায়।
+        """
+        last = TrialScoreItem.objects.order_by("-order").first()
+        order = (last.order + 1) if last else 0
+        added = 0
+        for key, bn, en in DEFAULT_TRIAL_SCORES:
+            if not TrialScoreItem.objects.filter(key=key).exists():
+                TrialScoreItem.objects.create(
+                    key=key, label_bn=bn, label_en=en, order=order)
+                order += 1
+                added += 1
+        rows = TrialScoreItem.objects.all()
+        return Response({"added": added,
+                         "items": self.get_serializer(rows, many=True).data})
 
     @action(detail=False, methods=["post"], permission_classes=[IsDirector])
     def reorder(self, request):

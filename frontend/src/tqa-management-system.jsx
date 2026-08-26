@@ -17003,6 +17003,9 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   const [form, setForm] = useState(null); // আইডি তৈরির ফর্ম খোলা আছে কিনা
   const [made, setMade] = useState(null); // সদ্য তৈরি — আইডি/পাসওয়ার্ড দেখানোর জন্য
   const [points, setPoints] = useState([]); // মূল্যায়নের মাপকাঠি
+  // তালিকাটা সার্ভার থেকে আনা গেছে কিনা। না গেলে "কোনো মাপকাঠি নেই" বলা
+  // যাবে না — তাতে মনে হয় সব মুছে গেছে, অথচ আসলে কেবল সংযোগ পাওয়া যায়নি।
+  const [pointsOk, setPointsOk] = useState(true);
   const [newPt, setNewPt] = useState({ bn: "", en: "" });
   const [editFor, setEditFor] = useState(null); // কার তথ্য বদলানো হচ্ছে
   const [sendFor, setSendFor] = useState(null); // কাকে বার্তা পাঠানো হচ্ছে
@@ -17018,10 +17021,11 @@ function TrialView({ db, setDb, user, courses, refresh }) {
         api.admissions().catch(() => []),
         api.allTeachers().catch(() => []),
         api.trialReports().catch(() => []),
-        api.trialScoreItems().catch(() => []),
+        api.trialScoreItems().catch(() => null),
       ]);
       setTrials(tr || []);
       setReports(rep || []);
+      setPointsOk(pts !== null);
       setPoints(pts || []);
       setApplications((ad || []).filter((a) => a.kind === "trial"));
       setTeachers(te || []);
@@ -17036,6 +17040,22 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   }, []);
 
   /* ───── মূল্যায়নের মাপকাঠি সাজানো ───── */
+  /* একাডেমির চারটি মূল মাপকাঠি ফিরিয়ে আনা — যেগুলো নেই কেবল সেগুলোই যোগ
+     হয়, তাই নিজের যোগ করা বা নাম-বদলানো কিছুই নষ্ট হয় না। */
+  const restorePoints = async () => {
+    try {
+      const r = await api.restoreTrialScoreItems();
+      await load();
+      notice(
+        r.added
+          ? `↩️ ${bn(r.added)}টি মাপকাঠি ফিরিয়ে আনা হয়েছে`
+          : "সবগুলোই আগে থেকে আছে — কিছু বদলানো হয়নি",
+      );
+    } catch (e) {
+      notice("ফিরিয়ে আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
   const addPoint = async () => {
     const bn = newPt.bn.trim();
     if (!bn) return notice("বাংলা নামটি লিখুন");
@@ -17531,6 +17551,24 @@ function TrialView({ db, setDb, user, courses, refresh }) {
             উস্তাদ ট্রায়াল শেষে এই মাপকাঠিগুলোতেই ১–৫ নম্বর দেন, আর পরিবার
             রিপোর্টে ইংরেজি নামটি দেখেন। ইংরেজি ঘর খালি রাখলে বাংলা নামটাই
             বসে যাবে। লেখা শেষ করে অন্য ঘরে গেলেই নিজে থেকে সংরক্ষিত হয়।
+            {points.length > 0 && points.length < 4 && (
+              <>
+                {" "}
+                <span
+                  onClick={restorePoints}
+                  style={{
+                    color: C.gold,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                  }}
+                >
+                  ↩️ একাডেমির চারটি মূল মাপকাঠি ফিরিয়ে আনুন
+                </span>{" "}
+                — যেগুলো নেই কেবল সেগুলোই যোগ হবে, আপনার নিজের যোগ করা বা
+                নাম-বদলানো কিছুই নষ্ট হবে না।
+              </>
+            )}
           </div>
           {points.map((pt, i) => (
             <div
@@ -17577,8 +17615,39 @@ function TrialView({ db, setDb, user, courses, refresh }) {
             </div>
           ))}
           {points.length === 0 && (
-            <div style={{ color: C.muted, fontSize: 14 }}>
-              কোনো মাপকাঠি নেই — নিচ থেকে যোগ করুন।
+            <div
+              style={{
+                ...S.card,
+                padding: 14,
+                background: C.amberBg,
+                border: `1.5px solid ${C.goldL}`,
+                fontSize: 13,
+                lineHeight: 1.75,
+              }}
+            >
+              {pointsOk ? (
+                <>
+                  <b style={{ color: C.gold }}>তালিকাটি এখন খালি।</b> নিচ থেকে
+                  নতুন মাপকাঠি যোগ করুন, অথবা একাডেমির চারটি মূল মাপকাঠি
+                  ফিরিয়ে আনুন।
+                </>
+              ) : (
+                <>
+                  <b style={{ color: C.gold }}>
+                    তালিকাটি সার্ভার থেকে আনা যায়নি।
+                  </b>{" "}
+                  কিছু মুছে যায়নি — সংযোগ ফিরে এলে আবার দেখা যাবে। উস্তাদের
+                  মূল্যায়নের ফরমে এখনো আগের চারটি মাপকাঠিই কাজ করছে।
+                </>
+              )}
+              <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Btn sm kind="gold" onClick={restorePoints}>
+                  ↩️ আগের চারটি ফিরিয়ে আনুন
+                </Btn>
+                <Btn sm kind="soft" onClick={load}>
+                  🔄 আবার চেষ্টা করুন
+                </Btn>
+              </div>
             </div>
           )}
           <div
