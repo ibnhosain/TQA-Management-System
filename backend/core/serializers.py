@@ -137,6 +137,11 @@ class LessonSerializer(serializers.ModelSerializer):
         return LessonStepSerializer(rows, many=True, context=self.context).data
 
     def get_step_count(self, obj):
+        # তালিকায় ডাটাবেসেই গোনা হয়েছে (annotate) — তখন ধাপগুলো আনাই হয় না।
+        # একটি দারস খুললে prefetch করা তালিকা থেকেই গোনা হয়, বাড়তি কোয়েরি নেই।
+        n = getattr(obj, "active_steps", None)
+        if n is not None:
+            return n
         return len([x for x in obj.steps.all() if x.is_active])
 
     def validate_objectives(self, v):

@@ -1527,7 +1527,9 @@ class LessonProgressViewSet(viewsets.ModelViewSet):
     """কে কোন দারসের কোথায় আছে — উস্তাদ চিহ্নিত করেন, সবাই দেখেন।"""
     serializer_class = LessonProgressSerializer
     permission_classes = [ReadOwnWriteTeacher]
-    filterset_fields = ["student", "lesson", "status"]
+    # lesson__course — একটি কোর্সের অগ্রগতি চাইলে গোটা একাডেমির সব সারি
+    # টেনে আনার দরকার নেই
+    filterset_fields = ["student", "lesson", "lesson__course", "status"]
 
     def get_queryset(self):
         u = self.request.user
@@ -1573,6 +1575,15 @@ class LessonProgressViewSet(viewsets.ModelViewSet):
                 and (student.teacher_id == u.id
                      or (student.teacher_id is None
                          and lesson.course.teacher_id == u.id)))
+
+    def perform_create(self, serializer):
+        """⚠️ mark/update/destroy-তে মালিকানা পরীক্ষা ছিল, কিন্তু সাধারণ
+        POST /lesson-progress/ পথটা খোলা রয়ে গিয়েছিল — উস্তাদ সরাসরি
+        অন্য উস্তাদের শিক্ষার্থীর নামে সারি বানিয়ে ফেলতে পারতেন।"""
+        d = serializer.validated_data
+        if not self._may_mark(self.request.user, d["lesson"], d["student"]):
+            raise PermissionDenied("এটি আপনার দারস বা শিক্ষার্থী নয়")
+        serializer.save(updated_by=self.request.user)
 
     def perform_update(self, serializer):
         # সরাসরি PATCH করেও যেন অন্যের রেকর্ড বদলানো না যায়
@@ -1642,8 +1653,18 @@ class LessonViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         u = self.request.user
-        qs = Lesson.objects.select_related("course").prefetch_related(
-            "steps", "steps__slide")
+        qs = Lesson.objects.select_related("course")
+        if self.action == "list":
+            # ⚠️ তালিকায় ধাপগুলো পাঠানোই হয় না, তাই টেনে আনারও দরকার নেই।
+            # আগে ৪টি সংস্করণের ১০০টি ধাপ ও ১০০টি স্লাইড কেবল সংখ্যাটা
+            # দেখানোর জন্য আনা হতো — Render-এর ০.১ CPU ও দূরের Neon-এ
+            # সেটা অকারণ দেরি।
+            # distinct=True জরুরি: উস্তাদের ছাঁকনিতে course__students হয়ে
+            # জোড়া লাগে, ফলে একই দারস কয়েকবার এসে গোনাটাই ফুলে যেত।
+            qs = qs.annotate(active_steps=Count(
+                "steps", filter=Q(steps__is_active=True), distinct=True))
+        else:
+            qs = qs.prefetch_related("steps", "steps__slide")
         if u.role in ("director", "admin"):
             return qs
         if u.role == "teacher":

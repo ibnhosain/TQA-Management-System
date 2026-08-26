@@ -17179,8 +17179,14 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
   const [open, setOpen] = useState(false);
   const [d, setD] = useState(step);
   const [busy, setBusy] = useState(false);
-  // সার্ভার থেকে নতুন তথ্য এলে (সংরক্ষণ/পুনরায় লোডের পর) পর্দাও মিলিয়ে নিই
-  useEffect(() => setD(step), [step]);
+  /* সার্ভার থেকে নতুন তথ্য এলে পর্দাও মিলিয়ে নিই।
+
+     ⚠️ শর্তটা "লেখা বদলেছে কিনা", "নতুন বস্তু এসেছে কিনা" নয়। প্রতিবার
+     load() নতুন বস্তু বানায়, তাই আগে যেকোনো একটি ধাপ সংরক্ষণ করলেই বাকি
+     সব ধাপের অসংরক্ষিত লেখা মুছে যেত — পরিচালক দুটো ধাপ পাশাপাশি লিখে
+     একটা সেভ করলে অন্যটার লেখা হারিয়ে যেত। */
+  const stepJson = JSON.stringify(step);
+  useEffect(() => setD(step), [stepJson]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sl = d.slide || EMPTY_SLIDE;
   const set = (k, v) => setD((x) => ({ ...x, [k]: v }));
@@ -17552,6 +17558,18 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
   );
 }
 
+/* দারসের নিজের ঘরগুলো — "বদলেছে কিনা" আর "কী কী পাঠাব", দুটোই এখান থেকে */
+const HEAD_FIELDS = [
+  "title",
+  "title_ar",
+  "kind",
+  "age_from",
+  "age_to",
+  "duration_min",
+  "status",
+  "objectives",
+];
+
 /* একটি দারস খোলা — উপরে দারসের নিজের তথ্য, নিচে ধাপগুলো */
 function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
   const [lesson, setLesson] = useState(null);
@@ -17564,7 +17582,6 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
     try {
       const l = await api.lesson(id);
       setLesson(l);
-      setHead(l);
     } catch (e) {
       notice("দারসটি আনা যায়নি — " + (e?.data?.error || e?.message || ""));
     } finally {
@@ -17576,36 +17593,26 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  /* একই কারণে উপরের ঘরগুলোও কেবল সত্যিই বদলালে মেলানো হয় — নইলে কোনো
+     ধাপ সংরক্ষণ করলেই শিরোনাম/লক্ষ্যের অসংরক্ষিত লেখা মুছে যেত। */
+  const headJson = lesson && JSON.stringify(HEAD_FIELDS.map((k) => lesson[k]));
+  useEffect(() => {
+    if (lesson) setHead(lesson);
+  }, [headJson]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading) return <Loader text="দারস লোড হচ্ছে" />;
   if (!lesson) return null;
 
   const setH = (k, v) => setHead((x) => ({ ...x, [k]: v }));
-  const headDirty =
-    head &&
-    [
-      "title",
-      "title_ar",
-      "kind",
-      "age_from",
-      "age_to",
-      "duration_min",
-      "status",
-      "objectives",
-    ].some((k) => head[k] !== lesson[k]);
+  const headDirty = head && HEAD_FIELDS.some((k) => head[k] !== lesson[k]);
 
   const saveHead = async () => {
     setBusy(true);
     try {
-      await api.editLesson(lesson.id, {
-        title: head.title,
-        title_ar: head.title_ar,
-        kind: head.kind,
-        age_from: head.age_from,
-        age_to: head.age_to,
-        duration_min: head.duration_min,
-        status: head.status,
-        objectives: head.objectives,
-      });
+      await api.editLesson(
+        lesson.id,
+        Object.fromEntries(HEAD_FIELDS.map((k) => [k, head[k]])),
+      );
       await load();
       onChanged && onChanged();
       notice("✅ দারসের তথ্য সংরক্ষিত");
@@ -18033,8 +18040,10 @@ function LessonsView({ user, courses }) {
     try {
       const [ls, pr] = await Promise.all([
         api.lessons(courseId),
+        // ⚠️ কেবল এই কোর্সেরটুকু — আগে গোটা একাডেমির সব শিক্ষার্থীর সব
+        // অগ্রগতি টেনে আনা হতো, অথচ দরকার ছিল এই কোর্সের কটা সারিই।
         // অগ্রগতি না এলেও তালিকা দেখাতে অসুবিধা নেই — তাই আলাদা করে ধরি
-        api.lessonProgress().catch(() => []),
+        api.lessonProgress(`?lesson__course=${courseId}`).catch(() => []),
       ]);
       setLessons(ls || []);
       setProg(pr || []);
