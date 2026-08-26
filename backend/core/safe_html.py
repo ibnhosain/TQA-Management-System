@@ -35,6 +35,13 @@ ALLOWED_STYLES = {
     "font-style", "text-decoration", "text-align", "direction", "line-height",
     "margin", "padding", "width", "height", "max-width", "border",
     "border-collapse", "vertical-align", "white-space",
+    # ছবি সাজানোর জন্য — বাঁয়ে/ডানে ভাসানো, মাঝবরাবর বসানো, আকার ও কোণ।
+    # সবগুলোই কেবল সাজসজ্জার, কোনোটিতেই স্ক্রিপ্ট চালানোর সুযোগ নেই।
+    # ⚠️ এগুলো অনুমোদিত না থাকায় সংরক্ষণের সময় ছবির সাজ মুছে যেত, তাই
+    # ছবি বসানোর পর আর নাড়াচাড়া করা যেত না।
+    "float", "clear", "display", "border-radius",
+    "margin-left", "margin-right", "margin-top", "margin-bottom",
+    "object-fit",
 }
 # style-এর মানে যা কখনোই থাকতে পারবে না (url(), expression() দিয়ে আক্রমণ হয়)
 _BAD_VALUE = re.compile(r"(expression|javascript:|url\s*\(|@import|/\*)", re.I)

@@ -4383,15 +4383,90 @@ const LESSON_BODY_CSS = `
 .tqaLessonBody ul, .tqaLessonBody ol, [contenteditable] ul, [contenteditable] ol { padding-left: 24px; margin: 6px 0; }
 `;
 
+/* নির্বাচিত ছবির চারপাশে যে দাগটা দেখানো হয় — এটি কখনো সংরক্ষিত হয় না,
+   লেখা পড়ার ঠিক আগে সরিয়ে নেওয়া হয় (নিচে readHTML দেখুন) */
+const RT_IMG_SEL = "3px solid #1a5c3a";
+
 function RichText({ value, onChange, placeholder }) {
   const ref = useRef(null);
   const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
+  // এই মুহূর্তে কোন ছবিটি নির্বাচিত (DOM নোড) — সাজানোর বাটনগুলো এর উপরেই চলে
+  const selImg = useRef(null);
+  const [hasSel, setHasSel] = useState(false);
   useEffect(() => {
     if (ref.current) ref.current.innerHTML = value || "";
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const push = () => onChange(ref.current ? ref.current.innerHTML : "");
+
+  /* সংরক্ষণের জন্য লেখা পড়া — নির্বাচনের দাগটা বাদ দিয়ে। নইলে দাগটাই
+     লেখার ভেতরে ঢুকে যেত এবং পরে সবার পর্দায় দেখা যেত। */
+  const readHTML = () => {
+    const el = ref.current;
+    if (!el) return "";
+    const img = selImg.current;
+    if (img) img.style.outline = "";
+    const html = el.innerHTML;
+    if (img) img.style.outline = RT_IMG_SEL;
+    return html;
+  };
+  const push = () => onChange(readHTML());
+
+  /* ছবিতে ক্লিক করলেই সেটি নির্বাচিত হয়, অন্য কোথাও ক্লিক করলে ছেড়ে দেয় */
+  const onClickArea = (e) => {
+    const prev = selImg.current;
+    if (prev) prev.style.outline = "";
+    if (e.target && e.target.tagName === "IMG") {
+      selImg.current = e.target;
+      e.target.style.outline = RT_IMG_SEL;
+      e.target.style.outlineOffset = "2px";
+      setHasSel(true);
+    } else {
+      selImg.current = null;
+      setHasSel(false);
+    }
+  };
+
+  /* ছবির আকার — শতাংশে, ১০% থেকে ১০০% পর্যন্ত */
+  const resizeImg = (step) => {
+    const img = selImg.current;
+    if (!img) return;
+    const cur = parseInt(img.style.width, 10);
+    const now = Number.isFinite(cur) ? cur : 100;
+    const next = Math.max(10, Math.min(100, now + step));
+    img.style.width = next + "%";
+    img.style.height = "auto";
+    img.style.maxWidth = "100%";
+    push();
+  };
+
+  /* বাঁয়ে/ডানে ভাসানো, নাকি মাঝবরাবর — লেখা তার পাশ দিয়ে বইবে */
+  const alignImg = (where) => {
+    const img = selImg.current;
+    if (!img) return;
+    img.style.maxWidth = "100%";
+    if (where === "center") {
+      img.style.float = "none";
+      img.style.display = "block";
+      img.style.margin = "10px auto";
+    } else {
+      img.style.display = "inline";
+      img.style.float = where; // "left" বা "right"
+      img.style.margin =
+        where === "left" ? "6px 14px 8px 0" : "6px 0 8px 14px";
+    }
+    push();
+  };
+
+  const removeImg = () => {
+    const img = selImg.current;
+    if (!img) return;
+    img.remove();
+    selImg.current = null;
+    setHasSel(false);
+    push();
+  };
+
   const cmd = (c, v) => {
     ref.current?.focus();
     try {
@@ -4431,7 +4506,8 @@ function RichText({ value, onChange, placeholder }) {
       cmd(
         "insertHTML",
         r.kind === "image"
-          ? `<img src="${url}" alt="${name}" style="max-width: 100%; border-radius: 8px" /><br />`
+          ? // width শতাংশে দিয়ে রাখি, তাই বসানোর পরই "ছোট/বড়" কাজ করে
+            `<img src="${url}" alt="${name}" style="width: 100%; height: auto; max-width: 100%; border-radius: 8px; display: block; margin: 10px auto" /><br />`
           : `<p>📄 <a href="${url}">${name}</a></p>`,
       );
     } catch (err) {
@@ -4545,10 +4621,42 @@ function RichText({ value, onChange, placeholder }) {
           style={{ display: "none" }}
         />
       </div>
+      {/* ছবি নির্বাচন করলেই এই সারিটি আসে — না করলে জায়গাও নেয় না */}
+      {hasSel && (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 4,
+            alignItems: "center",
+            padding: 6,
+            background: C.amberBg,
+            borderBottom: `1px solid ${C.line}`,
+          }}
+        >
+          <span style={{ fontSize: 12, fontWeight: 700, color: C.gold, marginRight: 4 }}>
+            🖼️ নির্বাচিত ছবি:
+          </span>
+          <button type="button" title="ছোট করুন" style={tool} onClick={() => resizeImg(-10)}>➖ ছোট</button>
+          <button type="button" title="বড় করুন" style={tool} onClick={() => resizeImg(10)}>➕ বড়</button>
+          <button type="button" title="বাঁয়ে, লেখা পাশ দিয়ে যাবে" style={tool} onClick={() => alignImg("left")}>⇤ বাঁয়ে</button>
+          <button type="button" title="মাঝবরাবর" style={tool} onClick={() => alignImg("center")}>⇔ মাঝে</button>
+          <button type="button" title="ডানে, লেখা পাশ দিয়ে যাবে" style={tool} onClick={() => alignImg("right")}>⇥ ডানে</button>
+          <button
+            type="button"
+            title="এই ছবিটি মুছে ফেলুন"
+            style={{ ...tool, color: C.red, borderColor: C.red }}
+            onClick={removeImg}
+          >
+            🗑️ মুছুন
+          </button>
+        </div>
+      )}
       <div
         ref={ref}
         contentEditable
         suppressContentEditableWarning
+        onClick={onClickArea}
         onInput={push}
         onBlur={push}
         data-ph={placeholder || ""}
