@@ -1815,7 +1815,9 @@ class AdmissionViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == "create":
             return []  # ওয়েবসাইটের পাবলিক ভর্তি/ট্রায়াল/যোগাযোগ ফরম
-        if self.action in ("accept", "reject"):
+        # মুছে ফেলাও গ্রহণ/বাতিলের মতোই — আবেদনটি চিরতরে চলে যায়, তাই
+        # এডমিন নয়, কেবল পরিচালক। অ্যাপের অন্য সব "মুছুন" বাটনেও একই নিয়ম।
+        if self.action in ("accept", "reject", "destroy"):
             # গ্রহণ/বাতিলের ক্ষমতা কেবল পরিচালকের — এডমিন বিস্তারিত দেখে
             # পরিচালক বরাবর পাঠাবেন (UI-তেও এই কথাই বলা আছে)। reject অ্যাকশনের
             # @action ডেকোরেটরে permission_classes=[IsDirector] বসানো ছিল, কিন্তু

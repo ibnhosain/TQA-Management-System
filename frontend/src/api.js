@@ -366,6 +366,7 @@ export const api = {
   notices: () => request("/notices/"),
   createNotice: (d) => request("/notices/", { method: "POST", body: d }),
   deleteNotice: (id) => request(`/notices/${id}/`, { method: "DELETE" }),
+  deleteAdmission: (id) => request(`/admissions/${id}/`, { method: "DELETE" }),
   notifications: () => request("/notifications/"),
   markAllRead: () => request("/notifications/mark_all_read/", { method: "POST" }),
 

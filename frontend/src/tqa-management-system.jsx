@@ -9062,6 +9062,31 @@ function AdmissionsView({ db, setDb, user, refresh }) {
     loadData();
   }, []);
 
+  /* আবেদন মুছে ফেলা — কেবল পরিচালক। গৃহীত আবেদনের ক্ষেত্রে স্পষ্ট করে
+     জানিয়ে দেওয়া হয় যে শিক্ষার্থীর অ্যাকাউন্ট ও তথ্য অক্ষত থাকবে, শুধু
+     আবেদনের কাগজটিই সরবে — নইলে ভুল বুঝে কেউ চাপতে ভয় পেতেন। */
+  const removeAdmission = (a) =>
+    askConfirm(
+      `${a.name}-এর এই আবেদনটি চিরতরে মুছে ফেলা হবে।` +
+        "\n\n" +
+        (a.status === "accepted"
+          ? "তিনি ইতিমধ্যে গৃহীত — তাঁর অ্যাকাউন্ট, হাজিরা ও সব তথ্য অক্ষত থাকবে, শুধু আবেদনের কাগজটি সরে যাবে।"
+          : "এটি আর ফেরানো যাবে না।"),
+      async () => {
+        try {
+          await api.deleteAdmission(a.id);
+          await loadData();
+          notice("🗑️ আবেদনটি মুছে ফেলা হয়েছে");
+        } catch (e) {
+          notice(
+            "মুছতে ব্যর্থ — " +
+              (e?.data?.error || e?.data?.detail || e?.message || "আবার চেষ্টা করুন"),
+          );
+        }
+      },
+      { yes: "হ্যাঁ, মুছে ফেলুন", no: "না, থাক" },
+    );
+
   const accept = async (a) => {
     if (acceptingId) return; // ডাবল-ক্লিকে দুইবার রিকোয়েস্ট গিয়ে ডুপ্লিকেট স্টুডেন্ট তৈরি ঠেকাতে
     setAcceptingId(a.id);
@@ -9196,6 +9221,18 @@ function AdmissionsView({ db, setDb, user, refresh }) {
           <Tag color={C.red} bg={C.redBg}>
             বাতিল ✘
           </Tag>
+        )}
+        {/* যেকোনো অবস্থার আবেদনই মোছা যায় — অপেক্ষমাণ, গৃহীত বা বাতিল */}
+        {isDir(user) && (
+          <Btn
+            sm
+            kind="danger"
+            title="এই আবেদনটি মুছে ফেলুন"
+            onClick={() => removeAdmission(a)}
+            style={{ alignSelf: "flex-start" }}
+          >
+            🗑️
+          </Btn>
         )}
       </div>
     </div>
