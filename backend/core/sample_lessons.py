@@ -690,7 +690,7 @@ QAIDA = {
         },
         {
             "section": "Homework",
-            "says": "Mashaa Allah! You did it! Before I see you again, say these seven letters five times every day.",
+            "says": "Mashaa Allah! You did it! Now a little homework. Say these seven letters five times every day.",
             "does": "Praise specifically — name what got better today. Say the homework slowly for any parent listening.",
             "student": "Listens.",
             "expected": "The child understands the task.",
