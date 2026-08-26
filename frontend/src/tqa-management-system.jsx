@@ -2302,9 +2302,10 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
   );
   const total = (presence?.myMin || 0) + notYetSavedMin;
   // উস্তাদ+স্টুডেন্ট দুজনেই একসাথে জয়েন করা মাত্রই হাজিরা 'সম্পন্ন' হয়ে যায় (backend
-  // থেকে present ফ্ল্যাগ আসে) — আর ৪৫ মিনিট থাকার দরকার নেই, শুধু জয়েন হলেই যথেষ্ট।
-  // পোর্টালে সতর্কতার জন্য এখনো "৪৫+ মিনিট" লেখাই থাকছে যাতে কেউ ইচ্ছা করে
-  // দু-মিনিট থেকেই বেরিয়ে যাওয়াকে স্বাভাবিক না ভাবেন।
+  // থেকে present ফ্ল্যাগ আসে) — ন্যূনতম সময় পূর্ণ হওয়ার অপেক্ষা লাগে না।
+  // পর্দার লেখাগুলো এখন আসল নিয়মটাই বলে (কমপক্ষে ২০ মিনিট), সাথে পুরো
+  // ৪৫ মিনিট ক্লাস করার উৎসাহ — যাতে কেউ দু-মিনিট থেকেই বেরিয়ে যাওয়াকে
+  // স্বাভাবিক না ভাবেন।
   const done = !!presence?.myPresent;
 
   // mode: "manual" (স্টুডেন্ট/উস্তাদ নিজে "বের হন" চেপেছেন — মাঝপথে বেরোনো,
@@ -2740,7 +2741,7 @@ function AttnMarkModal({ k, nameOf, onClose }) {
       onClose={onClose}
     >
       <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
-        ৪৫ মিনিটের কম হলেও পরিচালক এখানে হাজিরা দিতে/সরাতে পারবেন।
+        ২০ মিনিটের কম হলেও পরিচালক এখানে হাজিরা দিতে/সরাতে পারবেন।
       </div>
       {list.length === 0 && (
         <div style={{ color: C.muted }}>এই ক্লাসে কোনো স্টুডেন্ট নেই।</div>
@@ -3726,8 +3727,8 @@ function ClassesView({
       <Section
         title={T("আজকের ক্লাস", "Today's Classes")}
         sub={T(
-          "সময় হলে এক ক্লিকে জুম মিটিং খুলে যাবে — ৪৫ মিনিটের কম থাকলে হাজিরা গণ্য হবে না",
-          "The Zoom meeting will open with one click when it's time — attendance is only counted if you stay 45+ minutes",
+          "সময় হলে এক ক্লিকে জুম মিটিং খুলে যাবে · কমপক্ষে ২০ মিনিট থাকলে হাজিরা গণ্য হয়, তবে পুরো ৪৫ মিনিট ক্লাস করাই কাম্য",
+          "The Zoom meeting opens with one click when it's time · Attendance counts from 20 minutes, but staying the full 45 is what we expect",
         )}
         action={
           isAdm(user) && (
@@ -5816,8 +5817,8 @@ th{background:#eef5f0}
     <Section
       title={T("হাজিরা রিপোর্ট", "Attendance Report")}
       sub={T(
-        "ন্যূনতম ৪৫ মিনিট ক্লাসে থাকলে তবেই হাজিরা গণ্য হয় — এই তালিকা কখনো মোছা হয় না (পুরনো ক্লাস-শিডিউল ৬০ দিন পর মুছলেও হাজিরা টিকে থাকে)",
-        "Attendance only counts if you stayed 45+ minutes — this record is never deleted (it stays even after the old class schedule is removed after 60 days)",
+        "কমপক্ষে ২০ মিনিট থাকলে হাজিরা গণ্য হয়, তবে পুরো ৪৫ মিনিট ক্লাস করাই কাম্য · এই তালিকা কখনো মোছা হয় না (পুরনো ক্লাস-শিডিউল ৬০ দিন পর মুছলেও হাজিরা টিকে থাকে)",
+        "Attendance counts from 20 minutes, but staying the full 45 is what we expect · This record is never deleted (it stays even after the old class schedule is removed after 60 days)",
       )}
       action={
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -7314,8 +7315,8 @@ function ProgressView({ db, setDb, courses, user }) {
           .map((a) => ({ minutes: a.minutes || 0 })),
       )
     : db.attendance.filter((a) => String(a.userId) === selId);
-  const present = att.filter((a) => (a.present ?? a.minutes >= 45)).length;
-  const missed = att.filter((a) => !(a.present ?? a.minutes >= 45)).length;
+  const present = att.filter((a) => (a.present ?? a.minutes >= 20)).length;
+  const missed = att.filter((a) => !(a.present ?? a.minutes >= 20)).length;
   const myFees = fees.filter((p) => String(p.studentId) === selId);
   const paid = myFees.reduce((s, p) => s + (+p.amount || 0), 0);
   const dueMonths = duesMap[selId] || db.dueMonths?.[sel] || [];
@@ -7435,8 +7436,8 @@ function ProgressView({ db, setDb, courses, user }) {
           value={T(bn(missed), missed)}
           accent={C.red}
           note={T(
-            "৪৫ মিনিটের কম উপস্থিতিসহ",
-            "Includes attendance under 45 minutes",
+            "২০ মিনিটের কম উপস্থিতিসহ",
+            "Includes attendance under 20 minutes",
           )}
         />
         <Stat
@@ -8580,8 +8581,8 @@ function TeacherReportView({ db, setDb, courses, user }) {
     (c) => String(c.teacherId || c.teacher) === String(tid),
   );
   const att = attendance.filter((a) => String(a.user) === String(tid));
-  const present = att.filter((a) => (a.present ?? a.minutes >= 45)).length;
-  const short = att.filter((a) => !(a.present ?? a.minutes >= 45)).length;
+  const present = att.filter((a) => (a.present ?? a.minutes >= 20)).length;
+  const short = att.filter((a) => !(a.present ?? a.minutes >= 20)).length;
   // উস্তাদ নিজে শেষ করে দেওয়া ক্লাসও গোনা হয় — কর্তৃপক্ষের যাচাইয়ের অপেক্ষায়
   // থাকলেও ক্লাসটা তিনি নিয়েছেন। আগে শুধু status="done" বা বিগত তারিখ দেখা
   // হতো, তাই আজকের নেওয়া ক্লাস আজ গণনায় আসত না — পরদিন গিয়ে আসত।
@@ -8905,14 +8906,14 @@ function TeacherReportView({ db, setDb, courses, user }) {
           icon="✅"
           label="পূর্ণ উপস্থিতি"
           value={bn(present)}
-          note="৪০+ মিনিট"
+          note="২০+ মিনিট"
         />
         <Stat
           icon="⚠️"
           label="অসম্পূর্ণ উপস্থিতি"
           value={bn(short)}
           accent={C.red}
-          note="৪৫ মিনিটের কম"
+          note="২০ মিনিটের কম"
         />
         <Stat
           icon="🌟"
@@ -9022,7 +9023,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
                 a.course_name || "—",
                 a.class_date ? fmtDate(a.class_date) : "—",
                 ...(isDir(user) ? [`${bn(a.minutes)} মিনিট`] : []),
-                (a.present ?? a.minutes >= 45) ? (
+                (a.present ?? a.minutes >= 20) ? (
                   <Tag key="t">উপস্থিত ✔</Tag>
                 ) : (
                   <Tag key="t" color={C.red} bg={C.redBg}>
@@ -9719,7 +9720,7 @@ function ManageView({ db, setDb, user, refresh }) {
   const UserReport = ({ u }) => {
     const uid2 = String(u.id);
     const att = rAttendance.filter((a) => String(a.user) === uid2);
-    const present = att.filter((a) => (a.present ?? a.minutes >= 45)).length,
+    const present = att.filter((a) => (a.present ?? a.minutes >= 20)).length,
       missed = att.length - present;
     const ratingsGiven = rRatings.filter((r) => String(r.student) === uid2);
     const ratingsGot = rRatings.filter((r) => String(r.teacher) === uid2);

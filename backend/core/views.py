@@ -1038,7 +1038,7 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         })
 
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])
-    def mark_attendance(self, request, pk=None):  # পরিচালকের ম্যানুয়াল হাজিরা (৪৫ মিনিটের কম হলেও)
+    def mark_attendance(self, request, pk=None):  # পরিচালকের ম্যানুয়াল হাজিরা (ন্যূনতম সময়ের কম হলেও)
         s = self.get_object()
         att, _ = Attendance.objects.get_or_create(
             session=s, user_id=request.data["student_id"], defaults=_att_defaults(s)

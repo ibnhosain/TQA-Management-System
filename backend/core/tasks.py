@@ -182,6 +182,15 @@ def generate_monthly_dues(roles=None):
 
     created = 0
     for u in User.objects.filter(role__in=(roles or ["student", "teacher"]), is_active=True):
+        # ⚠️ যে মাসে ভর্তি হয়েছেন, সে মাসের বকেয়া বসে না — পরিচালকের
+        # সিদ্ধান্ত। আগে মাসের ২৫ তারিখে ভর্তি হলেও ওই মাসের পুরো ফি
+        # বকেয়া হয়ে যেত। ভর্তি ফি এর বাইরে, আগের মতোই আলাদা।
+        # ⚠️ কেবল শিক্ষার্থীর জন্য — উস্তাদের বেতনের হিসাব ছোঁয়া হয়নি।
+        # ⚠️ আগে তৈরি হয়ে যাওয়া কোনো বকেয়া এতে মুছে যায় না; এটি কেবল
+        # এরপর থেকে নতুন বকেয়া বসানোর সময় খাটে।
+        if (u.role == "student" and u.date_joined
+                and timezone.localtime(u.date_joined).date() >= first):
+            continue
         if u.role == "student" and u.id in paid_students:
             continue
         if u.role == "teacher" and u.id in paid_teachers:
