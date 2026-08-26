@@ -18120,6 +18120,31 @@ function LessonsView({ user, courses }) {
     }
   };
 
+  /* নমুনা দারস আনা।
+
+     ⚠️ আগে থেকেই বসানো থাকলে সার্ভার existed:true বলে দেয় — তখন আমরা
+     আলাদা করে জিজ্ঞেস করি "নতুন করে আনব?"। না জিজ্ঞেস করে বদলে দিলে
+     পরিচালকের নিজের করা সম্পাদনা চুপচাপ মুছে যেত। */
+  const seedAgain = (which) =>
+    askConfirm(
+      "এই নমুনা দারসটি আগে থেকেই আছে।" +
+        "\n\n" +
+        "নতুন করে আনলে এর সব ধাপ মুছে গিয়ে সবচেয়ে নতুন লেখা বসবে। " +
+        "আপনি নিজে কিছু বদলে থাকলে তা হারিয়ে যাবে।" +
+        "\n\n" +
+        "শিক্ষার্থীদের অগ্রগতি অক্ষত থাকবে — সেটি মুছবে না।",
+      async () => {
+        try {
+          await api.seedSampleLesson(Number(courseId), which, true);
+          await load();
+          notice("🔄 নতুন লেখা বসানো হয়েছে");
+        } catch (e) {
+          notice("আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+        }
+      },
+      { yes: "হ্যাঁ, নতুন লেখা আনুন", no: "না, আগেরটাই থাক" },
+    );
+
   const seed = (which) =>
     askConfirm(
       which === "ikhlas"
@@ -18129,9 +18154,10 @@ function LessonsView({ user, courses }) {
             "২৪ ধাপ, প্রথম সাত হরফ, ৫–৭ বছরের জন্য।",
       async () => {
         try {
-          await api.seedSampleLesson(Number(courseId), which);
+          const r = await api.seedSampleLesson(Number(courseId), which);
           await load();
-          notice("✅ নমুনা দারসটি যোগ হয়েছে");
+          if (r && r.existed) seedAgain(which);
+          else notice("✅ নমুনা দারসটি যোগ হয়েছে");
         } catch (e) {
           notice("যোগ করা যায়নি — " + (e?.data?.error || e?.message || ""));
         }

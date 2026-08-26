@@ -893,27 +893,40 @@ QAIDA = {
 SAMPLES = {"ikhlas": IKHLAS, "qaida": QAIDA}
 
 
-def create_sample(Lesson, LessonStep, StepSlide, course, key, status="published"):
-    """নমুনা দারসটি ওই কোর্সে তৈরি করে ফেরত দেয়।
+def create_sample(Lesson, LessonStep, StepSlide, course, key,
+                  status="published", replace=False):
+    """নমুনা দারসটি ওই কোর্সে তৈরি করে ফেরত দেয় — (দারস, আগে থেকে ছিল কিনা)।
 
     মডেলগুলো বাইরে থেকে নেওয়া হয় — মাইগ্রেশন ঐতিহাসিক মডেল পাঠায়, ভিউ
     আসলটা। তাই ভবিষ্যতে মডেল বদলালেও পুরনো মাইগ্রেশন ভাঙে না।
 
-    একই কোর্সে একই শিরোনামের দারস আগে থেকে থাকলে নতুন করে বানানো হয় না —
-    তাই বারবার ডাকা নিরাপদ।
+    একই কোর্সে একই শিরোনামের দারস আগে থেকে থাকলে —
+      replace=False : কিছুই বদলানো হয় না, ওটাই ফেরত যায় (বারবার ডাকা নিরাপদ)
+      replace=True  : ধাপগুলো মুছে নতুন লেখা বসে
+
+    ⚠️ replace-এ দারসের সারিটি মোছা হয় না, কেবল তার ধাপগুলো — তাই
+    শিক্ষার্থীদের অগ্রগতি (LessonProgress) অক্ষত থাকে।
     """
     data = SAMPLES[key]
     existing = Lesson.objects.filter(course=course, title=data["title"]).first()
-    if existing:
-        return existing
+    if existing and not replace:
+        return existing, True
 
-    last = Lesson.objects.filter(course=course).order_by("-order").first()
-    lesson = Lesson.objects.create(
-        course=course, title=data["title"], title_ar=data["title_ar"],
-        kind=data["kind"], age_from=data["age_from"], age_to=data["age_to"],
-        duration_min=data["duration_min"], objectives=data["objectives"],
-        status=status, order=(last.order + 1) if last else 0,
-    )
+    if existing:
+        existing.steps.all().delete()
+        for f in ("title_ar", "kind", "age_from", "age_to", "duration_min",
+                  "objectives"):
+            setattr(existing, f, data[f])
+        existing.save()
+        lesson = existing
+    else:
+        last = Lesson.objects.filter(course=course).order_by("-order").first()
+        lesson = Lesson.objects.create(
+            course=course, title=data["title"], title_ar=data["title_ar"],
+            kind=data["kind"], age_from=data["age_from"], age_to=data["age_to"],
+            duration_min=data["duration_min"], objectives=data["objectives"],
+            status=status, order=(last.order + 1) if last else 0,
+        )
     for i, st in enumerate(data["steps"]):
         step = LessonStep.objects.create(
             lesson=lesson, order=i, section=st["section"],
@@ -930,4 +943,4 @@ def create_sample(Lesson, LessonStep, StepSlide, course, key, status="published"
             arabic_locked=bool(sl.get("arabic")),
             translit=sl.get("translit", ""), text=sl.get("text", ""),
         )
-    return lesson
+    return lesson, bool(existing)

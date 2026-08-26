@@ -34,6 +34,7 @@ def seed(apps, schema_editor):
     for key, words in PICKS:
         course = _pick_course(Course, words)
         if course:
+            # (দারস, আগে ছিল কিনা) ফেরত আসে — এখানে প্রথমটিই যথেষ্ট
             create_sample(Lesson, LessonStep, StepSlide, course, key)
 
 

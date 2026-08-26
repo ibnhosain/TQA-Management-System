@@ -1753,10 +1753,18 @@ class LessonViewSet(viewsets.ModelViewSet):
         course = _by_pk(Course, request.data.get("course"))
         if not course:
             return Response({"error": "কোর্সটি পাওয়া যায়নি"}, status=400)
-        lesson = create_sample(Lesson, LessonStep, StepSlide, course, key)
+        # replace=True হলে পুরনো ধাপগুলো মুছে নতুন লেখা বসে; দারসের সারিটি
+        # থেকেই যায়, তাই শিক্ষার্থীদের অগ্রগতি হারায় না
+        lesson, existed = create_sample(
+            Lesson, LessonStep, StepSlide, course, key,
+            replace=bool(request.data.get("replace")))
         ctx = self.get_serializer_context()
         ctx["with_steps"] = True
-        return Response(LessonSerializer(lesson, context=ctx).data, status=201)
+        data = LessonSerializer(lesson, context=ctx).data
+        # আগে থেকেই ছিল কিনা — সামনের পর্দা এটা দেখেই জিজ্ঞেস করে
+        # "নতুন করে আনব?"
+        data["existed"] = existed
+        return Response(data, status=201)
 
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])
     def duplicate(self, request, pk=None):
