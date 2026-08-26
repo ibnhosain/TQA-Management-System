@@ -28,7 +28,18 @@ class FlexTokenObtainPairSerializer(TokenObtainPairSerializer):
                 # একই আইডি/ইমেইল/নম্বর একাধিক অ্যাকাউন্টে — যার পাসওয়ার্ড মেলে তাকে বেছে নিই
                 chosen = next((u for u in candidates if u.check_password(pwd)), candidates[0])
                 attrs[self.username_field] = chosen.username
-        return super().validate(attrs)
+        data = super().validate(attrs)
+        # ট্রায়ালের মেয়াদ ফুরালে আর ঢোকা যাবে না। পাসওয়ার্ড যাচাইয়ের পরে
+        # দেখা হয়, তাই ভুল পাসওয়ার্ড দিয়ে কেউ বুঝতে পারবেন না কোন আইডি
+        # ট্রায়ালের আর কোনটা নয়।
+        # ⚠️ পরে (ধাপ ৫) এটি বদলে যাবে — তখন মেয়াদ শেষ হলেও ঢোকা যাবে,
+        # তবে শুধু নিজের রিপোর্ট ও ভর্তির প্রস্তাব দেখার জন্য।
+        if getattr(self.user, "trial_expired", False):
+            from rest_framework_simplejwt.exceptions import AuthenticationFailed
+            raise AuthenticationFailed(
+                "আপনার ট্রায়ালের মেয়াদ শেষ হয়েছে। ভর্তির ব্যাপারে জানতে "
+                "একাডেমিতে যোগাযোগ করুন।")
+        return data
 
 
 class FlexTokenObtainPairView(TokenObtainPairView):

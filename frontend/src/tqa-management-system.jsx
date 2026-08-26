@@ -8931,7 +8931,12 @@ function ManageView({ db, setDb, user, refresh }) {
     try {
       const data = await api.allUsers();
       setAllUsers(
-        data.map((u) => ({
+        // ট্রায়াল (সাময়িক অতিথি) এখানে দেখানো হয় না — তাঁদের নিজস্ব
+        // "🎓 ট্রায়াল" পর্দা আছে। এই পর্দাটা একাডেমির স্থায়ী লোকজনের জন্য,
+        // তাই এখানে আগের মতোই কেবল পরিচালক/এডমিন/উস্তাদ/স্টুডেন্ট থাকবেন।
+        data
+          .filter((u) => u.role !== "trial")
+          .map((u) => ({
           id: u.id,
           role: u.role,
           name: u.name || u.name_bn,
@@ -15983,6 +15988,427 @@ function Overview({ db, courses, user, goTo }) {
   );
 }
 
+/* ═══════════ 🎓 ট্রায়াল — সাময়িক অতিথি (পরিচালক ও এডমিন) ═══════════
+   ট্রায়াল শিক্ষার্থী ভর্তি নন, সাময়িক অতিথি। তাই তাঁরা "সকল স্টুডেন্ট",
+   ফি, বকেয়া, বেতন বা মাসিক রিপোর্টে কোথাও আসেন না — সার্ভারের ওই সব
+   কোয়েরি role="student" ধরে চলে, আর ট্রায়ালের ভূমিকা আলাদা। এখানেই
+   তাঁদের সব কিছু: আবেদন থেকে আইডি বানানো, মেয়াদ, কোর্স ও উস্তাদ। */
+function TrialView({ db, setDb, user, courses, refresh }) {
+  const [tab, setTab] = useState("students");
+  const [trials, setTrials] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState(null); // আইডি তৈরির ফর্ম খোলা আছে কিনা
+  const [made, setMade] = useState(null); // সদ্য তৈরি — আইডি/পাসওয়ার্ড দেখানোর জন্য
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [tr, ad, te] = await Promise.all([
+        api.trials(),
+        api.admissions().catch(() => []),
+        api.allTeachers().catch(() => []),
+      ]);
+      setTrials(tr || []);
+      setApplications((ad || []).filter((a) => a.kind === "trial"));
+      setTeachers(te || []);
+    } catch (e) {
+      notice("ট্রায়ালের তথ্য আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    load();
+  }, []);
+
+  const courseName = (id) =>
+    (courses.find((c) => String(c.id) === String(id)) || {}).name || "";
+
+  /* যে আবেদনগুলোর জন্য এখনো আইডি বানানো হয়নি — একই আবেদনে দুবার আইডি
+     বানিয়ে ফেলা ঠেকাতে এখানেই ছেঁকে নেওয়া হয় */
+  const usedAdmissions = new Set(
+    trials.map((t) => String(t.trial_admission)).filter((x) => x !== "null"),
+  );
+  const pendingApps = applications.filter(
+    (a) => !usedAdmissions.has(String(a.id)),
+  );
+
+  const openForm = (a) =>
+    setForm({
+      admission: a ? a.id : null,
+      name: a ? a.name : "",
+      guardian: a ? a.guardian || "" : "",
+      country: a ? a.country || "" : "",
+      phone: a ? a.contact || "" : "",
+      course:
+        (a &&
+          (courses.find((c) => c.name === a.course_name) || {}).id) ||
+        "",
+      teacher: "",
+      days: 7,
+    });
+
+  const save = async () => {
+    if (!form.name.trim()) return notice("নাম লিখুন");
+    setBusy(true);
+    try {
+      const t = await api.createTrial({
+        admission: form.admission || undefined,
+        name: form.name.trim(),
+        guardian: form.guardian,
+        country: form.country,
+        phone: form.phone,
+        course: form.course || undefined,
+        teacher: form.teacher || undefined,
+        days: form.days,
+      });
+      setForm(null);
+      setMade(t); // আইডি ও পাসওয়ার্ড দেখাই
+      setTab("students");
+      await load();
+    } catch (e) {
+      notice("তৈরি করা যায়নি — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetPass = (t) =>
+    askConfirm(
+      "নতুন পাসওয়ার্ড তৈরি করলে পুরনোটি আর কাজ করবে না। নতুনটি পরিবারকে " +
+        "পাঠিয়ে দিতে হবে। নিশ্চিত?",
+      async () => {
+        try {
+          const u = await api.resetTrialPassword(t.id);
+          setMade(u);
+          await load();
+        } catch (e) {
+          notice("ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+        }
+      },
+      { yes: "হ্যাঁ, নতুন পাসওয়ার্ড", no: "থাক" },
+    );
+
+  const extend = async (t, days) => {
+    const base = new Date();
+    base.setDate(base.getDate() + days);
+    const until = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, "0")}-${String(base.getDate()).padStart(2, "0")}`;
+    try {
+      await api.editTrial(t.id, { trial_until: until });
+      await load();
+      notice(`✅ মেয়াদ ${fmtDate(until)} পর্যন্ত বাড়ানো হলো`);
+    } catch (e) {
+      notice("ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
+  /* স্বাগত বার্তা — আইডি, পাসওয়ার্ড, কোর্স, উস্তাদ ও মেয়াদসহ একসাথে */
+  const waText = (t) =>
+    [
+      `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম ${t.guardian || "অভিভাবক"},`,
+      "",
+      `আলহামদুলিল্লাহ — তারবিয়াতুল কুরআন একাডেমিতে ${t.name || t.name_bn}-এর ফ্রি ট্রায়ালের ব্যবস্থা হয়েছে।`,
+      "",
+      "আমাদের পোর্টালে লগইন করুন:",
+      "🔗 https://app.tarbiyatulquran.org",
+      `👤 আইডি: ${t.username}`,
+      `🔑 পাসওয়ার্ড: ${t.plain_password || ""}`,
+      "",
+      t.course_name ? `📘 কোর্স: ${t.course_name}` : "",
+      t.teacher_name ? `🧕 উস্তাদ/উস্তাদা: ${t.teacher_name}` : "",
+      t.trial_until ? `📅 ট্রায়ালের মেয়াদ: ${fmtDate(t.trial_until)} পর্যন্ত` : "",
+      "",
+      "পোর্টালে ঢুকে কোর্সের সিলেবাস, দারস পরিকল্পনা ও বই দেখতে পারবেন, আর নির্ধারিত সময়ে ক্লাসে যুক্ত হতে পারবেন ইনশাআল্লাহ।",
+      "",
+      "জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি",
+    ]
+      .filter((x) => x !== "")
+      .join("\n");
+
+  const sendWa = (t) => {
+    const phone = String(t.phone || "").replace(/[^\d]/g, "");
+    if (phone.length < 8)
+      return notice("এই ট্রায়ালের কোনো WhatsApp নম্বর নেই — আগে নম্বরটি যোগ করুন।");
+    window.open(
+      `https://wa.me/${phone}?text=${encodeURIComponent(waText(t))}`,
+      "_blank",
+    );
+  };
+
+  const copyCreds = (t) => {
+    const txt = `আইডি: ${t.username}\nপাসওয়ার্ড: ${t.plain_password || ""}`;
+    try {
+      navigator.clipboard.writeText(txt);
+      notice("📋 কপি হয়েছে");
+    } catch {
+      notice(txt);
+    }
+  };
+
+  /* মেয়াদের অবস্থা — একই হিসাব তালিকা ও ট্যাগ দুই জায়গাতেই */
+  const statusTag = (t) => {
+    if (t.expired)
+      return (
+        <Tag color={C.red} bg={C.redBg}>
+          মেয়াদ শেষ
+        </Tag>
+      );
+    if (t.days_left == null) return <Tag>মেয়াদ নেই</Tag>;
+    if (t.days_left === 0)
+      return (
+        <Tag color={C.gold} bg={C.amberBg}>
+          আজ শেষ
+        </Tag>
+      );
+    return <Tag>{bn(t.days_left)} দিন বাকি</Tag>;
+  };
+
+  return (
+    <>
+      <Section
+        title="🎓 ট্রায়াল"
+        action={
+          <Btn sm kind="soft" onClick={() => openForm(null)}>
+            + নতুন ট্রায়াল আইডি
+          </Btn>
+        }
+      >
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+          <Btn
+            sm
+            kind={tab === "apps" ? "gold" : "soft"}
+            onClick={() => setTab("apps")}
+          >
+            📥 আবেদন ({bn(pendingApps.length)})
+          </Btn>
+          <Btn
+            sm
+            kind={tab === "students" ? "gold" : "soft"}
+            onClick={() => setTab("students")}
+          >
+            👤 ট্রায়াল শিক্ষার্থী ({bn(trials.length)})
+          </Btn>
+        </div>
+
+        {loading && <Loader text="ট্রায়ালের তথ্য লোড হচ্ছে" />}
+
+        {!loading && tab === "apps" && (
+          <div style={{ display: "grid", gap: 8 }}>
+            {pendingApps.length === 0 && (
+              <div style={{ color: C.muted, fontSize: 14 }}>
+                আইডি বানানো বাকি এমন কোনো ট্রায়াল আবেদন নেই।
+              </div>
+            )}
+            {pendingApps.map((a) => (
+              <div
+                key={a.id}
+                style={{ ...S.card, padding: 14, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}
+              >
+                <div style={{ flex: 1, minWidth: 190 }}>
+                  <div style={{ fontWeight: 800 }}>{a.name}</div>
+                  <div style={{ fontSize: 12.5, color: C.muted }}>
+                    {[a.country, a.course_name, a.guardian, a.contact]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                </div>
+                <Btn sm kind="gold" onClick={() => openForm(a)}>
+                  → আইডি বানান
+                </Btn>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!loading && tab === "students" && (
+          <div style={{ display: "grid", gap: 8 }}>
+            {trials.length === 0 && (
+              <div style={{ color: C.muted, fontSize: 14 }}>
+                এখনো কোনো ট্রায়াল শিক্ষার্থী নেই।
+              </div>
+            )}
+            {trials.map((t) => (
+              <div
+                key={t.id}
+                style={{
+                  ...S.card,
+                  padding: 14,
+                  display: "flex",
+                  gap: 12,
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  opacity: t.expired ? 0.65 : 1,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <div style={{ fontWeight: 800 }}>
+                    {t.name || t.name_bn}{" "}
+                    <span style={{ color: C.muted, fontWeight: 600, fontSize: 12.5 }}>
+                      · {t.username}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12.5, color: C.muted }}>
+                    {[
+                      t.country,
+                      t.course_name || courseName(t.trial_course),
+                      t.teacher_name,
+                      t.trial_until ? `মেয়াদ ${fmtDate(t.trial_until)}` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                </div>
+                {statusTag(t)}
+                <Btn sm kind="soft" onClick={() => copyCreds(t)}>
+                  📋 আইডি-পাসওয়ার্ড
+                </Btn>
+                <Btn sm kind="soft" onClick={() => sendWa(t)}>
+                  💬 বার্তা
+                </Btn>
+                <Btn sm kind="soft" onClick={() => resetPass(t)}>
+                  🔄 পাসওয়ার্ড
+                </Btn>
+                <Btn sm kind="soft" onClick={() => extend(t, 7)}>
+                  ⏳ ৭ দিন বাড়ান
+                </Btn>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      {/* ───── আইডি তৈরির ফর্ম ───── */}
+      {form && (
+        <Modal title="সাময়িক আইডি তৈরি" onClose={() => setForm(null)}>
+          <div style={{ display: "grid", gap: 10 }}>
+            <div>
+              <label style={S.label}>নাম *</label>
+              <input
+                style={S.input}
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <label style={S.label}>অভিভাবক</label>
+                <input
+                  style={S.input}
+                  value={form.guardian}
+                  onChange={(e) => setForm({ ...form, guardian: e.target.value })}
+                />
+              </div>
+              <div>
+                <label style={S.label}>দেশ</label>
+                <input
+                  style={S.input}
+                  value={form.country}
+                  onChange={(e) => setForm({ ...form, country: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <label style={S.label}>WhatsApp নম্বর (কান্ট্রি কোডসহ)</label>
+              <input
+                style={S.input}
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              />
+            </div>
+            <div>
+              <label style={S.label}>কোন কোর্স দেখতে পাবেন</label>
+              <select
+                style={S.input}
+                value={form.course}
+                onChange={(e) => setForm({ ...form, course: e.target.value })}
+              >
+                <option value="">— বাছাই করুন —</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={S.label}>কোন উস্তাদের কাছে</label>
+              <select
+                style={S.input}
+                value={form.teacher}
+                onChange={(e) => setForm({ ...form, teacher: e.target.value })}
+              >
+                <option value="">— বাছাই করুন —</option>
+                {teachers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name || t.name_bn}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={S.label}>মেয়াদ</label>
+              <select
+                style={S.input}
+                value={form.days}
+                onChange={(e) => setForm({ ...form, days: +e.target.value })}
+              >
+                {[3, 7, 14, 30].map((d) => (
+                  <option key={d} value={d}>
+                    {bn(d)} দিন
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Btn kind="gold" onClick={busy ? undefined : save} style={{ opacity: busy ? 0.6 : 1 }}>
+              {busy ? "তৈরি হচ্ছে…" : "🎓 আইডি তৈরি করুন"}
+            </Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* ───── সদ্য তৈরি আইডি ও পাসওয়ার্ড ───── */}
+      {made && (
+        <Modal title="তৈরি হয়েছে" onClose={() => setMade(null)}>
+          <div
+            style={{
+              background: C.amberBg,
+              border: `1.5px dashed ${C.gold}`,
+              borderRadius: 12,
+              padding: 16,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 6 }}>
+              {made.name || made.name_bn}
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 0.5 }}>
+              {made.username}
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 0.5 }}>
+              {made.plain_password}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+            <Btn kind="gold" onClick={() => sendWa(made)}>
+              💬 স্বাগত বার্তা পাঠান
+            </Btn>
+            <Btn kind="soft" onClick={() => copyCreds(made)}>
+              📋 কপি করুন
+            </Btn>
+          </div>
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 12, lineHeight: 1.6 }}>
+            পাসওয়ার্ডটি পরে আবার এই তালিকা থেকেই দেখা ও পাঠানো যাবে। হারিয়ে
+            গেলে “🔄 পাসওয়ার্ড” চাপলে নতুন একটি তৈরি হবে।
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
+
 /* ═══════════════ অ্যাপ শেল ═══════════════ */
 const NAV = [
   {
@@ -16098,6 +16524,14 @@ const NAV = [
     id: "admissions",
     icon: "🎓",
     label: "ভর্তি আবেদন",
+    roles: ["director", "admin"],
+  },
+  {
+    // 🎓 আইকনটা "ভর্তি আবেদন" আগেই নিয়ে রেখেছে, তাই ট্রায়ালের জন্য আলাদা —
+    // মেনুতে দুটো একরকম দেখালে চোখে ধাঁধা লাগত
+    id: "trials",
+    icon: "🌱",
+    label: "ট্রায়াল",
     roles: ["director", "admin"],
   },
   { id: "accounts", icon: "🏦", label: "হিসাব-নিকাশ", roles: ["director"] },
@@ -17693,6 +18127,7 @@ export default function App() {
           {view === "admissions" && isAdm(user) && (
             <AdmissionsView {...props} />
           )}
+          {view === "trials" && isAdm(user) && <TrialView {...props} />}
           {view === "manage" && isDir(user) && <ManageView {...props} />}
           {view === "accounts" && isDir(user) && <AccountsView {...props} />}
           {view === "forms" && isAdm(user) && <FormsView {...props} />}

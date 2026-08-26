@@ -14,6 +14,11 @@ class User(AbstractUser):
         ADMIN = "admin", "এডমিন"
         TEACHER = "teacher", "উস্তাদ/উস্তাদা"
         STUDENT = "student", "স্টুডেন্ট"
+        # সাময়িক অতিথি — ভর্তি হওয়ার আগে কয়েক দিনের জন্য। ইচ্ছা করেই আলাদা
+        # ভূমিকা: ফি, বকেয়া, বেতন, মাসিক রিপোর্ট, স্টুডেন্ট তালিকা — সব
+        # জায়গার কোয়েরি role="student" ধরে চলে, তাই ট্রায়াল সেখানে
+        # আপনাআপনিই ঢোকে না, আলাদা করে কিছু বাদ দিতে হয় না।
+        TRIAL = "trial", "ট্রায়াল শিক্ষার্থী"
 
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.STUDENT)
     name_bn = models.CharField("নাম (বাংলা)", max_length=120)
@@ -42,6 +47,38 @@ class User(AbstractUser):
     # পরিচালকের জন্য পাসওয়ার্ডের দেখা-যায় কপি (কেবল director সিরিয়ালাইজারে ফেরত যায়)
     plain_password = models.CharField(max_length=128, blank=True, default="")
     can_fix_cross = models.BooleanField(default=False)  # পরিচালকের দেওয়া লাল-ক্রস ঠিক করার অনুমতি
+
+    # ─────────── ট্রায়াল (সাময়িক অতিথি) — কেবল role="trial" হলে প্রযোজ্য ───────────
+    # অন্য সব ভূমিকায় ঘরগুলো খালি পড়ে থাকে, কোনো প্রভাব নেই।
+    trial_until = models.DateField(
+        "ট্রায়ালের মেয়াদ", null=True, blank=True,
+        help_text="এই তারিখ পর্যন্ত ট্রায়াল চলবে")
+    # যে কোর্সের সিলেবাস, দারস পরিকল্পনা ও বই তিনি দেখতে পাবেন।
+    # ⚠️ Course.students-এ যোগ করা হয় না — তাহলে কোর্সের শিক্ষার্থী তালিকায়
+    # ট্রায়াল ঢুকে যেত। তাই আলাদা সংযোগ।
+    trial_course = models.ForeignKey(
+        "Course", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="trial_students", verbose_name="ট্রায়ালের কোর্স")
+    # কোন আবেদন থেকে এসেছেন — পরে ভর্তিতে রূপান্তরের সময় কাজে লাগবে
+    trial_admission = models.ForeignKey(
+        "Admission", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="trial_users", verbose_name="যে আবেদন থেকে")
+
+    @property
+    def trial_expired(self):
+        """মেয়াদ ফুরিয়েছে কিনা। তারিখ না দেওয়া থাকলে কখনো ফুরায় না।"""
+        if self.role != "trial" or not self.trial_until:
+            return False
+        from django.utils import timezone
+        return self.trial_until < timezone.localtime().date()
+
+    @property
+    def trial_days_left(self):
+        """আজ ধরে আর কত দিন বাকি (আজ শেষ দিন হলে ০)। মেয়াদ না থাকলে None।"""
+        if self.role != "trial" or not self.trial_until:
+            return None
+        from django.utils import timezone
+        return (self.trial_until - timezone.localtime().date()).days
 
     def __str__(self):
         return f"{self.name_bn} ({self.get_role_display()})"

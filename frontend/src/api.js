@@ -430,6 +430,12 @@ export const api = {
   // ব্যবহারকারী (পরিচালক)
   allUsers: () => request("/users/"),
   allStudents: () => request("/users/students/"),
+  // ── ট্রায়াল (সাময়িক অতিথি) — কেবল পরিচালক/এডমিন ──
+  trials: () => request("/trials/"),
+  createTrial: (d) => request("/trials/", { method: "POST", body: d }),
+  editTrial: (id, d) => request(`/trials/${id}/`, { method: "PATCH", body: d }),
+  resetTrialPassword: (id) =>
+    request(`/trials/${id}/reset_password/`, { method: "POST" }),
   // যাদের এখনো স্টুডেন্ট আইডি নেই তাদের সবার জন্য তৈরি (কেবল পরিচালক)
   backfillStudentIds: () => request("/users/backfill_student_ids/", { method: "POST" }),
   allTeachers: () => request("/users/teachers/"),

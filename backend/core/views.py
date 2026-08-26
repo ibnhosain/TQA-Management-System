@@ -762,6 +762,12 @@ def _assert_session_participant(s, user):
         raise PermissionDenied("শুধু ক্লাসের উস্তাদ বা শিক্ষার্থীই জয়েন করতে পারবেন")
 
 
+# হাজিরার হিসাবে যাঁদের "শিক্ষার্থী" ধরা হয়। ট্রায়াল অতিথিও ক্লাসে বসেন,
+# তাই তাঁকেও গুনতে হয় — কিন্তু ফি/বকেয়া/রিপোর্টের কোয়েরিগুলো আগের মতোই
+# শুধু role="student" ধরে চলে, সেখানে ট্রায়াল ঢোকে না।
+STUDENT_LIKE_ROLES = ("student", "trial")
+
+
 def _finalize_session(s, by=None, mark_done=True):
     """ক্লাসের একটি পর্ব শেষ করা — একটাই জায়গা, সবাই এখান থেকেই ডাকে।
 
@@ -820,7 +826,9 @@ def _sync_mutual_presence(s):
         r for r in rows
         if r.user_id != teacher_id
         and r.segment_start is not None
-        and getattr(r.user, "role", None) == "student"
+        # ট্রায়াল শিক্ষার্থীও এখানে শিক্ষার্থীই — নইলে ট্রায়াল ক্লাসে উস্তাদ
+        # চিরকাল "শিক্ষার্থীর অপেক্ষায়" দেখতেন, হাজিরাও নিশ্চিত হতো না
+        and getattr(r.user, "role", None) in STUDENT_LIKE_ROLES
     ]
     if not (teacher_active and student_rows_active):
         return
@@ -949,7 +957,7 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
             # একই কারণে এখানেও ভূমিকা যাচাই — উস্তাদ/এডমিন ঢুকলে যেন
             # অন্যপাশে "শিক্ষার্থী এসে গেছেন" না দেখায়
             "any_student_active": rows.filter(
-                segment_start__isnull=False, user__role="student"
+                segment_start__isnull=False, user__role__in=STUDENT_LIKE_ROLES
             ).exclude(user_id=teacher_id).exists(),
             # ⚠️ শিক্ষার্থীর পর্দার জন্য দরকারি দুটি খবর। "উস্তাদ আর নেই" দেখেই
             # আগে শিক্ষার্থীর ক্লাস শেষ করে দেওয়া হতো — কিন্তু উস্তাদের সেগমেন্ট
@@ -1391,6 +1399,90 @@ class SentReceiptViewSet(viewsets.ModelViewSet):
 # ─────────────────────────── ভর্তি, ছুটি, মূল্যায়ন ───────────────────────────
 class _PublicFormThrottle(AnonRateThrottle):
     rate = "5/min"  # একই ভিজিটর মিনিটে সর্বোচ্চ ৫টি ফরম — spam ঠেকাতে
+
+
+class TrialViewSet(viewsets.ModelViewSet):
+    """ট্রায়াল (সাময়িক অতিথি) অ্যাকাউন্ট — তৈরি, তালিকা, মেয়াদ/কোর্স বদল।
+
+    কেবল পরিচালক ও এডমিন। মুছে ফেলার সুযোগ ইচ্ছা করেই রাখা হয়নি — মেয়াদ
+    ফুরালে অ্যাকাউন্টটি নিজে থেকেই সংরক্ষণে চলে যায়, কিন্তু তথ্য থাকে
+    (কেউ ছয় মাস পরে ফিরে এলে তাঁর পুরনো তথ্য যেন হাতে থাকে)।
+    """
+    serializer_class = TrialSerializer
+    permission_classes = [IsAdminLevel]
+
+    def get_queryset(self):
+        return (User.objects.filter(role="trial")
+                .select_related("trial_course", "teacher", "trial_admission")
+                .order_by("-id"))
+
+    def create(self, request, *args, **kwargs):
+        from datetime import timedelta
+        from .utils import make_password_str, make_trial_username
+        d = request.data
+        adm = None
+        if d.get("admission"):
+            adm = Admission.objects.filter(pk=d.get("admission")).first()
+            if not adm:
+                return Response({"error": "আবেদনটি পাওয়া যায়নি"}, status=400)
+        name = str(d.get("name") or d.get("name_bn") or (adm.name if adm else "")).strip()
+        if not name:
+            return Response({"error": "নাম দিতে হবে"}, status=400)
+
+        # কোর্স ও উস্তাদ — দেওয়া থাকলে সত্যিই আছে কিনা যাচাই করে নিই, নইলে
+        # ভুল আইডিতে অ্যাকাউন্ট তৈরি হয়ে পরে খালি পর্দা দেখাত
+        course = None
+        if d.get("course"):
+            course = Course.objects.filter(pk=d.get("course")).first()
+            if not course:
+                return Response({"error": "কোর্সটি পাওয়া যায়নি"}, status=400)
+        teacher = None
+        if d.get("teacher"):
+            teacher = User.objects.filter(pk=d.get("teacher"), role="teacher").first()
+            if not teacher:
+                return Response({"error": "উস্তাদকে পাওয়া যায়নি"}, status=400)
+
+        until = d.get("trial_until") or None
+        if not until:
+            try:
+                days = int(d.get("days") or 7)
+            except (TypeError, ValueError):
+                days = 7
+            days = max(1, min(days, 90))  # এক দিনের কম বা তিন মাসের বেশি নয়
+            until = timezone.localtime().date() + timedelta(days=days)
+
+        pwd = make_password_str(8)
+        u = User.objects.create_user(
+            username=make_trial_username(User), password=pwd, role="trial",
+            name_bn=name,
+            guardian=str(d.get("guardian") or (adm.guardian if adm else "")),
+            country=str(d.get("country") or (adm.country if adm else "")),
+            phone=str(d.get("phone") or (adm.contact if adm else "")),
+            email=str(d.get("email") or (adm.email if adm else "")),
+            plain_password=pwd,          # পরিচালক পরিবারকে পাঠাবেন
+            trial_until=until,
+            trial_course=course,
+            teacher=teacher,
+            trial_admission=adm,
+        )
+        return Response(self.get_serializer(u).data, status=201)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAdminLevel])
+    def reset_password(self, request, pk=None):
+        """পাসওয়ার্ড হারিয়ে গেলে নতুন একটি — পুরনোটি আর কাজ করবে না।"""
+        from .utils import make_password_str
+        u = self.get_object()
+        pwd = make_password_str(8)
+        u.set_password(pwd)
+        u.plain_password = pwd
+        u.save(update_fields=["password", "plain_password"])
+        return Response(self.get_serializer(u).data)
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {"error": "ট্রায়াল অ্যাকাউন্ট মোছা যায় না — মেয়াদ ফুরালে নিজেই "
+                      "সংরক্ষণে চলে যায়, তথ্য অক্ষত থাকে"},
+            status=400)
 
 
 class AdmissionViewSet(viewsets.ModelViewSet):

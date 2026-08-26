@@ -31,6 +31,28 @@ class UserSerializer(serializers.ModelSerializer):
         return [d.month_label for d in obj.due_months.all()]
 
 
+class TrialSerializer(serializers.ModelSerializer):
+    """ট্রায়াল (সাময়িক অতিথি) অ্যাকাউন্ট — কেবল পরিচালক/এডমিন দেখেন।
+
+    plain_password এখানে দেখানো হয় কারণ পরিচালককেই পরিবারের কাছে আইডি-পাসওয়ার্ড
+    পাঠাতে হয় — ভর্তি গ্রহণের সময় ঠিক যেভাবে হয়, সেভাবেই।
+    """
+    name = serializers.CharField(source="name_bn", required=False)
+    course_name = serializers.CharField(source="trial_course.name", read_only=True)
+    teacher_name = serializers.CharField(source="teacher.name_bn", read_only=True)
+    days_left = serializers.IntegerField(source="trial_days_left", read_only=True)
+    expired = serializers.BooleanField(source="trial_expired", read_only=True)
+    plain_password = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "name", "name_bn", "guardian", "country",
+                  "phone", "email", "trial_until", "trial_course", "course_name",
+                  "teacher", "teacher_name", "trial_admission", "plain_password",
+                  "days_left", "expired", "date_joined"]
+        read_only_fields = ["username", "plain_password", "date_joined"]
+
+
 class UserAdminSerializer(UserSerializer):
     """কেবল পরিচালকের জন্য — পাসওয়ার্ড সেট/রিসেট + দেখা-যায় কপি (কিছুই আড়াল নয়)"""
     password = serializers.CharField(write_only=True, required=False)
