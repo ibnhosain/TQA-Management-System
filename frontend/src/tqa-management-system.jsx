@@ -8274,8 +8274,13 @@ function NoticesView({ db, setDb, user }) {
   }, []);
 
   /* একই ফর্ম দুই কাজে — নতুন নোটিশ, আর পুরনোটি সংশোধন। editId খালি
-     থাকলে নতুন, না থাকলে সংশোধন। */
-  const [editId, setEditId] = useState(null);
+     থাকলে নতুন, না থাকলে সংশোধন।
+
+     ⚠️ show ও f রিফ্রেশেও টিকে থাকে (usePersistedState), তাই editId-ও
+     টিকতে হবে। নইলে সংশোধনের মাঝপথে পাতা রিফ্রেশ হলে লেখাটা থেকে যেত
+     কিন্তু "কোনটা সংশোধন করছি" ভুলে যেত — ফলে "প্রকাশ করুন" চাপলে
+     একই নোটিশ দ্বিতীয়বার তৈরি হয়ে যেত। */
+  const [editId, setEditId] = usePersistedState("notice_editId", null);
   const openEdit = (n) => {
     setEditId(n.id);
     setF({ title: n.title, body: n.body });
@@ -17542,13 +17547,19 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               <span style={{ color: C.muted, fontSize: 12, minWidth: 18 }}>
                 {bn(i + 1)}.
               </span>
+              {/* key-তে বর্তমান লেখাটাও রাখা — সার্ভারের সাথে না মিললে ঘরটি
+                  নতুন করে আঁকা হয়। নইলে সংরক্ষণ ব্যর্থ হলে পর্দায় নতুন লেখা
+                  আর সার্ভারে পুরনো লেখা থেকে যেত, আর পরিচালক ভাবতেন সেভ
+                  হয়ে গেছে। */}
               <input
+                key={`bn-${pt.id}-${pt.label_bn}`}
                 style={{ ...S.input, flex: 1, minWidth: 150 }}
                 defaultValue={pt.label_bn}
                 placeholder="বাংলা নাম"
                 onBlur={(e) => savePoint(pt, { label_bn: e.target.value.trim() })}
               />
               <input
+                key={`en-${pt.id}-${pt.label_en}`}
                 style={{ ...S.input, flex: 1, minWidth: 150 }}
                 defaultValue={pt.label_en}
                 placeholder="ইংরেজি নাম"
