@@ -7,7 +7,8 @@ from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes as pc
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import (IsAuthenticated, BasePermission,
+                                        SAFE_METHODS)
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -1507,6 +1508,124 @@ def _convert_trial_to_student(u, course=None, fee=None):
     if assign_student_id(u, User):
         u.save(update_fields=["student_id"])
     return u
+
+
+class ReadOwnWriteTeacher(BasePermission):
+    """পড়া সবার জন্য খোলা (get_queryset যতটুকু দেয় ততটুকুই), লেখা কেবল
+    উস্তাদ/এডমিন/পরিচালকের — শিক্ষার্থী বা ট্রায়াল অতিথি নিজের অগ্রগতি
+    নিজে বদলাতে পারবেন না।"""
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user.role in ("director", "admin", "teacher")
+
+
+class LessonProgressViewSet(viewsets.ModelViewSet):
+    """কে কোন দারসের কোথায় আছে — উস্তাদ চিহ্নিত করেন, সবাই দেখেন।"""
+    serializer_class = LessonProgressSerializer
+    permission_classes = [ReadOwnWriteTeacher]
+    filterset_fields = ["student", "lesson", "status"]
+
+    def get_queryset(self):
+        u = self.request.user
+        qs = LessonProgress.objects.select_related(
+            "student", "lesson", "lesson__course")
+        if u.role in ("director", "admin"):
+            return qs
+        if u.role == "teacher":
+            # ⚠️ কোর্স নয়, *শিক্ষার্থী* ধরেই ছাঁকা হয় — একই কোর্সে একাধিক
+            # উস্তাদ থাকতে পারেন, তখন কোর্স ধরে ছাঁকলে একজনের শিক্ষার্থীর
+            # অগ্রগতি আরেকজন দেখে ফেলতেন। নিয়মটা কোর্সের শিক্ষার্থী-তালিকার
+            # সাথে হুবহু এক: নিজের শিক্ষার্থী, আর উস্তাদ বসানো নেই এমন
+            # শিক্ষার্থী কেবল কোর্সের উস্তাদের জন্য।
+            return qs.filter(
+                Q(student__teacher=u)
+                | (Q(student__teacher__isnull=True)
+                   & Q(lesson__course__teacher=u))
+            ).distinct()
+        # ⚠️ শিক্ষার্থী ও ট্রায়াল অতিথি কেবল নিজেরটাই — অন্য কারও নয়
+        return qs.filter(student=u)
+
+    @staticmethod
+    def _may_mark(u, lesson, student):
+        """এই উস্তাদ কি এই দারসে এই শিক্ষার্থীর অগ্রগতি লিখতে পারেন?
+
+        ⚠️ দুটোই লাগে — দারসটিও তাঁর, শিক্ষার্থীটিও তাঁর। আগে "অথবা" ছিল,
+        ফলে নিজের কোর্সের দারসে অন্য উস্তাদের শিক্ষার্থীকে, কিংবা নিজের
+        শিক্ষার্থীকে অন্য উস্তাদের দারসে চিহ্নিত করে ফেলা যেত।
+        """
+        if u.role in ("director", "admin"):
+            return True
+        if u.role != "teacher":
+            return False
+        own = Q(teacher=u)
+        if lesson.course.teacher_id == u.id:
+            own = own | Q(teacher__isnull=True)
+        if lesson.course.students.filter(own).filter(pk=student.pk).exists():
+            return True
+        # ট্রায়াল অতিথি কোর্সের students-এ থাকেন না (ইচ্ছা করেই) — তাঁর
+        # সংযোগ trial_course দিয়ে, তাই আলাদা করে দেখি
+        return (student.role == "trial"
+                and student.trial_course_id == lesson.course_id
+                and (student.teacher_id == u.id
+                     or (student.teacher_id is None
+                         and lesson.course.teacher_id == u.id)))
+
+    def perform_update(self, serializer):
+        # সরাসরি PATCH করেও যেন অন্যের রেকর্ড বদলানো না যায়
+        row = serializer.instance
+        if not self._may_mark(self.request.user, row.lesson, row.student):
+            raise PermissionDenied("এটি আপনার দারস বা শিক্ষার্থী নয়")
+        serializer.save(updated_by=self.request.user)
+
+    def perform_destroy(self, instance):
+        if not self._may_mark(self.request.user, instance.lesson,
+                              instance.student):
+            raise PermissionDenied("এটি আপনার দারস বা শিক্ষার্থী নয়")
+        instance.delete()
+
+    @action(detail=False, methods=["post"])
+    def mark(self, request):
+        """একটি দারসে একজন শিক্ষার্থীর অবস্থা বসানো (থাকলে হালনাগাদ)।
+
+        একই দিনে কয়েকবার সংরক্ষণ করলেও "কয় দিন পড়ানো হয়েছে" একবারই
+        বাড়ে — তারিখ দেখে গোনা হয়, সংরক্ষণের সংখ্যা দিয়ে নয়।
+        """
+        sid = request.data.get("student")
+        lid = request.data.get("lesson")
+        lesson = Lesson.objects.filter(pk=lid).first()
+        student = User.objects.filter(pk=sid).first()
+        if not lesson or not student:
+            return Response({"error": "শিক্ষার্থী বা দারসটি পাওয়া যায়নি"},
+                            status=400)
+        u = request.user
+        if not self._may_mark(u, lesson, student):
+            raise PermissionDenied("এটি আপনার দারস বা শিক্ষার্থী নয়")
+
+        status_in = request.data.get("status")
+        valid = dict(LessonProgress.Status.choices)
+        if status_in and status_in not in valid:
+            return Response({"error": "অবস্থাটি চেনা গেল না"}, status=400)
+
+        row, made = LessonProgress.objects.get_or_create(
+            student=student, lesson=lesson)
+        today = timezone.localtime().date()
+        if row.last_taught != today:
+            row.times_taught += 1
+            row.last_taught = today
+        if status_in:
+            row.status = status_in
+        if "last_step" in request.data:
+            row.last_step = max(0, int(request.data.get("last_step") or 0))
+        if "note" in request.data:
+            row.note = str(request.data.get("note") or "")[:2000]
+        row.updated_by = u
+        row.save()
+        return Response(LessonProgressSerializer(row).data,
+                        status=201 if made else 200)
 
 
 class LessonViewSet(viewsets.ModelViewSet):

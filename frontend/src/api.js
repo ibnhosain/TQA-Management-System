@@ -496,6 +496,14 @@ export const api = {
   reorderLessonSteps: (ids) =>
     request("/lesson-steps/reorder/", { method: "POST", body: { ids } }),
 
+  /* ── কে কোন দারসের কোথায় আছে ──
+     ⚠️ এখানে দারসের কোনো লেখা নেই — কেবল নাম, অবস্থা ও মন্তব্য। */
+  lessonProgress: (q) => request("/lesson-progress/" + (q || "")),
+  markLessonProgress: (d) =>
+    request("/lesson-progress/mark/", { method: "POST", body: d }),
+  editLessonProgress: (id, d) =>
+    request(`/lesson-progress/${id}/`, { method: "PATCH", body: d }),
+
   offerTrialReport: (id) =>
     request(`/trial-reports/${id}/offer/`, { method: "POST" }),
   acceptTrialOffer: (id) =>

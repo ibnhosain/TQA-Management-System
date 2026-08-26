@@ -30,6 +30,7 @@ router.register("trial-reports", views.TrialReportViewSet, basename="trial-repor
 router.register("trial-score-items", views.TrialScoreItemViewSet, basename="trial-score-items")
 router.register("lessons", views.LessonViewSet, basename="lessons")
 router.register("lesson-steps", views.LessonStepViewSet, basename="lesson-steps")
+router.register("lesson-progress", views.LessonProgressViewSet, basename="lesson-progress")
 router.register("admissions", views.AdmissionViewSet)
 router.register("leaves", views.LeaveRequestViewSet, basename="leaves")
 router.register("ratings", views.RatingViewSet, basename="ratings")

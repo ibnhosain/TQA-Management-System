@@ -17909,6 +17909,10 @@ function LessonsView({ user, courses }) {
   const canEdit = isDir(user);
   // কোন দারসটি এই মুহূর্তে শিক্ষক মোডে খোলা (খোলা না থাকলে null)
   const [teachId, setTeachId] = useState(null);
+  // কোন দারসের অগ্রগতির পাতা খোলা
+  const [progFor, setProgFor] = useState(null);
+  // এই কোর্সের সব অগ্রগতি — তালিকায় এক নজরে দেখানোর জন্য
+  const [prog, setProg] = useState([]);
   const [courseId, setCourseId] = useState("");
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17927,7 +17931,13 @@ function LessonsView({ user, courses }) {
     if (!courseId) return setLoading(false);
     setLoading(true);
     try {
-      setLessons((await api.lessons(courseId)) || []);
+      const [ls, pr] = await Promise.all([
+        api.lessons(courseId),
+        // অগ্রগতি না এলেও তালিকা দেখাতে অসুবিধা নেই — তাই আলাদা করে ধরি
+        api.lessonProgress().catch(() => []),
+      ]);
+      setLessons(ls || []);
+      setProg(pr || []);
     } catch (e) {
       notice("দারস আনা যায়নি — " + (e?.data?.error || e?.message || ""));
     } finally {
@@ -18024,6 +18034,16 @@ function LessonsView({ user, courses }) {
     <TeacherMode id={teachId} onClose={() => setTeachId(null)} />
   );
 
+  const progOverlay = progFor && (
+    <ProgressPanel
+      lesson={progFor}
+      onClose={() => {
+        setProgFor(null);
+        load();
+      }}
+    />
+  );
+
   if (openId)
     return (
       <>
@@ -18086,6 +18106,7 @@ function LessonsView({ user, courses }) {
       {loading && <Loader text="দারস লোড হচ্ছে" />}
 
       {teachOverlay}
+      {progOverlay}
 
       {!loading && (
         <div style={{ display: "grid", gap: 8 }}>
@@ -18117,7 +18138,8 @@ function LessonsView({ user, courses }) {
                 <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>
                   {bn(l.age_from)}–{bn(l.age_to)} বছর · {bn(l.step_count || 0)} ধাপ ·{" "}
                   {bn(l.duration_min)} মিনিট ·{" "}
-                  {(LESSON_KINDS.find((x) => x[0] === l.kind) || [, l.kind])[1]}
+                  {(LESSON_KINDS.find((x) => x[0] === l.kind) || [, l.kind])[1]}{" "}
+                  <ProgressSummary lessonId={l.id} rows={prog} />
                 </div>
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -18126,6 +18148,9 @@ function LessonsView({ user, courses }) {
                     ▶️ শিক্ষক মোড
                   </Btn>
                 )}
+                <Btn sm kind="soft" onClick={() => setProgFor(l)}>
+                  📈 অগ্রগতি
+                </Btn>
                 <Btn sm kind="soft" onClick={() => setOpenId(l.id)}>
                   {canEdit ? "✏️ খুলুন" : "👁️ দেখুন"}
                 </Btn>
@@ -18145,6 +18170,182 @@ function LessonsView({ user, courses }) {
         </div>
       )}
     </Section>
+  );
+}
+
+/* ═══════════════ 📈 দারসের অগ্রগতি ═══════════════
+   কে কোন দারসের কোথায় আছে — উস্তাদ ক্লাস শেষে চিহ্নিত করেন।
+
+   ⚠️ "মুখস্থ হয়েছে" উস্তাদই বলেন, কয়বার পড়ানো হলো তা দিয়ে নয়। শিক্ষার্থী
+   একা, ঠিক ক্রমে, এক শব্দের ইশারাতেই সামলে নিয়ে পড়তে পারলে তবেই। */
+
+const PROGRESS_STATUS = [
+  ["learning", "শিখছে", C.gold, C.amberBg],
+  ["review", "পুনরাবৃত্তি দরকার", C.blue, C.blueBg],
+  ["mastered", "মুখস্থ হয়েছে", C.green, C.greenBg],
+];
+
+const progressTag = (st) => {
+  const row = PROGRESS_STATUS.find((x) => x[0] === st);
+  if (!row) return <Tag color={C.muted} bg={C.cream}>শুরু হয়নি</Tag>;
+  return (
+    <Tag color={row[2]} bg={row[3]}>
+      {row[1]}
+    </Tag>
+  );
+};
+
+/* একটি দারসে কার কী অবস্থা — চিহ্নিত করার পাতা।
+   শিক্ষক মোডের উপরে ভাসে, আবার দারসের তালিকা থেকেও খোলা যায়। */
+function ProgressPanel({ lesson, atStep, onClose }) {
+  const [students, setStudents] = useState([]);
+  const [rows, setRows] = useState([]); // এই দারসের অগ্রগতি
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(0); // কোন শিক্ষার্থীরটি সংরক্ষণ হচ্ছে
+  const [notes, setNotes] = useState({}); // খসড়া মন্তব্য
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [st, pr] = await Promise.all([
+        api.courseStudents(lesson.course),
+        api.lessonProgress(`?lesson=${lesson.id}`).catch(() => []),
+      ]);
+      setStudents(st || []);
+      setRows(pr || []);
+      const n = {};
+      (pr || []).forEach((r) => {
+        n[r.student] = r.note || "";
+      });
+      setNotes(n);
+    } catch (e) {
+      notice("তালিকা আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lesson.id]);
+
+  const rowOf = (sid) => rows.find((r) => r.student === sid);
+
+  const mark = async (sid, status) => {
+    setBusy(sid);
+    try {
+      await api.markLessonProgress({
+        student: sid,
+        lesson: lesson.id,
+        status,
+        // কোন ধাপ পর্যন্ত এগোনো গেছে — পরের ক্লাসে সেখান থেকেই ধরা যায়
+        ...(typeof atStep === "number" ? { last_step: atStep } : {}),
+        note: notes[sid] ?? rowOf(sid)?.note ?? "",
+      });
+      await load();
+      notice("✅ চিহ্নিত হয়েছে");
+    } catch (e) {
+      notice("সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+    } finally {
+      setBusy(0);
+    }
+  };
+
+  return (
+    <Modal title={`📈 অগ্রগতি — ${lesson.title}`} onClose={onClose} wide>
+      {loading && <Loader text="তালিকা লোড হচ্ছে" />}
+
+      {!loading && students.length === 0 && (
+        <div style={{ color: C.muted, fontSize: 14 }}>
+          এই কোর্সে আপনার কোনো শিক্ষার্থী নেই।
+        </div>
+      )}
+
+      {!loading && students.length > 0 && (
+        <div style={{ display: "grid", gap: 10 }}>
+          <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
+            শিক্ষার্থী <b>একা, ঠিক ক্রমে</b>, এক শব্দের ইশারাতেই সামলে নিয়ে
+            পড়তে পারলে তবেই “মুখস্থ হয়েছে”। কয়েকবার আপনার সাথে বলতে পারা
+            এখনো মুখস্থ নয়।
+          </div>
+
+          {students.map((s) => {
+            const r = rowOf(s.id);
+            return (
+              <div key={s.id} style={{ ...S.card, padding: 12 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    marginBottom: 8,
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 140 }}>
+                    <div style={{ fontWeight: 800 }}>{s.name}</div>
+                    <div style={{ fontSize: 11.5, color: C.muted }}>
+                      {r
+                        ? `${bn(r.times_taught)} দিন পড়ানো হয়েছে` +
+                          (r.last_taught ? ` · শেষ ${fmtDate(r.last_taught)}` : "") +
+                          (r.last_step ? ` · ধাপ ${bn(r.last_step + 1)} পর্যন্ত` : "")
+                        : "এখনো শুরু হয়নি"}
+                    </div>
+                  </div>
+                  {progressTag(r?.status)}
+                </div>
+
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {PROGRESS_STATUS.map(([v, label]) => (
+                    <Btn
+                      key={v}
+                      sm
+                      kind={r?.status === v ? "primary" : "soft"}
+                      disabled={busy === s.id}
+                      onClick={() => mark(s.id, v)}
+                    >
+                      {label}
+                    </Btn>
+                  ))}
+                </div>
+
+                <input
+                  style={{ ...S.input, marginTop: 8, fontSize: 13 }}
+                  placeholder="মন্তব্য (ঐচ্ছিক) — যেমন: ৪ নং আয়াতে থেমে যায়"
+                  value={notes[s.id] ?? ""}
+                  onChange={(e) =>
+                    setNotes((n) => ({ ...n, [s.id]: e.target.value }))
+                  }
+                  onBlur={() => {
+                    // লেখা শেষ করে সরে গেলেই সংরক্ষণ — আগে অবস্থা বসানো
+                    // থাকলে তবেই, নইলে না চাইতেই রেকর্ড তৈরি হয়ে যেত
+                    const cur = rowOf(s.id);
+                    if (cur && (notes[s.id] ?? "") !== (cur.note || ""))
+                      api
+                        .editLessonProgress(cur.id, { note: notes[s.id] ?? "" })
+                        .then(load)
+                        .catch(() => notice("মন্তব্য সংরক্ষণ ব্যর্থ"));
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+/* দারসের তালিকায় এক নজরে — কজন কোথায় */
+function ProgressSummary({ lessonId, rows }) {
+  const mine = rows.filter((r) => r.lesson === lessonId);
+  if (!mine.length) return null;
+  const n = (st) => mine.filter((r) => r.status === st).length;
+  const bits = PROGRESS_STATUS.map(([v, label]) =>
+    n(v) ? `${bn(n(v))} জন ${label}` : null,
+  ).filter(Boolean);
+  return (
+    <span style={{ fontSize: 11.5, color: C.muted }}>· {bits.join(" · ")}</span>
   );
 }
 
@@ -18511,6 +18712,7 @@ function TeacherMode({ id, onClose }) {
   const [zoom, setZoom] = usePersistedState("tm_zoom", 1);
   // উপস্থাপনা উইন্ডো খোলা আছে কিনা (সে নিজে থেকে সাড়া দেয়)
   const [stageOk, setStageOk] = useState(false);
+  const [prog, setProg] = useState(false); // অগ্রগতির পাতা খোলা আছে কিনা
   const stageWin = useRef(null);
   const lastBeat = useRef(0);
 
@@ -18796,6 +18998,9 @@ function TeacherMode({ id, onClose }) {
         >
           {stageOk ? "🟢" : "🖥️"} উপস্থাপনা
         </button>
+        <button style={barBtn} onClick={() => setProg(true)}>
+          📈 অগ্রগতি
+        </button>
         <button
           style={{ ...barBtn, background: "#ffffff26" }}
           onClick={onClose}
@@ -19038,6 +19243,16 @@ function TeacherMode({ id, onClose }) {
         </div>
       </div>
 
+      {prog && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 130 }}>
+          <ProgressPanel
+            lesson={lesson}
+            atStep={i}
+            onClose={() => setProg(false)}
+          />
+        </div>
+      )}
+
       {/* ───────── নিচের পট্টি ───────── */}
       <div
         style={{
@@ -19080,9 +19295,9 @@ function TeacherMode({ id, onClose }) {
               background: C.gold,
               border: "none",
             }}
-            onClick={onClose}
+            onClick={() => setProg(true)}
           >
-            ✓ দারস শেষ
+            ✓ শেষ — অগ্রগতি লিখুন
           </button>
         ) : (
           <button

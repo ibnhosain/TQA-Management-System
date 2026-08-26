@@ -8,7 +8,8 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      SentReceipt, Admission, LeaveRequest, Rating, StudentRemark, Notice,
                      Notification, PushSubscription, WaMessage, LibraryBook,
                      CourseSyllabusSheet, LessonSection, TrialReport,
-                     TrialScoreItem, Lesson, LessonStep, StepSlide)
+                     TrialScoreItem, Lesson, LessonStep, StepSlide,
+                     LessonProgress)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -172,6 +173,27 @@ class StageSerializer(serializers.ModelSerializer):
     def get_steps(self, obj):
         rows = [x for x in obj.steps.all() if x.is_active]
         return StageStepSerializer(rows, many=True).data
+
+
+class LessonProgressSerializer(serializers.ModelSerializer):
+    """কোন শিক্ষার্থীর কোন দারস কতটা হয়েছে।
+
+    ⚠️ এখানে দারসের কোনো লেখা নেই — কেবল নাম, অবস্থা ও উস্তাদের মন্তব্য।
+    শিক্ষার্থী নিজের অগ্রগতি দেখতে পান, কিন্তু স্ক্রিপ্ট নয়।
+    """
+    student_name = serializers.CharField(source="student.name_bn",
+                                         read_only=True)
+    lesson_title = serializers.CharField(source="lesson.title", read_only=True)
+    course = serializers.IntegerField(source="lesson.course_id", read_only=True)
+
+    class Meta:
+        model = LessonProgress
+        fields = ["id", "student", "student_name", "lesson", "lesson_title",
+                  "course", "status", "times_taught", "last_taught",
+                  "last_step", "note", "updated_at"]
+        # কয় দিন পড়ানো হলো তা সার্ভারই গোনে — হাতে বসানো যায় না, নইলে
+        # ভুল করে একই দিনে কয়েকবার সংরক্ষণ করলেই সংখ্যাটা বেড়ে যেত
+        read_only_fields = ["times_taught", "last_taught", "updated_at"]
 
 
 class TrialScoreItemSerializer(serializers.ModelSerializer):

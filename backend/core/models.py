@@ -642,6 +642,47 @@ class StepSlide(models.Model):
         return f"{self.step} — {self.get_kind_display()}"
 
 
+class LessonProgress(models.Model):
+    """কোন শিক্ষার্থীর কোন দারস কতটা হয়েছে।
+
+    ⚠️ সম্পূর্ণ নতুন তালিকা — পুরনো কোনো তালিকার একটি ঘরও বদলানো হয়নি।
+    রেকর্ড না থাকা মানেই "এখনো শুরু হয়নি", তাই আগে থেকে কিছু বসাতে হয় না
+    এবং কারও কোনো তথ্য এই কারণে নড়ে না।
+
+    মুখস্থ হয়েছে কিনা তা উস্তাদই বলেন — কয়বার পড়ানো হলো তা দিয়ে নয়।
+    মাস্টার প্রম্পটের নিয়ম: শিক্ষার্থী একা, ঠিক ক্রমে, এক শব্দের ইশারাতেই
+    সামলে নিয়ে পড়তে পারলে তবেই "মুখস্থ হয়েছে"।
+    """
+    class Status(models.TextChoices):
+        LEARNING = "learning", "শিখছে"
+        REVIEW = "review", "পুনরাবৃত্তি দরকার"
+        MASTERED = "mastered", "মুখস্থ হয়েছে"
+
+    # ট্রায়াল অতিথিও দারস করেন, তাই ভূমিকা দিয়ে আটকানো হয়নি
+    student = models.ForeignKey(User, on_delete=models.CASCADE,
+                                related_name="lesson_progress")
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE,
+                               related_name="progress")
+    status = models.CharField(max_length=10, choices=Status.choices,
+                              default=Status.LEARNING)
+    times_taught = models.PositiveIntegerField("কয় দিন পড়ানো হয়েছে", default=0)
+    last_taught = models.DateField("সর্বশেষ যেদিন", null=True, blank=True)
+    # কোন ধাপ পর্যন্ত এগোনো গেছে — পরের ক্লাসে সেখান থেকেই ধরা যায়
+    last_step = models.PositiveIntegerField(default=0)
+    note = models.TextField("উস্তাদের মন্তব্য", blank=True, default="")
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                   blank=True, related_name="+")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        # এক শিক্ষার্থীর এক দারসে একটিই রেকর্ড
+        unique_together = [("student", "lesson")]
+        ordering = ["-last_taught", "-updated_at"]
+
+    def __str__(self):
+        return f"{self.student.name_bn} — {self.lesson.title} ({self.get_status_display()})"
+
+
 class TrialScoreItem(models.Model):
     """মূল্যায়নের একেকটি মাপকাঠি — পরিচালক নিজে সাজাতে পারেন।
 
