@@ -8273,24 +8273,46 @@ function NoticesView({ db, setDb, user }) {
     loadNotices();
   }, []);
 
+  /* একই ফর্ম দুই কাজে — নতুন নোটিশ, আর পুরনোটি সংশোধন। editId খালি
+     থাকলে নতুন, না থাকলে সংশোধন। */
+  const [editId, setEditId] = useState(null);
+  const openEdit = (n) => {
+    setEditId(n.id);
+    setF({ title: n.title, body: n.body });
+    setShow(true);
+  };
+  const closeForm = () => {
+    setShow(false);
+    setEditId(null);
+    setF({ title: "", body: "" });
+  };
+
   const publish = async () => {
     if (!f.title.trim() || !f.body.trim()) return notice("শিরোনাম ও বিস্তারিত দিন।");
     setBusy(true);
     try {
-      await api.createNotice({ title: f.title.trim(), body: f.body.trim() });
+      const body = { title: f.title.trim(), body: f.body.trim() };
+      if (editId) await api.editNotice(editId, body);
+      else await api.createNotice(body);
       await loadNotices();
-      setShow(false);
-      setF({ title: "", body: "" });
-      notice("✔ নোটিশ প্রকাশ হয়েছে।");
+      closeForm();
+      notice(editId ? "✔ নোটিশ সংশোধন হয়েছে।" : "✔ নোটিশ প্রকাশ হয়েছে।");
     } catch (e) {
       notice(
-        "নোটিশ প্রকাশ করতে ব্যর্থ — " +
+        (editId ? "নোটিশ সংশোধন করতে ব্যর্থ — " : "নোটিশ প্রকাশ করতে ব্যর্থ — ") +
           (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
       );
     }
     setBusy(false);
   };
-  const remove = async (id) => {
+  const remove = (id) =>
+    askConfirm(
+      "নোটিশটি চিরতরে মুছে ফেলা হবে — সবার পাতা থেকে, আর যাঁদের " +
+        "নোটিফিকেশনে গিয়েছিল তাঁদের ঘণ্টা থেকেও।",
+      () => reallyRemove(id),
+      { yes: "হ্যাঁ, মুছে ফেলুন", no: "না, থাক" },
+    );
+  const reallyRemove = async (id) => {
     try {
       await api.deleteNotice(id);
       await loadNotices();
@@ -8307,7 +8329,17 @@ function NoticesView({ db, setDb, user }) {
     <Section
       title={T("নোটিশ বোর্ড", "Notice Board")}
       action={
-        isAdm(user) && <Btn onClick={() => setShow(true)}>+ নোটিশ দিন</Btn>
+        isAdm(user) && (
+          <Btn
+            onClick={() => {
+              setEditId(null);
+              setF({ title: "", body: "" });
+              setShow(true);
+            }}
+          >
+            + নোটিশ দিন
+          </Btn>
+        )
       }
     >
       <div style={{ display: "grid", gap: 10 }}>
@@ -8330,9 +8362,14 @@ function NoticesView({ db, setDb, user }) {
             >
               <span>📌 {n.title}</span>
               {isDir(user) && (
-                <Btn sm kind="danger" onClick={() => remove(n.id)}>
-                  মুছুন
-                </Btn>
+                <span style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <Btn sm kind="soft" onClick={() => openEdit(n)}>
+                    ✏️ এডিট
+                  </Btn>
+                  <Btn sm kind="danger" onClick={() => remove(n.id)}>
+                    মুছুন
+                  </Btn>
+                </span>
               )}
             </div>
             <div style={{ fontSize: 12, color: C.muted, margin: "2px 0 6px" }}>
@@ -8343,7 +8380,10 @@ function NoticesView({ db, setDb, user }) {
         ))}
       </div>
       {show && (
-        <Modal title="নতুন নোটিশ" onClose={() => setShow(false)}>
+        <Modal
+          title={editId ? "নোটিশ সংশোধন" : "নতুন নোটিশ"}
+          onClose={closeForm}
+        >
           <label style={S.label}>শিরোনাম</label>
           <input
             style={S.input}
@@ -8359,11 +8399,21 @@ function NoticesView({ db, setDb, user }) {
               onChange={(e) => setF({ ...f, body: e.target.value })}
             />
           </div>
+          {editId && (
+            <div style={{ fontSize: 11.5, color: C.muted, marginTop: 10, lineHeight: 1.6 }}>
+              সংশোধন করলে নতুন করে কারও ঘণ্টা বাজবে না — কেবল আগে পাঠানো
+              বার্তাটির লেখা মিলিয়ে দেওয়া হবে।
+            </div>
+          )}
           <Btn
             style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: busy ? 0.6 : 1 }}
-            onClick={publish}
+            onClick={busy ? undefined : publish}
           >
-            {busy ? "⏳ প্রকাশ হচ্ছে…" : "প্রকাশ করুন"}
+            {busy
+              ? "⏳ সংরক্ষণ হচ্ছে…"
+              : editId
+                ? "💾 সংশোধন সংরক্ষণ করুন"
+                : "প্রকাশ করুন"}
           </Btn>
         </Modal>
       )}

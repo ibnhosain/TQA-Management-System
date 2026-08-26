@@ -2045,6 +2045,17 @@ class StudentRemarkViewSet(viewsets.ModelViewSet):
 
 
 # ─────────────────────────── নোটিশ, নোটিফিকেশন, WhatsApp ───────────────────────────
+def _notice_text(n):
+    """নোটিশ প্রকাশের সময় যে লেখাটি নোটিফিকেশনে যায় — একটাই জায়গা।
+
+    এই লেখাটা নোটিশ থেকেই তৈরি হয় বলে পরে নোটিশটি খুঁজে বের করা যায়:
+    এডিট করলে নোটিফিকেশনের লেখাও মিলিয়ে দেওয়া যায়, আর মুছে ফেললে
+    নোটিফিকেশনটাও সাথে মুছে ফেলা যায়। এজন্যই এটি ছড়িয়ে না রেখে
+    এক জায়গায় রাখা।
+    """
+    return f"📢 {n.title} — {n.body}"
+
+
 class NoticeViewSet(viewsets.ModelViewSet):
     queryset = Notice.objects.all()
     serializer_class = NoticeSerializer
@@ -2062,13 +2073,36 @@ class NoticeViewSet(viewsets.ModelViewSet):
         """
         obj = serializer.save()
         try:
-            notify(f"📢 {obj.title} — {obj.body}",
-                   list(User.objects.filter(is_active=True)))
+            notify(_notice_text(obj), list(User.objects.filter(is_active=True)))
         except Exception:
             # নোটিফিকেশন পাঠানো ব্যর্থ হলেও নোটিশ তৈরি হওয়াটা আটকানো যাবে না —
             # নইলে সেভ হয়ে যাওয়া নোটিশের জন্য ভুল করে ব্যর্থতা দেখিয়ে এডমিন
             # আবার পোস্ট করতেন, আর একই নোটিশ দুবার হয়ে যেত
             pass
+
+    def perform_update(self, serializer):
+        """নোটিশ সংশোধন — সবার নোটিফিকেশনের লেখাটাও মিলিয়ে দেওয়া হয়।
+
+        ⚠️ নতুন করে কাউকে জানানো হয় না, ঘণ্টাও বাজে না — বানান ঠিক করলে
+        সবার কাছে আবার বেজে ওঠা বিরক্তিকর হতো। কেবল আগের যে বার্তাটি
+        গিয়েছিল সেটির লেখা হালনাগাদ হয়, যাতে নোটিশ ও নোটিফিকেশন দুই
+        জায়গায় দুই কথা না থাকে।
+        """
+        before = _notice_text(serializer.instance)
+        obj = serializer.save()
+        after = _notice_text(obj)
+        if after != before:
+            Notification.objects.filter(text=before).update(text=after)
+
+    def perform_destroy(self, instance):
+        """নোটিশ মুছে ফেলা — সবার নোটিফিকেশন থেকেও মুছে যায়।
+
+        নোটিশটি একটাই সারি, তাই মুছলেই সবার পাতা থেকে চলে যায়। কিন্তু
+        প্রকাশের সময় পাঠানো নোটিফিকেশনটি আলাদা সারি — সেটিও একই সাথে
+        মুছে ফেলা হয়, নইলে নোটিশ নেই অথচ ঘণ্টায় বার্তাটি রয়ে যেত।
+        """
+        Notification.objects.filter(text=_notice_text(instance)).delete()
+        instance.delete()
 
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):

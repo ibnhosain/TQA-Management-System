@@ -365,6 +365,7 @@ export const api = {
   myRemarks: () => request("/remarks/"), // স্টুডেন্ট নিজের সব মন্তব্য
   notices: () => request("/notices/"),
   createNotice: (d) => request("/notices/", { method: "POST", body: d }),
+  editNotice: (id, d) => request(`/notices/${id}/`, { method: "PATCH", body: d }),
   deleteNotice: (id) => request(`/notices/${id}/`, { method: "DELETE" }),
   deleteAdmission: (id) => request(`/admissions/${id}/`, { method: "DELETE" }),
   notifications: () => request("/notifications/"),
