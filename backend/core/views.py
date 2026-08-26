@@ -780,6 +780,12 @@ def _q_teacher_course(u):
     return Q(teacher=u) | Q(students__teacher=u)
 
 
+def _q_course_teacher_or_own_lesson(u):
+    """ধাপ → দারস → কোর্স — উস্তাদ নিজের কোর্সের ধাপগুলোই দেখেন।"""
+    return (Q(lesson__course__teacher=u)
+            | Q(lesson__course__students__teacher=u))
+
+
 def _q_course_teacher_or_own(u):
     """একই নিয়ম, কিন্তু course-এর মধ্য দিয়ে (assignment/exam ইত্যাদির জন্য)।"""
     return Q(course__teacher=u) | Q(course__students__teacher=u)
@@ -1501,6 +1507,104 @@ def _convert_trial_to_student(u, course=None, fee=None):
     if assign_student_id(u, User):
         u.save(update_fields=["student_id"])
     return u
+
+
+class LessonViewSet(viewsets.ModelViewSet):
+    """দারস স্ক্রিপ্ট — পরিচালক লেখেন, উস্তাদ পড়ান।
+
+    দুটি আলাদা পথ, আর এটাই নিরাপত্তার ভিত্তি —
+      GET /lessons/{id}/        → উস্তাদের জন্য, পুরো স্ক্রিপ্টসহ
+      GET /lessons/{id}/stage/  → উপস্থাপনার জন্য, কেবল স্লাইড
+    দ্বিতীয়টি StageSerializer ব্যবহার করে, যেখানে উস্তাদের ঘরগুলো নেই-ই।
+    """
+    serializer_class = LessonSerializer
+    permission_classes = [ReadAllWriteDirector]
+    filterset_fields = ["course", "status", "kind"]
+
+    def get_queryset(self):
+        u = self.request.user
+        qs = Lesson.objects.select_related("course").prefetch_related(
+            "steps", "steps__slide")
+        if u.role in ("director", "admin"):
+            return qs
+        if u.role == "teacher":
+            # নিজের কোর্স, অথবা কোর্সে নিজের শিক্ষার্থী আছে
+            return qs.filter(_q_course_teacher_or_own(u)).distinct()
+        # ⚠️ শিক্ষার্থী ও ট্রায়াল অতিথি এখনো কিছুই পান না। ক্লাসের পর নিজে
+        # দেখার ব্যবস্থাটি ধাপ ৫-এ ইচ্ছা করে খোলা হবে — তখন কেবল
+        # প্রকাশিত দারসের stage-টুকু, স্ক্রিপ্ট নয়।
+        return qs.none()
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        # একটিমাত্র দারস খুললেই কেবল ধাপগুলো পাঠাই — তালিকায় নয়
+        ctx["with_steps"] = self.action in ("retrieve", "create", "update",
+                                            "partial_update")
+        return ctx
+
+    @action(detail=False, methods=["post"], permission_classes=[IsDirector])
+    def seed_sample(self, request):
+        """নমুনা দারস কোনো কোর্সে বসিয়ে দেওয়া — পরিচালকের বাটন।
+
+        একই কোর্সে একই শিরোনামের দারস আগে থেকে থাকলে নতুন করে বানানো হয় না,
+        তাই বারবার চাপা নিরাপদ।
+        """
+        from .sample_lessons import SAMPLES, create_sample
+        key = str(request.data.get("which") or "").strip()
+        if key not in SAMPLES:
+            return Response(
+                {"error": "কোন নমুনা তা বেছে দিন: " + ", ".join(SAMPLES)},
+                status=400)
+        course = Course.objects.filter(pk=request.data.get("course")).first()
+        if not course:
+            return Response({"error": "কোর্সটি পাওয়া যায়নি"}, status=400)
+        lesson = create_sample(Lesson, LessonStep, StepSlide, course, key)
+        ctx = self.get_serializer_context()
+        ctx["with_steps"] = True
+        return Response(LessonSerializer(lesson, context=ctx).data, status=201)
+
+    @action(detail=True, permission_classes=[IsAuthenticated])
+    def stage(self, request, pk=None):
+        """উপস্থাপনা উইন্ডোর জন্য — কেবল শিক্ষার্থী যা দেখবেন।
+
+        ⚠️ ইচ্ছা করেই আলাদা সিরিয়ালাইজার। ভবিষ্যতে কেউ ভুল করে উস্তাদের
+        কোনো ঘর যোগ করে ফেললেও যেন এই পথ দিয়ে না যায়, সেজন্য এখানে
+        LessonSerializer ছোঁয়াই হয় না।
+        """
+        obj = self.get_object()
+        return Response(StageSerializer(obj).data)
+
+
+class LessonStepViewSet(viewsets.ModelViewSet):
+    """দারসের ধাপ — লেখা, বদলানো, ক্রম সাজানো। কেবল পরিচালক লিখতে পারেন।"""
+    serializer_class = LessonStepSerializer
+    permission_classes = [ReadAllWriteDirector]
+    filterset_fields = ["lesson"]
+
+    def get_queryset(self):
+        u = self.request.user
+        qs = LessonStep.objects.select_related("lesson", "slide")
+        if u.role in ("director", "admin"):
+            return qs
+        if u.role == "teacher":
+            return qs.filter(
+                _q_course_teacher_or_own_lesson(u)).distinct()
+        return qs.none()
+
+    @action(detail=False, methods=["post"], permission_classes=[IsDirector])
+    def reorder(self, request):
+        """যে ক্রমে আইডি পাঠানো হয়, সেই ক্রমেই বসে।"""
+        ids = request.data.get("ids") or []
+        rows = {x.id: x for x in LessonStep.objects.filter(id__in=ids)}
+        changed = []
+        for i, sid in enumerate(ids):
+            r = rows.get(sid)
+            if r and r.order != i:
+                r.order = i
+                changed.append(r)
+        if changed:
+            LessonStep.objects.bulk_update(changed, ["order"])
+        return Response({"ok": True})
 
 
 # একাডেমির চারটি মূল মাপকাঠি — প্রথমবার এগুলোই বসে (মাইগ্রেশন 0033), আর

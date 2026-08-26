@@ -8,7 +8,7 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      SentReceipt, Admission, LeaveRequest, Rating, StudentRemark, Notice,
                      Notification, PushSubscription, WaMessage, LibraryBook,
                      CourseSyllabusSheet, LessonSection, TrialReport,
-                     TrialScoreItem)
+                     TrialScoreItem, Lesson, LessonStep, StepSlide)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -33,6 +33,80 @@ class UserSerializer(serializers.ModelSerializer):
         # .values_list()-এর বদলে .all() ইটারেট — prefetch_related("due_months") এর ক্যাশ
         # ব্যবহার হয়, নইলে প্রতি ব্যবহারকারীতে আলাদা কোয়েরি হতো (N+1)
         return [d.month_label for d in obj.due_months.all()]
+
+
+# ═══════════ দারস স্ক্রিপ্ট ও উপস্থাপনা ═══════════
+# ⚠️ এখানে দুটি সম্পূর্ণ আলাদা পথ রাখা হয়েছে, আর এটাই এই ব্যবস্থার
+# নিরাপত্তার ভিত্তি:
+#     উস্তাদের পথ  → LessonSerializer      (স্ক্রিপ্টসহ সব)
+#     পর্দার পথ    → StageSerializer       (কেবল শিক্ষার্থী যা দেখবেন)
+# উপস্থাপনার এন্ডপয়েন্ট কখনোই প্রথমটি ব্যবহার করে না। উস্তাদের স্ক্রিপ্ট
+# লুকানো হয় না — পাঠানোই হয় না।
+class SlideSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StepSlide
+        fields = ["kind", "heading", "arabic", "arabic_locked", "translit",
+                  "text", "image", "audio"]
+
+
+class LessonStepSerializer(serializers.ModelSerializer):
+    """উস্তাদের জন্য — পুরো স্ক্রিপ্ট।"""
+    slide = SlideSerializer(read_only=True)
+
+    class Meta:
+        model = LessonStep
+        fields = ["id", "order", "section", "teacher_says", "teacher_does",
+                  "student_does", "expected", "correction", "note", "seconds",
+                  "topic", "is_active", "slide"]
+
+
+class LessonSerializer(serializers.ModelSerializer):
+    """উস্তাদের জন্য — দারস ও তার সব ধাপ।"""
+    course_name = serializers.CharField(source="course.name", read_only=True)
+    steps = serializers.SerializerMethodField()
+    step_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Lesson
+        fields = ["id", "course", "course_name", "title", "title_ar", "kind",
+                  "age_from", "age_to", "duration_min", "objectives", "status",
+                  "order", "step_count", "steps"]
+
+    def get_steps(self, obj):
+        # তালিকা দেখানোর সময় ধাপগুলো পাঠানো হয় না — শুধু একটি দারস খুললেই
+        if not self.context.get("with_steps"):
+            return None
+        rows = [x for x in obj.steps.all() if x.is_active]
+        return LessonStepSerializer(rows, many=True, context=self.context).data
+
+    def get_step_count(self, obj):
+        return len([x for x in obj.steps.all() if x.is_active])
+
+
+class StageStepSerializer(serializers.ModelSerializer):
+    """⚠️ শিক্ষার্থীর পর্দার জন্য — কেবল ক্রম ও স্লাইড।
+
+    এখানে teacher_says/teacher_does/expected/correction/note-এর একটিও নেই,
+    আর কখনো যোগ করাও যাবে না।
+    """
+    slide = SlideSerializer(read_only=True)
+
+    class Meta:
+        model = LessonStep
+        fields = ["id", "order", "slide"]
+
+
+class StageSerializer(serializers.ModelSerializer):
+    """⚠️ উপস্থাপনা উইন্ডো যা পায় — দারসের নাম আর স্লাইডগুলো, ব্যস।"""
+    steps = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Lesson
+        fields = ["id", "title", "title_ar", "steps"]
+
+    def get_steps(self, obj):
+        rows = [x for x in obj.steps.all() if x.is_active]
+        return StageStepSerializer(rows, many=True).data
 
 
 class TrialScoreItemSerializer(serializers.ModelSerializer):

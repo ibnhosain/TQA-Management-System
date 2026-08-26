@@ -527,6 +527,121 @@ class Admission(models.Model):
     applied_at = models.DateField(auto_now_add=True)
 
 
+# ═══════════════ দারস স্ক্রিপ্ট ও উপস্থাপনা ═══════════════
+# "এক দারস, দুই পর্দা" — উস্তাদ পড়ানোর পুরো নির্দেশনা দেখেন, শিক্ষার্থী
+# দেখেন কেবল শেখার জিনিসটুকু।
+#
+# ⚠️ এটি বিদ্যমান "দারস পরিকল্পনা" (LessonSection/LectureTopic)-এর বদলি নয়।
+# সেটি বলে *কী পড়াব ও কার কতটুকু হয়েছে* (পাঠ্যসূচি ও কভারেজ); এটি বলে
+# *কীভাবে পড়াব* (বলার স্ক্রিপ্ট, ধাপে ধাপে)। দুটো আলাদা জিনিস, তাই আলাদা
+# তালিকা। তবে LessonStep.topic দিয়ে দুটো জোড়া লাগানো যায় — ধাপ শেষ করলে
+# ওই টপিকটি পরিকল্পনায় নিজে থেকেই "কভার হয়েছে" হয়ে যাবে।
+class Lesson(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "খসড়া"
+        READY = "ready", "প্রস্তুত"
+        PUBLISHED = "published", "প্রকাশিত"
+        ARCHIVED = "archived", "সংরক্ষিত"
+
+    KINDS = [
+        ("memorization", "মুখস্থ (হিফজ)"),
+        ("qaida", "কায়েদা"),
+        ("tajweed", "তাজবীদ"),
+        ("reading", "তিলাওয়াত"),
+        ("islamic", "ইসলামিক শিক্ষা"),
+        ("other", "অন্যান্য"),
+    ]
+
+    course = models.ForeignKey(Course, on_delete=models.CASCADE,
+                               related_name="lessons")
+    title = models.CharField("দারসের শিরোনাম", max_length=200)
+    title_ar = models.CharField("আরবি শিরোনাম", max_length=120,
+                                blank=True, default="")
+    kind = models.CharField(max_length=14, choices=KINDS, default="memorization")
+    # একই বিষয়ের আলাদা বয়সের আলাদা দারস — তাই বয়সটাই সংস্করণ আলাদা করে,
+    # বাড়তি কোনো তালিকা লাগে না
+    age_from = models.PositiveSmallIntegerField("বয়স — থেকে", default=5)
+    age_to = models.PositiveSmallIntegerField("বয়স — পর্যন্ত", default=7)
+    duration_min = models.PositiveIntegerField("আনুমানিক সময় (মিনিট)", default=25)
+    objectives = models.TextField("কাঙ্ক্ষিত ফল", blank=True, default="")
+    status = models.CharField(max_length=10, choices=Status.choices,
+                              default=Status.DRAFT)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["course", "order", "id"]
+
+    def __str__(self):
+        return f"{self.title} ({self.age_from}–{self.age_to})"
+
+
+class LessonStep(models.Model):
+    """একটি পড়ানোর ধাপ — উস্তাদ এখানে যা দেখেন তার কিছুই শিক্ষার্থী দেখেন না।
+
+    ঘরগুলো আলাদা আলাদা রাখা হয়েছে (এক গাদা লেখা নয়), যাতে শিক্ষক মোডে
+    প্রতিটি অংশ আলাদা করে বড় ও পড়ার উপযোগী করে দেখানো যায়।
+    """
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE,
+                               related_name="steps")
+    order = models.PositiveIntegerField(default=0)
+    section = models.CharField("এই ধাপের অংশ", max_length=120,
+                               blank=True, default="")
+    teacher_says = models.TextField("উস্তাদ বলবেন", blank=True, default="")
+    teacher_does = models.TextField("উস্তাদ করবেন", blank=True, default="")
+    student_does = models.TextField("শিক্ষার্থী করবে", blank=True, default="")
+    expected = models.TextField("প্রত্যাশিত সাড়া", blank=True, default="")
+    correction = models.TextField("ভুল হলে", blank=True, default="")
+    note = models.TextField("উস্তাদের টীকা", blank=True, default="")
+    seconds = models.PositiveIntegerField("আনুমানিক সময় (সেকেন্ড)", default=0)
+    # ঐচ্ছিক — এই ধাপ শেষ হলে দারস পরিকল্পনার কোন টপিকটি "কভার" ধরা হবে
+    topic = models.ForeignKey(LectureTopic, on_delete=models.SET_NULL,
+                              null=True, blank=True, related_name="lesson_steps")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"{self.lesson.title} — ধাপ {self.order + 1}"
+
+
+class StepSlide(models.Model):
+    """শিক্ষার্থীর পর্দায় এই ধাপে যা দেখা যাবে — আর কিছুই নয়।
+
+    ⚠️ নিরাপত্তার মূল জায়গা: উপস্থাপনার এন্ডপয়েন্ট কেবল এই তালিকা থেকেই
+    তথ্য পাঠায়। উস্তাদের স্ক্রিপ্ট লুকানো হয় না — পাঠানোই হয় না। যা
+    পাঠানো হয় না, তার ফাঁস হওয়ার পথও নেই।
+    """
+    KINDS = [
+        ("title", "শিরোনাম"), ("verse", "আয়াত"), ("letters", "হরফ"),
+        ("listen", "শোনো"), ("repeat", "আমার সাথে বলো"),
+        ("your_turn", "তুমি বলো"), ("question", "প্রশ্ন"),
+        ("meaning", "অর্থ"), ("visual", "ছবি"), ("activity", "খেলা"),
+        ("reminder", "মনে রেখো"), ("praise", "শাবাশ"),
+        ("review", "পুনরাবৃত্তি"), ("homework", "বাড়ির কাজ"),
+        ("end", "সমাপ্তি"), ("blank", "খালি পর্দা"),
+    ]
+
+    step = models.OneToOneField(LessonStep, on_delete=models.CASCADE,
+                                related_name="slide")
+    kind = models.CharField(max_length=12, choices=KINDS, default="title")
+    heading = models.CharField(max_length=160, blank=True, default="")
+    # ⚠️ কুরআনের আরবি — যাচাই করে locked করা হলে সাধারণ সম্পাদনায় আর
+    # বদলানো যায় না। যের-যবর-তানভীন হুবহু যেমন লেখা হয়েছে তেমনই থাকে।
+    arabic = models.TextField(blank=True, default="")
+    arabic_locked = models.BooleanField("আরবি যাচাইকৃত ও সুরক্ষিত",
+                                        default=False)
+    translit = models.CharField(max_length=200, blank=True, default="")
+    text = models.TextField(blank=True, default="")
+    image = models.CharField(max_length=500, blank=True, default="")
+    audio = models.CharField(max_length=500, blank=True, default="")
+
+    def __str__(self):
+        return f"{self.step} — {self.get_kind_display()}"
+
+
 class TrialScoreItem(models.Model):
     """মূল্যায়নের একেকটি মাপকাঠি — পরিচালক নিজে সাজাতে পারেন।
 
