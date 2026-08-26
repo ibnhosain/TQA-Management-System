@@ -1,5 +1,5 @@
 import React from 'react'
-import TQAManagementSystem from './tqa-management-system'
+import TQAManagementSystem, { PresentWindow } from './tqa-management-system'
 
 /* সাদা স্ক্রিন এড়াতে: কোনো render-error হলে পুরো অ্যাপ ভেঙে না পড়ে আসল বার্তা দেখাবে */
 class ErrorBoundary extends React.Component {
@@ -25,10 +25,22 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+/* ?present=<দারসের নম্বর> — জুমে শেয়ার করার উপস্থাপনা উইন্ডো।
+   ইচ্ছা করেই পুরো অ্যাপটা এখানে চালানো হয় না: তাহলে ওই উইন্ডোতেও
+   নোটিফিকেশন পোলিং, "সাইট ছেড়ে যাবেন?" সতর্কতা, ব্যাক-গার্ড — সব চলত।
+   শুধু পর্দাটুকু চালানোয় বাড়তি কোনো সার্ভার/ডাটাবেস খরচ নেই। */
+const presenting = (() => {
+  try {
+    return new URLSearchParams(window.location.search).has('present')
+  } catch (e) {
+    return false
+  }
+})()
+
 function App() {
   return (
     <ErrorBoundary>
-      <TQAManagementSystem />
+      {presenting ? <PresentWindow /> : <TQAManagementSystem />}
     </ErrorBoundary>
   )
 }

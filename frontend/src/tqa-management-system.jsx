@@ -18148,6 +18148,335 @@ function LessonsView({ user, courses }) {
   );
 }
 
+/* ═══════════════ 🖥️ উপস্থাপনা উইন্ডো ও দুই পর্দার সংযোগ ═══════════════
+
+   উস্তাদ জুমে এই উইন্ডোটিই শেয়ার করবেন — শিক্ষক মোডের পর্দাটি কখনো নয়।
+
+   ⚠️ নিরাপত্তা এখানে দুই স্তরে:
+     ১. এই উইন্ডো কেবল /lessons/{id}/stage/ ডাকে — যে পথে উস্তাদের
+        স্ক্রিপ্টের একটি ঘরও আসে না।
+     ২. দুই উইন্ডোর মধ্যে কেবল *ধাপের নম্বর* যায়, কোনো লেখা নয়। তাই
+        বার্তা কেউ পাল্টে দিলেও এখানে দেখানোর মতো স্ক্রিপ্টই নেই।
+
+   সংযোগটি ব্রাউজারের ভেতরেই — সার্ভার বা ডাটাবেসে একটি অনুরোধও যায় না,
+   তাই ধাপ বদলানোর কোনো খরচ নেই। */
+
+const STAGE_CH = "tqa_stage";
+const STAGE_KEY = "tqa_stage_msg";
+
+let stageChan;
+const stageChannel = () => {
+  if (stageChan === undefined) {
+    try {
+      stageChan = new BroadcastChannel(STAGE_CH);
+    } catch (e) {
+      stageChan = null; // পুরনো ব্রাউজার — localStorage-ই সেতু হবে
+    }
+  }
+  return stageChan;
+};
+
+/* বার্তা পাঠানো — দুই পথেই, যেটা কাজ করে সেটাই পৌঁছাবে।
+   নিজের উইন্ডোতে কোনোটাই ফিরে আসে না (দুটোরই নিয়ম তাই), তাই প্রতিধ্বনির
+   ভয় নেই। */
+const stageSend = (msg) => {
+  const m = { ...msg, at: Date.now() };
+  const ch = stageChannel();
+  if (ch)
+    try {
+      ch.postMessage(m);
+    } catch (e) {}
+  try {
+    window.localStorage.setItem(STAGE_KEY, JSON.stringify(m));
+  } catch (e) {}
+};
+
+const stageOn = (fn) => {
+  const ch = stageChannel();
+  const onMsg = (e) => fn(e.data);
+  const onStore = (e) => {
+    if (e.key !== STAGE_KEY || !e.newValue) return;
+    try {
+      fn(JSON.parse(e.newValue));
+    } catch (err) {}
+  };
+  if (ch) ch.addEventListener("message", onMsg);
+  window.addEventListener("storage", onStore);
+  return () => {
+    if (ch) ch.removeEventListener("message", onMsg);
+    window.removeEventListener("storage", onStore);
+  };
+};
+
+/* উপস্থাপনার পর্দায় একটি স্লাইড — পুরো পর্দা জুড়ে।
+   সম্পাদকের ছোট নমুনাটি (SlidePreview) এরই ছোট ভাই; দুটোর সাজ এক রকম,
+   শুধু এখানে মাপগুলো পর্দার আকারের সাথে বাড়ে-কমে (clamp) — ছোট পপআপ
+   থেকে বড় প্রজেক্টর, সবখানেই পড়া যায়। */
+function StageSlide({ slide }) {
+  const sl = slide || null;
+  if (!sl)
+    return (
+      <div style={{ color: "#ffffff44", fontSize: "clamp(14px,2vw,20px)" }}>
+        ⬛
+      </div>
+    );
+  return (
+    <div
+      style={{
+        display: "grid",
+        gap: "clamp(14px,2.4vh,34px)",
+        width: "100%",
+        maxWidth: 1200,
+        textAlign: "center",
+        padding: "0 4vw",
+      }}
+    >
+      {sl.heading && (
+        <div
+          style={{
+            fontSize: "clamp(22px,4.4vw,54px)",
+            fontWeight: 800,
+            color: C.goldL,
+            lineHeight: 1.3,
+          }}
+        >
+          {sl.heading}
+        </div>
+      )}
+      {sl.arabic && (
+        <div
+          dir="rtl"
+          style={{
+            fontFamily: "'Amiri', serif",
+            fontSize: "clamp(30px,7vw,92px)",
+            lineHeight: 2,
+            whiteSpace: "pre-wrap",
+            color: "#fff",
+          }}
+        >
+          {sl.arabic}
+        </div>
+      )}
+      {sl.translit && (
+        <div
+          style={{
+            fontSize: "clamp(15px,2.4vw,30px)",
+            fontStyle: "italic",
+            color: "#ffffffc0",
+          }}
+        >
+          {sl.translit}
+        </div>
+      )}
+      {sl.image && (
+        <img
+          src={sl.image}
+          alt=""
+          style={{
+            maxWidth: "100%",
+            maxHeight: "45vh",
+            borderRadius: 16,
+            margin: "0 auto",
+          }}
+        />
+      )}
+      {sl.text && (
+        <div
+          style={{
+            fontSize: "clamp(17px,3vw,40px)",
+            whiteSpace: "pre-wrap",
+            lineHeight: 1.55,
+            color: "#fff",
+          }}
+        >
+          {sl.text}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ⚠️ এটিই সেই উইন্ডো যা জুমে শেয়ার করা হয়।
+   এখানে কেবল শিক্ষার্থীর পর্দা — আর কিছুই নেই, থাকতেও পারবে না। */
+export function PresentWindow() {
+  const [stage, setStage] = useState(null); // /stage/ থেকে আসা স্লাইডগুলো
+  const [i, setI] = useState(0);
+  const [ended, setEnded] = useState(false);
+  const [err, setErr] = useState("");
+  const [hint, setHint] = useState(true); // "এই উইন্ডোটি শেয়ার করুন" পরামর্শ
+  const lastAt = useRef(0);
+  const lessonId = useRef(null);
+  // এখনকার স্লাইডগুলো — বার্তা এলে সাথে সাথেই দেখা দরকার, তাই রেফেও রাখি
+  const stageRef = useRef(null);
+
+  /* উস্তাদের উইন্ডো থেকে ধাপের নম্বর শোনা */
+  useEffect(() => {
+    const off = stageOn((m) => {
+      if (!m || typeof m.at !== "number" || m.at <= lastAt.current) return;
+      lastAt.current = m.at;
+      if (m.t === "step") {
+        setEnded(false);
+        if (m.lesson && m.lesson !== lessonId.current) {
+          lessonId.current = m.lesson;
+          setStage(null);
+          load(m.lesson);
+        }
+        // আইডি মিললে সেটাই সত্য; না মিললে (বা এখনো লোড না হলে) নম্বর
+        const rows = stageRef.current?.steps || [];
+        const byId = m.sid ? rows.findIndex((x) => x.id === m.sid) : -1;
+        setI(byId >= 0 ? byId : m.i || 0);
+      } else if (m.t === "bye") {
+        setEnded(true);
+      }
+    });
+    // "আমি এসেছি" — উস্তাদের উইন্ডো শুনলেই এখনকার ধাপটি পাঠিয়ে দেবে
+    stageSend({ t: "hello" });
+    const beat = setInterval(() => stageSend({ t: "here" }), 3000);
+    return () => {
+      off();
+      clearInterval(beat);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ⚠️ একমাত্র যে তথ্যটি এই উইন্ডো সার্ভার থেকে আনে — এবং সেটি
+     /stage/, যেখানে উস্তাদের কোনো ঘর নেই। */
+  const load = async (id) => {
+    try {
+      const got = await api.lessonStage(id);
+      stageRef.current = got;
+      setStage(got);
+      setErr("");
+    } catch (e) {
+      setErr(e?.data?.error || e?.message || "দারসটি আনা যায়নি");
+    }
+  };
+
+  /* প্রথমবার খোলার সময় ঠিকানাতেই দারসের নম্বর থাকে — উস্তাদের বার্তার
+     অপেক্ষা না করেই পর্দা তৈরি হয়ে যায় */
+  useEffect(() => {
+    try {
+      const id = new URLSearchParams(window.location.search).get("present");
+      if (id && id !== "1") {
+        lessonId.current = Number(id);
+        load(Number(id));
+      }
+    } catch (e) {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* পরামর্শটি নিজে থেকেই সরে যাক — জুমে শেয়ার করার পর যেন পর্দায় না থাকে */
+  useEffect(() => {
+    const t = setTimeout(() => setHint(false), 12000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const full = () => {
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+    } catch (e) {}
+  };
+
+  const steps = stage?.steps || [];
+  const cur = steps[i];
+
+  return (
+    <div
+      onDoubleClick={full}
+      style={{
+        minHeight: "100vh",
+        background: C.emeraldD,
+        color: "#fff",
+        display: "grid",
+        placeItems: "center",
+        fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* পর্দার নিচে সরু অগ্রগতির রেখা — বাচ্চা বুঝতে পারে কতটা বাকি */}
+      {steps.length > 0 && !ended && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 6,
+            background: "#ffffff14",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${((i + 1) / steps.length) * 100}%`,
+              background: C.goldL,
+              transition: "width .3s",
+            }}
+          />
+        </div>
+      )}
+
+      {err ? (
+        <div style={{ textAlign: "center", padding: 24 }}>
+          <div style={{ fontSize: 40, marginBottom: 10 }}>🕌</div>
+          <div style={{ fontSize: 15, color: "#ffffffbb" }}>{err}</div>
+        </div>
+      ) : ended ? (
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "clamp(40px,8vw,90px)" }}>🌟</div>
+          <div
+            style={{
+              fontFamily: "'Amiri', serif",
+              fontSize: "clamp(24px,5vw,60px)",
+              color: C.goldL,
+              marginTop: 10,
+            }}
+          >
+            بَارَكَ ٱللَّهُ فِيكَ
+          </div>
+          <div style={{ fontSize: "clamp(15px,2.4vw,26px)", marginTop: 12 }}>
+            Jazakumullahu Khairan!
+          </div>
+        </div>
+      ) : !stage ? (
+        <div style={{ textAlign: "center", color: "#ffffff88" }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>🕌</div>
+          <div style={{ fontSize: 15 }}>উস্তাদের অপেক্ষায়…</div>
+        </div>
+      ) : (
+        <StageSlide slide={cur?.slide} />
+      )}
+
+      {/* শুরুতে কয়েক সেকেন্ডের জন্য — উস্তাদ যেন ঠিক উইন্ডোটাই শেয়ার করেন */}
+      {hint && (
+        <div
+          onClick={() => setHint(false)}
+          style={{
+            position: "absolute",
+            top: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#00000066",
+            border: "1px solid #ffffff33",
+            borderRadius: 10,
+            padding: "8px 14px",
+            fontSize: 12.5,
+            color: "#ffffffcc",
+            cursor: "pointer",
+            textAlign: "center",
+            maxWidth: "92vw",
+          }}
+        >
+          🖥️ জুমে <b>এই উইন্ডোটিই</b> শেয়ার করুন · দুই ক্লিকে পুরো পর্দা ·
+          এই পরামর্শটি নিজেই সরে যাবে
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ═══════════════════ 🧑‍🏫 শিক্ষক মোড ═══════════════════
    ক্লাস চলাকালে উস্তাদের সামনের পর্দা — একবারে একটি ধাপ, বড় করে,
    পড়তে সহজ করে। ডান পাশে ওই মুহূর্তে শিক্ষার্থী ঠিক কী দেখছেন তাও
@@ -18180,6 +18509,10 @@ function TeacherMode({ id, onClose }) {
   const [running, setRunning] = useState(true);
   // অক্ষরের আকার উস্তাদের নিজের পছন্দ — পরেরবারও যেন মনে থাকে
   const [zoom, setZoom] = usePersistedState("tm_zoom", 1);
+  // উপস্থাপনা উইন্ডো খোলা আছে কিনা (সে নিজে থেকে সাড়া দেয়)
+  const [stageOk, setStageOk] = useState(false);
+  const stageWin = useRef(null);
+  const lastBeat = useRef(0);
 
   useEffect(() => {
     (async () => {
@@ -18234,6 +18567,68 @@ function TeacherMode({ id, onClose }) {
 
   const steps = lesson?.steps || [];
   const step = steps[i];
+
+  /* ⚠️ উপস্থাপনা উইন্ডোতে কেবল *ধাপের নম্বর ও আইডি* যায় — কোনো লেখা নয়।
+     স্লাইডের বিষয়বস্তু সে নিজেই /stage/ থেকে আনে, যে পথে উস্তাদের
+     স্ক্রিপ্টের একটি ঘরও নেই।
+
+     আইডিটাও পাঠাই কেন: ক্লাস চলাকালে পরিচালক যদি দারসে ধাপ যোগ/বাদ
+     করেন, দুই উইন্ডোর তালিকা আলাদা হয়ে যেতে পারে — তখন শুধু নম্বর
+     ধরে চললে উস্তাদ এক কথা বলতেন, বাচ্চা আরেক পর্দা দেখত। আইডি
+     মিলিয়ে নিলে সেটা নিজে থেকেই ঠিক হয়ে যায়। */
+  useEffect(() => {
+    if (!lesson) return;
+    stageSend({ t: "step", lesson: lesson.id, i, sid: steps[i]?.id });
+  }, [lesson, i]);
+
+  useEffect(() => {
+    const off = stageOn((m) => {
+      if (!m) return;
+      if (m.t === "hello") {
+        // উইন্ডোটি সবে খুলেছে — এখন কোথায় আছি তা জানিয়ে দিই
+        if (lesson)
+          stageSend({ t: "step", lesson: lesson.id, i, sid: steps[i]?.id });
+        setStageOk(true);
+        lastBeat.current = Date.now();
+      } else if (m.t === "here") {
+        setStageOk(true);
+        lastBeat.current = Date.now();
+      }
+    });
+    // সাড়া থেমে গেলে (উইন্ডো বন্ধ) সবুজ বাতিটাও নিভে যাক
+    const watch = setInterval(() => {
+      if (lastBeat.current && Date.now() - lastBeat.current > 9000)
+        setStageOk(false);
+    }, 3000);
+    return () => {
+      off();
+      clearInterval(watch);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lesson, i]);
+
+  // শিক্ষক মোড বন্ধ হলে উপস্থাপনার পর্দাও সমাপ্তি দেখাক
+  useEffect(() => () => stageSend({ t: "bye" }), []);
+
+  const openStage = () => {
+    // আগেরটি খোলা থাকলে সেটিকেই সামনে আনি, নতুন করে খুলি না
+    if (stageWin.current && !stageWin.current.closed) {
+      stageWin.current.focus();
+      return;
+    }
+    const w = window.open(
+      `${window.location.pathname}?present=${lesson.id}`,
+      "tqa_present",
+      "width=1100,height=680",
+    );
+    if (!w) {
+      notice(
+        "ব্রাউজার নতুন উইন্ডো আটকে দিয়েছে — ঠিকানার পাশে পপআপের অনুমতি দিন।",
+      );
+      return;
+    }
+    stageWin.current = w;
+  };
 
   const go = (n) => {
     if (n < 0 || n >= steps.length) return;
@@ -18390,6 +18785,17 @@ function TeacherMode({ id, onClose }) {
             🎯 লক্ষ্য
           </button>
         )}
+        <button
+          style={{
+            ...barBtn,
+            background: stageOk ? "#1a7a4433" : "#ffffff14",
+            borderColor: stageOk ? "#4ade8077" : "#ffffff33",
+          }}
+          onClick={openStage}
+          title="জুমে এই উইন্ডোটিই শেয়ার করবেন"
+        >
+          {stageOk ? "🟢" : "🖥️"} উপস্থাপনা
+        </button>
         <button
           style={{ ...barBtn, background: "#ffffff26" }}
           onClick={onClose}
@@ -18580,6 +18986,15 @@ function TeacherMode({ id, onClose }) {
               }}
             >
               🖥️ শিক্ষার্থী এখন যা দেখছেন
+              {stageOk ? (
+                <span style={{ color: "#4ade80", marginLeft: 6 }}>
+                  · উপস্থাপনা উইন্ডো সংযুক্ত
+                </span>
+              ) : (
+                <span style={{ color: "#ffffff55", marginLeft: 6 }}>
+                  · উইন্ডো খোলা নেই
+                </span>
+              )}
             </div>
             <div
               style={{
