@@ -18025,9 +18025,15 @@ function LessonsView({ user, courses }) {
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState(null);
 
-  const mine = (courses || []).filter(
-    (c) => isAdm(user) || c.teacher === user.id,
-  );
+  /* ⚠️ এখানে আর ছাঁকা যাবে না — `courses` ইতিমধ্যেই myCourses() হয়ে
+     এসেছে, আর সার্ভারও রোল অনুযায়ী ছেঁকে দিয়েছে। উস্তাদ কোর্স পান দুই
+     সূত্রে: তিনি কোর্সের নির্ধারিত উস্তাদ, অথবা কোর্সে তাঁর নিজের
+     শিক্ষার্থী আছে।
+     আগে এখানে `c.teacher === user.id` দিয়ে আবার ছাঁকা হতো — কিন্তু
+     কোর্সের বস্তুতে ঘরটার নাম `teacherId`, `teacher` নয়। ফলে উস্তাদের
+     কাছে শর্তটা কখনোই মিলত না এবং কোর্সের তালিকা পুরো খালি দেখাত —
+     উস্তাদ দারস স্ক্রিপ্ট খুলতেই পারতেন না। */
+  const mine = courses || [];
 
   useEffect(() => {
     if (!courseId && mine.length) setCourseId(String(mine[0].id));
@@ -18594,9 +18600,17 @@ function StudentLessonsView({ user }) {
                       </div>
                     )}
                   </div>
-                  <Btn sm kind="gold" onClick={() => setPlay(r)}>
-                    🔁 Revise
-                  </Btn>
+                  {/* প্রকাশিত না থাকলে /stage/ খোলে না — তখন বোতামটি
+                      দেখালে চেপে কেবল ব্যর্থতাই দেখতেন */}
+                  {r.lesson_status === "published" ? (
+                    <Btn sm kind="gold" onClick={() => setPlay(r)}>
+                      🔁 Revise
+                    </Btn>
+                  ) : (
+                    <span style={{ fontSize: 12, color: C.muted }}>
+                      Ask your teacher to open this again
+                    </span>
+                  )}
                 </div>
               );
             })}

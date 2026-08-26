@@ -190,12 +190,16 @@ class LessonProgressSerializer(serializers.ModelSerializer):
                                          read_only=True)
     lesson_title = serializers.CharField(source="lesson.title", read_only=True)
     course = serializers.IntegerField(source="lesson.course_id", read_only=True)
+    # দারসটি এখনো প্রকাশিত আছে কিনা — শিক্ষার্থীর "আবার দেখুন" বোতামটি
+    # এর উপরেই নির্ভর করে। প্রকাশিত না হলে /stage/ ৪০৪ দেয়, তাই বোতামটি
+    # দেখানোই উচিত নয়; নইলে চেপে কেবল ব্যর্থতাই দেখতেন।
+    lesson_status = serializers.CharField(source="lesson.status", read_only=True)
 
     class Meta:
         model = LessonProgress
         fields = ["id", "student", "student_name", "lesson", "lesson_title",
-                  "course", "status", "times_taught", "last_taught",
-                  "last_step", "note", "updated_at"]
+                  "course", "lesson_status", "status", "times_taught",
+                  "last_taught", "last_step", "note", "updated_at"]
         # কয় দিন পড়ানো হলো তা সার্ভারই গোনে — হাতে বসানো যায় না, নইলে
         # ভুল করে একই দিনে কয়েকবার সংরক্ষণ করলেই সংখ্যাটা বেড়ে যেত
         read_only_fields = ["times_taught", "last_taught", "updated_at"]

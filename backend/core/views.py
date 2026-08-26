@@ -1661,7 +1661,13 @@ class LessonProgressViewSet(viewsets.ModelViewSet):
         if status_in:
             row.status = status_in
         if "last_step" in request.data:
-            row.last_step = max(0, int(request.data.get("last_step") or 0))
+            # ভাঙা মান এলে (যেমন "abc") আগে int() ছুড়ে দিয়ে ৫০০ হতো —
+            # অগ্রগতি লিখতে গিয়ে পুরো অনুরোধই ভেঙে পড়ত
+            try:
+                row.last_step = max(0, int(request.data.get("last_step") or 0))
+            except (TypeError, ValueError):
+                return Response({"error": "ধাপের নম্বরটি সংখ্যা হতে হবে"},
+                                status=400)
         if "note" in request.data:
             row.note = str(request.data.get("note") or "")[:2000]
         row.updated_by = u
@@ -1749,14 +1755,36 @@ class LessonViewSet(viewsets.ModelViewSet):
         খসড়া হিসেবে শুরু হয়, যাতে আধা-সম্পাদিত অবস্থায় কারও সামনে না পড়ে।
         """
         src = self.get_object()
+
+        # ⚠️ বাইরের মান সরাসরি মডেলে বসানো যাবে না — আগে বয়সের ঘরে সংখ্যা
+        # ছাড়া কিছু এলে (বা শিরোনাম ২০০ অক্ষরের বেশি হলে) সার্ভার ভেঙে
+        # পড়ত (৫০০), কারণ ভুলটা ধরা পড়ত একেবারে ডাটাবেসে গিয়ে।
+        def age(key, fallback):
+            v = request.data.get(key)
+            if v in (None, ""):
+                return fallback
+            try:
+                n = int(v)
+            except (TypeError, ValueError):
+                return None
+            return n if 3 <= n <= 25 else None
+
+        age_from = age("age_from", src.age_from)
+        age_to = age("age_to", src.age_to)
+        if age_from is None or age_to is None or age_from > age_to:
+            return Response({"error": "বয়সসীমাটি ঠিক নেই (৩ থেকে ২৫)"},
+                            status=400)
+
+        title = str(request.data.get("title") or "").strip()[:200]
+
         last = Lesson.objects.filter(
             course=src.course).order_by("-order").first()
         new = Lesson.objects.create(
             course=src.course,
-            title=request.data.get("title") or (src.title + " (নকল)"),
+            title=title or (src.title + " (নকল)")[:200],
             title_ar=src.title_ar, kind=src.kind,
-            age_from=request.data.get("age_from") or src.age_from,
-            age_to=request.data.get("age_to") or src.age_to,
+            age_from=age_from,
+            age_to=age_to,
             duration_min=src.duration_min, objectives=src.objectives,
             status=Lesson.Status.DRAFT,
             order=(last.order + 1) if last else 0,
@@ -1811,14 +1839,46 @@ class LessonStepViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], permission_classes=[IsDirector])
     def reorder(self, request):
-        """যে ক্রমে আইডি পাঠানো হয়, সেই ক্রমেই বসে।"""
-        ids = request.data.get("ids") or []
+        """যে ক্রমে আইডি পাঠানো হয়, সেই ক্রমেই বসে।
+
+        ⚠️ শর্তগুলো আগে যাচাই হতো না, ফলে চুপচাপ ক্ষতি হতে পারত:
+          • দুই দারসের আইডি মিশিয়ে পাঠালে দুটোরই ক্রম এলোমেলো হয়ে যেত
+          • অর্ধেক তালিকা পাঠালে দুটো ধাপ একই ক্রমে বসে যেত
+          • ফাঁকা বা ভুল তালিকা পাঠালেও "হয়ে গেছে" বলা হতো
+        এখন সব আইডি একই দারসের হতে হবে, আর সেই দারসের সব দৃশ্যমান ধাপই
+        তালিকায় থাকতে হবে। লুকানো ধাপ থাকলে সেগুলো শেষে বসে, তাই কোনো
+        ক্রম কখনো দুবার বসে না।
+        """
+        ids = request.data.get("ids")
+        if not isinstance(ids, list) or not ids:
+            return Response({"error": "ধাপের তালিকা পাঠানো হয়নি"}, status=400)
+        if len(set(ids)) != len(ids):
+            return Response({"error": "একই ধাপ একাধিকবার এসেছে"}, status=400)
+
         rows = {x.id: x for x in LessonStep.objects.filter(id__in=ids)}
+        if len(rows) != len(ids):
+            return Response({"error": "কিছু ধাপ পাওয়া যায়নি"}, status=400)
+
+        lessons = {x.lesson_id for x in rows.values()}
+        if len(lessons) != 1:
+            return Response({"error": "সব ধাপ একই দারসের হতে হবে"}, status=400)
+
+        others = list(LessonStep.objects.filter(lesson_id=lessons.pop())
+                      .exclude(id__in=ids).order_by("order", "id"))
+        if any(x.is_active for x in others):
+            return Response({"error": "দারসের সব ধাপ তালিকায় থাকতে হবে"},
+                            status=400)
+
         changed = []
         for i, sid in enumerate(ids):
-            r = rows.get(sid)
-            if r and r.order != i:
+            r = rows[sid]
+            if r.order != i:
                 r.order = i
+                changed.append(r)
+        # লুকানো ধাপগুলো শেষে — তাতে কোনো ক্রম দুবার বসে না
+        for j, r in enumerate(others, start=len(ids)):
+            if r.order != j:
+                r.order = j
                 changed.append(r)
         if changed:
             LessonStep.objects.bulk_update(changed, ["order"])
