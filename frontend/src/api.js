@@ -412,6 +412,10 @@ export const api = {
   saveSectionTopics: (id, topics) =>
     request(`/lesson-sections/${id}/topics/`, { method: "PUT", body: { topics } }),
   courseStudents: (courseId) => request(`/courses/${courseId}/students/`),
+  // কোর্সে যাঁরা পড়েন — শিক্ষার্থী ও ট্রায়াল অতিথি দুই-ই (দারসের অগ্রগতির
+  // জন্য)। উপরের courseStudents ছোঁয়া হয়নি — সেটি লেকচার প্ল্যানের টিক
+  // বাছাইয়ে ব্যবহার হয়, সেখানে ট্রায়াল ঢুকলে হিসাব বদলে যেত।
+  courseLearners: (courseId) => request(`/courses/${courseId}/learners/`),
   syllabusSheet: (courseId) => request(`/courses/${courseId}/syllabus_sheet/`),
   saveSyllabusSheet: (courseId, headers, rows) =>
     request(`/courses/${courseId}/syllabus_sheet/`, {

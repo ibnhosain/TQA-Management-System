@@ -261,6 +261,37 @@ class CourseViewSet(viewsets.ModelViewSet):
         ]
         return Response(rows)
 
+    @action(detail=True, permission_classes=[IsAuthenticated])
+    def learners(self, request, pk=None):
+        """কোর্সে যাঁরা পড়েন — শিক্ষার্থী ও ট্রায়াল অতিথি, দুই-ই।
+
+        ⚠️ উপরের `students` পথটি ইচ্ছা করেই ছোঁয়া হয়নি — সেটি লেকচার
+        প্ল্যানের "কার জন্য টিক" বাছাইয়ে ব্যবহার হয়, সেখানে ট্রায়াল
+        অতিথি ঢুকলে হিসাব বদলে যেত। তাই দারসের অগ্রগতির জন্য আলাদা এই
+        পথ, নিয়ম হুবহু একই — উস্তাদ কেবল নিজের জনদেরই দেখেন।
+
+        ট্রায়াল অতিথি Course.students-এ থাকেন না (ইচ্ছাকৃত), তাঁদের
+        সংযোগ trial_course দিয়ে — তাই আলাদা করে আনতে হয়।
+        """
+        course = self.get_object()
+        u = request.user
+        own = Q(teacher=u)
+        if course.teacher_id == u.id:
+            own = own | Q(teacher__isnull=True)
+
+        studs = course.students.all()
+        trials = User.objects.filter(role="trial", trial_course=course,
+                                     is_active=True)
+        if u.role == "teacher":
+            studs = studs.filter(own)
+            trials = trials.filter(own)
+
+        rows = [{"id": x.id, "name": x.name_bn, "student_id": x.student_id,
+                 "is_trial": False} for x in studs.order_by("name_bn")]
+        rows += [{"id": x.id, "name": x.name_bn, "student_id": "",
+                  "is_trial": True} for x in trials.order_by("name_bn")]
+        return Response(rows)
+
     @action(detail=True, methods=["get", "put"], permission_classes=[IsAuthenticated])
     def syllabus_sheet(self, request, pk=None):
         """কোর্সের সিলেবাস টেবিল — পরিচালকের নিজের হাতে লেখা।

@@ -18740,7 +18740,8 @@ function ProgressPanel({ lesson, atStep, onClose }) {
     setLoading(true);
     try {
       const [st, pr] = await Promise.all([
-        api.courseStudents(lesson.course),
+        // শিক্ষার্থী ও ট্রায়াল অতিথি — দুই-ই
+        api.courseLearners(lesson.course),
         api.lessonProgress(`?lesson=${lesson.id}`).catch(() => []),
       ]);
       setStudents(st || []);
@@ -18815,7 +18816,22 @@ function ProgressPanel({ lesson, atStep, onClose }) {
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 140 }}>
-                    <div style={{ fontWeight: 800 }}>{s.name}</div>
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        display: "flex",
+                        gap: 6,
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {s.name}
+                      {s.is_trial && (
+                        <Tag color={C.blue} bg={C.blueBg}>
+                          ট্রায়াল অতিথি
+                        </Tag>
+                      )}
+                    </div>
                     <div style={{ fontSize: 11.5, color: C.muted }}>
                       {r
                         ? `${bn(r.times_taught)} দিন পড়ানো হয়েছে` +
