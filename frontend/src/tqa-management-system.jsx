@@ -17052,6 +17052,11 @@ const SLIDE_KINDS = [
 const slideKindLabel = (k) =>
   (SLIDE_KINDS.find((x) => x[0] === k) || [k, k])[1];
 
+const kindLabel = (k) => {
+  const row = LESSON_KINDS.find((x) => x[0] === k);
+  return row ? row[1] : k;
+};
+
 const EMPTY_SLIDE = {
   kind: "title",
   heading: "",
@@ -17590,6 +17595,8 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
   };
   useEffect(() => {
     load();
+    // load প্রতি রেন্ডারে নতুন — নির্ভরতায় দিলে অসীম লুপ হতো। দারস
+    // বদলালেই কেবল আবার আনা দরকার, আর সেটাই id দিয়ে হচ্ছে।
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -18146,15 +18153,6 @@ function LessonsView({ user, courses }) {
   });
   groups.forEach((g) => g.items.sort((a, b) => a.age_from - b.age_from));
 
-  const statusTag = (st) => {
-    if (st === "published") return <Tag>প্রকাশিত</Tag>;
-    if (st === "ready")
-      return <Tag color={C.blue} bg={C.blueBg}>প্রস্তুত</Tag>;
-    if (st === "archived")
-      return <Tag color={C.muted} bg={C.cream}>সংরক্ষিত</Tag>;
-    return <Tag color={C.gold} bg={C.amberBg}>খসড়া</Tag>;
-  };
-
   const teachOverlay = teachId && (
     <TeacherMode id={teachId} onClose={() => setTeachId(null)} />
   );
@@ -18504,7 +18502,7 @@ const STUDENT_STATUS = {
   mastered: ["Memorised 🌟", C.green, C.greenBg],
 };
 
-function StudentLessonsView({ user }) {
+function StudentLessonsView() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [play, setPlay] = useState(null);
@@ -18622,6 +18620,18 @@ function StudentLessonsView({ user }) {
 }
 
 
+/* দারসের অবস্থার চিহ্ন। ⚠️ মডিউল-স্তরে — LessonRow এটি ব্যবহার করে, আর
+   সেটি নিজেও মডিউল-স্তরের কম্পোনেন্ট। আগে এটি LessonsView-এর ভেতরে ছিল,
+   ফলে LessonRow-এর কাছে ছিলই না — তালিকায় একটিও দারস থাকলেই পাতা ভেঙে
+   পড়ত (statusTag is not defined)। */
+const statusTag = (st) => {
+  if (st === "published") return <Tag>প্রকাশিত</Tag>;
+  if (st === "ready") return <Tag color={C.blue} bg={C.blueBg}>প্রস্তুত</Tag>;
+  if (st === "archived")
+    return <Tag color={C.muted} bg={C.cream}>সংরক্ষিত</Tag>;
+  return <Tag color={C.gold} bg={C.amberBg}>খসড়া</Tag>;
+};
+
 /* একটি দারস — একই শিরোনামের কয়েকটি বয়সের সংস্করণ থাকলে সেগুলো একসাথে,
    আলাদা আলাদা সারি হিসেবে নয়। উস্তাদ এক চাপে বয়স বেছে নেন। */
 function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
@@ -18659,7 +18669,7 @@ function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
           <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>
             {bandLabel(l)} · {bn(l.step_count || 0)} ধাপ · {bn(l.duration_min)}{" "}
             মিনিট ·{" "}
-            {(LESSON_KINDS.find((x) => x[0] === l.kind) || [, l.kind])[1]}{" "}
+            {kindLabel(l.kind)}{" "}
             <ProgressSummary lessonId={l.id} rows={prog} />
           </div>
         </div>
@@ -18900,7 +18910,10 @@ function ProgressPanel({ lesson, atStep, onClose }) {
 
 /* দারসের তালিকায় এক নজরে — কজন কোথায় */
 function ProgressSummary({ lessonId, rows }) {
-  const mine = rows.filter((r) => r.lesson === lessonId);
+  // সার্ভার থেকে তালিকার বদলে অন্য কিছু এলেও যেন পাতা না ভাঙে
+  const mine = (Array.isArray(rows) ? rows : []).filter(
+    (r) => r.lesson === lessonId,
+  );
   if (!mine.length) return null;
   const n = (st) => mine.filter((r) => r.status === st).length;
   const bits = PROGRESS_STATUS.map(([v, label]) =>
@@ -19072,6 +19085,22 @@ export function PresentWindow() {
   // এখনকার স্লাইডগুলো — বার্তা এলে সাথে সাথেই দেখা দরকার, তাই রেফেও রাখি
   const stageRef = useRef(null);
 
+  /* ⚠️ একমাত্র যে তথ্যটি এই উইন্ডো সার্ভার থেকে আনে — এবং সেটি
+     /stage/, যেখানে উস্তাদের কোনো ঘর নেই।
+     ঘোষণাটি ইচ্ছা করেই নিচের এফেক্টগুলোর আগে: আগে পরে ছিল, ফলে
+     এফেক্টের ভেতর থেকে ডাকা হতো ঘোষণার আগেই। চলত ঠিকই (এফেক্ট রেন্ডারের
+     পরে চলে), কিন্তু কেউ রেন্ডারের সময় ডাকলেই ভেঙে পড়ত। */
+  const load = async (id) => {
+    try {
+      const got = await api.lessonStage(id);
+      stageRef.current = got;
+      setStage(got);
+      setErr("");
+    } catch (e) {
+      setErr(e?.data?.error || e?.message || "দারসটি আনা যায়নি");
+    }
+  };
+
   /* উস্তাদের উইন্ডো থেকে ধাপের নম্বর শোনা */
   useEffect(() => {
     const off = stageOn((m) => {
@@ -19099,21 +19128,7 @@ export function PresentWindow() {
       off();
       clearInterval(beat);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  /* ⚠️ একমাত্র যে তথ্যটি এই উইন্ডো সার্ভার থেকে আনে — এবং সেটি
-     /stage/, যেখানে উস্তাদের কোনো ঘর নেই। */
-  const load = async (id) => {
-    try {
-      const got = await api.lessonStage(id);
-      stageRef.current = got;
-      setStage(got);
-      setErr("");
-    } catch (e) {
-      setErr(e?.data?.error || e?.message || "দারসটি আনা যায়নি");
-    }
-  };
 
   /* প্রথমবার খোলার সময় ঠিকানাতেই দারসের নম্বর থাকে — উস্তাদের বার্তার
      অপেক্ষা না করেই পর্দা তৈরি হয়ে যায় */
@@ -19125,7 +19140,6 @@ export function PresentWindow() {
         load(Number(id));
       }
     } catch (e) {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* পরামর্শটি নিজে থেকেই সরে যাক — জুমে শেয়ার করার পর যেন পর্দায় না থাকে */
@@ -19343,6 +19357,10 @@ function TeacherMode({ id, onClose }) {
   useEffect(() => {
     if (!lesson) return;
     stageSend({ t: "step", lesson: lesson.id, i, sid: steps[i]?.id });
+    // steps ইচ্ছা করেই নির্ভরতায় নেই — সেটি lesson থেকেই তৈরি হয় (যা আছে),
+    // আর প্রতি রেন্ডারে নতুন অ্যারে বলে যোগ করলে প্রতিটি রেন্ডারেই বার্তা
+    // পাঠানো হতো
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson, i]);
 
   useEffect(() => {
@@ -23216,7 +23234,7 @@ export default function App() {
             <LessonsView user={user} courses={courses} />
           )}
           {view === "mylessons" && user.role === "student" && (
-            <StudentLessonsView user={user} />
+            <StudentLessonsView />
           )}
           {view === "syllabus" && <SyllabusView {...props} />}
           {view === "attendance" && <AttendanceView {...props} />}
