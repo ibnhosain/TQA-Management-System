@@ -17372,27 +17372,56 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
             </div>
 
             <div>
-              <Lbl>🗣️ উস্তাদ বলবেন — বাচ্চা এটাই কানে শুনবে</Lbl>
-              <Area value={d.teacher_says} onChange={(v) => set("teacher_says", v)} disabled={!canEdit} rows={3} ph="ছোট ছোট বাক্যে, বাচ্চার ভাষায়" />
+              <Lbl>
+                🗣️ উস্তাদ বলবেন — <b>হুবহু এই কথাগুলোই</b> মুখে বলবেন
+                (ইংরেজিতে)
+              </Lbl>
+              <Area
+                value={d.teacher_says}
+                onChange={(v) => set("teacher_says", v)}
+                disabled={!canEdit}
+                rows={4}
+                ph="উস্তাদ যেন নিজে থেকে ইংরেজি বানাতে না হয় — পড়লেই যেন ক্লাস হয়ে যায়। ছোট ছোট বাক্য, সহজ শব্দ।"
+              />
             </div>
             <div>
-              <Lbl>🤲 উস্তাদ করবেন</Lbl>
-              <Area value={d.teacher_does} onChange={(v) => set("teacher_does", v)} disabled={!canEdit} ph="যেমন: চার আঙুল দেখান" />
+              <Lbl>🤲 উস্তাদ যা করবেন — বলার নয়, করার (বাংলায়)</Lbl>
+              <Area
+                value={d.teacher_does}
+                onChange={(v) => set("teacher_does", v)}
+                disabled={!canEdit}
+                ph="যেমন: চার আঙুল দেখান"
+              />
             </div>
             <div>
-              <Lbl>🧒 শিক্ষার্থী করবে</Lbl>
-              <Area value={d.student_does} onChange={(v) => set("student_does", v)} disabled={!canEdit} />
+              <Lbl>🧒 শিক্ষার্থী যা করবে (বাংলায়)</Lbl>
+              <Area
+                value={d.student_does}
+                onChange={(v) => set("student_does", v)}
+                disabled={!canEdit}
+                ph="যেমন: হরফটি বলে"
+              />
             </div>
             <div>
               <Lbl>✅ প্রত্যাশিত সাড়া — এখানেই যাচাই</Lbl>
               <Area value={d.expected} onChange={(v) => set("expected", v)} disabled={!canEdit} />
             </div>
             <div>
-              <Lbl>🔧 ভুল হলে</Lbl>
-              <Area value={d.correction} onChange={(v) => set("correction", v)} disabled={!canEdit} />
+              <Lbl>
+                🔧 ভুল হলে — <b>হুবহু যা বলবেন</b> (ইংরেজিতে)
+              </Lbl>
+              <Area
+                value={d.correction}
+                onChange={(v) => set("correction", v)}
+                disabled={!canEdit}
+                rows={3}
+                ph="“শিশুকে বলুন…” নয় — সরাসরি সেই কথাগুলোই। যেমন: Almost! Watch my lips. Ba! Now you try."
+              />
             </div>
             <div>
-              <Lbl>📌 উস্তাদের টীকা — মাখরাজ, সূত্র, অভিভাবকের জন্য কথা</Lbl>
+              <Lbl>
+                📌 উস্তাদের টীকা (বাংলায়) — মাখরাজ, সূত্র, অভিভাবকের কথা
+              </Lbl>
               <Area value={d.note} onChange={(v) => set("note", v)} disabled={!canEdit} />
             </div>
           </div>
@@ -19274,7 +19303,9 @@ const TM_BLOCKS = [
   ["teacher_does", "🤲 উস্তাদ করবেন", "#ffffff"],
   ["student_does", "🧒 শিক্ষার্থী করবে", "#ffffff"],
   ["expected", "✅ প্রত্যাশিত সাড়া", "#a7e8c4"],
-  ["correction", "🔧 ভুল হলে", "#ffd7a8"],
+  // ⚠️ "ভুল হলে" ঘরে হুবহু বলার কথাগুলোই থাকে — উস্তাদ পড়েই বলে দিতে
+  // পারেন, নিজে থেকে ইংরেজি বানাতে হয় না
+  ["correction", "🔧 ভুল হলে এটাই বলুন", "#ffd7a8"],
   ["note", "📌 টীকা", "#cfd8e3"],
 ];
 
