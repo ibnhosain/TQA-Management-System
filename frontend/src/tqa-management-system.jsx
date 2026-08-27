@@ -17012,6 +17012,14 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
    (কেবল স্লাইড)। ⚠️ দুটো মেশানো যাবে না; ডান পাশে যা বসানো হয় কেবল
    সেটুকুই শিক্ষার্থীর পর্দায় যায়, বাঁ পাশের কিছুই কখনো যায় না। */
 
+/* কুরআনের আরবির ফন্ট।
+
+   ⚠️ Amiri Quran — কুরআনের জন্যই বানানো মুসহাফ-ধাঁচের নাসখ ফন্ট, যাতে
+   যের-যবর-শাদ্দা-তানভীন ও ছোট আলিফ মুসহাফের মতোই বসে। সাধারণ Amiri-তে
+   এগুলো মুসহাফের মতো দেখাত না।
+   না নামলে আগের Amiri, তারপর সিস্টেমের serif — লেখা কখনোই হারাবে না। */
+const QURAN_FONT = "'Amiri Quran', 'Amiri', serif";
+
 const LESSON_KINDS = [
   ["memorization", "মুখস্থ (হিফজ)"],
   ["qaida", "কায়েদা"],
@@ -17111,7 +17119,7 @@ function SlidePreview({ slide, small }) {
             <div
               dir="rtl"
               style={{
-                fontFamily: "'Amiri', serif",
+                fontFamily: QURAN_FONT,
                 fontSize: small ? 26 : 38,
                 lineHeight: 1.9,
                 whiteSpace: "pre-wrap",
@@ -17496,7 +17504,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
                 readOnly={sl.arabic_locked || !canEdit}
                 style={{
                   ...S.input,
-                  fontFamily: "'Amiri', serif",
+                  fontFamily: QURAN_FONT,
                   fontSize: 20,
                   lineHeight: 2,
                   resize: "vertical",
@@ -17864,7 +17872,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
           <div>
             <label style={S.label}>আরবি শিরোনাম</label>
             <input
-              style={{ ...S.input, fontFamily: "'Amiri', serif", fontSize: 17 }}
+              style={{ ...S.input, fontFamily: QURAN_FONT, fontSize: 17 }}
               dir="rtl"
               disabled={!canEdit}
               value={head.title_ar || ""}
@@ -19862,7 +19870,7 @@ function StageSlide({ slide }) {
         <div
           dir="rtl"
           style={{
-            fontFamily: "'Amiri', serif",
+            fontFamily: QURAN_FONT,
             fontSize: "clamp(30px,7vw,92px)",
             lineHeight: 2,
             whiteSpace: "pre-wrap",
@@ -20044,7 +20052,7 @@ export function PresentWindow() {
           <div style={{ fontSize: "clamp(40px,8vw,90px)" }}>🌟</div>
           <div
             style={{
-              fontFamily: "'Amiri', serif",
+              fontFamily: QURAN_FONT,
               fontSize: "clamp(24px,5vw,60px)",
               color: C.goldL,
               marginTop: 10,

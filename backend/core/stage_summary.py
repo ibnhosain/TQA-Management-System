@@ -21,6 +21,13 @@ from .safe_html import clean_html
 # যে স্লাইডগুলো কেবল ফাঁকা পর্দা — সারাংশে রাখার কিছু নেই
 SKIP_KINDS = {"blank"}
 
+# কুরআনের আরবির সাজ। Amiri Quran কুরআনের জন্যই বানানো মুসহাফ-ধাঁচের
+# নাসখ ফন্ট — যের-যবর-শাদ্দা-তানভীন মুসহাফের মতোই বসে।
+ARABIC_STYLE = (
+    "font-family:'Amiri Quran','Amiri',serif;"
+    "font-size:21px;line-height:2"
+)
+
 
 def _lines(v):
     """একাধিক লাইনের লেখা → <br> দিয়ে জোড়া, নিরাপদে escape করে।"""
@@ -45,10 +52,13 @@ def summary_html(lesson):
         if sl.heading:
             bits.append("<b>%s</b>" % escape(sl.heading))
         if sl.arabic:
-            # dir="rtl" — আরবি যেন ডান থেকে বাঁয়ে ঠিকভাবে বসে
+            # dir="rtl" — আরবি যেন ডান থেকে বাঁয়ে ঠিকভাবে বসে।
+            # ⚠️ ফন্টও বসানো হয় — শিক্ষার্থী লেকচার প্ল্যানের টগলেই
+            # রিভিশন দেন, তাই সেখানেও কুরআনের ফন্টে দেখা চাই। না নামলে
+            # Amiri, তারপর সিস্টেমের serif — লেখা কখনো হারায় না।
             bits.append(
-                '<span dir="rtl" style="font-size:19px;line-height:2">%s</span>'
-                % _lines(sl.arabic)
+                '<span dir="rtl" style="%s">%s</span>'
+                % (ARABIC_STYLE, _lines(sl.arabic))
             )
         if sl.translit:
             bits.append("<i>%s</i>" % escape(sl.translit))
