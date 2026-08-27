@@ -1595,6 +1595,68 @@ function InstallBanner({ lang }) {
 }
 
 /* ═══════════════ লগইন ═══════════════ */
+/* লগইন আটকে গেলে আসল কারণটা বলি।
+
+   ⚠️ আগে ৪০১ আর ৪২৯ ছাড়া বাকি সব সমস্যাতেই এক কথা দেখাত — "সার্ভার
+   সংযোগ নেই। ব্যাকএন্ড চালু আছে কি?" ফলে ইন্টারনেট নেই, সার্ভার সবে
+   চালু হচ্ছে, নাকি সার্ভারের ভেতরেই ত্রুটি — কিছুই বোঝা যেত না, আর
+   পরিচালককে প্রতিবার জিজ্ঞেস করতে হতো।
+
+   ⚠️ api.js উত্তর পেলে ত্রুটিতে status বসায়, আর উত্তরই না পেলে (নেটওয়ার্ক
+   বা টাইমআউট) বসায় না — এই পার্থক্যটাই এখানে কাজে লাগে। */
+const loginErrorText = (e, T) => {
+  const s = e?.status;
+
+  // ── উত্তর এসেছে, কিন্তু ত্রুটি ──
+  if (s === 401 || /\b401\b/.test(e?.message || ""))
+    return T("ভুল আইডি বা পাসওয়ার্ড!", "Incorrect ID or password!");
+  if (s === 429)
+    // নিরাপত্তার জন্য মিনিটে সর্বোচ্চ ২০ বার চেষ্টার সীমা — সার্ভার-ডাউন নয়
+    return T(
+      "অনেকবার চেষ্টা হয়েছে — নিরাপত্তার জন্য সাময়িকভাবে আটকানো হয়েছে। ১ মিনিট অপেক্ষা করে আবার চেষ্টা করুন।",
+      "Too many attempts — temporarily blocked for security. Please wait 1 minute and try again.",
+    );
+  if (s === 502 || s === 503 || s === 504)
+    // নতুন কোড বসানোর পর সার্ভার চালু হতে কয়েক মিনিট লাগে
+    return T(
+      "সার্ভার এখন চালু হচ্ছে — ১-২ মিনিট পর আবার চেষ্টা করুন।",
+      "The server is starting up — please try again in a minute or two.",
+    );
+  if (s >= 500)
+    return T(
+      `সার্ভারে সমস্যা হয়েছে (${s})। একটু পরে আবার চেষ্টা করুন — না সারলে জানাবেন।`,
+      `Server error (${s}). Please try again shortly.`,
+    );
+  if (s === 403)
+    return T(
+      "এই অ্যাকাউন্টে ঢোকার অনুমতি নেই।",
+      "This account is not allowed to sign in.",
+    );
+  if (s)
+    // অচেনা কোড — নম্বরটা দেখিয়ে দিই, নইলে খোঁজার কোনো সূত্রই থাকে না
+    return `${e?.message || T("লগইন করা গেল না", "Could not sign in")} (${s})`;
+
+  // ── উত্তরই আসেনি ──
+  try {
+    if (navigator.onLine === false)
+      return T(
+        "ইন্টারনেট সংযোগ নেই — সংযোগ দেখে আবার চেষ্টা করুন।",
+        "No internet connection — please check and try again.",
+      );
+  } catch {
+    /* navigator না থাকলে নিচের সাধারণ বার্তাই যথেষ্ট */
+  }
+  if (e?.name === "AbortError" || /abort/i.test(e?.message || ""))
+    return T(
+      "সার্ভার সময়মতো সাড়া দিচ্ছে না — সংযোগ ধীর, বা সার্ভার ঘুম থেকে উঠছে। আবার চেষ্টা করুন।",
+      "The server is not responding in time — slow connection, or the server is waking up. Please try again.",
+    );
+  return T(
+    "সার্ভারে পৌঁছানো যাচ্ছে না — ইন্টারনেট দেখুন। ঠিক থাকলে সার্ভার সাময়িকভাবে বন্ধ, একটু পরে আবার চেষ্টা করুন।",
+    "Cannot reach the server — check your internet. If that is fine, the server is temporarily down; please try again shortly.",
+  );
+};
+
 function Login({ onLogin }) {
   /* ভূমিকার তালিকা — কার্ড হিসেবে দেখানো হয় */
   const ROLES = [
@@ -1693,25 +1755,7 @@ function Login({ onLogin }) {
         salary: me.monthly_salary,
       });
     } catch (e) {
-      if (e?.status === 401 || e?.message?.includes("401")) {
-        setErr(T("ভুল আইডি বা পাসওয়ার্ড!", "Incorrect ID or password!"));
-      } else if (e?.status === 429) {
-        // নিরাপত্তার জন্য মিনিটে সর্বোচ্চ ২০ বার লগইন চেষ্টার সীমা (brute-force ঠেকাতে) —
-        // এটা সার্ভার-ডাউন নয়, শুধু সাময়িক সীমা; আগে ভুলভাবে "সংযোগ নেই" দেখাত
-        setErr(
-          T(
-            "অনেকবার চেষ্টা হয়েছে — নিরাপত্তার জন্য সাময়িকভাবে আটকানো হয়েছে। ১ মিনিট অপেক্ষা করে আবার চেষ্টা করুন।",
-            "Too many attempts — temporarily blocked for security. Please wait 1 minute and try again.",
-          ),
-        );
-      } else {
-        setErr(
-          T(
-            "সার্ভার সংযোগ নেই। ব্যাকএন্ড চালু আছে কি?",
-            "No server connection. Please check your internet and try again.",
-          ),
-        );
-      }
+      setErr(loginErrorText(e, T));
     } finally {
       setBusy(false);
     }
@@ -24654,6 +24698,7 @@ export default function App() {
    কম্পোনেন্টগুলোকে ধরতে পারে।
    ───────────────────────────────────────────────────────────────── */
 export {
+  loginErrorText,
   SlidePreview,
   StageSlide,
   SlideArt,

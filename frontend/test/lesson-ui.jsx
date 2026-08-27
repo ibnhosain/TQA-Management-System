@@ -666,6 +666,59 @@ export async function run() {
     },
   );
 
+  /* ───── লগইন আটকালে আসল কারণটা বলা ─────
+     ⚠️ আগে সব সমস্যাতেই এক কথা দেখাত, তাই পরিচালক কখনো বুঝতেন না
+     দোষটা ইন্টারনেটের, নাকি সার্ভারের। প্রতিটি অবস্থার আলাদা বার্তা
+     আছে কিনা — আর দুটো অবস্থা যেন এক বার্তা না দেয় — তা এখানে দেখা হয়। */
+  const bnOnly = (b) => b; // পরিচালক/উস্তাদ বাংলাই দেখেন
+  const say = (e) => M.loginErrorText(e, bnOnly);
+  const CASES = [
+    [{ status: 401 }, "ভুল আইডি বা পাসওয়ার্ড", "ভুল পাসওয়ার্ড"],
+    [{ status: 429 }, "১ মিনিট অপেক্ষা", "বারবার চেষ্টা"],
+    [{ status: 503 }, "সার্ভার এখন চালু হচ্ছে", "সার্ভার রিস্টার্ট"],
+    [{ status: 502 }, "সার্ভার এখন চালু হচ্ছে", "গেটওয়ে"],
+    [{ status: 500 }, "সার্ভারে সমস্যা", "সার্ভারের ভেতরের ত্রুটি"],
+    [{ status: 403 }, "অনুমতি নেই", "নিষিদ্ধ অ্যাকাউন্ট"],
+    [{ name: "AbortError", message: "aborted" }, "সময়মতো সাড়া", "টাইমআউট"],
+    [{ message: "Failed to fetch" }, "পৌঁছানো যাচ্ছে না", "নেটওয়ার্ক"],
+  ];
+  for (const [err, want, why] of CASES) {
+    check(`লগইন ত্রুটি — ${why}`, () => {
+      const got = say(err);
+      if (!got.includes(want))
+        throw new Error(`“${want}” নেই · পেলাম “${got}”`);
+    });
+  }
+  check("প্রতিটি অবস্থার বার্তা আলাদা", () => {
+    const seen = new Map();
+    for (const [err, , why] of CASES) {
+      const got = say(err);
+      // ৫০২ ও ৫০৩ ইচ্ছা করেই একই — দুটোই "সার্ভার চালু হচ্ছে"
+      if (why === "গেটওয়ে") continue;
+      if (seen.has(got))
+        throw new Error(`“${why}” আর “${seen.get(got)}” একই কথা বলে`);
+      seen.set(got, why);
+    }
+  });
+  check("অচেনা কোড হলে নম্বরটা দেখায়", () => {
+    const got = say({ status: 418, message: "I am a teapot" });
+    if (!got.includes("418"))
+      throw new Error(`নম্বর ছাড়া খোঁজার সূত্র থাকে না · পেলাম “${got}”`);
+  });
+  check("পুরনো ধাঁচের 401 বার্তাও ধরা পড়ে", () => {
+    // status না থাকলেও বার্তায় 401 থাকলে সেটা ভুল পাসওয়ার্ডই
+    const got = say({ message: "Request failed with 401" });
+    if (!got.includes("ভুল আইডি"))
+      throw new Error(`পেলাম “${got}”`);
+  });
+  check("ত্রুটি না থাকলেও ভাঙে না", () => {
+    for (const e of [null, undefined, {}]) {
+      const got = say(e);
+      if (!got || typeof got !== "string" || !got.length)
+        throw new Error("খালি বার্তা");
+    }
+  });
+
   await scene("শিক্ষার্থী → Revise → Next → Close", <M.StudentLessonsView />, {
     click: ["🔁 Revise", "Next", "Close"],
   });
