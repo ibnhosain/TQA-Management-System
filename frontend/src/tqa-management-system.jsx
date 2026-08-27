@@ -20284,18 +20284,28 @@ function FitBox({ children }) {
         width: "100%",
         height: "100%",
         overflow: "hidden",
-        display: "grid",
-        placeItems: "center",
       }}
     >
+      {/* ⚠️ ভেতরের বাক্সটি সবসময় ১২৮০px চওড়া — পর্দার চেয়ে অনেক বড়।
+          আগে এটি গ্রিডের ঘর হিসেবে বসত, ফলে ছোট উইন্ডোতে ঘরটাই ১২৮০px
+          হয়ে যেত আর তার কেন্দ্র থাকত ৬৪০px-এ। scale ওই কেন্দ্র ধরে ছোট
+          করত, তাই স্লাইডটা পর্দার বাইরে সরে গিয়ে কাটা পড়ত — দেখে মনে
+          হতো কিছুই বদলায়নি।
+
+          এখন বাক্সটির কেন্দ্র পর্দার কেন্দ্রেই পিন করা: উপরে-বাঁয়ে ৫০%
+          বসিয়ে নিজের অর্ধেক পিছিয়ে আনা হয়। মাপ যাই হোক, কেন্দ্র এক
+          জায়গাতেই থাকে — তাই ছোট-বড় করলে ঠিক মাঝখানেই বসে। */}
       <div
         ref={inner}
         style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
           width: FIT_W,
           minHeight: FIT_H,
           display: "grid",
           placeItems: "center",
-          transform: `scale(${scale})`,
+          transform: `translate(-50%, -50%) scale(${scale})`,
           transformOrigin: "center center",
         }}
       >

@@ -866,6 +866,65 @@ export async function run() {
       );
   }
 
+  /* ⚠️ শুধু "কতটা ছোট হলো" জানলেই হয় না — "কোথায় বসল" সেটাও দেখতে হয়।
+     আগের বাগটা ঠিক এখানেই ছিল: স্লাইড ছোট হচ্ছিল, কিন্তু গ্রিডের ঘর
+     ১২৮০px হয়ে যাওয়ায় কেন্দ্র সরে গিয়ে স্লাইডটা পর্দার বাইরে চলে যেত
+     আর কাটা পড়ত। তাই এখানে জ্যামিতিটাই মেলানো হয়। */
+  const boxOf = async (w, h) => {
+    const host = document.createElement("div");
+    host.style.setProperty("--w", `${w}px`);
+    host.style.setProperty("--h", `${h}px`);
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(<M.FloatBody slide={SL} />);
+    });
+    for (let k = 0; k < 8; k++) await act(async () => { await sleep(10); });
+    const el = [...host.querySelectorAll("div")].find((d) =>
+      (d.style.transform || "").includes("scale("));
+    const out = el
+      ? { style: el.style, tf: el.style.transform,
+          pos: el.style.position, top: el.style.top, left: el.style.left,
+          s: parseFloat(el.style.transform.match(/scale\(([^)]+)\)/)[1]) }
+      : null;
+    await act(async () => root.unmount());
+    host.remove();
+    return out;
+  };
+
+  {
+    ran++;
+    const b = await boxOf(380, 220);
+    const why = [];
+    if (!b) why.push("ছোট-বড় হওয়ার বাক্সটাই নেই");
+    else {
+      if (b.pos !== "absolute")
+        why.push(`গ্রিডের ঘরে বসে আছে (position=${b.pos}) — কেন্দ্র সরে যাবে`);
+      if (b.top !== "50%" || b.left !== "50%")
+        why.push(`কেন্দ্রে পিন করা নেই (top=${b.top} left=${b.left})`);
+      if (!b.tf.includes("translate(-50%, -50%)"))
+        why.push(`নিজের অর্ধেক পিছিয়ে আনা হয়নি: ${b.tf}`);
+      // জ্যামিতি: কেন্দ্র পর্দার কেন্দ্রে, আর ছোট করার পর দুই দিকেই ভেতরে
+      const halfW = (M.FIT_W * b.s) / 2;
+      const halfH = (M.FIT_H * b.s) / 2;
+      if (halfW > 380 / 2 + 0.5) why.push(`চওড়ায় বাইরে চলে যাচ্ছে`);
+      if (halfH > 220 / 2 + 0.5) why.push(`উচ্চতায় বাইরে চলে যাচ্ছে`);
+    }
+    if (why.length)
+      failures.push("ছোট পর্দায় স্লাইড ভেতরে বসে → " + why.join(" · "));
+  }
+
+  for (const [name, w, h] of [["মাঝারি", 960, 540], ["বড়", 1920, 1080],
+                              ["ফোন শোয়ানো", 844, 390]]) {
+    ran++;
+    const b = await boxOf(w, h);
+    const ok = b && b.pos === "absolute" &&
+      (M.FIT_W * b.s) / 2 <= w / 2 + 0.5 && (M.FIT_H * b.s) / 2 <= h / 2 + 0.5;
+    if (!ok)
+      failures.push(`স্লাইড ভেতরে বসে — ${name} (${w}×${h}) → ` +
+        (b ? `scale=${b.s} pos=${b.pos}` : "বাক্সই নেই"));
+  }
+
   check("(প্রস্তুতি) মাপের নকল কাজ করছে", () => {
     const d = document.createElement("div");
     d.style.setProperty("--w", "800px");
