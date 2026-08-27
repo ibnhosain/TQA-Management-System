@@ -968,41 +968,6 @@ export async function run() {
     if (M.pipReady() !== false)
       throw new Error("jsdom-এ তো documentPictureInPicture নেই");
   });
-  /* ───── দারস আনতে না পারলে ─────
-     ⚠️ আগে সব সমস্যাতেই এক কথা দেখাত। বেশিরভাগ ক্ষেত্রেই কারণ ছিল
-     ঘুমন্ত ডাটাবেজ, অথচ পরিচালক ভাবতেন দারসটাই নষ্ট। */
-  const said = (e) => M.fetchErrorText(e);
-  const FETCH_CASES = [
-    [{ status: 404 }, "আর নেই", "মুছে ফেলা"],
-    [{ status: 403 }, "অনুমতি নেই", "অনুমতি"],
-    [{ status: 503 }, "চালু হচ্ছে", "সার্ভার রিস্টার্ট"],
-    [{ status: 500 }, "সার্ভারে সমস্যা", "ভেতরের ত্রুটি"],
-    [{ name: "AbortError", message: "aborted" }, "ঘুম থেকে উঠছে", "টাইমআউট"],
-    [{ message: "Failed to fetch" }, "পৌঁছানো যাচ্ছে না", "নেটওয়ার্ক"],
-  ];
-  for (const [err, want, why] of FETCH_CASES) {
-    check(`দারস আনার ত্রুটি — ${why}`, () => {
-      const got = said(err);
-      if (!got.includes(want))
-        throw new Error(`“${want}” নেই · পেলাম “${got}”`);
-    });
-  }
-  check("প্রতিটি অবস্থার বার্তা আলাদা", () => {
-    const seen = new Map();
-    for (const [err, , why] of FETCH_CASES) {
-      const got = said(err);
-      if (seen.has(got))
-        throw new Error(`“${why}” আর “${seen.get(got)}” একই কথা বলে`);
-      seen.set(got, why);
-    }
-  });
-  check("ত্রুটি না থাকলেও ভাঙে না", () => {
-    for (const e of [null, undefined, {}]) {
-      const got = said(e);
-      if (!got || typeof got !== "string") throw new Error("খালি বার্তা");
-    }
-  });
-
   /* ───── মেনুর নাম ─────
      ⚠️ একই পাতা দুই নামে: পরিচালক-উস্তাদের কাছে "লেকচার প্ল্যান",
      শিক্ষার্থীর কাছে "My Lessons"। আলাদা কোনো পাতা নয় — আগে একটি

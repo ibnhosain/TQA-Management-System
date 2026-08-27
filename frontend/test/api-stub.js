@@ -83,9 +83,6 @@ export const reset = () => {
    ফলে যে বাগগুলো ওই মুহূর্তে ঘটে সেগুলো পরীক্ষাতেই ধরা পড়ত না। */
 const wait = () => new Promise((r) => setTimeout(r, 0));
 
-/* ☀️ ডাটাবেজ জাগানো — পরীক্ষায় কিছুই করার নেই, শুধু থাকতে হবে */
-export const warmUp = () => {};
-
 export const api = {
   lessons: async () => (MODE === "empty" ? [] : [
     LESSON,
