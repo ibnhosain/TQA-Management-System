@@ -981,6 +981,45 @@ export async function run() {
     if (M.pipReady() !== false)
       throw new Error("jsdom-এ তো documentPictureInPicture নেই");
   });
+  /* ───── মেনুর নাম ─────
+     ⚠️ একই পাতা দুই নামে: পরিচালক-উস্তাদের কাছে "লেকচার প্ল্যান",
+     শিক্ষার্থীর কাছে "My Lessons"। আলাদা কোনো পাতা নয় — আগে একটি
+     আলাদা মেনু ছিল, সেটি তুলে দেওয়া হয়েছে। */
+  const navItem = (id) => M.NAV.find((n) => n.id === id);
+  const navName = (n, role) =>
+    role === "student" ? n.studentLabelEn || n.labelEn || n.label : n.label;
+
+  check("শিক্ষার্থীর কাছে লেকচার প্ল্যানের নাম My Lessons", () => {
+    const n = navItem("lectures");
+    if (!n) throw new Error("লেকচার প্ল্যানের মেনুটাই নেই");
+    eq(navName(n, "student"), "My Lessons", "শিক্ষার্থীর নাম ভুল");
+    eq(n.studentIcon, "📗", "শিক্ষার্থীর আইকন ভুল");
+  });
+  check("উস্তাদ-পরিচালকের কাছে নাম আগের মতোই", () => {
+    const n = navItem("lectures");
+    eq(navName(n, "teacher"), "লেকচার প্ল্যান", "উস্তাদের নাম বদলে গেছে");
+    eq(navName(n, "director"), "লেকচার প্ল্যান", "পরিচালকের নাম বদলে গেছে");
+    eq(n.icon, "📋", "উস্তাদের আইকন বদলে গেছে");
+  });
+  check("শিক্ষার্থীও লেকচার প্ল্যান পাতাটি পান", () => {
+    const n = navItem("lectures");
+    if (!n.roles.includes("student"))
+      throw new Error("শিক্ষার্থী আর পাতাটিই পাচ্ছেন না");
+  });
+  check("আলাদা “My Lessons” মেনুটি তুলে দেওয়া হয়েছে", () => {
+    if (M.NAV.some((n) => n.id === "mylessons"))
+      throw new Error("এখনো আলাদা মেনুটি রয়ে গেছে — দুটো একই নামে দেখাবে");
+  });
+  check("শিক্ষার্থীর কোনো দুটি মেনুর নাম এক নয়", () => {
+    const seen = new Map();
+    for (const n of M.NAV.filter((x) => x.roles.includes("student"))) {
+      const nm = navName(n, "student");
+      if (seen.has(nm))
+        throw new Error(`“${nm}” নামে দুটি মেনু: ${seen.get(nm)} ও ${n.id}`);
+      seen.set(nm, n.id);
+    }
+  });
+
   /* ───── স্ক্রিপ্ট তৈরি ─────
      ⚠️ "নমুনা" ব্যবস্থাটি তুলে দেওয়া হয়েছে — দারসগুলো এখন সরাসরি আসল
      দারস। টপিকে চাপলে বিকল্প বাছার মডাল আর আসে না, খালি স্ক্রিপ্ট

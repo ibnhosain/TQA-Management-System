@@ -23055,10 +23055,16 @@ const NAV = [
     roles: ["director", "admin", "teacher", "student"],
   },
   {
+    /* ⚠️ একই পাতা, দুই নামে। পরিচালক-উস্তাদের কাছে এটি "লেকচার প্ল্যান" —
+       কী পড়ানো হবে তার পরিকল্পনা। শিক্ষার্থীর কাছে একই জিনিস "My
+       Lessons" — সে যা শিখেছে, দেখে অনুশীলন করবে। কাজ একটাই, নাম
+       দুটো; আলাদা কোনো পাতা নয়। */
     id: "lectures",
     icon: "📋",
     label: "লেকচার প্ল্যান",
     labelEn: "Lecture Plan",
+    studentIcon: "📗",
+    studentLabelEn: "My Lessons",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
@@ -23070,16 +23076,6 @@ const NAV = [
     label: "দারস স্ক্রিপ্ট",
     labelEn: "Lesson Script",
     roles: ["director", "admin", "teacher"],
-  },
-  {
-    // ⚠️ শিক্ষার্থীর নিজের পাতা — এখানে কেবল ক্লাসে তাঁর সামনে যা ছিল
-    // সেই পর্দাটুকুই, উস্তাদের স্ক্রিপ্ট নয়। ট্রায়াল অতিথির পোর্টাল
-    // ইচ্ছা করেই একটিমাত্র পাতার, তাই সেখানে যোগ করা হয়নি।
-    id: "mylessons",
-    icon: "📗",
-    label: "আমার দারস",
-    labelEn: "My Lessons",
-    roles: ["student"],
   },
   {
     id: "syllabus",
@@ -24688,8 +24684,13 @@ export default function App() {
                     : "3px solid transparent",
               }}
             >
-              <span>{n.icon}</span>{" "}
-              {user.role === "student" && n.labelEn ? n.labelEn : n.label}
+              {/* শিক্ষার্থীর কাছে কোনো কোনো পাতা অন্য নামে পরিচিত */}
+              <span>
+                {(user.role === "student" && n.studentIcon) || n.icon}
+              </span>{" "}
+              {user.role === "student"
+                ? n.studentLabelEn || n.labelEn || n.label
+                : n.label}
             </button>
           ))}
           <div
@@ -24745,9 +24746,6 @@ export default function App() {
           {view === "lessons" && user.role !== "student" && user.role !== "trial" && (
             <LessonsView user={user} courses={courses} />
           )}
-          {view === "mylessons" && user.role === "student" && (
-            <StudentLessonsView />
-          )}
           {view === "syllabus" && <SyllabusView {...props} />}
           {view === "attendance" && <AttendanceView {...props} />}
           {view === "assignments" && <AssignmentsView {...props} />}
@@ -24795,6 +24793,7 @@ export default function App() {
    কম্পোনেন্টগুলোকে ধরতে পারে।
    ───────────────────────────────────────────────────────────────── */
 export {
+  NAV,
   loginErrorText,
   RichText,
   FitBox,
