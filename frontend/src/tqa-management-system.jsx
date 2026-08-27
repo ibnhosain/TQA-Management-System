@@ -20172,7 +20172,112 @@ const stageOn = (fn) => {
    সম্পাদকের ছোট নমুনাটি (SlidePreview) এরই ছোট ভাই; দুটোর সাজ এক রকম,
    শুধু এখানে মাপগুলো পর্দার আকারের সাথে বাড়ে-কমে (clamp) — ছোট পপআপ
    থেকে বড় প্রজেক্টর, সবখানেই পড়া যায়। */
-function StageSlide({ slide }) {
+/* ═══════════ 📐 যেকোনো মাপের পর্দায় স্লাইড পুরোটা বসানো ═══════════
+
+   কেন দরকার — ভাসমান পর্দা ছোট করলে, বা শিক্ষার্থী ফোনে খুললে, লেখা
+   উপচে পড়ত বা কেটে যেত। clamp() দিয়ে অক্ষর ছোট-বড় হতো ঠিকই, কিন্তু
+   লেখা বেশি হলে উচ্চতায় আর ধরত না — নিচের অংশ হারিয়ে যেত।
+
+   কীভাবে — স্লাইডটা ভেতরে সবসময় একই নকশার মাপে (১২৮০×৭২০) আঁকা হয়,
+   তারপর গোটাটা এক সাথে ছোট বা বড় করা হয়। তাই অনুপাত কখনো বদলায় না,
+   কিছুই কাটা পড়ে না — টেলিভিশনে ছবি যেভাবে পুরো পর্দায় বসে।
+
+   ⚠️ transform লেআউট বদলায় না, তাই "মাপা → বসানো → আবার মাপা" এমন
+   অন্তহীন চক্র তৈরি হয় না। */
+
+const FIT_W = 1280;
+const FIT_H = 720;
+
+/* ⚠️ এই বাক্সের ভেতরে vw/vh ব্যবহার করা চলে না — সেগুলো গোটা পর্দার মাপ
+   ধরে, বাক্সটির নয়। তাই নকশার মাপে (১২৮০×৭২০) আগের CSS যে পিক্সেল মান
+   দিত, ঠিক সেগুলোই বসানো — দেখতে হুবহু আগের মতোই। */
+const FIXED = {
+  gap: 17,        // clamp(14px,2.4vh,34px) → ৭২০-এর ২.৪%
+  heading: 54,    // clamp(22px,4.4vw,54px)
+  arabic: 90,     // clamp(30px,7vw,92px)  → ১২৮০-এর ৭%
+  translit: 30,   // clamp(15px,2.4vw,30px)
+  text: 38,       // clamp(17px,3vw,40px)
+  pad: 51,        // 4vw → ১২৮০-এর ৪%
+  img: 324,       // 45vh → ৭২০-এর ৪৫%
+};
+
+/* কতটা ছোট/বড় করলে পুরোটা ঠিক বসবে — হিসাবটা আলাদা রাখা হলো যাতে
+   পরীক্ষা করা যায় (ব্রাউজার ছাড়া মাপ জানা যায় না, কিন্তু অঙ্কটা যায়)।
+
+     ow,oh — বাইরের পর্দার মাপ | iw,ih — ভেতরের স্লাইডের আসল মাপ
+
+   ⚠️ কোনো মাপ শূন্য হলে (সবে বসেছে, বা লুকানো) 0 ফেরে — ডাকা জায়গায়
+   তখন হাত দেওয়া হয় না, নইলে স্লাইড মিলিয়ে যেত। */
+const fitScale = (ow, oh, iw, ih) => {
+  if (!ow || !oh || !iw || !ih) return 0;
+  // ০.৯৬ — চারপাশে একটু হাওয়া, লেখা যেন কিনারা ছুঁয়ে না থাকে
+  const s = Math.min(ow / iw, oh / ih) * 0.96;
+  // খুব ছোট হলে কিছুই পড়া যায় না, খুব বড় হলে ঝাপসা — দুদিকেই সীমা
+  return Math.min(Math.max(s, 0.05), 4);
+};
+
+function FitBox({ children }) {
+  const outer = useRef(null);
+  const inner = useRef(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const o = outer.current;
+    const i = inner.current;
+    if (!o || !i) return;
+    const measure = () => {
+      const ow = o.clientWidth;
+      const oh = o.clientHeight;
+      // ⚠️ transform অফসেট-মাপ বদলায় না, তাই এগুলো সবসময় আসল মাপই
+      const iw = i.offsetWidth;
+      const ih = i.offsetHeight;
+      const s = fitScale(ow, oh, iw, ih);
+      // মাপ এখনো জানা যায়নি (সবে বসেছে, বা পরীক্ষার পরিবেশ) — হাত দেব না
+      if (s) setScale(s);
+    };
+    measure();
+    /* ⚠️ ভাসমান পর্দা আলাদা উইন্ডোতে থাকে, তাই ওই উইন্ডোর নিজের
+       ResizeObserver লাগে — এই উইন্ডোরটা ওখানে কাজ করে না */
+    const RO = o.ownerDocument?.defaultView?.ResizeObserver;
+    if (!RO) return; // পুরনো ব্রাউজার — নকশার মাপেই থাক, ভাঙবে না
+    const ro = new RO(measure);
+    ro.observe(o); // পর্দার মাপ বদলালে
+    ro.observe(i); // স্লাইড বদলে লেখা কম-বেশি হলে
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={outer}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+        display: "grid",
+        placeItems: "center",
+      }}
+    >
+      <div
+        ref={inner}
+        style={{
+          width: FIT_W,
+          minHeight: FIT_H,
+          display: "grid",
+          placeItems: "center",
+          transform: `scale(${scale})`,
+          transformOrigin: "center center",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* fixed=true হলে মাপগুলো পর্দা-নির্ভর (vw/vh) না হয়ে স্থির — FitBox-এর
+   ভেতরে বসলে এটাই লাগে */
+function StageSlide({ slide, fixed }) {
   const sl = slide || null;
   if (!sl)
     return (
@@ -20184,11 +20289,11 @@ function StageSlide({ slide }) {
     <div
       style={{
         display: "grid",
-        gap: "clamp(14px,2.4vh,34px)",
+        gap: fixed ? FIXED.gap : "clamp(14px,2.4vh,34px)",
         width: "100%",
         maxWidth: 1200,
         textAlign: "center",
-        padding: "0 4vw",
+        padding: fixed ? `0 ${FIXED.pad}px` : "0 4vw",
         position: "relative",
         zIndex: 1,
       }}
@@ -20196,7 +20301,7 @@ function StageSlide({ slide }) {
       {sl.heading && (
         <div
           style={{
-            fontSize: "clamp(22px,4.4vw,54px)",
+            fontSize: fixed ? FIXED.heading : "clamp(22px,4.4vw,54px)",
             fontWeight: 800,
             color: C.goldL,
             lineHeight: 1.3,
@@ -20210,7 +20315,7 @@ function StageSlide({ slide }) {
           dir="rtl"
           style={{
             fontFamily: QURAN_FONT,
-            fontSize: "clamp(30px,7vw,92px)",
+            fontSize: fixed ? FIXED.arabic : "clamp(30px,7vw,92px)",
             lineHeight: 2,
             whiteSpace: "pre-wrap",
             color: "#fff",
@@ -20222,7 +20327,7 @@ function StageSlide({ slide }) {
       {sl.translit && (
         <div
           style={{
-            fontSize: "clamp(15px,2.4vw,30px)",
+            fontSize: fixed ? FIXED.translit : "clamp(15px,2.4vw,30px)",
             fontStyle: "italic",
             color: "#ffffffc0",
           }}
@@ -20236,7 +20341,7 @@ function StageSlide({ slide }) {
           alt=""
           style={{
             maxWidth: "100%",
-            maxHeight: "45vh",
+            maxHeight: fixed ? FIXED.img : "45vh",
             borderRadius: 16,
             margin: "0 auto",
           }}
@@ -20245,7 +20350,7 @@ function StageSlide({ slide }) {
       {sl.text && (
         <div
           style={{
-            fontSize: "clamp(17px,3vw,40px)",
+            fontSize: fixed ? FIXED.text : "clamp(17px,3vw,40px)",
             whiteSpace: "pre-wrap",
             lineHeight: 1.55,
             color: "#fff",
@@ -20334,7 +20439,16 @@ function FloatBody({ slide }) {
       }}
     >
       <SlideArt kind={slide?.kind} />
-      <StageSlide slide={slide} />
+      {/* ⚠️ উইন্ডোটি যত ছোট বা বড়ই হোক, স্লাইড পুরোটা ভেতরে বসবে।
+          জুমে এটিই শেয়ার হয়, আর জুম পুরো উইন্ডোটাকে শিক্ষার্থীর পর্দায়
+          মানিয়ে দেখায় — তাই ফোন, ট্যাব বা কম্পিউটার, সবখানেই আয়াত
+          পুরোটা দেখা যাবে, কিছু কাটা পড়বে না।
+          ⚠️ inset:0 — নইলে গ্রিডের ভেতরে বাক্সটি নিজের উচ্চতা জানত না। */}
+      <div style={{ position: "absolute", inset: 0 }}>
+        <FitBox>
+          <StageSlide slide={slide} fixed />
+        </FitBox>
+      </div>
     </div>
   );
 }
@@ -24699,6 +24813,10 @@ export default function App() {
    ───────────────────────────────────────────────────────────────── */
 export {
   loginErrorText,
+  FitBox,
+  fitScale,
+  FIT_W,
+  FIT_H,
   SlidePreview,
   StageSlide,
   SlideArt,

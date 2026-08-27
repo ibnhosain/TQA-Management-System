@@ -719,6 +719,115 @@ export async function run() {
     }
   });
 
+  /* ───── 📐 যেকোনো মাপে স্লাইড পুরোটা বসা ─────
+     ভাসমান পর্দা ছোট-বড় করলেও আয়াত যেন কাটা না পড়ে। ⚠️ সবচেয়ে জরুরি:
+     এতে যেন উপস্থাপনা পপআপ বা শিক্ষার্থীর পোর্টালের চেহারা না বদলায় —
+     সেখানে পুরনো পর্দা-নির্ভর মাপই (clamp) থাকা চাই। */
+  const SL = { kind: "verse", heading: "Say it with me", arabic: "قُلْ",
+               text: "🎤" };
+  await scene(
+    "ভাসমান পর্দায় স্লাইড পুরোটা থাকে",
+    <M.FloatBody slide={SL} />,
+    { expect: ["Say it with me", "قُلْ", "🎤"] },
+  );
+  await scene(
+    "লেখা অনেক বেশি হলেও ভাঙে না",
+    <M.FloatBody slide={{ kind: "verse", heading: "ক".repeat(200),
+                          arabic: "قُلْ ".repeat(60),
+                          text: "খ".repeat(400) }} />,
+    { expect: ["قُلْ"] },
+  );
+  await scene(
+    "স্লাইড ছাড়াও ভাসমান পর্দা দাঁড়িয়ে থাকে",
+    <M.FloatBody slide={null} />,
+    { expect: [] },
+  );
+  await scene(
+    "খালি বাক্সেও FitBox ভাঙে না",
+    <M.FitBox>{null}</M.FitBox>,
+    { expect: [] },
+  );
+  /* ⚠️ এটাই আসল পরীক্ষা — সত্যিকারের পর্দার মাপ ধরে হিসাব মেলানো।
+     স্লাইড ১২৮০×৭২০; "ফিট" মানে ছোট করার পর দুই দিকেই ভেতরে থাকা। */
+  const W = 1280, H = 720;
+  const fits = (ow, oh, iw = W, ih = H) => {
+    const s = M.fitScale(ow, oh, iw, ih);
+    return s > 0 && iw * s <= ow + 0.5 && ih * s <= oh + 0.5;
+  };
+  const SCREENS = [
+    ["ছোট ভাসমান পর্দা", 380, 220],
+    ["মাঝারি ভাসমান পর্দা", 960, 540],
+    ["ল্যাপটপ পুরো পর্দা", 1366, 768],
+    ["বড় মনিটর", 1920, 1080],
+    ["ফোন খাড়া", 390, 844],
+    ["ফোন শোয়ানো", 844, 390],
+    ["ট্যাব", 1024, 768],
+    ["খুবই সরু", 240, 700],
+    ["খুবই চ্যাপ্টা", 1600, 180],
+  ];
+  for (const [name, w, h] of SCREENS) {
+    check(`স্লাইড পুরোটা বসে — ${name} (${w}×${h})`, () => {
+      if (!fits(w, h))
+        throw new Error(`কাটা পড়ছে · scale=${M.fitScale(w, h, W, H)}`);
+    });
+  }
+  check("লেখা অনেক বেশি হলে আরও ছোট হয়", () => {
+    const normal = M.fitScale(960, 540, W, H);
+    const tall = M.fitScale(960, 540, W, H * 3); // তিনগুণ লম্বা স্লাইড
+    if (!(tall < normal))
+      throw new Error("লম্বা স্লাইডেও একই মাপ — নিচের অংশ কাটা পড়বে");
+    if (!fits(960, 540, W, H * 3))
+      throw new Error("লম্বা স্লাইড বসছে না");
+  });
+  check("পর্দা বড় হলে স্লাইডও বড় হয়", () => {
+    const small = M.fitScale(640, 360, W, H);
+    const big = M.fitScale(1920, 1080, W, H);
+    if (!(big > small)) throw new Error("বড় পর্দাতেও ছোটই রয়ে গেল");
+  });
+  check("অনুপাত কখনো বদলায় না", () => {
+    // এক সংখ্যা দিয়ে দুই দিকই ছোট-বড় হয়, তাই আকৃতি অটুট
+    for (const [, w, h] of SCREENS) {
+      const s = M.fitScale(w, h, W, H);
+      if (!(s > 0) || !isFinite(s)) throw new Error(`অদ্ভুত মান ${s}`);
+    }
+  });
+  check("মাপ জানা না থাকলে ০ — স্লাইড মিলিয়ে যাবে না", () => {
+    for (const a of [[0, 500, W, H], [500, 0, W, H], [500, 500, 0, H],
+                     [500, 500, W, 0], [NaN, 500, W, H]]) {
+      if (M.fitScale(...a) !== 0)
+        throw new Error(`${JSON.stringify(a)} → ০ নয়`);
+    }
+  });
+  check("সীমার বাইরে যায় না", () => {
+    const huge = M.fitScale(99999, 99999, W, H);
+    const tiny = M.fitScale(1, 1, W, H);
+    if (huge > 4) throw new Error("অতিরিক্ত বড় — ঝাপসা হবে");
+    if (tiny < 0.05) throw new Error("অতিরিক্ত ছোট — কিছুই দেখা যাবে না");
+  });
+  check("নকশার মাপ ১৬:৯ — টিভি/প্রজেক্টরের অনুপাত", () => {
+    const r = M.FIT_W / M.FIT_H;
+    if (Math.abs(r - 16 / 9) > 0.01)
+      throw new Error(`অনুপাত ${r.toFixed(3)}, ১৬:৯ নয়`);
+  });
+  /* ⚠️ পাহারা — fixed ছাড়া StageSlide-এর মাপ আগের মতোই পর্দা-নির্ভর
+     থাকা চাই, নইলে উপস্থাপনা পপআপের চেহারা বদলে যেত */
+  await scene(
+    "উপস্থাপনার পর্দায় আগের মাপই (clamp)",
+    <M.StageSlide slide={SL} />,
+    { expect: ["Say it with me"] },
+  );
+  check("fixed ছাড়া পুরনো clamp, fixed দিলে স্থির পিক্সেল", () => {
+    const el = (fixed) =>
+      JSON.stringify(M.StageSlide({ slide: SL, fixed }), (k, v) =>
+        typeof v === "function" ? "fn" : v);
+    const loose = el(false);
+    const tight = el(true);
+    if (!loose.includes("clamp("))
+      throw new Error("fixed ছাড়াও clamp হারিয়েছে — পুরনো পর্দা বদলে যাবে");
+    if (tight.includes("clamp("))
+      throw new Error("fixed দিলেও clamp রয়ে গেছে — বাক্সে ফিট হবে না");
+  });
+
   await scene("শিক্ষার্থী → Revise → Next → Close", <M.StudentLessonsView />, {
     click: ["🔁 Revise", "Next", "Close"],
   });
