@@ -594,8 +594,21 @@ class LectureViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
     def mark_topic(self, request):
-        """টপিক ✔/✘ — উস্তাদ নিজের কোর্সে; লাল-ক্রস ঠিক করা কেবল এডমিন-লেভেল বা অনুমতিপ্রাপ্ত"""
-        topic = LectureTopic.objects.get(pk=request.data["topic_id"])
+        """টপিক ✔/✘ — উস্তাদ নিজের কোর্সে; লাল-ক্রস ঠিক করা কেবল এডমিন-লেভেল বা অনুমতিপ্রাপ্ত
+
+        ⚠️ আগে সরাসরি .get(request.data["topic_id"]) করা হতো, তাই তিনটি
+        ক্ষেত্রেই সার্ভার ভেঙে পড়ত (৫০০):
+          • topic_id একেবারেই না পাঠালে      → KeyError
+          • সংখ্যা ছাড়া কিছু পাঠালে           → ValueError
+          • মুছে ফেলা টপিকের আইডি পাঠালে      → DoesNotExist
+        শেষেরটা বাস্তবেই ঘটতে পারে: এক ট্যাবে পাতা খোলা রেখে অন্য ট্যাবে
+        টপিকটি মুছে দিলে, তারপর টিক দিতে গেলে।
+        """
+        topic = _by_pk(LectureTopic, request.data.get("topic_id"))
+        if not topic:
+            return Response({"detail": "টপিকটি পাওয়া যায়নি — হয়তো ইতিমধ্যে "
+                                       "মুছে ফেলা হয়েছে। পাতাটি একবার "
+                                       "রিফ্রেশ করে নিন।"}, status=404)
         new = request.data.get("covered")  # covered | missed | pending
         valid = [c[0] for c in LectureTopic.Covered.choices]
         if new not in valid:  # boolean/অবৈধ মান CharField-এ সেভ হয়ে ডেটা নষ্ট হওয়া ঠেকাতে
