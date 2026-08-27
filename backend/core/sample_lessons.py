@@ -1864,9 +1864,15 @@ def create_sample(Lesson, LessonStep, StepSlide, course, key,
     data = SAMPLES[key]
     # টপিক দেওয়া থাকলে "আগে থেকে আছে কিনা" ওই টপিক ধরেই দেখি — একই নমুনা
     # আলাদা আলাদা টপিকে বসাতে চাইলে যেন আটকে না যায়
+    # ⚠️ মাইগ্রেশন ঐতিহাসিক মডেল পাঠায়, আর ০০৩৬-এর সময় Lesson-এ topic
+    # ঘরটি ছিলই না (এসেছে ০০৩৮-এ)। ঘরটি না দেখে topic= পাঠালে একদম নতুন
+    # ডাটাবেজে migrate ভেঙে পড়ত — "Lesson() got unexpected keyword
+    # arguments: 'topic'"। চালু সাইটে ধরা পড়েনি, কারণ সেখানে ০০৩৬ আগেই
+    # চলে গিয়েছিল। তাই ঘরটি সত্যিই আছে কিনা দেখে নিই।
+    has_topic = any(f.name == "topic" for f in Lesson._meta.fields)
     if target is not None:
         existing = target
-    elif topic is not None:
+    elif topic is not None and has_topic:
         existing = Lesson.objects.filter(topic=topic).first()
     else:
         existing = Lesson.objects.filter(course=course,
@@ -1888,7 +1894,7 @@ def create_sample(Lesson, LessonStep, StepSlide, course, key,
             kind=data["kind"], age_from=data["age_from"], age_to=data["age_to"],
             duration_min=data["duration_min"], objectives=data["objectives"],
             status=status, order=(last.order + 1) if last else 0,
-            topic=topic,
+            **({"topic": topic} if has_topic else {}),
         )
     for i, st in enumerate(data["steps"]):
         step = LessonStep.objects.create(

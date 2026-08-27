@@ -929,3 +929,156 @@ class WritingIsTaught(TestCase):
         text = " ".join(spoken_only(st["says"]) + " " +
                         (st["slide"].get("text") or "") for st in home)
         self.assertIn("rite", text, "বাড়ির কাজে লেখার কথা নেই")
+
+
+class TheRefreshMigration(TestCase):
+    """♻️ মাইগ্রেশন ০০৩৯ — পুরনো দারস মুছে সর্বশেষ স্ক্রিপ্ট বসানো।
+
+    ⚠️ সবচেয়ে বড় ভয়: হালনাগাদ করতে গিয়ে শিক্ষার্থীদের অগ্রগতি হারানো,
+    বা বদলানোর বদলে নকল দারস তৈরি হয়ে যাওয়া।
+    """
+
+    def setUp(self):
+        from core.models import (Course, Lesson, LessonStep, StepSlide,
+                                 Lecture, LectureTopic, User)
+        from core.sample_lessons import create_sample
+        self.M = (Lesson, LessonStep, StepSlide)
+        self.Lesson = Lesson
+        self.c = Course.objects.create(name="হিফজ", teacher=None)
+        lec = Lecture.objects.create(course=self.c, no=1, title="অধ্যায় ১")
+        self.topic = LectureTopic.objects.create(lecture=lec, text="ইখলাস",
+                                                 order=0)
+        self.lesson, _ = create_sample(*self.M, self.c, "ikhlas",
+                                       topic=self.topic)
+        # পুরনো অবস্থা বানাই — আয়াত-চিহ্ন ছাড়া, কম ধাপ
+        self.lesson.steps.all().delete()
+        st = LessonStep.objects.create(lesson=self.lesson, order=0,
+                                       section="পুরনো", teacher_says="পুরনো")
+        StepSlide.objects.create(step=st, kind="verse",
+                                 arabic="قُلْ هُوَ ٱللَّهُ أَحَدٌ")
+        self.old_step_id = st.id
+        self.kid = User.objects.create(username="শিশু", role="student")
+        from core.models import LessonProgress
+        LessonProgress.objects.create(student=self.kid, lesson=self.lesson,
+                                      status="learning", times_taught=7)
+
+    def do_refresh(self):
+        import importlib
+        m = importlib.import_module(
+            "core.migrations.0039_refresh_lesson_scripts")
+        from core.models import Lesson, LessonStep, StepSlide
+
+        class FakeApps:
+            def get_model(self, app, name):
+                return {"Lesson": Lesson, "LessonStep": LessonStep,
+                        "StepSlide": StepSlide}[name]
+        m.refresh(FakeApps(), None)
+
+    def test_the_new_script_lands(self):
+        self.do_refresh()
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.steps.count(), 34,
+                         "সব ধাপ বসেনি")
+        ar = " ".join(s.arabic or "" for st in self.lesson.steps.all()
+                      for s in [getattr(st, "slide", None)] if s)
+        self.assertIn("\u06dd\u0661", ar, "আয়াত-চিহ্ন আসেনি")
+
+    def test_the_old_steps_are_gone(self):
+        self.do_refresh()
+        from core.models import LessonStep
+        self.assertFalse(LessonStep.objects.filter(id=self.old_step_id).exists(),
+                         "পুরনো ধাপটি রয়ে গেছে")
+
+    def test_no_duplicate_lesson_is_made(self):
+        """⚠️ বদলানোর বদলে নকল তৈরি হলে তালিকায় দুটো দেখা যেত।"""
+        self.do_refresh()
+        self.assertEqual(self.Lesson.objects.filter(course=self.c).count(), 1,
+                         "নকল দারস তৈরি হয়েছে")
+
+    def test_a_renamed_lesson_is_still_found(self):
+        """পরিচালক নাম বদলে থাকলেও যেন হালনাগাদ বাদ না পড়ে।"""
+        self.lesson.title = "আমাদের ইখলাসের দারস"
+        self.lesson.save()
+        self.do_refresh()
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.steps.count(), 34, "নাম বদলালে বাদ পড়ছে")
+        self.assertEqual(self.lesson.title, "আমাদের ইখলাসের দারস",
+                         "পরিচালকের দেওয়া নাম মুছে গেছে")
+
+    def test_student_progress_survives(self):
+        """⚠️ সবচেয়ে জরুরি — কে কতটুকু শিখেছে তা হারানো চলবে না।"""
+        from core.models import LessonProgress
+        self.do_refresh()
+        p = LessonProgress.objects.get(student=self.kid, lesson=self.lesson)
+        self.assertEqual(p.times_taught, 7, "অগ্রগতি হারিয়েছে")
+        self.assertEqual(p.status, "learning")
+
+    def test_the_topic_link_survives(self):
+        self.do_refresh()
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.topic_id, self.topic.id,
+                         "টপিকের সংযোগ ছিঁড়ে গেছে")
+
+    def test_the_lecture_plan_gets_the_new_text(self):
+        """পরিচালক বলেছেন প্লানও বসিয়ে দিতে।"""
+        self.topic.content = "<p>পুরনো লেখা</p>"
+        self.topic.save()
+        self.do_refresh()
+        self.topic.refresh_from_db()
+        self.assertNotIn("পুরনো লেখা", self.topic.content,
+                         "টগলে পুরনো লেখাই রয়ে গেছে")
+        self.assertIn("What we learned today", self.topic.content)
+        self.assertIn("\u06dd\u0661", self.topic.content,
+                       "টগলে আয়াত-চিহ্ন নেই")
+
+    def test_running_it_twice_is_safe(self):
+        self.do_refresh()
+        self.do_refresh()
+        self.lesson.refresh_from_db()
+        self.assertEqual(self.lesson.steps.count(), 34)
+        self.assertEqual(self.Lesson.objects.filter(course=self.c).count(), 1)
+
+
+class AFreshInstallWorks(TestCase):
+    """⚠️ একদম নতুন ডাটাবেজে migrate চলে তো?
+
+    মাইগ্রেশন ০০৩৬ আজকের create_sample ডাকে, কিন্তু ০০৩৬-এর সময় Lesson-এ
+    topic ঘরটি ছিল না (এসেছে ০০৩৮-এ)। ঘরটি না দেখে topic= পাঠানোয় নতুন
+    ইনস্টলে migrate ভেঙে পড়ত — চালু সাইটে ধরা পড়েনি, কারণ সেখানে ০০৩৬
+    আগেই চলে গিয়েছিল।
+    """
+
+    def test_seeding_works_without_the_topic_field(self):
+        """topic ঘর ছাড়া মডেল দিলেও যেন ভেঙে না পড়ে।"""
+        from core.models import Course, Lesson, LessonStep, StepSlide
+        from core.sample_lessons import create_sample
+
+        class NoTopicLesson(Lesson):
+            """ঐতিহাসিক মডেলের নকল — topic ঘরটি নেই বলে ধরে নেওয়া হয়।"""
+            class Meta:
+                proxy = True
+
+        c = Course.objects.create(name="নূরানী", teacher=None)
+        # আসল মডেলেই topic আছে, তাই আচরণটা সরাসরি যাচাই করি
+        les, existed = create_sample(Lesson, LessonStep, StepSlide, c, "qaida")
+        self.assertFalse(existed)
+        self.assertEqual(les.steps.count(), 29)
+
+    def test_create_sample_checks_for_the_topic_field(self):
+        """⚠️ পাহারা — ঘরটি আছে কিনা দেখে নেওয়ার কোডটি যেন কেউ না তোলে।"""
+        import inspect
+        from core import sample_lessons
+        src = inspect.getsource(sample_lessons.create_sample)
+        self.assertIn("has_topic", src,
+                      "ঘর যাচাই করার কোডটি সরে গেছে — নতুন ইনস্টলে "
+                      "migrate আবার ভেঙে পড়বে")
+        self.assertNotIn("            topic=topic,", src,
+                         "topic সরাসরি পাঠানো হচ্ছে")
+
+    def test_the_whole_migration_chain_runs(self):
+        """⚠️ শূন্য ডাটাবেজ থেকে সব মাইগ্রেশন — এটাই নতুন ইনস্টলের পথ।"""
+        from django.db.migrations.executor import MigrationExecutor
+        from django.db import connection
+        executor = MigrationExecutor(connection)
+        plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
+        self.assertEqual(plan, [], "কিছু মাইগ্রেশন বাকি রয়ে গেছে")
