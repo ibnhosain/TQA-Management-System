@@ -1990,3 +1990,51 @@ class WrongHeadingIsRepaired(TestCase):
         self.run_it()
         les = self.Lesson.objects.filter(topic=self.right[4]).first()
         self.assertIsNotNone(les, "ঠিক জায়গা থেকেও সরে গেছে")
+
+
+class TheDatabaseWakesUpEarly(TestCase):
+    """☀️ /api/warmup/ — ঘুমন্ত ডাটাবেজ অ্যাপ খোলার সাথে সাথেই জাগে।
+
+    ⚠️ কেন দরকার — Neon নিষ্ক্রিয় থাকলে কম্পিউট বন্ধ করে দেয়। পরের প্রথম
+    প্রশ্নটি ডাটাবেজ জাগা পর্যন্ত অপেক্ষা করে, আর সেটা ১০-২০ সেকেন্ডও
+    হতে পারে। ঠিক তখনই "দারস আনা যায়নি" দেখাত — সার্ভার বা কোডে কোনো
+    সমস্যা না থাকা সত্ত্বেও।
+    """
+
+    def test_it_answers_without_login(self):
+        """⚠️ টোকেনের অপেক্ষা করলে দেরিটাই থেকে যেত।"""
+        from rest_framework.test import APIClient
+        r = APIClient().get("/api/warmup/")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["ok"])
+
+    def test_it_really_touches_the_database(self):
+        """⚠️ ping/ ডাটাবেজ ছোঁয় না — তাই ঘুমন্ত Neon জাগত না।"""
+        from django.test.utils import CaptureQueriesContext
+        from django.db import connection
+        from rest_framework.test import APIClient
+        with CaptureQueriesContext(connection) as q:
+            APIClient().get("/api/warmup/")
+        self.assertGreaterEqual(len(q), 1,
+                                "ডাটাবেজে একটিও প্রশ্ন যায়নি — জাগবে না")
+
+    def test_it_stays_cheap(self):
+        """⚠️ জাগানোর জন্য একটির বেশি প্রশ্ন দরকার নেই।"""
+        from django.test.utils import CaptureQueriesContext
+        from django.db import connection
+        from rest_framework.test import APIClient
+        with CaptureQueriesContext(connection) as q:
+            APIClient().get("/api/warmup/")
+        self.assertLessEqual(len(q), 2, "অকারণে %d প্রশ্ন" % len(q))
+
+    def test_it_never_leaks_anything(self):
+        """⚠️ লগইন ছাড়াই খোলা — তাই কোনো তথ্য ফেরত যেতে পারবে না।"""
+        from rest_framework.test import APIClient
+        d = APIClient().get("/api/warmup/").json()
+        self.assertEqual(set(d), {"ok", "ms"},
+                         "শুধু ok ও ms থাকার কথা, পেলাম %s" % set(d))
+
+    def test_the_old_ping_still_works(self):
+        from rest_framework.test import APIClient
+        r = APIClient().get("/api/ping/")
+        self.assertEqual(r.status_code, 200)

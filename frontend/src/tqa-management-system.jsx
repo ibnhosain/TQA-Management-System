@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 // ভাসমান পর্দাটি উস্তাদের উইন্ডোর ভেতর থেকেই আঁকা হয় — তাই portal
 import { createPortal } from "react-dom";
-import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
+import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites, warmUp } from "./api";
 
 /* ═══════════════════════════════════════════════════════════
    তারবিয়াতুল কুরআন একাডেমি — ম্যানেজমেন্ট সিস্টেম (TQA-MS)
@@ -1595,6 +1595,32 @@ function InstallBanner({ lang }) {
 }
 
 /* ═══════════════ লগইন ═══════════════ */
+/* দারস আনতে না পারলে আসল কারণটা বলি।
+
+   ⚠️ আগে সব সমস্যাতেই এক কথা দেখাত — "দারসটি আনা যায়নি"। ফলে সার্ভার
+   জাগছে, নাকি ইন্টারনেট নেই, নাকি সত্যিই ত্রুটি — কিছুই বোঝা যেত না।
+   বেশিরভাগ ক্ষেত্রেই কারণটা ছিল ঘুমন্ত ডাটাবেজ, অথচ পরিচালক ভাবতেন
+   দারসটাই নষ্ট। */
+const fetchErrorText = (e) => {
+  const s = e?.status;
+  if (s === 404) return "দারসটি আর নেই — হয়তো মুছে ফেলা হয়েছে।";
+  if (s === 403) return "এই দারসটি দেখার অনুমতি নেই।";
+  if (s === 502 || s === 503 || s === 504)
+    return "সার্ভার এখন চালু হচ্ছে — কয়েক সেকেন্ড পর আবার চেষ্টা করুন।";
+  if (s >= 500) return `সার্ভারে সমস্যা হয়েছে (${s})। আবার চেষ্টা করুন।`;
+  if (s) return (e?.message || "আনা যায়নি") + ` (${s})`;
+  try {
+    if (navigator.onLine === false)
+      return "ইন্টারনেট সংযোগ নেই — সংযোগ দেখে আবার চেষ্টা করুন।";
+  } catch {
+    /* navigator না থাকলে নিচের বার্তাই যথেষ্ট */
+  }
+  if (e?.name === "AbortError" || /abort/i.test(e?.message || ""))
+    return "সার্ভার সময়মতো সাড়া দিল না — ডাটাবেজ ঘুম থেকে উঠছে। " +
+           "আরেকবার চেষ্টা করুন, এবার দ্রুত হবে।";
+  return "সার্ভারে পৌঁছানো যাচ্ছে না — একটু পর আবার চেষ্টা করুন।";
+};
+
 /* লগইন আটকে গেলে আসল কারণটা বলি।
 
    ⚠️ আগে ৪০১ আর ৪২৯ ছাড়া বাকি সব সমস্যাতেই এক কথা দেখাত — "সার্ভার
@@ -17995,7 +18021,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
         .then((d) => setSections(d || []))
         .catch(() => setSections([]));
     } catch (e) {
-      notice("দারসটি আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("দারসটি আনা যায়নি — " + fetchErrorText(e));
     } finally {
       if (!silent) setLoading(false);
     }
@@ -20186,7 +20212,7 @@ export function PresentWindow() {
       setStage(got);
       setErr("");
     } catch (e) {
-      setErr(e?.data?.error || e?.message || "দারসটি আনা যায়নি");
+      setErr(fetchErrorText(e));
     }
   };
 
@@ -20413,7 +20439,7 @@ function TeacherMode({ id, onClose }) {
       try {
         setLesson(await api.lesson(id));
       } catch (e) {
-        notice("দারসটি আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+        notice("দারসটি আনা যায়নি — " + fetchErrorText(e));
         onClose();
       } finally {
         setLoading(false);
@@ -23547,6 +23573,14 @@ function UpdateBanner({ lang }) {
 }
 
 export default function App() {
+  /* ☀️ অ্যাপ খোলার সাথে সাথেই ডাটাবেজ জাগিয়ে রাখি — লগইনের আগেই।
+     Neon ঘুমিয়ে থাকলে প্রথম প্রশ্নটি ১০-২০ সেকেন্ড অপেক্ষা করে, আর
+     তখনই "দারস আনা যায়নি" দেখাত। আগেভাগে জাগালে সেই দেরিটা পরিচালকের
+     চোখেই পড়ে না। ⚠️ ব্যর্থ হলেও কিছু আটকায় না। */
+  useEffect(() => {
+    warmUp();
+  }, []);
+
   const [user, setUser] = useState(null);
   const T = (bnText, enText) => (user?.role === "student" ? enText : bnText);
   // ট্রায়াল অতিথিরাও শিক্ষার্থীদের মতোই ইংরেজি পোর্টাল দেখেন
@@ -24520,6 +24554,7 @@ export default function App() {
 export {
   NAV,
   loginErrorText,
+  fetchErrorText,
   RichText,
   FitBox,
   fitScale,
