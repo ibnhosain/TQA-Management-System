@@ -12,7 +12,7 @@
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import * as M from "../src/tqa-management-system.jsx";
-import { setMode, LESSON } from "./api-stub.js";
+import { setMode, reset, LESSON } from "./api-stub.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const nop = () => {};
@@ -20,12 +20,29 @@ let ran = 0;
 const failures = [];
 
 /* একটি দৃশ্য — আঁকা, এফেক্ট চলা, তথ্য আসা, তারপর (চাইলে) বোতামে চাপ */
+/* React-এর নিজস্ব মান-ট্র্যাকিং পাশ কাটিয়ে সত্যিকারের টাইপিং —
+   শুধু value বসালে React বদলটা টেরই পায় না */
+function typeInto(el, text) {
+  const proto =
+    el.tagName === "TEXTAREA"
+      ? window.HTMLTextAreaElement.prototype
+      : window.HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
+  setter.call(el, text);
+  el.dispatchEvent(new window.Event("input", { bubbles: true }));
+}
+
+/* click ও type একই তালিকায় রাখা যায়, তাই ক্রম ঠিক থাকে:
+     steps: [["click", "খুলুন"], ["type", "Say line 0", "নতুন"], …]        */
 async function scene(
   name,
   node,
-  { expect = [], notExpect = [], click = [] } = {},
+  { expect = [], notExpect = [], click = [], steps = [], mode } = {},
 ) {
   ran++;
+  // প্রতিটি দৃশ্য আগের অবস্থা থেকেই শুরু হোক
+  reset();
+  if (mode) setMode(mode);
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
@@ -46,24 +63,58 @@ async function scene(
       root.render(node);
     });
     await settle();
-    for (const label of click) {
-      const btn = [...host.querySelectorAll("button")].find((b) =>
-        (b.textContent || "").includes(label),
-      );
-      if (!btn) throw new Error(`“${label}” বোতামটি পাওয়া গেল না`);
-      await act(async () => {
-        btn.click();
-      });
+    const all = [...click.map((c) => ["click", c]), ...steps];
+    for (const [what, where, text] of all) {
+      if (what === "click") {
+        /* ⚠️ হুবহু মিল আগে, তারপর আংশিক — নইলে "খুলুন" খুঁজতে গিয়ে
+           "🔓 তালা খুলুন"-এ চাপ পড়ে যেত */
+        const all_btn = [...host.querySelectorAll("button")];
+        const btn =
+          all_btn.find((b) => (b.textContent || "").trim() === where) ||
+          all_btn.find((b) => (b.textContent || "").includes(where));
+        if (!btn) {
+          const have = [...host.querySelectorAll("button")]
+            .map((b) => JSON.stringify((b.textContent || "").slice(0, 20)))
+            .join(", ");
+          throw new Error(
+            `“${where}” বোতামটি পাওয়া গেল না · আছে: ${have || "(কিছুই নয়)"}`,
+          );
+        }
+        await act(async () => {
+          btn.click();
+        });
+      } else {
+        const box = [...host.querySelectorAll("textarea, input")].find(
+          (b) => (b.value || "") === where,
+        );
+        if (!box) {
+          const have = [...host.querySelectorAll("textarea, input")]
+            .map((b) => JSON.stringify((b.value || "").slice(0, 24)))
+            .join(", ");
+          throw new Error(
+            `“${where}” ঘরটি পাওয়া গেল না · আছে: ${have || "(কিছুই নয়)"}`,
+          );
+        }
+        await act(async () => {
+          typeInto(box, text);
+        });
+      }
       await settle();
     }
+    /* ⚠️ ঘরের ভেতরের লেখা (input/textarea-এর value) textContent-এ আসে
+       না — অথচ পরিচালক ওটাই দেখেন। তাই দুটোই মিলিয়ে খোঁজা হয়। */
+    const seen =
+      (host.textContent || "") +
+      " " +
+      [...host.querySelectorAll("input, textarea")]
+        .map((b) => b.value || "")
+        .join(" ");
     for (const want of expect) {
-      if (!(host.textContent || "").includes(want))
-        throw new Error(`পর্দায় “${want}” নেই`);
+      if (!seen.includes(want)) throw new Error(`পর্দায় “${want}” নেই`);
     }
     // যা পর্দায় থাকার কথা *নয়* — যেমন উস্তাদের কাছে সম্পাদনার বোতাম
     for (const no of notExpect) {
-      if ((host.textContent || "").includes(no))
-        throw new Error(`পর্দায় “${no}” থাকার কথা নয়`);
+      if (seen.includes(no)) throw new Error(`পর্দায় “${no}” থাকার কথা নয়`);
     }
     if (errs.length) throw new Error(errs[0]);
   } catch (e) {
@@ -192,21 +243,19 @@ export async function run() {
   );
 
   /* ───── কিছুই না থাকার দৃশ্য ───── */
-  setMode("empty");
   await scene(
     "তালিকা — কোনো হেডিং বা দারস নেই",
     <M.LessonsView user={director} courses={courses} />,
-    { expect: ["এখনো দারস পরিকল্পনার কোনো হেডিং নেই"] },
+    { expect: ["এখনো দারস পরিকল্পনার কোনো হেডিং নেই"], mode: "empty" },
   );
   await scene(
     "অগ্রগতি — কোনো শিক্ষার্থী নেই",
     <M.ProgressPanel lesson={LESSON} onClose={nop} />,
-    { expect: ["কোনো শিক্ষার্থী নেই"] },
+    { expect: ["কোনো শিক্ষার্থী নেই"], mode: "empty" },
   );
   await scene("শিক্ষার্থীর দারস — কিছু নেই", <M.StudentLessonsView />, {
-    expect: ["will appear here"],
+    expect: ["will appear here"], mode: "empty",
   });
-  setMode("full");
 
   /* ───── বোতামে চাপ: আসল ব্যবহারের পথ ───── */
   await scene(
@@ -284,6 +333,80 @@ export async function run() {
     "সম্পাদকে টপিক বেছে দেওয়া যায়",
     <M.LessonEditor id={1} canEdit onClose={nop} onChanged={nop} />,
     { expect: ["দারস পরিকল্পনার টপিক", "কোনো টপিকের সাথে যুক্ত নয়"] },
+  );
+
+  /* ───── সংরক্ষণ সত্যিই টেকে কিনা ───── */
+  await scene(
+    "ধাপে লিখে সংরক্ষণ করলে লেখা টেকে",
+    <M.LessonEditor id={1} canEdit onClose={nop} onChanged={nop} />,
+    {
+      steps: [
+        ["click", "খুলুন"],
+        ["type", "Say line 0", "আমার নতুন লেখা"],
+        ["click", "💾 সংরক্ষণ করুন"],
+      ],
+      expect: ["আমার নতুন লেখা", "✓ সংরক্ষিত"],
+      notExpect: ["অসংরক্ষিত"],
+    },
+  );
+  await scene(
+    "দারসের শিরোনাম বদলে সংরক্ষণ করলে টেকে",
+    <M.LessonEditor id={1} canEdit onClose={nop} onChanged={nop} />,
+    {
+      steps: [
+        ["type", "Surah Al-Ikhlas", "নতুন শিরোনাম"],
+        ["click", "💾 সংরক্ষণ করুন"],
+      ],
+      expect: ["নতুন শিরোনাম"],
+      notExpect: ["অসংরক্ষিত"],
+    },
+  );
+
+  await scene(
+    "⚠️ এক ধাপ সংরক্ষণ করলে অন্য ধাপের অসংরক্ষিত লেখা মুছে যায় কিনা",
+    <M.LessonEditor id={1} canEdit onClose={nop} onChanged={nop} />,
+    {
+      steps: [
+        // দুটি ধাপ খুলে দুটোতেই লিখি
+        ["click", "খুলুন"],
+        ["type", "Say line 0", "প্রথম ধাপের লেখা"],
+        ["click", "খুলুন"],
+        ["type", "Say line 1", "দ্বিতীয় ধাপের লেখা"],
+        // এখন কেবল দ্বিতীয়টি সংরক্ষণ করি
+        ["click", "💾 সংরক্ষণ করুন"],
+      ],
+      // ⚠️ প্রথম ধাপের লেখাটি পর্দাতেই থাকা চাই
+      expect: ["প্রথম ধাপের লেখা", "দ্বিতীয় ধাপের লেখা"],
+    },
+  );
+
+  /* ───── ⚠️ সার্ভার যদি না রাখে — লেখা যেন না হারায় ───── */
+  await scene(
+    "সার্ভার না রাখলে ধাপের লেখা পর্দাতেই থাকে",
+    <M.LessonEditor id={1} canEdit onClose={nop} onChanged={nop} />,
+    {
+      steps: [
+        ["click", "খুলুন"],
+        ["type", "Say line 0", "আমার নতুন লেখা"],
+        ["click", "💾 সংরক্ষণ করুন"],
+      ],
+      // লেখাটি রয়ে গেছে, আর "সংরক্ষিত" বলে ভুল আশ্বাস দেওয়া হয়নি
+      // "অসংরক্ষিত" থেকে যাওয়াই প্রমাণ — ভুল আশ্বাস দেওয়া হয়নি
+      expect: ["আমার নতুন লেখা", "অসংরক্ষিত"],
+      mode: "forget",
+    },
+  );
+  await scene(
+    "সার্ভার না রাখলে শিরোনামও পর্দাতেই থাকে",
+    <M.LessonEditor id={1} canEdit onClose={nop} onChanged={nop} />,
+    {
+      steps: [
+        ["type", "Surah Al-Ikhlas", "নতুন শিরোনাম"],
+        ["click", "💾 সংরক্ষণ করুন"],
+      ],
+      expect: ["নতুন শিরোনাম"],
+      mode: "forget",
+    },
   );
 
   /* ───── ধাপ ৪ — স্ক্রিপ্ট থেকে টগলের লেখা ───── */

@@ -17616,8 +17616,16 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
+  /* ⚠️ silent — সংরক্ষণের পর নতুন করে আনার সময় "লোড হচ্ছে" পর্দা
+     দেখানো যাবে না।
+
+     আগে দেখানো হতো, আর তাতে পুরো ফর্মটি পর্দা থেকে সরে গিয়ে আবার তৈরি
+     হতো — ফলে প্রতিটি ধাপের কার্ডও নতুন করে বসত এবং তাদের ভেতরে লেখা
+     *অসংরক্ষিত* কথা মুছে যেত। পরিচালক দুটো ধাপে লিখে একটা সংরক্ষণ করলেই
+     অন্যটার লেখা হারিয়ে যেত — "সেভ চাপলে সেভ হচ্ছে দেখায়, বাস্তবে হয় না,
+     মুছে যায়"। প্রথমবার লোডের সময় পর্দাটা ঠিকই দেখানো হয়। */
+  const load = async (silent) => {
+    if (!silent) setLoading(true);
     try {
       const l = await api.lesson(id);
       setLesson(l);
@@ -17629,7 +17637,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
     } catch (e) {
       notice("দারসটি আনা যায়নি — " + (e?.data?.error || e?.message || ""));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
   useEffect(() => {
@@ -17657,14 +17665,33 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
   const setH = (k, v) => setDraft((x) => ({ ...(x || lesson), [k]: v }));
   const headDirty = !!draft && HEAD_FIELDS.some((k) => head[k] !== lesson[k]);
 
+  /* ⚠️ সংরক্ষণের পর সার্ভার যা ফেরত দেয় তার সাথে আমরা যা পাঠিয়েছি তা
+     মিলিয়ে দেখি। না মিললে পাতাটি নতুন করে লোড করা হয় না — তাহলে
+     পরিচালকের লেখা পর্দাতেই থেকে যায়, আর তাঁকে স্পষ্ট করে বলা হয়।
+     নইলে "সংরক্ষিত" দেখিয়ে লেখাটা চুপচাপ হারিয়ে যেতে পারত। */
+  const kept = (sent, got, keys) =>
+    !got || keys.every((k) => (got[k] ?? "") === (sent[k] ?? ""));
+
+  const STEP_FIELDS = ["section", "teacher_says", "teacher_does",
+                       "student_does", "expected", "correction", "note",
+                       "seconds"];
+
   const saveHead = async () => {
     setBusy(true);
     try {
-      await api.editLesson(
-        lesson.id,
-        Object.fromEntries(HEAD_FIELDS.map((k) => [k, head[k]])),
-      );
-      await load();
+      const body = Object.fromEntries(HEAD_FIELDS.map((k) => [k, head[k]]));
+      const got = await api.editLesson(lesson.id, body);
+      // ⚠️ objectives ছাঁকনিতে একটু বদলাতে পারে (clean_html), তাই সেটি
+      // মেলানো হয় না — বাকিগুলো হুবহু মিলতে হবে
+      const check = HEAD_FIELDS.filter((k) => k !== "objectives");
+      if (!kept(body, got, check)) {
+        notice(
+          "⚠️ সার্ভার তথ্যটি রাখেনি — আপনার লেখা পর্দায় রেখে দেওয়া হলো। " +
+            "পাতাটি একবার রিফ্রেশ করে আবার চেষ্টা করুন।",
+        );
+        return;
+      }
+      await load(true);
       onChanged && onChanged();
       notice("✅ দারসের তথ্য সংরক্ষিত");
     } catch (e) {
@@ -17713,19 +17740,20 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
   };
 
   const saveStep = async (d) => {
+    const body = {
+      ...Object.fromEntries(STEP_FIELDS.map((k) => [k, d[k]])),
+      slide: d.slide || EMPTY_SLIDE,
+    };
     try {
-      await api.editLessonStep(d.id, {
-        section: d.section,
-        teacher_says: d.teacher_says,
-        teacher_does: d.teacher_does,
-        student_does: d.student_does,
-        expected: d.expected,
-        correction: d.correction,
-        note: d.note,
-        seconds: d.seconds,
-        slide: d.slide || EMPTY_SLIDE,
-      });
-      await load();
+      const got = await api.editLessonStep(d.id, body);
+      if (!kept(body, got, STEP_FIELDS)) {
+        notice(
+          "⚠️ সার্ভার লেখাটি রাখেনি — আপনার লেখা পর্দায় রেখে দেওয়া হলো। " +
+            "পাতাটি একবার রিফ্রেশ করে আবার চেষ্টা করুন।",
+        );
+        return;
+      }
+      await load(true);
       notice("✅ ধাপটি সংরক্ষিত");
     } catch (e) {
       notice("সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || ""));
@@ -17739,7 +17767,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
         section: "নতুন ধাপ",
         slide: { ...EMPTY_SLIDE },
       });
-      await load();
+      await load(true);
       onChanged && onChanged();
     } catch (e) {
       notice("ধাপ যোগ করা যায়নি — " + (e?.data?.error || e?.message || ""));
@@ -17755,7 +17783,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
       async () => {
         try {
           await api.delLessonStep(st.id);
-          await load();
+          await load(true);
           onChanged && onChanged();
           notice("🗑️ ধাপটি মুছে ফেলা হয়েছে");
         } catch (e) {
@@ -17773,7 +17801,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
     [ids[i], ids[j]] = [ids[j], ids[i]];
     try {
       await api.reorderLessonSteps(ids);
-      await load();
+      await load(true);
     } catch (e) {
       notice("ক্রম বদলানো যায়নি — " + (e?.data?.error || e?.message || ""));
     }

@@ -68,6 +68,21 @@ const PROGRESS = [
 let MODE = "full";
 export const setMode = (m) => { MODE = m; };
 
+/* ⚠️ নকলটি এখন তথ্য মনে রাখে, তাই এক দৃশ্যের বদল পরের দৃশ্যে থেকে যেত।
+   প্রতিটি দৃশ্যের আগে reset() ডেকে সব আগের অবস্থায় ফেরানো হয়। */
+const PRISTINE = JSON.stringify(LESSON);
+export const reset = () => {
+  MODE = "full";
+  const fresh = JSON.parse(PRISTINE);
+  Object.keys(LESSON).forEach((k) => delete LESSON[k]);
+  Object.assign(LESSON, fresh);
+};
+
+/* ⚠️ সামান্য দেরি — আসল সার্ভারের মতো।
+   সাথে সাথে উত্তর দিলে React মাঝের "লোড হচ্ছে" পর্দাটা কখনো আঁকেই না,
+   ফলে যে বাগগুলো ওই মুহূর্তে ঘটে সেগুলো পরীক্ষাতেই ধরা পড়ত না। */
+const wait = () => new Promise((r) => setTimeout(r, 0));
+
 export const api = {
   lessons: async () => (MODE === "empty" ? [] : [
     LESSON,
@@ -98,18 +113,31 @@ export const api = {
   reorderSections: async () => ({}),
   saveSectionTopics: async () => ({}),
   ensureSections: async () => SECTIONS,
-  lesson: async (id) => (Number(id) === 2 ? EMPTY_LESSON : LESSON),
+  lesson: async (id) => {
+    await wait();
+    return Number(id) === 2 ? EMPTY_LESSON : JSON.parse(JSON.stringify(LESSON));
+  },
   lessonStage: async () => ({
     id: 1, title: LESSON.title, title_ar: LESSON.title_ar,
     steps: LESSON.steps.map((s) => ({ id: s.id, order: s.order, slide: s.slide })),
   }),
   addLesson: async () => LESSON,
-  editLesson: async () => LESSON,
+  // সার্ভারের মতোই — যা পাঠানো হয় তা সত্যিই বসে
+  editLesson: async (id, patch) => {
+    if (MODE !== "forget") Object.assign(LESSON, patch);
+    return JSON.parse(JSON.stringify(LESSON));
+  },
   delLesson: async () => ({}),
   duplicateLesson: async () => ({ ...LESSON, id: 4 }),
   seedSampleLesson: async () => LESSON,
   addLessonStep: async () => mkStep(9),
-  editLessonStep: async () => mkStep(0),
+  editLessonStep: async (id, patch) => {
+    const st = LESSON.steps.find((x) => x.id === Number(id));
+    // ⚠️ "forget" মোড — সার্ভার ২০০ দেয় কিন্তু কিছুই রাখে না।
+    // পরিচালক ঠিক এটাই দেখেছিলেন: "সেভ হচ্ছে দেখায়, বাস্তবে হয় না"।
+    if (st && MODE !== "forget") Object.assign(st, patch);
+    return JSON.parse(JSON.stringify(st || mkStep(0)));
+  },
   delLessonStep: async () => ({}),
   reorderLessonSteps: async () => ({ ok: true }),
   lessonProgress: async () => (MODE === "empty" ? [] : PROGRESS),
