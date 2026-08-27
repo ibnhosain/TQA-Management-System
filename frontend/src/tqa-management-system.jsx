@@ -17020,6 +17020,219 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
    না নামলে আগের Amiri, তারপর সিস্টেমের serif — লেখা কখনোই হারাবে না। */
 const QURAN_FONT = "'Amiri Quran', 'Amiri', serif";
 
+/* ═══════════════ শিশুদের পর্দার সাজ ═══════════════
+
+   ৫ বছরের বাচ্চা পর্দায় তাকিয়ে থাকবে কিনা, তার অনেকটাই নির্ভর করে
+   পর্দাটা দেখতে কেমন তার উপর। তাই প্রতিটি ধরনের স্লাইডের নিজস্ব রঙ ও
+   নকশা — শোনার সময় শান্ত নীল ঢেউ, বলার সময় উষ্ণ আলো, শাবাশে সোনালি
+   তারা, খেলায় রঙিন কনফেত্তি।
+
+   ⚠️ সব নকশা কোডে আঁকা (SVG) — কোনো ছবি নামাতে হয় না। তাই ইন্টারনেট
+   ধীর হলেও পর্দা সাথে সাথেই ওঠে, আর একটি বাইটও বাড়তি খরচ হয় না।
+   ⚠️ প্রাণীর ছবি নেই — তারা, চাঁদ, আলো, জ্যামিতিক নকশা, ঢেউ।
+   ⚠️ নকশা সবসময় লেখার পেছনে ও হালকা, যাতে আয়াত পড়তে এক বিন্দু অসুবিধা
+   না হয়। */
+
+/* ধরন → [পটভূমির রং, নকশার ধরন, নকশার রং] */
+const SLIDE_ART = {
+  title: ["linear-gradient(160deg,#0d3b26,#11593a 55%,#1b7a52)", "stars", "#f0c355"],
+  verse: ["linear-gradient(160deg,#0b3a2c,#0f4d3a 60%,#12603f)", "frame", "#e9c46a"],
+  letters: ["linear-gradient(160deg,#123f5e,#17557d 60%,#1d6b9c)", "bubbles", "#8fd3f4"],
+  listen: ["linear-gradient(160deg,#0f3a52,#14506f 60%,#1a6a92)", "waves", "#7fd1e8"],
+  repeat: ["linear-gradient(160deg,#123f5e,#155b7a 60%,#1a7396)", "waves", "#9fe0f0"],
+  your_turn: ["linear-gradient(160deg,#5a2f0b,#7d4310 55%,#a05a17)", "glow", "#ffd08a"],
+  question: ["linear-gradient(160deg,#3a2258,#4d2d72 60%,#5f3890)", "sparkles", "#d9b3ff"],
+  meaning: ["linear-gradient(160deg,#123f28,#1a5c3a 60%,#22764c)", "glow", "#9ff0c4"],
+  visual: ["linear-gradient(160deg,#1a2b3c,#24405a 60%,#2d5273)", "frame", "#cfe3f5"],
+  activity: ["linear-gradient(160deg,#5c1f4a,#7a2a63 55%,#98357c)", "confetti", "#ffd9f0"],
+  reminder: ["linear-gradient(160deg,#08243d,#0d3559 60%,#124875)", "moon", "#ffe9a8"],
+  praise: ["linear-gradient(160deg,#6b4a05,#8f6408 50%,#b8830c)", "burst", "#fff2b8"],
+  review: ["linear-gradient(160deg,#14464a,#1a5f65 60%,#217a82)", "waves", "#a8e6e6"],
+  homework: ["linear-gradient(160deg,#123f28,#19583a 60%,#1f7049)", "stars", "#ffe9a8"],
+  end: ["linear-gradient(160deg,#4a2410,#6b3a18 55%,#8c5220)", "burst", "#ffd8a0"],
+  blank: ["#0b1f16", "none", "#0b1f16"],
+};
+
+const artOf = (kind) => SLIDE_ART[kind] || SLIDE_ART.title;
+
+/* কেউ কেউ (বা তাঁদের যন্ত্র) নড়াচড়া কম চান — তখন নকশা থাকে, নড়ে না।
+   ব্রাউজার না চিনলে আগের মতোই নড়বে। */
+let CALM = false;
+try {
+  CALM = !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+} catch (e) {
+  /* উপেক্ষা */
+}
+
+/* নড়াচড়ার ট্যাগ — শান্ত মোডে কিছুই আঁকা হয় না */
+const Move = (p) => (CALM ? null : <animate {...p} />);
+
+/* নকশাগুলো — সবই SVG, তাই যত বড় পর্দাই হোক ঝাপসা হয় না */
+function SlideArt({ kind, small }) {
+  const [, art, tint] = artOf(kind);
+  if (art === "none") return null;
+  const common = {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    pointerEvents: "none",
+  };
+  const o = small ? 0.5 : 0.75; // ছোট নমুনায় আরও হালকা
+
+  if (art === "stars" || art === "moon") {
+    const dots = [
+      [12, 18, 2.6], [26, 9, 1.7], [40, 22, 2.1], [62, 12, 1.6],
+      [78, 24, 2.4], [90, 14, 1.8], [8, 62, 2], [22, 78, 1.6],
+      [45, 88, 2.2], [68, 74, 1.7], [84, 84, 2.5], [94, 56, 1.6],
+      [54, 6, 1.4], [34, 46, 1.3], [72, 44, 1.5],
+    ];
+    return (
+      <svg style={common} viewBox="0 0 100 100" preserveAspectRatio="none"
+           aria-hidden="true">
+        {art === "moon" && (
+          <g opacity={o * 0.9}>
+            <circle cx="82" cy="20" r="9" fill={tint} />
+            <circle cx="77" cy="17" r="8" fill="#08243d" />
+          </g>
+        )}
+        {dots.map(([x, y, r], i) => (
+          <circle key={i} cx={x} cy={y} r={r * 0.55} fill={tint}
+                  opacity={o * (0.35 + (i % 4) * 0.18)}>
+            <Move attributeName="opacity"
+                     values={`${o * 0.25};${o * 0.85};${o * 0.25}`}
+                     dur={`${2.4 + (i % 5) * 0.7}s`} repeatCount="indefinite" />
+          </circle>
+        ))}
+      </svg>
+    );
+  }
+
+  if (art === "waves") {
+    return (
+      <svg style={common} viewBox="0 0 100 100" preserveAspectRatio="none"
+           aria-hidden="true">
+        {[0, 1, 2, 3].map((i) => (
+          <circle key={i} cx="50" cy="50" r={14 + i * 13} fill="none"
+                  stroke={tint} strokeWidth="0.5"
+                  opacity={o * (0.32 - i * 0.06)}>
+            <Move attributeName="r"
+                     values={`${14 + i * 13};${18 + i * 13};${14 + i * 13}`}
+                     dur={`${3 + i}s`} repeatCount="indefinite" />
+          </circle>
+        ))}
+      </svg>
+    );
+  }
+
+  if (art === "glow") {
+    return (
+      <svg style={common} viewBox="0 0 100 100" preserveAspectRatio="none"
+           aria-hidden="true">
+        <defs>
+          <radialGradient id={`g-${kind}`}>
+            <stop offset="0%" stopColor={tint} stopOpacity={o * 0.42} />
+            <stop offset="100%" stopColor={tint} stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <ellipse cx="50" cy="46" rx="46" ry="40" fill={`url(#g-${kind})`}>
+          <Move attributeName="ry" values="38;44;38" dur="5s"
+                   repeatCount="indefinite" />
+        </ellipse>
+      </svg>
+    );
+  }
+
+  if (art === "bubbles" || art === "confetti") {
+    const bits = [
+      [10, 22, 4], [24, 68, 3], [38, 14, 5], [52, 82, 3.5], [66, 30, 4.5],
+      [80, 70, 3], [92, 26, 4], [16, 86, 3.5], [46, 50, 2.5], [74, 90, 3],
+    ];
+    return (
+      <svg style={common} viewBox="0 0 100 100" preserveAspectRatio="none"
+           aria-hidden="true">
+        {bits.map(([x, y, r], i) =>
+          art === "bubbles" ? (
+            <circle key={i} cx={x} cy={y} r={r * 0.7} fill="none"
+                    stroke={tint} strokeWidth="0.6" opacity={o * 0.4}>
+              <Move attributeName="cy" values={`${y};${y - 4};${y}`}
+                       dur={`${4 + (i % 4)}s`} repeatCount="indefinite" />
+            </circle>
+          ) : (
+            <rect key={i} x={x} y={y} width={r * 0.9} height={r * 0.5}
+                  rx="0.6" fill={tint} opacity={o * 0.45}
+                  transform={`rotate(${i * 37} ${x} ${y})`}>
+              <Move attributeName="opacity"
+                       values={`${o * 0.2};${o * 0.6};${o * 0.2}`}
+                       dur={`${3 + (i % 3)}s`} repeatCount="indefinite" />
+            </rect>
+          ),
+        )}
+      </svg>
+    );
+  }
+
+  if (art === "sparkles") {
+    const st = [[18, 26], [72, 18], [86, 62], [30, 76], [56, 40], [10, 58]];
+    return (
+      <svg style={common} viewBox="0 0 100 100" preserveAspectRatio="none"
+           aria-hidden="true">
+        {st.map(([x, y], i) => (
+          <g key={i} opacity={o * 0.5}>
+            <path
+              d={`M${x} ${y - 4} L${x + 1} ${y - 1} L${x + 4} ${y} L${x + 1} ${y + 1} L${x} ${y + 4} L${x - 1} ${y + 1} L${x - 4} ${y} L${x - 1} ${y - 1} Z`}
+              fill={tint}
+            >
+              <Move attributeName="opacity" values="0.3;1;0.3"
+                       dur={`${2.6 + i * 0.5}s`} repeatCount="indefinite" />
+            </path>
+          </g>
+        ))}
+      </svg>
+    );
+  }
+
+  if (art === "burst") {
+    return (
+      <svg style={common} viewBox="0 0 100 100" preserveAspectRatio="none"
+           aria-hidden="true">
+        {Array.from({ length: 12 }, (_, i) => {
+          const a = (i * Math.PI) / 6;
+          return (
+            <line key={i} x1={50 + Math.cos(a) * 16} y1={50 + Math.sin(a) * 16}
+                  x2={50 + Math.cos(a) * 40} y2={50 + Math.sin(a) * 40}
+                  stroke={tint} strokeWidth="0.7" strokeLinecap="round"
+                  opacity={o * 0.32}>
+              <Move attributeName="opacity"
+                       values={`${o * 0.15};${o * 0.5};${o * 0.15}`}
+                       dur={`${2.8 + (i % 4) * 0.6}s`} repeatCount="indefinite" />
+            </line>
+          );
+        })}
+      </svg>
+    );
+  }
+
+  /* frame — মুসহাফের কিনারার মতো জ্যামিতিক নকশা */
+  return (
+    <svg style={common} viewBox="0 0 100 100" preserveAspectRatio="none"
+         aria-hidden="true">
+      <rect x="2.5" y="3" width="95" height="94" rx="4" fill="none"
+            stroke={tint} strokeWidth="0.5" opacity={o * 0.5} />
+      <rect x="4.5" y="5" width="91" height="90" rx="3" fill="none"
+            stroke={tint} strokeWidth="0.25" opacity={o * 0.35} />
+      {[[7, 8], [93, 8], [7, 92], [93, 92]].map(([x, y], i) => (
+        <g key={i} opacity={o * 0.55}>
+          <path
+            d={`M${x} ${y - 3.2} L${x + 2.2} ${y - 1} L${x + 3.2} ${y} L${x + 2.2} ${y + 1} L${x} ${y + 3.2} L${x - 2.2} ${y + 1} L${x - 3.2} ${y} L${x - 2.2} ${y - 1} Z`}
+            fill={tint}
+          />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 const LESSON_KINDS = [
   ["memorization", "মুখস্থ (হিফজ)"],
   ["qaida", "কায়েদা"],
@@ -17087,7 +17300,7 @@ function SlidePreview({ slide, small }) {
   return (
     <div
       style={{
-        background: C.emeraldD,
+        background: artOf(sl.kind)[0],
         color: "#fff",
         borderRadius: 14,
         padding: small ? "18px 14px" : "28px 20px",
@@ -17096,14 +17309,29 @@ function SlidePreview({ slide, small }) {
         placeItems: "center",
         textAlign: "center",
         gap: 10,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
+      <SlideArt kind={sl.kind} small={small} />
       {empty ? (
-        <div style={{ color: "#ffffff66", fontSize: 13 }}>
+        <div
+          style={{ color: "#ffffff66", fontSize: 13, position: "relative" }}
+        >
           এই ধাপে শিক্ষার্থীর পর্দা এখনো খালি
         </div>
       ) : (
-        <div style={{ display: "grid", gap: 12, width: "100%" }}>
+        // ⚠️ নকশাটি absolute, তাই লেখাকে relative করে উপরে তুলতে হয় —
+        // নইলে আয়াতের উপরেই নকশা পড়ে যেত
+        <div
+          style={{
+            display: "grid",
+            gap: 12,
+            width: "100%",
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
           {sl.heading && (
             <div
               style={{
@@ -19113,11 +19341,14 @@ function StudentLessonPlayer({ lessonId, title, onClose }) {
         position: "fixed",
         inset: 0,
         zIndex: 120,
-        background: C.emeraldD,
+        // পর্দার রংও স্লাইড অনুযায়ী — শিক্ষার্থী ক্লাসে যা দেখেছে, তাই
+        background: artOf(steps[i]?.slide?.kind)[0],
+        transition: "background 700ms ease",
         color: "#fff",
         display: "flex",
         flexDirection: "column",
         fontFamily: "inherit",
+        overflow: "hidden",
       }}
     >
       <div
@@ -19127,6 +19358,8 @@ function StudentLessonPlayer({ lessonId, title, onClose }) {
           gap: 10,
           padding: "10px 14px",
           borderBottom: "1px solid #ffffff1f",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         <div style={{ flex: 1, fontWeight: 800, fontSize: 14.5 }}>{title}</div>
@@ -19165,7 +19398,10 @@ function StudentLessonPlayer({ lessonId, title, onClose }) {
         ) : !stage ? (
           <div style={{ color: "#ffffff88" }}>Loading…</div>
         ) : (
-          <StageSlide slide={steps[i]?.slide} />
+          <>
+            <SlideArt kind={steps[i]?.slide?.kind} />
+            <StageSlide slide={steps[i]?.slide} />
+          </>
         )}
       </div>
 
@@ -19852,6 +20088,8 @@ function StageSlide({ slide }) {
         maxWidth: 1200,
         textAlign: "center",
         padding: "0 4vw",
+        position: "relative",
+        zIndex: 1,
       }}
     >
       {sl.heading && (
@@ -20010,7 +20248,10 @@ export function PresentWindow() {
       onDoubleClick={full}
       style={{
         minHeight: "100vh",
-        background: C.emeraldD,
+        // ⚠️ পটভূমি স্লাইডের ধরন অনুযায়ী বদলায় — শোনার সময় শান্ত নীল,
+        // শাবাশে সোনালি। ধীরে বদলায় যাতে চোখে ধাক্কা না লাগে।
+        background: artOf(cur?.slide?.kind)[0],
+        transition: "background 700ms ease",
         color: "#fff",
         display: "grid",
         placeItems: "center",
@@ -20019,6 +20260,7 @@ export function PresentWindow() {
         overflow: "hidden",
       }}
     >
+      {!ended && !err && stage && <SlideArt kind={cur?.slide?.kind} />}
       {/* পর্দার নিচে সরু অগ্রগতির রেখা — বাচ্চা বুঝতে পারে কতটা বাকি */}
       {steps.length > 0 && !ended && (
         <div
@@ -24134,6 +24376,9 @@ export default function App() {
 export {
   SlidePreview,
   StageSlide,
+  SlideArt,
+  SLIDE_KINDS,
+  artOf,
   StepCard,
   LessonRow,
   LessonEditor,

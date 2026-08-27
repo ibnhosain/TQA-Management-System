@@ -335,6 +335,38 @@ export async function run() {
     { expect: ["দারস পরিকল্পনার টপিক", "কোনো টপিকের সাথে যুক্ত নয়"] },
   );
 
+  /* ───── শিশুদের পর্দার সাজ ───── */
+  for (const [kind, label] of M.SLIDE_KINDS) {
+    await scene(
+      `স্লাইডের সাজ — ${label}`,
+      <M.SlidePreview
+        slide={{
+          kind,
+          heading: "শিরোনাম",
+          arabic: "قُلْ هُوَ ٱللَّهُ أَحَدٌ",
+          translit: "Qul huwal-lahu ahad",
+          text: "পর্দার লেখা",
+          image: "",
+        }}
+      />,
+      // ⚠️ নকশা যেন লেখাকে ঢেকে না দেয় — সবই পর্দায় থাকা চাই
+      { expect: ["শিরোনাম", "قُلْ هُوَ ٱللَّهُ أَحَدٌ", "পর্দার লেখা"] },
+    );
+    const [bg, art] = M.artOf(kind);
+    if (!bg) throw new Error(`${kind} — পটভূমির রং নেই`);
+    if (!art) throw new Error(`${kind} — নকশার ধরন নেই`);
+  }
+  await scene(
+    "খালি পর্দায় সাজ থাকে না",
+    <M.SlidePreview slide={{ kind: "blank", heading: "", arabic: "", text: "" }} />,
+    { expect: ["এখনো খালি"] },
+  );
+  await scene(
+    "অচেনা ধরনেও ভাঙে না",
+    <M.SlidePreview slide={{ kind: "zzz", heading: "ক", arabic: "", text: "" }} />,
+    { expect: ["ক"] },
+  );
+
   /* ───── সংরক্ষণ সত্যিই টেকে কিনা ───── */
   await scene(
     "ধাপে লিখে সংরক্ষণ করলে লেখা টেকে",
