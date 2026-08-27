@@ -1698,11 +1698,12 @@ class LessonViewSet(viewsets.ModelViewSet):
     """
     serializer_class = LessonSerializer
     permission_classes = [ReadAllWriteDirector]
-    filterset_fields = ["course", "status", "kind"]
+    filterset_fields = ["course", "status", "kind", "topic"]
 
     def get_queryset(self):
         u = self.request.user
-        qs = Lesson.objects.select_related("course")
+        # topic__section — পাতাটি হেডিং ধরে সাজায়, তাই দুটোই আগেভাগে আনি
+        qs = Lesson.objects.select_related("course", "topic", "topic__section")
         if self.action == "list":
             # ⚠️ তালিকায় ধাপগুলো পাঠানোই হয় না, তাই টেনে আনারও দরকার নেই।
             # আগে ৪টি সংস্করণের ১০০টি ধাপ ও ১০০টি স্লাইড কেবল সংখ্যাটা
@@ -1755,9 +1756,15 @@ class LessonViewSet(viewsets.ModelViewSet):
             return Response({"error": "কোর্সটি পাওয়া যায়নি"}, status=400)
         # replace=True হলে পুরনো ধাপগুলো মুছে নতুন লেখা বসে; দারসের সারিটি
         # থেকেই যায়, তাই শিক্ষার্থীদের অগ্রগতি হারায় না
+        # topic দিলে নমুনাটি ওই টপিকের স্ক্রিপ্ট হিসেবেই বসে
+        topic = _by_pk(LectureTopic, request.data.get("topic"))
+        if request.data.get("topic") and not topic:
+            return Response({"error": "টপিকটি পাওয়া যায়নি"}, status=400)
+        if topic and topic.lecture.course_id != course.id:
+            return Response({"error": "টপিকটি এই কোর্সের নয়"}, status=400)
         lesson, existed = create_sample(
             Lesson, LessonStep, StepSlide, course, key,
-            replace=bool(request.data.get("replace")))
+            replace=bool(request.data.get("replace")), topic=topic)
         ctx = self.get_serializer_context()
         ctx["with_steps"] = True
         data = LessonSerializer(lesson, context=ctx).data
@@ -1806,6 +1813,8 @@ class LessonViewSet(viewsets.ModelViewSet):
             age_from=age_from,
             age_to=age_to,
             duration_min=src.duration_min, objectives=src.objectives,
+            # একই বিষয়ের আলাদা বয়সের সংস্করণ — তাই একই টপিকেই থাকে
+            topic=src.topic,
             status=Lesson.Status.DRAFT,
             order=(last.order + 1) if last else 0,
         )

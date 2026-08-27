@@ -894,7 +894,7 @@ SAMPLES = {"ikhlas": IKHLAS, "qaida": QAIDA}
 
 
 def create_sample(Lesson, LessonStep, StepSlide, course, key,
-                  status="published", replace=False):
+                  status="published", replace=False, topic=None):
     """নমুনা দারসটি ওই কোর্সে তৈরি করে ফেরত দেয় — (দারস, আগে থেকে ছিল কিনা)।
 
     মডেলগুলো বাইরে থেকে নেওয়া হয় — মাইগ্রেশন ঐতিহাসিক মডেল পাঠায়, ভিউ
@@ -908,7 +908,13 @@ def create_sample(Lesson, LessonStep, StepSlide, course, key,
     শিক্ষার্থীদের অগ্রগতি (LessonProgress) অক্ষত থাকে।
     """
     data = SAMPLES[key]
-    existing = Lesson.objects.filter(course=course, title=data["title"]).first()
+    # টপিক দেওয়া থাকলে "আগে থেকে আছে কিনা" ওই টপিক ধরেই দেখি — একই নমুনা
+    # আলাদা আলাদা টপিকে বসাতে চাইলে যেন আটকে না যায়
+    if topic is not None:
+        existing = Lesson.objects.filter(topic=topic).first()
+    else:
+        existing = Lesson.objects.filter(course=course,
+                                         title=data["title"]).first()
     if existing and not replace:
         return existing, True
 
@@ -926,6 +932,7 @@ def create_sample(Lesson, LessonStep, StepSlide, course, key,
             kind=data["kind"], age_from=data["age_from"], age_to=data["age_to"],
             duration_min=data["duration_min"], objectives=data["objectives"],
             status=status, order=(last.order + 1) if last else 0,
+            topic=topic,
         )
     for i, st in enumerate(data["steps"]):
         step = LessonStep.objects.create(

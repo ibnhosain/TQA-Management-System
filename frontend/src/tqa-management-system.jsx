@@ -17594,6 +17594,8 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
 
 /* দারসের নিজের ঘরগুলো — "বদলেছে কিনা" আর "কী কী পাঠাব", দুটোই এখান থেকে */
 const HEAD_FIELDS = [
+  // কোন টপিকের স্ক্রিপ্ট — এতেই পাতায় নিজের হেডিংয়ের নিচে বসে
+  "topic",
   "title",
   "title_ar",
   "kind",
@@ -17609,6 +17611,8 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
   const [lesson, setLesson] = useState(null);
   // উপরের ঘরগুলোর খসড়া — পরিচালক কিছু বদলানোর আগ পর্যন্ত null
   const [draft, setDraft] = useState(null);
+  // দারস পরিকল্পনার হেডিং ও টপিক — কোন টপিকের স্ক্রিপ্ট তা বেছে দিতে
+  const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -17617,6 +17621,11 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
     try {
       const l = await api.lesson(id);
       setLesson(l);
+      // টপিকের তালিকা — না এলেও সম্পাদনা আটকায় না
+      api
+        .lessonSections(l.course)
+        .then((d) => setSections(d || []))
+        .catch(() => setSections([]));
     } catch (e) {
       notice("দারসটি আনা যায়নি — " + (e?.data?.error || e?.message || ""));
     } finally {
@@ -17872,6 +17881,37 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
             </select>
           </div>
         </div>
+        {/* দারস পরিকল্পনার কোন টপিকের স্ক্রিপ্ট — বেছে দিলে পাতায় ওই
+            হেডিংয়ের নিচে চলে যায় */}
+        <div style={{ marginBottom: 10 }}>
+          <label style={S.label}>দারস পরিকল্পনার টপিক</label>
+          <select
+            style={{ ...S.input, maxWidth: 520 }}
+            disabled={!canEdit}
+            value={head.topic || ""}
+            onChange={(e) =>
+              setH("topic", e.target.value ? Number(e.target.value) : null)
+            }
+          >
+            <option value="">— কোনো টপিকের সাথে যুক্ত নয় —</option>
+            {sections.map((sec) => (
+              <optgroup key={sec.id} label={sec.name}>
+                {(sec.topics || []).map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.text}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          {sections.length === 0 && (
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+              এই কোর্সে এখনো কোনো টপিক নেই — “📋 লেকচার প্ল্যান” পাতায়
+              সাজিয়ে নিলে এখানে চলে আসবে।
+            </div>
+          )}
+        </div>
+
         <label style={S.label}>
           কাঙ্ক্ষিত ফল, মাপকাঠি ও পুনরাবৃত্তির পরিকল্পনা — কেবল উস্তাদ দেখবেন
         </label>
@@ -18051,30 +18091,177 @@ function TeachFromClass({ courseId, label }) {
   );
 }
 
-/* দারসের তালিকা ও সম্পাদক */
+/* ⚠️ ইচ্ছা করেই NewScriptModal-এর বাইরে। রেন্ডারের ভেতরে কম্পোনেন্ট
+   বানালে প্রতি রেন্ডারে সেটি নতুন ধরন হয়ে যায় — React পুরনোটি সরিয়ে
+   নতুন বসায়। */
+const ScriptChoice = ({ title, sub, busy, onPick }) => (
+  <button
+    disabled={busy}
+    onClick={onPick}
+    style={{
+      ...S.card,
+      padding: 12,
+      textAlign: "left",
+      cursor: busy ? "default" : "pointer",
+      fontFamily: "inherit",
+      border: `1.5px solid ${C.emerald}`,
+      opacity: busy ? 0.6 : 1,
+    }}
+  >
+    <div style={{ fontWeight: 800, color: C.text }}>{title}</div>
+    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{sub}</div>
+  </button>
+);
+
+/* টপিকে এখনো স্ক্রিপ্ট নেই — কীভাবে শুরু করবেন */
+function NewScriptModal({ topic, onClose, onPick }) {
+  const [busy, setBusy] = useState(false);
+  const go = async (how) => {
+    setBusy(true);
+    try {
+      await onPick(how);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal title={`✍️ স্ক্রিপ্ট লিখুন — ${topic.text}`} onClose={onClose}>
+      <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.8, marginBottom: 12 }}>
+        এই টপিকের ক্লাস স্ক্রিপ্ট তৈরি হবে। কীভাবে শুরু করবেন?
+      </div>
+      <div style={{ display: "grid", gap: 8 }}>
+        <ScriptChoice
+          busy={busy}
+          onPick={() => go("blank")}
+          title="🗒️ খালি থেকে শুরু করি"
+          sub="নিজের মতো করে ধাপে ধাপে লিখবেন"
+        />
+        <ScriptChoice
+          busy={busy}
+          onPick={() => go("ikhlas")}
+          title="📥 নমুনা — সূরা আল-ইখলাস (মুখস্থ)"
+          sub="২৫ ধাপ · ৫–৭ বছর · পড়ে দেখে নিজের মতো বদলে নিতে পারবেন"
+        />
+        <ScriptChoice
+          busy={busy}
+          onPick={() => go("qaida")}
+          title="📥 নমুনা — Noorani Qaida দারস ১ (কায়েদা)"
+          sub="২৪ ধাপ · প্রথম সাত হরফ · ৫–৭ বছর"
+        />
+      </div>
+    </Modal>
+  );
+}
+
+/* একটি হেডিং ও তার নিচের টপিকগুলো — লেকচার প্ল্যানের মতোই সাজানো।
+   ⚠️ এখানে কভার/বাদ/রিসেটের টিক নেই — সেটি লেকচার প্ল্যানেরই কাজ।
+   টপিকে চাপলে তার ক্লাস স্ক্রিপ্ট খোলে। */
+function SectionBlock({ section, lessons, prog, canEdit, rowProps, onNew }) {
+  const topics = section.topics || [];
+  const scriptsOf = (t) => lessons.filter((l) => l.topic === t.id);
+  const done = topics.filter((t) => scriptsOf(t).length).length;
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "8px 12px",
+          background: C.emerald,
+          color: "#fff",
+          borderRadius: "12px 12px 0 0",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ fontWeight: 800, fontSize: 15, flex: 1, minWidth: 140 }}>
+          {section.name}
+        </div>
+        <span style={{ fontSize: 12, color: "#ffffffcc" }}>
+          {bn(done)}/{bn(topics.length)} টপিকে স্ক্রিপ্ট আছে
+        </span>
+      </div>
+
+      <div
+        style={{
+          border: `1px solid ${C.line}`,
+          borderTop: "none",
+          borderRadius: "0 0 12px 12px",
+          padding: 10,
+          display: "grid",
+          gap: 8,
+          background: "#fff",
+        }}
+      >
+        {topics.length === 0 && (
+          <div style={{ color: C.muted, fontSize: 13, padding: "6px 4px" }}>
+            এই হেডিংয়ের নিচে এখনো কোনো টপিক নেই।
+          </div>
+        )}
+
+        {topics.map((t) => {
+          const mine = scriptsOf(t);
+          if (mine.length)
+            return (
+              <LessonRow
+                key={t.id}
+                group={{ title: t.text, items: mine }}
+                prog={prog}
+                canEdit={canEdit}
+                {...rowProps}
+              />
+            );
+          return (
+            <div
+              key={t.id}
+              style={{
+                ...S.card,
+                padding: "10px 14px",
+                display: "flex",
+                gap: 10,
+                alignItems: "center",
+                flexWrap: "wrap",
+                background: C.cream,
+                border: `1px dashed ${C.line}`,
+                boxShadow: "none",
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <div style={{ fontWeight: 700, color: C.text }}>{t.text}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>
+                  এখনো স্ক্রিপ্ট লেখা হয়নি
+                </div>
+              </div>
+              {canEdit && (
+                <Btn sm kind="ghost" onClick={() => onNew(t)}>
+                  ✍️ স্ক্রিপ্ট লিখুন
+                </Btn>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* দারসের স্ক্রিপ্ট — হেডিং ও টপিক ধরে, লেকচার প্ল্যানের মতো */
 function LessonsView({ user, courses }) {
   const canEdit = isDir(user);
-  // কোন দারসটি এই মুহূর্তে শিক্ষক মোডে খোলা (খোলা না থাকলে null)
-  const [teachId, setTeachId] = useState(null);
-  // কোন দারসের অগ্রগতির পাতা খোলা
-  const [progFor, setProgFor] = useState(null);
-  // কোন দারসের নতুন বয়সের সংস্করণ বানানো হচ্ছে
-  const [ageFor, setAgeFor] = useState(null);
-  // এই কোর্সের সব অগ্রগতি — তালিকায় এক নজরে দেখানোর জন্য
-  const [prog, setProg] = useState([]);
   const [courseId, setCourseId] = useState("");
   const [lessons, setLessons] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [prog, setProg] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState(null);
+  const [teachId, setTeachId] = useState(null);
+  const [progFor, setProgFor] = useState(null);
+  const [ageFor, setAgeFor] = useState(null);
+  const [newFor, setNewFor] = useState(null); // কোন টপিকে নতুন স্ক্রিপ্ট
 
-  /* ⚠️ এখানে আর ছাঁকা যাবে না — `courses` ইতিমধ্যেই myCourses() হয়ে
-     এসেছে, আর সার্ভারও রোল অনুযায়ী ছেঁকে দিয়েছে। উস্তাদ কোর্স পান দুই
-     সূত্রে: তিনি কোর্সের নির্ধারিত উস্তাদ, অথবা কোর্সে তাঁর নিজের
-     শিক্ষার্থী আছে।
-     আগে এখানে `c.teacher === user.id` দিয়ে আবার ছাঁকা হতো — কিন্তু
-     কোর্সের বস্তুতে ঘরটার নাম `teacherId`, `teacher` নয়। ফলে উস্তাদের
-     কাছে শর্তটা কখনোই মিলত না এবং কোর্সের তালিকা পুরো খালি দেখাত —
-     উস্তাদ দারস স্ক্রিপ্ট খুলতেই পারতেন না। */
+  /* ⚠️ এখানে আর ছাঁকা যাবে না — courses ইতিমধ্যেই myCourses() হয়ে এসেছে,
+     আর সার্ভারও রোল অনুযায়ী ছেঁকে দিয়েছে। উস্তাদ কোর্স পান দুই সূত্রে:
+     তিনি কোর্সের নির্ধারিত উস্তাদ, অথবা কোর্সে তাঁর নিজের শিক্ষার্থী আছে। */
   const mine = courses || [];
 
   useEffect(() => {
@@ -18086,14 +18273,15 @@ function LessonsView({ user, courses }) {
     if (!courseId) return setLoading(false);
     setLoading(true);
     try {
-      const [ls, pr] = await Promise.all([
+      const [ls, secs, pr] = await Promise.all([
         api.lessons(courseId),
-        // ⚠️ কেবল এই কোর্সেরটুকু — আগে গোটা একাডেমির সব শিক্ষার্থীর সব
-        // অগ্রগতি টেনে আনা হতো, অথচ দরকার ছিল এই কোর্সের কটা সারিই।
-        // অগ্রগতি না এলেও তালিকা দেখাতে অসুবিধা নেই — তাই আলাদা করে ধরি
+        // দারস পরিকল্পনার হেডিং ও টপিক — পাতাটি এগুলো ধরেই সাজে
+        api.lessonSections(courseId).catch(() => []),
+        // অগ্রগতি না এলেও তালিকা দেখাতে অসুবিধা নেই
         api.lessonProgress(`?lesson__course=${courseId}`).catch(() => []),
       ]);
       setLessons(ls || []);
+      setSections(secs || []);
       setProg(pr || []);
     } catch (e) {
       notice("দারস আনা যায়নি — " + (e?.data?.error || e?.message || ""));
@@ -18105,6 +18293,9 @@ function LessonsView({ user, courses }) {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId]);
+
+  /* টপিকহীন স্ক্রিপ্ট — পুরনো লেখা, বা "+ নতুন দারস" দিয়ে বানানো */
+  const loose = lessons.filter((l) => !l.topic);
 
   const create = async () => {
     try {
@@ -18120,50 +18311,31 @@ function LessonsView({ user, courses }) {
     }
   };
 
-  /* নমুনা দারস আনা।
-
-     ⚠️ আগে থেকেই বসানো থাকলে সার্ভার existed:true বলে দেয় — তখন আমরা
-     আলাদা করে জিজ্ঞেস করি "নতুন করে আনব?"। না জিজ্ঞেস করে বদলে দিলে
-     পরিচালকের নিজের করা সম্পাদনা চুপচাপ মুছে যেত। */
-  const seedAgain = (which) =>
-    askConfirm(
-      "এই নমুনা দারসটি আগে থেকেই আছে।" +
-        "\n\n" +
-        "নতুন করে আনলে এর সব ধাপ মুছে গিয়ে সবচেয়ে নতুন লেখা বসবে। " +
-        "আপনি নিজে কিছু বদলে থাকলে তা হারিয়ে যাবে।" +
-        "\n\n" +
-        "শিক্ষার্থীদের অগ্রগতি অক্ষত থাকবে — সেটি মুছবে না।",
-      async () => {
-        try {
-          await api.seedSampleLesson(Number(courseId), which, true);
-          await load();
-          notice("🔄 নতুন লেখা বসানো হয়েছে");
-        } catch (e) {
-          notice("আনা যায়নি — " + (e?.data?.error || e?.message || ""));
-        }
-      },
-      { yes: "হ্যাঁ, নতুন লেখা আনুন", no: "না, আগেরটাই থাক" },
-    );
-
-  const seed = (which) =>
-    askConfirm(
-      which === "ikhlas"
-        ? "সূরা আল-ইখলাসের নমুনা দারসটি এই কোর্সে যোগ করা হবে — ২৫ ধাপ, " +
-            "৫–৭ বছরের জন্য। আপনি পড়ে দেখে নিজের মতো বদলে নিতে পারবেন।"
-        : "Easy Noorani Qaida দারস ১-এর নমুনাটি এই কোর্সে যোগ করা হবে — " +
-            "২৪ ধাপ, প্রথম সাত হরফ, ৫–৭ বছরের জন্য।",
-      async () => {
-        try {
-          const r = await api.seedSampleLesson(Number(courseId), which);
-          await load();
-          if (r && r.existed) seedAgain(which);
-          else notice("✅ নমুনা দারসটি যোগ হয়েছে");
-        } catch (e) {
-          notice("যোগ করা যায়নি — " + (e?.data?.error || e?.message || ""));
-        }
-      },
-      { yes: "হ্যাঁ, যোগ করুন", no: "না, থাক" },
-    );
+  /* টপিকের স্ক্রিপ্ট শুরু — খালি থেকে, নাকি নমুনা থেকে */
+  const startScript = async (topic, how) => {
+    try {
+      const l =
+        how === "blank"
+          ? await api.addLesson({
+              course: Number(courseId),
+              title: topic.text,
+              topic: topic.id,
+              status: "draft",
+            })
+          : await api.seedSampleLesson(
+              Number(courseId),
+              how,
+              false,
+              topic.id,
+            );
+      setNewFor(null);
+      await load();
+      setOpenId(l.id);
+      notice("✍️ স্ক্রিপ্ট তৈরি — এখন লিখে নিন");
+    } catch (e) {
+      notice("তৈরি করা যায়নি — " + (e?.data?.error || e?.message || ""));
+    }
+  };
 
   const duplicate = (l) =>
     askConfirm(
@@ -18187,16 +18359,18 @@ function LessonsView({ user, courses }) {
 
   const remove = (l) =>
     askConfirm(
-      `"${l.title}" দারসটি চিরতরে মুছে ফেলা হবে — এর ${bn(l.step_count || 0)}টি ` +
+      `"${l.title}" স্ক্রিপ্টটি চিরতরে মুছে ফেলা হবে — এর ${bn(l.step_count || 0)}টি ` +
         "ধাপ, উস্তাদের পুরো স্ক্রিপ্ট ও শিক্ষার্থীর সব পর্দাসহ।" +
         "\n\n" +
-        "এটি আর ফেরানো যাবে না। আপাতত সরিয়ে রাখতে চাইলে মোছার দরকার নেই — " +
-        "অবস্থা “সংরক্ষিত” করে দিলেই তালিকা থেকে সরে যায়।",
+        "দারস পরিকল্পনার টপিকটি মুছবে না — কেবল এই স্ক্রিপ্টটিই যাবে।" +
+        "\n\n" +
+        "আপাতত সরিয়ে রাখতে চাইলে মোছার দরকার নেই — অবস্থা “সংরক্ষিত” " +
+        "করে দিলেই যথেষ্ট।",
       async () => {
         try {
           await api.delLesson(l.id);
           await load();
-          notice("🗑️ দারসটি মুছে ফেলা হয়েছে");
+          notice("🗑️ স্ক্রিপ্টটি মুছে ফেলা হয়েছে");
         } catch (e) {
           notice("মোছা যায়নি — " + (e?.data?.error || e?.message || ""));
         }
@@ -18204,15 +18378,14 @@ function LessonsView({ user, courses }) {
       { yes: "হ্যাঁ, চিরতরে মুছুন", no: "না, থাক" },
     );
 
-  /* একই শিরোনামের দারসগুলো এক দলে — এগুলোই এক বিষয়ের কয়েকটি
-     বয়সের সংস্করণ। ছোট বয়স আগে। */
-  const groups = [];
-  lessons.forEach((l) => {
-    const g = groups.find((x) => x.title === l.title);
-    if (g) g.items.push(l);
-    else groups.push({ title: l.title, items: [l] });
-  });
-  groups.forEach((g) => g.items.sort((a, b) => a.age_from - b.age_from));
+  const rowProps = {
+    onOpen: (l) => setOpenId(l.id),
+    onTeach: (l) => setTeachId(l.id),
+    onProgress: (l) => setProgFor(l),
+    onDuplicate: duplicate,
+    onAgeVersion: (l, siblings) => setAgeFor({ lesson: l, siblings }),
+    onRemove: remove,
+  };
 
   const teachOverlay = teachId && (
     <TeacherMode id={teachId} onClose={() => setTeachId(null)} />
@@ -18238,6 +18411,14 @@ function LessonsView({ user, courses }) {
         setProgFor(null);
         load();
       }}
+    />
+  );
+
+  const newOverlay = newFor && (
+    <NewScriptModal
+      topic={newFor}
+      onClose={() => setNewFor(null)}
+      onPick={(how) => startScript(newFor, how)}
     />
   );
 
@@ -18286,54 +18467,93 @@ function LessonsView({ user, courses }) {
             </option>
           ))}
         </select>
-        {canEdit && courseId && (
-          <div
-            style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}
-          >
-            <Btn sm kind="soft" onClick={() => seed("ikhlas")}>
-              📥 নমুনা — সূরা আল-ইখলাস
-            </Btn>
-            <Btn sm kind="soft" onClick={() => seed("qaida")}>
-              📥 নমুনা — Noorani Qaida দারস ১
-            </Btn>
-          </div>
-        )}
       </div>
-
-      {loading && <Loader text="দারস লোড হচ্ছে" />}
 
       {teachOverlay}
       {progOverlay}
       {ageOverlay}
+      {newOverlay}
+
+      {loading && <Loader text="দারস লোড হচ্ছে" />}
 
       {!loading && (
-        <div style={{ display: "grid", gap: 8 }}>
-          {groups.length === 0 && (
-            <div style={{ ...S.card, color: C.muted, fontSize: 14 }}>
-              এই কোর্সে এখনো কোনো দারস লেখা হয়নি।
-              {canEdit &&
-                " উপরের নমুনা দুটির একটি এনে দেখতে পারেন — কেমন হওয়া উচিত তার ধারণা পাবেন।"}
+        <>
+          {sections.length === 0 && loose.length === 0 && (
+            <div style={{ ...S.card, color: C.muted, fontSize: 14, lineHeight: 1.8 }}>
+              এই কোর্সে এখনো দারস পরিকল্পনার কোনো হেডিং নেই।
+              <br />
+              “📋 লেকচার প্ল্যান” পাতায় হেডিং ও টপিক সাজিয়ে নিলে সেগুলো
+              এখানে চলে আসবে, আর প্রতিটি টপিকের জন্য ক্লাস স্ক্রিপ্ট লেখা
+              যাবে।
             </div>
           )}
-          {groups.map((g) => (
-            <LessonRow
-              key={g.title}
-              group={g}
-              canEdit={canEdit}
+
+          {sections.map((sec) => (
+            <SectionBlock
+              key={sec.id}
+              section={sec}
+              lessons={lessons}
               prog={prog}
-              onOpen={(l) => setOpenId(l.id)}
-              onTeach={(l) => setTeachId(l.id)}
-              onProgress={(l) => setProgFor(l)}
-              onDuplicate={duplicate}
-              onAgeVersion={(l, siblings) => setAgeFor({ lesson: l, siblings })}
-              onRemove={remove}
+              canEdit={canEdit}
+              rowProps={rowProps}
+              onNew={setNewFor}
             />
           ))}
-        </div>
+
+          {loose.length > 0 && (
+            <div style={{ marginBottom: 18 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "8px 12px",
+                  background: C.muted,
+                  color: "#fff",
+                  borderRadius: "12px 12px 0 0",
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: 15, flex: 1 }}>
+                  টপিকের বাইরে
+                </div>
+                <span style={{ fontSize: 12, color: "#ffffffcc" }}>
+                  {bn(loose.length)}টি
+                </span>
+              </div>
+              <div
+                style={{
+                  border: `1px solid ${C.line}`,
+                  borderTop: "none",
+                  borderRadius: "0 0 12px 12px",
+                  padding: 10,
+                  display: "grid",
+                  gap: 8,
+                  background: "#fff",
+                }}
+              >
+                <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
+                  এই স্ক্রিপ্টগুলো এখনো দারস পরিকল্পনার কোনো টপিকের সাথে
+                  যুক্ত নয়। স্ক্রিপ্ট খুলে ভেতরে টপিক বেছে দিলে সেটি উপরের
+                  নিজের হেডিংয়ে চলে যাবে।
+                </div>
+                {loose.map((l) => (
+                  <LessonRow
+                    key={l.id}
+                    group={{ title: l.title, items: [l] }}
+                    prog={prog}
+                    canEdit={canEdit}
+                    {...rowProps}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </Section>
   );
 }
+
 
 /* ═══════════ বয়সভিত্তিক সংস্করণ ও শিক্ষার্থীর পুনরাবৃত্তি ═══════════ */
 
@@ -18711,13 +18931,24 @@ function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
         }}
       >
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div
+          {/* টপিকের নামে চাপলেই তার স্ক্রিপ্ট খোলে */}
+          <button
+            onClick={() => onOpen(l)}
+            title="স্ক্রিপ্টটি খুলুন"
             style={{
               fontWeight: 800,
               display: "flex",
               gap: 8,
               alignItems: "center",
               flexWrap: "wrap",
+              border: "none",
+              background: "none",
+              padding: 0,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: 15,
+              color: C.emeraldD,
+              textAlign: "left",
             }}
           >
             {group.title} {statusTag(l.status)}
@@ -18726,7 +18957,7 @@ function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
                 {bn(items.length)}টি বয়সের সংস্করণ
               </Tag>
             )}
-          </div>
+          </button>
           <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>
             {bandLabel(l)} · {bn(l.step_count || 0)} ধাপ · {bn(l.duration_min)}{" "}
             মিনিট ·{" "}

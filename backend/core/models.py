@@ -569,6 +569,20 @@ class Lesson(models.Model):
     age_to = models.PositiveSmallIntegerField("বয়স — পর্যন্ত", default=7)
     duration_min = models.PositiveIntegerField("আনুমানিক সময় (মিনিট)", default=25)
     objectives = models.TextField("কাঙ্ক্ষিত ফল", blank=True, default="")
+    # এই স্ক্রিপ্টটি দারস পরিকল্পনার কোন টপিকের।
+    #
+    # এতেই স্ক্রিপ্টের পাতা লেকচার প্ল্যানের মতো সাজে — হেডিংয়ের নিচে
+    # টপিক, টপিকে চাপলেই তার স্ক্রিপ্ট।
+    #
+    # ⚠️ খালি থাকতে পারে — পুরনো সব স্ক্রিপ্ট খালি নিয়েই বসে, তাই কিছুই
+    # হারায় না; সেগুলো "টপিকের বাইরে" দলে দেখানো হয়।
+    # ⚠️ SET_NULL — টপিক মুছে গেলেও স্ক্রিপ্টটি থেকে যায়, উস্তাদের লেখা
+    # পরিশ্রম যেন হারিয়ে না যায়।
+    # ⚠️ একাধিক স্ক্রিপ্ট এক টপিকে থাকতে পারে — একই বিষয়ের ৫–৭, ৭–৯,
+    # ৯–১২ বয়সের আলাদা সংস্করণ, তাই OneToOne নয়।
+    topic = models.ForeignKey("LectureTopic", on_delete=models.SET_NULL,
+                              null=True, blank=True, related_name="scripts",
+                              verbose_name="দারস পরিকল্পনার টপিক")
     status = models.CharField(max_length=10, choices=Status.choices,
                               default=Status.DRAFT)
     order = models.PositiveIntegerField(default=0)

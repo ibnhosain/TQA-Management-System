@@ -95,14 +95,27 @@ export async function run() {
     { expect: ["এখনো কোনো ধাপ নেই"] },
   );
   await scene(
-    "দারসের তালিকা (উস্তাদ)",
+    "দারসের তালিকা (উস্তাদ) — হেডিং ও টপিক ধরে",
     <M.LessonsView user={teacher} courses={courses} />,
-    { expect: ["Surah Al-Ikhlas", "শিক্ষক মোড"] },
+    {
+      expect: [
+        "Memorized Surah", "Memorized Hadith",   // হেডিং
+        "Al-Ikhlas-الإخلاص",                      // যে টপিকে স্ক্রিপ্ট আছে
+        "শিক্ষক মোড",
+        "টপিকের বাইরে", "পুরনো স্ক্রিপ্ট",        // টপিকহীন স্ক্রিপ্ট
+      ],
+    },
   );
   await scene(
-    "দারসের তালিকা (পরিচালক)",
+    "দারসের তালিকা (পরিচালক) — স্ক্রিপ্টহীন টপিকও দেখায়",
     <M.LessonsView user={director} courses={courses} />,
-    { expect: ["নমুনা", "খুলুন"] },
+    {
+      expect: [
+        "Al-Kawthar-الكوثر", "Hadith -N-01",      // স্ক্রিপ্ট নেই এমন টপিক
+        "এখনো স্ক্রিপ্ট লেখা হয়নি", "স্ক্রিপ্ট লিখুন",
+        "১/২ টপিকে স্ক্রিপ্ট আছে",                 // হেডিংয়ের গণনা
+      ],
+    },
   );
   await scene("শিক্ষক মোড", <M.TeacherMode id={1} onClose={nop} />, {
     expect: ["Say line 0", "শিক্ষার্থী এখন যা দেখছেন"],
@@ -130,9 +143,9 @@ export async function run() {
   /* ───── কিছুই না থাকার দৃশ্য ───── */
   setMode("empty");
   await scene(
-    "তালিকা — কোনো দারস নেই",
+    "তালিকা — কোনো হেডিং বা দারস নেই",
     <M.LessonsView user={director} courses={courses} />,
-    { expect: ["এখনো কোনো দারস লেখা হয়নি"] },
+    { expect: ["এখনো দারস পরিকল্পনার কোনো হেডিং নেই"] },
   );
   await scene(
     "অগ্রগতি — কোনো শিক্ষার্থী নেই",
@@ -159,6 +172,31 @@ export async function run() {
     "তালিকা → দারস খোলা → ফেরা",
     <M.LessonsView user={director} courses={courses} />,
     { click: ["✏️ খুলুন", "← দারসের তালিকা"] },
+  );
+  await scene(
+    "টপিকের নামে চাপলেই স্ক্রিপ্ট খোলে",
+    <M.LessonsView user={director} courses={courses} />,
+    { click: ["Al-Ikhlas-الإخلاص"], expect: ["পড়ানোর ধাপ"] },
+  );
+  await scene(
+    "স্ক্রিপ্টহীন টপিক → ✍️ স্ক্রিপ্ট লিখুন → বিকল্প দেখায়",
+    <M.LessonsView user={director} courses={courses} />,
+    {
+      click: ["✍️ স্ক্রিপ্ট লিখুন"],
+      expect: ["খালি থেকে শুরু", "নমুনা — সূরা আল-ইখলাস",
+               "নমুনা — Noorani Qaida"],
+    },
+  );
+  await scene(
+    "স্ক্রিপ্টহীন টপিক → নমুনা থেকে শুরু",
+    <M.LessonsView user={director} courses={courses} />,
+    { click: ["✍️ স্ক্রিপ্ট লিখুন", "নমুনা — সূরা আল-ইখলাস"],
+      expect: ["পড়ানোর ধাপ"] },
+  );
+  await scene(
+    "সম্পাদকে টপিক বেছে দেওয়া যায়",
+    <M.LessonEditor id={1} canEdit onClose={nop} onChanged={nop} />,
+    { expect: ["দারস পরিকল্পনার টপিক", "কোনো টপিকের সাথে যুক্ত নয়"] },
   );
   await scene(
     "তালিকা → শিক্ষক মোড → বন্ধ",

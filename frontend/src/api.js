@@ -493,10 +493,18 @@ export const api = {
     request(`/lessons/${id}/duplicate/`, { method: "POST", body: d || {} }),
   // replace=true দিলে আগের নমুনাটির ধাপগুলো মুছে নতুন লেখা বসে
   // (দারসের সারি থেকেই যায়, তাই অগ্রগতি হারায় না)
-  seedSampleLesson: (course, which, replace) =>
+  // topic দিলে নমুনাটি ওই টপিকের স্ক্রিপ্ট হিসেবেই বসে।
+  // replace=true দিলে আগের নমুনাটির ধাপগুলো মুছে নতুন লেখা বসে
+  // (দারসের সারি থেকেই যায়, তাই অগ্রগতি হারায় না)
+  seedSampleLesson: (course, which, replace, topic) =>
     request("/lessons/seed_sample/", {
       method: "POST",
-      body: { course, which, ...(replace ? { replace: true } : {}) },
+      body: {
+        course,
+        which,
+        ...(replace ? { replace: true } : {}),
+        ...(topic ? { topic } : {}),
+      },
     }),
   addLessonStep: (d) => request("/lesson-steps/", { method: "POST", body: d }),
   editLessonStep: (id, d) =>

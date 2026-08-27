@@ -24,11 +24,35 @@ export const LESSON = {
   age_from: 5, age_to: 7, duration_min: 25,
   objectives: "<p><b>Goal</b></p><ul><li>x</li></ul>",
   status: "published", order: 0, step_count: 4,
+  // দারস পরিকল্পনার টপিকের সাথে যুক্ত
+  topic: 11, topic_text: "Al-Ikhlas-الإخلاص", section: 1,
   steps: [0, 1, 2, 3].map(mkStep),
 };
 export const EMPTY_LESSON = {
   ...LESSON, id: 2, title: "খালি দারস", step_count: 0, steps: [],
 };
+// ⚠️ টপিকহীন স্ক্রিপ্ট — পুরনো লেখা, "টপিকের বাইরে" দলে দেখানো হয়
+export const LOOSE_LESSON = {
+  ...LESSON, id: 5, title: "পুরনো স্ক্রিপ্ট",
+  topic: null, topic_text: null, section: null,
+};
+
+/* দারস পরিকল্পনার হেডিং ও টপিক — পাতাটি এগুলো ধরেই সাজে।
+   টপিক ১১-এ স্ক্রিপ্ট আছে, ১২ ও ২১-এ নেই — দুই অবস্থাই পরীক্ষা হয়। */
+const SECTIONS = [
+  { id: 1, course: 1, name: "Memorized Surah", order: 0, is_trial: false,
+    topics: [
+      { id: 11, text: "Al-Ikhlas-الإخلاص", section: 1, order: 0,
+        content: "", covered: "pending" },
+      { id: 12, text: "Al-Kawthar-الكوثر", section: 1, order: 1,
+        content: "", covered: "pending" },
+    ] },
+  { id: 2, course: 1, name: "Memorized Hadith", order: 1, is_trial: false,
+    topics: [
+      { id: 21, text: "Hadith -N-01", section: 2, order: 0,
+        content: "", covered: "pending" },
+    ] },
+];
 const PROGRESS = [
   { id: 1, student: 9, student_name: "S", lesson: 1,
     lesson_title: "Surah Al-Ikhlas", course: 1, lesson_status: "published",
@@ -47,9 +71,11 @@ export const setMode = (m) => { MODE = m; };
 export const api = {
   lessons: async () => (MODE === "empty" ? [] : [
     LESSON,
+    // একই টপিকের আরেক বয়সের সংস্করণ
     { ...LESSON, id: 3, age_from: 9, age_to: 12, status: "draft" },
-    EMPTY_LESSON,
+    LOOSE_LESSON,
   ]),
+  lessonSections: async () => (MODE === "empty" ? [] : SECTIONS),
   lesson: async (id) => (Number(id) === 2 ? EMPTY_LESSON : LESSON),
   lessonStage: async () => ({
     id: 1, title: LESSON.title, title_ar: LESSON.title_ar,

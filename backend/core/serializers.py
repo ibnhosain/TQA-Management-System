@@ -120,6 +120,11 @@ class LessonStepSerializer(serializers.ModelSerializer):
 class LessonSerializer(serializers.ModelSerializer):
     """উস্তাদের জন্য — দারস ও তার সব ধাপ।"""
     course_name = serializers.CharField(source="course.name", read_only=True)
+    # কোন টপিকের স্ক্রিপ্ট, আর সেই টপিক কোন হেডিংয়ের নিচে — এই দুটো দিয়েই
+    # পাতাটি লেকচার প্ল্যানের মতো সাজানো যায়। টপিক না থাকলে দুটোই null,
+    # তখন স্ক্রিপ্টটি "টপিকের বাইরে" দলে দেখানো হয়।
+    topic_text = serializers.SerializerMethodField()
+    section = serializers.SerializerMethodField()
     steps = serializers.SerializerMethodField()
     step_count = serializers.SerializerMethodField()
 
@@ -127,7 +132,8 @@ class LessonSerializer(serializers.ModelSerializer):
         model = Lesson
         fields = ["id", "course", "course_name", "title", "title_ar", "kind",
                   "age_from", "age_to", "duration_min", "objectives", "status",
-                  "order", "step_count", "steps"]
+                  "order", "topic", "topic_text", "section", "step_count",
+                  "steps"]
 
     def get_steps(self, obj):
         # তালিকা দেখানোর সময় ধাপগুলো পাঠানো হয় না — শুধু একটি দারস খুললেই
@@ -135,6 +141,15 @@ class LessonSerializer(serializers.ModelSerializer):
             return None
         rows = [x for x in obj.steps.all() if x.is_active]
         return LessonStepSerializer(rows, many=True, context=self.context).data
+
+    def get_topic_text(self, obj):
+        # ⚠️ source="topic.text" ব্যবহার করা যায় না — টপিক না থাকলে DRF
+        # ঘরটাই বাদ দিয়ে দেয়, null দেয় না। তখন সামনের পর্দায় ঘরটি
+        # অনুপস্থিত হয়ে যেত।
+        return obj.topic.text if obj.topic_id else None
+
+    def get_section(self, obj):
+        return obj.topic.section_id if obj.topic_id else None
 
     def get_step_count(self, obj):
         # তালিকায় ডাটাবেসেই গোনা হয়েছে (annotate) — তখন ধাপগুলো আনাই হয় না।
