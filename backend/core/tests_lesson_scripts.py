@@ -8,15 +8,17 @@
 """
 import re
 from django.test import TestCase
-from core.sample_lessons import (IKHLAS, QAIDA, QAIDA2, DOTS,
-                                 V1, V2, V3, V4)
+from core.sample_lessons import (IKHLAS, QAIDA, QAIDA2, QAIDA3,
+                                 DOTS, V1, V2, V3, V4)
 
 BN = re.compile(r"[ঀ-৿]")
 CUE = re.compile(r"\[[^\]]*\]")       # [বাংলা নির্দেশনা]
 SPOKEN = ("says", "correction")
 # ⚠️ প্রতিটি দারসই একই নিয়মে বাঁধা — নতুন দারস যোগ করলে এখানেও যোগ
 # করতে হবে, নইলে সেটি পাহারার বাইরে থেকে যায়
-ALL = (IKHLAS, QAIDA, QAIDA2)
+ALL = (IKHLAS, QAIDA, QAIDA2, QAIDA3)
+# কায়দার সব দারস — লেখার ধাপ ও হরফের নিয়ম কেবল এগুলোতেই খাটে
+QAIDAS = (QAIDA, QAIDA2, QAIDA3)
 BOTH = ALL  # পুরনো নাম, আগের পরীক্ষাগুলো এটাই ব্যবহার করে
 
 
@@ -864,9 +866,18 @@ class WritingIsTaught(TestCase):
     জুমে এটাই একমাত্র উপায় যাতে উস্তাদ হাতের লেখা দেখতে পান।
     """
 
-    def steps(self):
-        return [st for st in QAIDA["steps"]
+    def steps(self, lesson=None):
+        """লেখার ধাপগুলো — না বললে সব কায়দার দারস মিলিয়ে।"""
+        src = [lesson] if lesson else QAIDAS
+        return [st for L in src for st in L["steps"]
                 if st["slide"]["kind"] == "write"]
+
+    def test_every_qaida_lesson_teaches_writing(self):
+        """⚠️ নতুন দারস যোগ হলেও লেখার ধাপ যেন বাদ না পড়ে।"""
+        for L in QAIDAS:
+            n = len(self.steps(L))
+            self.assertGreaterEqual(n, 3, "%s — লেখার ধাপ মাত্র %d"
+                                          % (L["title"][:34], n))
 
     def test_the_qaida_has_writing_steps(self):
         self.assertGreaterEqual(len(self.steps()), 4,
@@ -892,10 +903,17 @@ class WritingIsTaught(TestCase):
         bn = " ".join(st["does"] or "" for st in self.steps())
         self.assertIn("ডান থেকে বাঁয়ে", bn, "উস্তাদের নির্দেশনায় দিকটা নেই")
 
-    def test_all_seven_letters_get_written(self):
-        ar = " ".join(st["slide"].get("arabic", "") for st in self.steps())
-        for letter in "ابتثجحخ":
-            self.assertIn(letter, ar, "এই হরফটি লেখানো হয় না: " + letter)
+    def test_each_lesson_writes_its_own_letters(self):
+        WANT = {"Lesson 1": "ابتثجحخ", "Lesson 2": "دذرزسش",
+                "Lesson 3": "صضطظعغ"}
+        for L in QAIDAS:
+            key = next((k for k in WANT if k in L["title"]), None)
+            self.assertIsNotNone(key, "চেনা গেল না: " + L["title"][:40])
+            ar = " ".join(st["slide"].get("arabic", "")
+                          for st in self.steps(L))
+            for letter in WANT[key]:
+                self.assertIn(letter, ar,
+                              "%s — এই হরফটি লেখানো হয় না: %s" % (key, letter))
 
     def test_a_child_without_a_notebook_is_not_left_out(self):
         """⚠️ খাতা না থাকলেও যেন ক্লাস থেকে বাদ না পড়ে।"""
@@ -1314,3 +1332,182 @@ class TheEnglishIsSpokenEnglish(TestCase):
                for where, text in self.spoken()
                for h in HARD if h in text.lower()]
         self.assertEqual(bad, [], "বইয়ের ভারী শব্দ: " + ", ".join(bad))
+
+
+class NoLessonIsACopyOfAnother(TestCase):
+    """⚠️ এক দারসের কথা যেন অন্যটায় কপি না হয়।
+
+    আসল উস্তাদ রোজ একই কথায় ক্লাস শুরু করেন না, একইভাবে শেষও করেন না।
+    ছক এক থাকবে (শোনো → বলো → জোড়া → লেখো), কিন্তু কথা, খেলা ও পর্দার
+    সাজ আলাদা হবে — নইলে শিশুর কাছে সব দারস একরকম ঠেকে।
+    """
+
+    def spoken_of(self, L):
+        return [spoken_only(st["says"]) for st in L["steps"]]
+
+    def test_the_openings_are_different(self):
+        firsts = {L["title"][:40]: self.spoken_of(L)[0] for L in QAIDAS}
+        seen = {}
+        for title, text in firsts.items():
+            key = " ".join(text.split()[:6])
+            self.assertNotIn(key, seen,
+                             "“%s” আর “%s” একই কথায় শুরু হয়"
+                             % (title, seen.get(key)))
+            seen[key] = title
+
+    def test_the_closings_are_different(self):
+        """শেষ কথাটাও আলাদা — সালাম ছাড়া বাকিটা।"""
+        tails = {}
+        for L in QAIDAS:
+            last = self.spoken_of(L)[-1]
+            body = " ".join(w for w in last.split()
+                            if "alaikum" not in w.lower()
+                            and "rahmatullah" not in w.lower())
+            key = " ".join(body.split()[:6])
+            self.assertNotIn(key, tails,
+                             "“%s” আর “%s” একই কথায় শেষ হয়"
+                             % (L["title"][:40], tails.get(key)))
+            tails[key] = L["title"][:40]
+
+    def test_no_whole_step_is_copied(self):
+        """⚠️ কোনো ধাপের বলার কথা হুবহু আরেক দারসে নেই তো?"""
+        seen = {}
+        for L in QAIDAS:
+            for i, st in enumerate(L["steps"], 1):
+                t = " ".join(spoken_only(st["says"]).split())
+                if len(t.split()) < 8:
+                    continue          # ছোট বাক্য মিলে যেতেই পারে
+                where = "%s ধাপ %d" % (L["title"][:26], i)
+                self.assertNotIn(t, seen,
+                                 "হুবহু একই কথা: %s ও %s" % (where, seen.get(t)))
+                seen[t] = where
+
+    def test_each_lesson_has_its_own_slide_mix(self):
+        """পর্দার ধরনের মিশ্রণ আলাদা — তাই পটভূমির রংও আলাদা দেখায়।"""
+        mixes = {}
+        for L in QAIDAS:
+            mix = tuple(sorted(
+                (st["slide"]["kind"] for st in L["steps"])))
+            self.assertNotIn(mix, mixes,
+                             "“%s” আর “%s” — পর্দার সাজ হুবহু এক"
+                             % (L["title"][:40], mixes.get(mix)))
+            mixes[mix] = L["title"][:40]
+
+    def test_each_lesson_has_its_own_length(self):
+        """ধাপ সংখ্যা আলাদা — একই ছাঁচে ঢালা নয়।"""
+        counts = {}
+        for L in QAIDAS:
+            n = len(L["steps"])
+            self.assertNotIn(n, counts,
+                             "“%s” আর “%s” — দুটোতেই %d ধাপ"
+                             % (L["title"][:40], counts.get(n), n))
+            counts[n] = L["title"][:40]
+
+    def test_each_lesson_teaches_different_letters(self):
+        """⚠️ একই হরফ দুই দারসে শেখানো হচ্ছে না তো?"""
+        NEW = {"Lesson 1": set("ابتثجحخ"), "Lesson 2": set("دذرزسش"),
+               "Lesson 3": set("صضطظعغ")}
+        pairs = list(NEW.items())
+        for i, (a, sa) in enumerate(pairs):
+            for b, sb in pairs[i + 1:]:
+                self.assertEqual(sa & sb, set(),
+                                 "%s ও %s-এ একই হরফ: %s" % (a, b, sa & sb))
+
+    def test_every_lesson_keeps_the_same_teaching_shape(self):
+        """⚠️ আলাদা হতে গিয়ে ছকটাই যেন হারিয়ে না যায়।"""
+        for L in QAIDAS:
+            kinds = [st["slide"]["kind"] for st in L["steps"]]
+            for must in ("letters", "your_turn", "question", "write",
+                         "homework", "end"):
+                self.assertIn(must, kinds,
+                              "%s — “%s” ধাপটিই নেই" % (L["title"][:34], must))
+
+
+class TheNewQaidaLessonsLand(TestCase):
+    """♻️ মাইগ্রেশন ০০৪১ — দারস ২ ও ৩ কোর্সে ও লেকচার প্ল্যানে বসে।"""
+
+    def setUp(self):
+        from core.models import (Course, Lesson, LessonStep, StepSlide,
+                                 Lecture, LectureTopic)
+        from core.sample_lessons import create_sample
+        self.M = (Lesson, LessonStep, StepSlide)
+        self.Lesson, self.LectureTopic = Lesson, LectureTopic
+        self.c = Course.objects.create(name="নূরানী কায়দা", teacher=None)
+        lec = Lecture.objects.create(course=self.c, no=1, title="কায়দা")
+        self.topic = LectureTopic.objects.create(lecture=lec, text="দারস ১",
+                                                 order=0)
+        # দারস ১ আগে থেকেই আছে — চালু সাইটের মতো
+        self.first, _ = create_sample(*self.M, self.c, "qaida",
+                                      topic=self.topic)
+
+    def run_it(self):
+        import importlib
+        from core.models import (Lesson, LessonStep, StepSlide, Lecture,
+                                 LectureTopic)
+        m = importlib.import_module("core.migrations.0041_qaida_lessons_2_and_3")
+
+        class A:
+            def get_model(self, app, name):
+                return {"Lesson": Lesson, "LessonStep": LessonStep,
+                        "StepSlide": StepSlide, "Lecture": Lecture,
+                        "LectureTopic": LectureTopic}[name]
+        m.seed(A(), None)
+
+    def test_both_lessons_are_created(self):
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.filter(course=self.c).count(), 3,
+                         "তিনটি দারস হওয়ার কথা")
+        for L in QAIDAS[1:]:
+            self.assertTrue(
+                self.Lesson.objects.filter(title=L["title"]).exists(),
+                "বসেনি: " + L["title"][:40])
+
+    def test_each_gets_its_own_lecture_topic(self):
+        self.run_it()
+        for L in QAIDAS[1:]:
+            t = self.LectureTopic.objects.filter(text=L["title"]).first()
+            self.assertIsNotNone(t, "টপিক তৈরি হয়নি: " + L["title"][:40])
+            self.assertTrue((t.content or "").strip(),
+                            "টগলের লেখা খালি: " + L["title"][:40])
+            self.assertIn("Practise", t.content)
+            self.assertIn("Write in your notebook", t.content,
+                          "লেখার অংশটি টগলে নেই")
+
+    def test_the_lessons_are_linked_to_their_topics(self):
+        self.run_it()
+        for L in QAIDAS[1:]:
+            les = self.Lesson.objects.get(title=L["title"])
+            self.assertIsNotNone(les.topic_id, "টপিকের সাথে যুক্ত নয়")
+            self.assertEqual(les.topic.text, L["title"])
+
+    def test_the_steps_and_slides_all_arrive(self):
+        self.run_it()
+        for L in QAIDAS[1:]:
+            les = self.Lesson.objects.get(title=L["title"])
+            self.assertEqual(les.steps.count(), len(L["steps"]))
+            missing = [s.order for s in les.steps.all()
+                       if getattr(s, "slide", None) is None]
+            self.assertEqual(missing, [], "কিছু ধাপে পর্দা নেই")
+
+    def test_lesson_one_is_untouched(self):
+        """⚠️ নতুন দুটি বসাতে গিয়ে পুরনোটা যেন না বদলায়।"""
+        before = self.first.steps.count()
+        self.run_it()
+        self.first.refresh_from_db()
+        self.assertEqual(self.first.steps.count(), before)
+        self.assertEqual(self.first.topic_id, self.topic.id)
+
+    def test_running_it_twice_makes_no_duplicates(self):
+        self.run_it()
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.filter(course=self.c).count(), 3)
+        for L in QAIDAS[1:]:
+            self.assertEqual(
+                self.LectureTopic.objects.filter(text=L["title"]).count(), 1,
+                "টপিক দুবার তৈরি হয়েছে")
+
+    def test_nothing_happens_without_lesson_one(self):
+        """কায়দার কোর্সই না থাকলে চুপচাপ কিছু না করাই নিরাপদ।"""
+        self.first.delete()
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.count(), 0)
