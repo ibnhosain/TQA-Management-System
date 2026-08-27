@@ -804,6 +804,96 @@ export async function run() {
     if (huge > 4) throw new Error("অতিরিক্ত বড় — ঝাপসা হবে");
     if (tiny < 0.05) throw new Error("অতিরিক্ত ছোট — কিছুই দেখা যাবে না");
   });
+  /* ⚠️ সবচেয়ে জরুরি পরীক্ষা — অঙ্ক ঠিক থাকলেই হয় না, পর্দায় সত্যিই
+     বসছে কিনা দেখতে হয়। run.mjs-এ মাপের নকল বসানো আছে বলে এটা এখন
+     করা যায়। ভাসমান পর্দা "রেসপনসিভ হয়নি" — সেই অভিযোগটাই এখানে ধরা। */
+  const scaleIn = async (w, h) => {
+    const host = document.createElement("div");
+    host.style.setProperty("--w", `${w}px`);
+    host.style.setProperty("--h", `${h}px`);
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(<M.FloatBody slide={SL} />);
+    });
+    for (let k = 0; k < 6; k++) await act(async () => { await sleep(0); });
+    // ভেতরের যে বাক্সটি ছোট-বড় হয়
+    const box = [...host.querySelectorAll("div")].find((d) =>
+      (d.style.transform || "").includes("scale("));
+    const got = box ? parseFloat(box.style.transform.match(/scale\(([^)]+)\)/)[1]) : null;
+    await act(async () => root.unmount());
+    host.remove();
+    return got;
+  };
+
+  /* ⚠️ আসল বাগটা এখানে — ভাসমান উইন্ডো খোলার মুহূর্তে তার মাপ জানা
+     যায় না (০ আসে)। মাপটা আসে একটু পরে। উস্তাদ যদি উইন্ডোটা হাতে না
+     নাড়ান, ResizeObserver-ও আর ডাকে না — ফলে স্লাইড বড়ই থেকে যেত,
+     কাটা পড়ত। "রেসপনসিভ হয়নি" বলতে ঠিক এটাই।
+
+     এখানে সেই অবস্থাই বানানো: প্রথমে মাপ ০, বসার পরে আসল মাপ, আর
+     ResizeObserver পুরো সময় নীরব। */
+  const scaleAfterLateSize = async (w, h) => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(<M.FloatBody slide={SL} />);
+    });
+    // এখন মাপটা এলো — উইন্ডো নিজের আকার পেয়েছে
+    host.style.setProperty("--w", `${w}px`);
+    host.style.setProperty("--h", `${h}px`);
+    // কিন্তু কেউ উইন্ডো নাড়াচ্ছে না — observer নীরব
+    for (let k = 0; k < 12; k++) await act(async () => { await sleep(60); });
+    const box = [...host.querySelectorAll("div")].find((d) =>
+      (d.style.transform || "").includes("scale("));
+    const got = box
+      ? parseFloat(box.style.transform.match(/scale\(([^)]+)\)/)[1])
+      : null;
+    await act(async () => root.unmount());
+    host.remove();
+    return got;
+  };
+
+  {
+    ran++;
+    const s3 = await scaleAfterLateSize(380, 220);
+    const want = M.fitScale(380, 220, M.FIT_W, M.FIT_H);
+    if (s3 === null || Math.abs(s3 - want) > 0.001)
+      failures.push(
+        `মাপ দেরিতে এলেও স্লাইড বসে → scale=${s3}, হওয়ার কথা ` +
+          `${want.toFixed(3)} · উইন্ডো না নাড়ালে স্লাইড কাটা পড়বে`,
+      );
+  }
+
+  check("(প্রস্তুতি) মাপের নকল কাজ করছে", () => {
+    const d = document.createElement("div");
+    d.style.setProperty("--w", "800px");
+    document.body.appendChild(d);
+    const kid = document.createElement("div");
+    d.appendChild(kid);
+    if (kid.clientWidth !== 800) throw new Error("নকল মাপ কাজ করছে না");
+    d.remove();
+  });
+
+  for (const [name, w, h, want] of [
+    ["ছোট ভাসমান পর্দা", 380, 220, "ছোট"],
+    ["মাঝারি", 960, 540, "ছোট"],
+    ["বড় মনিটর", 1920, 1080, "বড়"],
+  ]) {
+    ran++;
+    const s2 = await scaleIn(w, h);
+    const ok =
+      s2 !== null &&
+      (want === "ছোট" ? s2 < 0.99 : s2 > 1.01) &&
+      Math.abs(s2 - M.fitScale(w, h, M.FIT_W, M.FIT_H)) < 0.001;
+    if (!ok)
+      failures.push(
+        `ভাসমান পর্দা সত্যিই বসে — ${name} (${w}×${h}) → scale=${s2}, ` +
+          `হওয়ার কথা ${M.fitScale(w, h, M.FIT_W, M.FIT_H).toFixed(3)}`,
+      );
+  }
+
   check("নকশার মাপ ১৬:৯ — টিভি/প্রজেক্টরের অনুপাত", () => {
     const r = M.FIT_W / M.FIT_H;
     if (Math.abs(r - 16 / 9) > 0.01)

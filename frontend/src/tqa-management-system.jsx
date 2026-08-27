@@ -20222,28 +20222,58 @@ function FitBox({ children }) {
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
-    const o = outer.current;
-    const i = inner.current;
-    if (!o || !i) return;
+    if (!outer.current || !inner.current) return;
+    const win = outer.current.ownerDocument?.defaultView || window;
+    let alive = true;
+
     const measure = () => {
-      const ow = o.clientWidth;
-      const oh = o.clientHeight;
+      const o = outer.current;
+      const i = inner.current;
+      if (!alive || !o || !i) return;
       // ⚠️ transform অফসেট-মাপ বদলায় না, তাই এগুলো সবসময় আসল মাপই
-      const iw = i.offsetWidth;
-      const ih = i.offsetHeight;
-      const s = fitScale(ow, oh, iw, ih);
-      // মাপ এখনো জানা যায়নি (সবে বসেছে, বা পরীক্ষার পরিবেশ) — হাত দেব না
-      if (s) setScale(s);
+      const s = fitScale(o.clientWidth, o.clientHeight,
+                         i.offsetWidth, i.offsetHeight);
+      // মাপ এখনো জানা যায়নি (সবে বসেছে) — হাত দেব না
+      if (s) setScale((was) => (Math.abs(was - s) > 0.001 ? s : was));
     };
+
     measure();
+
+    /* ⚠️ প্রথম মাপটা প্রায়ই ভুল — উইন্ডোটি তখনো নিজের মাপ পায়নি, তাই
+       ০ আসে আর স্লাইড আগের মাপেই থেকে যায়। উস্তাদ উইন্ডোটা হাতে না
+       নাড়ালে আর কখনো মাপা হতো না — "রেসপনসিভ হয়নি" বলে এটাই।
+       তাই পরের ফ্রেমে, একটু পরে, আর ফন্ট নামার পরেও মেপে নিই। */
+    const raf = win.requestAnimationFrame
+      ? win.requestAnimationFrame(measure)
+      : null;
+    const t1 = win.setTimeout(measure, 60);
+    const t2 = win.setTimeout(measure, 400);
+    try {
+      win.document?.fonts?.ready?.then(measure);
+    } catch {
+      /* ফন্টের খবর না পেলেও উপরের মাপাগুলোই যথেষ্ট */
+    }
+
+    // উইন্ডো টেনে ছোট-বড় করলে
+    win.addEventListener("resize", measure);
+
     /* ⚠️ ভাসমান পর্দা আলাদা উইন্ডোতে থাকে, তাই ওই উইন্ডোর নিজের
        ResizeObserver লাগে — এই উইন্ডোরটা ওখানে কাজ করে না */
-    const RO = o.ownerDocument?.defaultView?.ResizeObserver;
-    if (!RO) return; // পুরনো ব্রাউজার — নকশার মাপেই থাক, ভাঙবে না
-    const ro = new RO(measure);
-    ro.observe(o); // পর্দার মাপ বদলালে
-    ro.observe(i); // স্লাইড বদলে লেখা কম-বেশি হলে
-    return () => ro.disconnect();
+    const RO = win.ResizeObserver;
+    const ro = RO ? new RO(measure) : null;
+    if (ro) {
+      ro.observe(outer.current); // পর্দার মাপ বদলালে
+      ro.observe(inner.current); // স্লাইড বদলে লেখা কম-বেশি হলে
+    }
+
+    return () => {
+      alive = false;
+      if (raf && win.cancelAnimationFrame) win.cancelAnimationFrame(raf);
+      win.clearTimeout(t1);
+      win.clearTimeout(t2);
+      win.removeEventListener("resize", measure);
+      if (ro) ro.disconnect();
+    };
   }, []);
 
   return (
