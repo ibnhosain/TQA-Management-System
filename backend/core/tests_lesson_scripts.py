@@ -8,12 +8,16 @@
 """
 import re
 from django.test import TestCase
-from core.sample_lessons import IKHLAS, QAIDA, DOTS, V1, V2, V3, V4
+from core.sample_lessons import (IKHLAS, QAIDA, QAIDA2, DOTS,
+                                 V1, V2, V3, V4)
 
 BN = re.compile(r"[ঀ-৿]")
 CUE = re.compile(r"\[[^\]]*\]")       # [বাংলা নির্দেশনা]
 SPOKEN = ("says", "correction")
-BOTH = (IKHLAS, QAIDA)
+# ⚠️ প্রতিটি দারসই একই নিয়মে বাঁধা — নতুন দারস যোগ করলে এখানেও যোগ
+# করতে হবে, নইলে সেটি পাহারার বাইরে থেকে যায়
+ALL = (IKHLAS, QAIDA, QAIDA2)
+BOTH = ALL  # পুরনো নাম, আগের পরীক্ষাগুলো এটাই ব্যবহার করে
 
 
 def spoken_only(text):
@@ -1283,7 +1287,10 @@ class TheEnglishIsSpokenEnglish(TestCase):
         bad = []
         for where, text in self.spoken():
             for old, new in self.FORMAL:
-                pat = r"\b%s\b" % old.replace(" ", r"\s")
+                # ⚠️ পরে আরেকটি শব্দ থাকলেই কেবল ধরি — বাক্যের
+                # শেষে "There it is!" ঠিক ইংরেজি, "There
+                # it's" নয়। জোরের জায়গায় সংক্ষিপ্ত রূপ চলে না।
+                pat = r"\b%s\s+[A-Za-z]" % old.replace(" ", r"\s")
                 if re.search(pat, text, re.I):
                     bad.append("%s — “%s” হওয়া উচিত “%s”" % (where, old, new))
         self.assertEqual(bad, [], "আনুষ্ঠানিক ইংরেজি:\n  " +
