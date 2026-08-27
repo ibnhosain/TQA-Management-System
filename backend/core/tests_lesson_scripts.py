@@ -9,16 +9,17 @@
 import re
 from django.test import TestCase
 from core.sample_lessons import (IKHLAS, QAIDA, QAIDA2, QAIDA3,
-                                 DOTS, V1, V2, V3, V4)
+                                 QAIDA4, QAIDA5, DOTS,
+                                 V1, V2, V3, V4)
 
 BN = re.compile(r"[ঀ-৿]")
 CUE = re.compile(r"\[[^\]]*\]")       # [বাংলা নির্দেশনা]
 SPOKEN = ("says", "correction")
 # ⚠️ প্রতিটি দারসই একই নিয়মে বাঁধা — নতুন দারস যোগ করলে এখানেও যোগ
 # করতে হবে, নইলে সেটি পাহারার বাইরে থেকে যায়
-ALL = (IKHLAS, QAIDA, QAIDA2, QAIDA3)
+ALL = (IKHLAS, QAIDA, QAIDA2, QAIDA3, QAIDA4, QAIDA5)
 # কায়দার সব দারস — লেখার ধাপ ও হরফের নিয়ম কেবল এগুলোতেই খাটে
-QAIDAS = (QAIDA, QAIDA2, QAIDA3)
+QAIDAS = (QAIDA, QAIDA2, QAIDA3, QAIDA4, QAIDA5)
 BOTH = ALL  # পুরনো নাম, আগের পরীক্ষাগুলো এটাই ব্যবহার করে
 
 
@@ -905,7 +906,8 @@ class WritingIsTaught(TestCase):
 
     def test_each_lesson_writes_its_own_letters(self):
         WANT = {"Lesson 1": "ابتثجحخ", "Lesson 2": "دذرزسش",
-                "Lesson 3": "صضطظعغ"}
+                "Lesson 3": "صضطظعغ", "Lesson 4": "فقكلمن",
+                "Lesson 5": "وهءي"}
         for L in QAIDAS:
             key = next((k for k in WANT if k in L["title"]), None)
             self.assertIsNotNone(key, "চেনা গেল না: " + L["title"][:40])
@@ -1406,7 +1408,8 @@ class NoLessonIsACopyOfAnother(TestCase):
     def test_each_lesson_teaches_different_letters(self):
         """⚠️ একই হরফ দুই দারসে শেখানো হচ্ছে না তো?"""
         NEW = {"Lesson 1": set("ابتثجحخ"), "Lesson 2": set("دذرزسش"),
-               "Lesson 3": set("صضطظعغ")}
+               "Lesson 3": set("صضطظعغ"), "Lesson 4": set("فقكلمن"),
+               "Lesson 5": set("وهءي")}
         pairs = list(NEW.items())
         for i, (a, sa) in enumerate(pairs):
             for b, sb in pairs[i + 1:]:
@@ -1745,3 +1748,119 @@ class TopicNumbersAreReadFirst(TestCase):
         Lecture.objects.create(course=c, no=1, title="Q")
         self.assertIsNone(topic_for_number(LectureTopic, Lesson, c, 5),
                           "নেই এমন নম্বরের টপিক ফেরত এসেছে")
+
+
+class LessonsFourAndFiveLand(TestCase):
+    """♻️ মাইগ্রেশন ০০৪৩ — দারস ৪ ও ৫ পরিচালকের নম্বর ধরে বসে।
+
+    ⚠️ এখানে টপিকের order আর নম্বর ইচ্ছা করেই মেলানো হয়নি — আসল সমস্যাটা
+    ঠিক এমনই ছিল, আর তাতেই দারস ২ ও ৩ গিয়ে বসেছিল ৯ ও ১০ নম্বরে।
+    """
+
+    def setUp(self):
+        from core.models import (Course, Lesson, LessonStep, StepSlide,
+                                 Lecture, LectureTopic)
+        from core.sample_lessons import create_sample
+        self.Lesson, self.LectureTopic = Lesson, LectureTopic
+        self.c = Course.objects.create(name="Easy Noorani Qaida", teacher=None)
+        lec = Lecture.objects.create(course=self.c, no=1, title="Qaida")
+        # ⚠️ order উল্টোপাল্টা — নম্বরের সাথে মেলে না
+        ORDERS = {1: 5, 2: 0, 3: 9, 4: 2, 5: 11, 6: 7}
+        self.topics = {
+            n: LectureTopic.objects.create(
+                lecture=lec, text="Qaida for Beginners — Lesson-%02d" % n,
+                order=ORDERS[n])
+            for n in range(1, 7)}
+        self.first, _ = create_sample(Lesson, LessonStep, StepSlide,
+                                      self.c, "qaida", topic=self.topics[1])
+        self.first.title = "Qaida for Beginners — Lesson -01"
+        self.first.save()
+
+    def run_it(self):
+        import importlib
+        from core.models import (Lesson, LessonStep, StepSlide, Lecture,
+                                 LectureTopic)
+        m = importlib.import_module(
+            "core.migrations.0043_qaida_lessons_4_and_5")
+
+        class A:
+            def get_model(self, app, name):
+                return {"Lesson": Lesson, "LessonStep": LessonStep,
+                        "StepSlide": StepSlide, "Lecture": Lecture,
+                        "LectureTopic": LectureTopic}[name]
+        m.seed(A(), None)
+
+    def test_they_land_on_the_right_numbers(self):
+        """⚠️ আসল পরীক্ষা — ক্রম নয়, নম্বর ধরে।"""
+        from core.sample_lessons import SAMPLES
+        self.run_it()
+        for n, key in ((4, "qaida4"), (5, "qaida5")):
+            les = self.Lesson.objects.filter(topic=self.topics[n]).first()
+            self.assertIsNotNone(les, "Lesson-%02d-এ বসেনি" % n)
+            self.assertEqual(les.title_ar, SAMPLES[key]["title_ar"],
+                             "Lesson-%02d-এ ভুল দারস" % n)
+
+    def test_other_topics_stay_empty(self):
+        """⚠️ ভুল নম্বরের টপিকে যেন কিছু না বসে।"""
+        self.run_it()
+        for n in (2, 3, 6):
+            self.assertFalse(
+                self.Lesson.objects.filter(topic=self.topics[n]).exists(),
+                "Lesson-%02d-এ অকারণে স্ক্রিপ্ট বসেছে" % n)
+
+    def test_the_directors_naming_is_kept(self):
+        self.run_it()
+        les = self.Lesson.objects.filter(topic=self.topics[4]).first()
+        self.assertEqual(les.title, "Qaida for Beginners — Lesson-04")
+
+    def test_the_toggle_gets_the_practice_sheet(self):
+        self.run_it()
+        for n in (4, 5):
+            self.topics[n].refresh_from_db()
+            c = self.topics[n].content or ""
+            self.assertTrue(c.strip(), "টগল খালি — Lesson-%02d" % n)
+            self.assertIn("Write in your notebook", c, "লেখার অংশ নেই")
+
+    def test_steps_and_slides_all_arrive(self):
+        self.run_it()
+        for n, L in ((4, QAIDAS[3]), (5, QAIDAS[4])):
+            les = self.Lesson.objects.filter(topic=self.topics[n]).first()
+            self.assertEqual(les.steps.count(), len(L["steps"]))
+            missing = [s.order for s in les.steps.all()
+                       if getattr(s, "slide", None) is None]
+            self.assertEqual(missing, [], "কিছু ধাপে পর্দা নেই")
+
+    def test_a_topic_with_a_script_is_left_alone(self):
+        """⚠️ পরিচালকের লেখা স্ক্রিপ্টের উপরে কখনো বসবে না।"""
+        from core.models import Lesson
+        mine = Lesson.objects.create(course=self.c, title="আমার নিজের",
+                                     kind="qaida", topic=self.topics[4])
+        self.run_it()
+        mine.refresh_from_db()
+        self.assertEqual(mine.title, "আমার নিজের")
+        self.assertEqual(mine.steps.count(), 0, "আমার দারস বদলে গেছে")
+        # দারস ৫ তবু ঠিক জায়গায় বসবে
+        self.assertIsNotNone(
+            self.Lesson.objects.filter(topic=self.topics[5]).first())
+
+    def test_nothing_happens_without_a_matching_topic(self):
+        """ওই নম্বরের টপিক না থাকলে চুপচাপ কিছু না করাই নিরাপদ।"""
+        self.topics[4].delete()
+        self.topics[5].delete()
+        n = self.Lesson.objects.count()
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.count(), n,
+                         "টপিক না থাকলেও কোথাও বসিয়ে দিয়েছে")
+
+    def test_running_it_twice_changes_nothing(self):
+        self.run_it()
+        a = self.Lesson.objects.count()
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.count(), a, "দুবার বসেছে")
+
+    def test_lesson_one_is_untouched(self):
+        before = self.first.steps.count()
+        self.run_it()
+        self.first.refresh_from_db()
+        self.assertEqual(self.first.steps.count(), before)
+        self.assertEqual(self.first.title, "Qaida for Beginners — Lesson -01")
