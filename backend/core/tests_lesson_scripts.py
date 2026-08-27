@@ -1142,3 +1142,105 @@ class TheRefreshNeverTouchesOtherLessons(TestCase):
         self.assertEqual(les.steps.filter(slide__kind="write").count(), 5,
                          "লেখার ধাপগুলো ফিরে আসেনি")
         self.assertEqual(les.steps.count(), 29)
+
+
+# ═══════════════ গোপনীয়তা ও অনুমতির পাহারা ═══════════════
+# ⚠️ এগুলো একবারের পরীক্ষা নয় — স্থায়ী পাহারা। কোনো ViewSet-এর
+# get_queryset বদলালে, বা নতুন ফিল্টার যোগ হলে, একজনের তথ্য অন্যজনের
+# চোখে পড়ে যেতে পারে। সেটাই এখানে ধরা পড়বে।
+
+class Privacy(TestCase):
+    def setUp(self):
+        from rest_framework.test import APIClient
+        from core import models as M
+        self.APIClient, self.M = APIClient, M
+        mk = lambda u, r: M.User.objects.create(username=u, role=r)
+        self.boss = mk("boss", "director")
+        self.t1, self.t2 = mk("t1", "teacher"), mk("t2", "teacher")
+        self.s1, self.s2 = mk("s1", "student"), mk("s2", "student")
+        self.c1 = M.Course.objects.create(name="c1", teacher=self.t1)
+        self.c2 = M.Course.objects.create(name="c2", teacher=self.t2)
+        self.c1.students.add(self.s1)
+        self.c2.students.add(self.s2)
+        # দুজনের ফি, দুজনের বেতন, দুজনের ছুটি
+        for s, c in ((self.s1, self.c1), (self.s2, self.c2)):
+            M.FeePayment.objects.create(student=s, month_label="2026-08",
+                                        amount=1000)
+            M.LeaveRequest.objects.create(applicant=s,
+                                          from_date="2026-08-10",
+                                          to_date="2026-08-10", reason="r")
+        for t in (self.t1, self.t2):
+            M.TeacherPayment.objects.create(teacher=t, amount=5000)
+
+    def as_(self, u):
+        cl = self.APIClient()
+        cl.force_authenticate(user=u)
+        return cl
+
+    def rows(self, u, path):
+        r = self.as_(u).get("/api/%s/" % path)
+        if r.status_code != 200:
+            return r.status_code
+        d = r.data
+        return d["results"] if isinstance(d, dict) and "results" in d else d
+
+    def names(self, rows, *keys):
+        out = []
+        for x in rows if isinstance(rows, list) else []:
+            for k in keys:
+                if x.get(k) is not None:
+                    out.append(x[k])
+        return out
+
+    def test_a_student_sees_only_their_own_fees(self):
+        got = self.rows(self.s1, "fees")
+        self.assertNotIsInstance(got, int, "শিক্ষার্থী ফি পাতাই পাচ্ছেন না")
+        ids = {x.get("student") for x in got}
+        self.assertLessEqual(ids, {self.s1.id},
+                             "অন্য শিক্ষার্থীর ফি দেখা যাচ্ছে: %s" % ids)
+
+    def test_a_student_cannot_see_salaries(self):
+        got = self.rows(self.s1, "salaries")
+        if not isinstance(got, int):
+            self.assertEqual(len(got), 0,
+                             "শিক্ষার্থী উস্তাদের বেতন দেখছেন!")
+
+    def test_a_teacher_cannot_see_another_teachers_salary(self):
+        got = self.rows(self.t1, "salaries")
+        if not isinstance(got, int):
+            ids = {x.get("teacher") for x in got}
+            self.assertLessEqual(ids, {self.t1.id, None},
+                                 "অন্য উস্তাদের বেতন দেখা যাচ্ছে: %s" % ids)
+
+    def test_a_student_sees_only_their_own_leave(self):
+        got = self.rows(self.s1, "leaves")
+        if not isinstance(got, int):
+            ids = {x.get("applicant") for x in got}
+            self.assertLessEqual(ids, {self.s1.id},
+                                 "অন্যের ছুটির আবেদন দেখা যাচ্ছে: %s" % ids)
+
+    def test_a_teacher_sees_only_their_own_course(self):
+        got = self.rows(self.t1, "courses")
+        ids = {x.get("id") for x in got}
+        self.assertNotIn(self.c2.id, ids,
+                         "অন্য উস্তাদের কোর্স দেখা যাচ্ছে")
+
+    def test_a_student_sees_only_their_own_course(self):
+        got = self.rows(self.s1, "courses")
+        ids = {x.get("id") for x in got}
+        self.assertNotIn(self.c2.id, ids,
+                         "অন্য কোর্স দেখা যাচ্ছে")
+
+    def test_a_student_cannot_list_users(self):
+        self.assertEqual(self.rows(self.s1, "users"), 403,
+                         "শিক্ষার্থী সবার তালিকা দেখছেন")
+
+    def test_the_director_sees_everything(self):
+        """সাবধানতা যেন পরিচালকের কাজ আটকে না দেয়।"""
+        for p, n in (("fees", 2), ("salaries", 2), ("leaves", 2),
+                     ("courses", 2)):
+            got = self.rows(self.boss, p)
+            self.assertNotIsInstance(got, int, "পরিচালক %s পাচ্ছেন না" % p)
+            self.assertEqual(len(got), n,
+                             "পরিচালক %s-এ %d নয়, %d দেখছেন"
+                             % (p, n, len(got)))
