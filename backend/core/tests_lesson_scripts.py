@@ -1534,3 +1534,134 @@ class TheNewQaidaLessonsLand(TestCase):
         self.first.delete()
         self.run_it()
         self.assertEqual(self.Lesson.objects.count(), 0)
+
+
+class TheRepairMigration(TestCase):
+    """🔧 মাইগ্রেশন ০০৪২ — দুই অবস্থাতেই দারস ২ ও ৩ ঠিক জায়গায় আনে।
+
+    ⚠️ ০০৪১-এর প্রথম সংস্করণ নিজের নামে নতুন টপিক বানাত। সেটি একবার চলে
+    গেলে Django আর চালায় না, তাই সংশোধনটি এই আলাদা মাইগ্রেশনে।
+    """
+
+    def setUp(self):
+        from core.models import (Course, Lesson, LessonStep, StepSlide,
+                                 Lecture, LectureTopic)
+        from core.sample_lessons import create_sample
+        self.M = (Lesson, LessonStep, StepSlide)
+        self.Lesson, self.LectureTopic = Lesson, LectureTopic
+        self.c = Course.objects.create(name="Easy Noorani Qaida", teacher=None)
+        self.lec = Lecture.objects.create(course=self.c, no=1, title="Qaida")
+        self.topics = [
+            LectureTopic.objects.create(
+                lecture=self.lec,
+                text="Qaida for Beginners — Lesson-%02d" % n, order=n - 1)
+            for n in range(1, 13)]
+        self.first, _ = create_sample(*self.M, self.c, "qaida",
+                                      topic=self.topics[0])
+        self.first.title = "Qaida for Beginners — Lesson -01"
+        self.first.save()
+
+    def run_it(self):
+        import importlib
+        from core.models import (Lesson, LessonStep, StepSlide, Lecture,
+                                 LectureTopic)
+        m = importlib.import_module(
+            "core.migrations.0042_qaida_2_3_into_director_topics")
+
+        class A:
+            def get_model(self, app, name):
+                return {"Lesson": Lesson, "LessonStep": LessonStep,
+                        "StepSlide": StepSlide, "Lecture": Lecture,
+                        "LectureTopic": LectureTopic}[name]
+        m.fix(A(), None)
+
+    def seed_the_wrong_way(self):
+        """০০৪১-এর প্রথম সংস্করণ যেভাবে বসাত — নিজের নামে নতুন টপিকে।"""
+        from core.models import Lesson, LessonStep, StepSlide, LectureTopic
+        from core.sample_lessons import SAMPLES, create_sample
+        made = []
+        for i, key in enumerate(("qaida2", "qaida3")):
+            data = SAMPLES[key]
+            t = LectureTopic.objects.create(
+                lecture=self.lec, text=data["title"], order=100 + i)
+            create_sample(Lesson, LessonStep, StepSlide, self.c, key, topic=t)
+            made.append(t)
+        return made
+
+    # ───── ক) এখনো বসেনি ─────
+    def test_it_seeds_into_the_directors_topics(self):
+        self.run_it()
+        for n in (2, 3):
+            les = self.Lesson.objects.filter(topic=self.topics[n - 1]).first()
+            self.assertIsNotNone(les, "টপিক %02d-এ স্ক্রিপ্ট বসেনি" % n)
+            self.assertEqual(les.title, self.topics[n - 1].text,
+                             "পরিচালকের নাম রাখা হয়নি")
+
+    def test_no_extra_topic_appears(self):
+        before = self.LectureTopic.objects.count()
+        self.run_it()
+        self.assertEqual(self.LectureTopic.objects.count(), before,
+                         "বাড়তি টপিক তৈরি হয়েছে")
+
+    # ───── খ) ভুল সংস্করণ আগেই চলে গেছে ─────
+    def test_it_moves_lessons_off_the_auto_made_topics(self):
+        """⚠️ আসল সারাই — ভুল জায়গা থেকে সরিয়ে ঠিক জায়গায় আনা।"""
+        wrong = self.seed_the_wrong_way()
+        self.run_it()
+        for t in wrong:
+            self.assertFalse(
+                self.LectureTopic.objects.filter(pk=t.pk).exists(),
+                "নিজের বানানো টপিকটি রয়ে গেছে: " + t.text[:40])
+        for n in (2, 3):
+            les = self.Lesson.objects.filter(topic=self.topics[n - 1]).first()
+            self.assertIsNotNone(les, "টপিক %02d-এ আসেনি" % n)
+            self.assertEqual(les.title, self.topics[n - 1].text)
+
+    def test_the_moved_lesson_keeps_its_steps(self):
+        self.seed_the_wrong_way()
+        counts = {l.title_ar: l.steps.count()
+                  for l in self.Lesson.objects.exclude(pk=self.first.pk)}
+        self.run_it()
+        for ar, n in counts.items():
+            les = self.Lesson.objects.get(title_ar=ar)
+            self.assertEqual(les.steps.count(), n, "ধাপ হারিয়েছে")
+
+    def test_no_duplicate_lesson_after_repair(self):
+        self.seed_the_wrong_way()
+        self.run_it()
+        from core.sample_lessons import SAMPLES
+        for key in ("qaida2", "qaida3"):
+            self.assertEqual(
+                self.Lesson.objects.filter(
+                    title_ar=SAMPLES[key]["title_ar"]).count(), 1,
+                "নকল দারস তৈরি হয়েছে")
+
+    # ───── নিরাপত্তা ─────
+    def test_a_directors_own_topic_is_never_deleted(self):
+        """⚠️ কেবল নিজের বানানো টপিকই মোছা হয়, পরিচালকেরটি নয়।"""
+        self.run_it()
+        for t in self.topics:
+            self.assertTrue(self.LectureTopic.objects.filter(pk=t.pk).exists(),
+                            "পরিচালকের টপিক মুছে গেছে: " + t.text[:40])
+
+    def test_a_topic_with_a_script_is_skipped(self):
+        from core.models import Lesson
+        mine = Lesson.objects.create(course=self.c, title="আমার নিজের",
+                                     kind="qaida", topic=self.topics[1])
+        self.run_it()
+        mine.refresh_from_db()
+        self.assertEqual(mine.title, "আমার নিজের")
+        self.assertEqual(mine.steps.count(), 0, "আমার দারস বদলে গেছে")
+
+    def test_lesson_one_is_untouched(self):
+        self.run_it()
+        self.first.refresh_from_db()
+        self.assertEqual(self.first.title, "Qaida for Beginners — Lesson -01")
+        self.assertEqual(self.first.topic_id, self.topics[0].id)
+
+    def test_running_it_twice_changes_nothing(self):
+        self.run_it()
+        a = (self.Lesson.objects.count(), self.LectureTopic.objects.count())
+        self.run_it()
+        b = (self.Lesson.objects.count(), self.LectureTopic.objects.count())
+        self.assertEqual(a, b, "দুবার চললে বদলে যাচ্ছে")
