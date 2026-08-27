@@ -15,6 +15,20 @@ import * as M from "../src/tqa-management-system.jsx";
 import { setMode, reset, LESSON } from "./api-stub.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* পর্দা ছাড়াই যেসব নিয়ম যাচাই করা যায় — যেমন কোন ঘরগুলো পর্দায় যেতে পারে */
+function check(name, fn) {
+  ran++;
+  try {
+    fn();
+  } catch (e) {
+    failures.push(`${name} → ${e.message}`);
+  }
+}
+const eq = (a, b, why) => {
+  if (JSON.stringify(a) !== JSON.stringify(b))
+    throw new Error(`${why} · পেলাম ${JSON.stringify(a)}`);
+};
 const nop = () => {};
 let ran = 0;
 const failures = [];
@@ -511,6 +525,68 @@ export async function run() {
     "নতুন নমুনা বসিয়ে স্ক্রিপ্টটি খোলে",
     <M.LessonsView user={director} courses={courses} />,
     { click: ["♻️ নতুন নমুনা"], expect: ["← দারসের তালিকা", "+ নতুন ধাপ"] },
+  );
+
+  /* ───── 🔝 সবার উপরে ভাসমান পর্দা ─────
+     ⚠️ এটি উস্তাদের উইন্ডোর ভেতরেই আঁকা হয়, তাই "শুধু স্লাইডের ঘর যাবে"
+     দেয়ালটা এখানে কোডেই — onlySlide()। সেটি ফুটো হলে বাচ্চার পর্দায়
+     উস্তাদের স্ক্রিপ্ট ভেসে উঠত, তাই সবচেয়ে কড়া পরীক্ষাটি এখানে। */
+  check("ভাসমান পর্দায় উস্তাদের স্ক্রিপ্ট যেতে পারে না", () => {
+    const dirty = {
+      kind: "verse",
+      heading: "Say it with me",
+      arabic: "قُلْ",
+      text: "🎤",
+      // ⚠️ নিচেরগুলো কখনো যেতে পারবে না
+      teacher_says: "Listen carefully",
+      correction: "Almost! Try again",
+      note: "মাখরাজ: গলার গভীর থেকে",
+      expected: "قُلْ",
+      student_does: "বলে",
+    };
+    const out = M.onlySlide(dirty);
+    eq(Object.keys(out).sort(), ["arabic", "heading", "kind", "text"],
+       "অনুমোদিত ঘরের বাইরে কিছু গেছে");
+    for (const bad of ["teacher_says", "correction", "note", "expected",
+                       "student_does"]) {
+      if (bad in out) throw new Error(`“${bad}” ঘরটি পার হয়ে গেছে`);
+    }
+  });
+  check("স্লাইড না থাকলে ভাসমান পর্দা খালি", () => {
+    eq(M.onlySlide(null), null, "null-এর বদলে অন্য কিছু");
+    eq(M.onlySlide(undefined), null, "undefined-এর বদলে অন্য কিছু");
+  });
+  check("খালি ঘর বাদ যায়, শূন্য নয়", () => {
+    eq(M.onlySlide({ kind: "title", heading: "", arabic: null, text: "হ্যাঁ" }),
+       { kind: "title", heading: "", text: "হ্যাঁ" },
+       "null বাদ পড়েনি বা খালি লেখা হারিয়েছে");
+  });
+  check("এই ব্রাউজারে ভাসমান পর্দা নেই — তা বোঝা যায়", () => {
+    if (M.pipReady() !== false)
+      throw new Error("jsdom-এ তো documentPictureInPicture নেই");
+  });
+  await scene(
+    "ভাসমান পর্দা স্লাইডটাই আঁকে",
+    <M.FloatBody slide={{ kind: "verse", heading: "Say it with me",
+                          arabic: "قُلْ", text: "🎤" }} />,
+    { expect: ["Say it with me", "قُلْ"] },
+  );
+  await scene(
+    "স্লাইড ছাড়াও ভাসমান পর্দা ভাঙে না",
+    <M.FloatBody slide={null} />,
+    { expect: [] },
+  );
+  await scene(
+    "শিক্ষক মোডে ভাসমান পর্দার বোতাম আছে",
+    <M.TeacherMode id={1} onClose={nop} />,
+    { expect: ["🔝 ভাসমান পর্দা"] },
+  );
+  /* ⚠️ jsdom-এ ভাসমান উইন্ডো নেই — চাপলে যেন ভেঙে না পড়ে, বরং
+     উস্তাদকে পরিষ্কার করে বলে দেয় */
+  await scene(
+    "ভাসমান পর্দা না থাকলেও চাপলে ভাঙে না",
+    <M.TeacherMode id={1} onClose={nop} />,
+    { click: ["🔝 ভাসমান পর্দা"], expect: ["🔝 ভাসমান পর্দা"] },
   );
 
   await scene("শিক্ষার্থী → Revise → Next → Close", <M.StudentLessonsView />, {

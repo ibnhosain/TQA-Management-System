@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+// ভাসমান পর্দাটি উস্তাদের উইন্ডোর ভেতর থেকেই আঁকা হয় — তাই portal
+import { createPortal } from "react-dom";
 import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
 
 /* ═══════════════════════════════════════════════════════════
@@ -20212,6 +20214,87 @@ function StageSlide({ slide }) {
   );
 }
 
+/* ═══════════ 🔝 সবার উপরে ভাসমান পর্দা ═══════════
+
+   কেন দরকার হলো — জুমে সাধারণ পপআপ উইন্ডো শেয়ার করলে দুটো ঝামেলা হতো:
+
+     ১. মিনিমাইজ করলে শেয়ার জমে যেত
+     ২. নেক্সট চাপলে নতুন স্লাইড আসত না, যতক্ষণ না উইন্ডোটায় ক্লিক করা হয়
+
+   দুটোরই কারণ এক: ক্রোম যে উইন্ডো পুরোপুরি ঢাকা পড়ে বা মিনিমাইজ হয়,
+   তার ছবি আঁকা বন্ধ করে দেয় (জায়গা ও ব্যাটারি বাঁচাতে)। ছবি না আঁকলে
+   জুম পুরনো ফ্রেমেই আটকে থাকে। ⚠️ মিনিমাইজ করা উইন্ডোর ছবি অপারেটিং
+   সিস্টেমেই থাকে না — জাভাস্ক্রিপ্ট দিয়ে তা বদলানো যায় না।
+
+   এই ভাসমান উইন্ডো (Document Picture-in-Picture) দুটোই মিটিয়ে দেয়:
+     • সবসময় সবার উপরে থাকে → কখনো ঢাকা পড়ে না → ছবি আঁকা থামে না
+     • মিনিমাইজ করার দরকারই হয় না
+     • উস্তাদের উইন্ডোরই অংশ (portal), তাই নেক্সট চাপলে সাথে সাথে বদলায়
+       — কোনো বার্তা পাঠানোর অপেক্ষা নেই
+
+   ⚠️ নিরাপত্তা — এটি উস্তাদের উইন্ডোর ভেতরেই চলে, তাই আলাদা /stage/
+   ডাকার দেয়ালটা এখানে নেই। তার বদলে দেয়ালটা onlySlide()— শুধু
+   অনুমোদিত ঘরগুলো নিয়ে নতুন বস্তু বানানো হয়, ধাপটা সরাসরি যায় না।
+   ফলে উস্তাদের স্ক্রিপ্টের কোনো ঘর ভুলেও পৌঁছাতে পারে না। */
+
+const pipReady = () =>
+  typeof window !== "undefined" && "documentPictureInPicture" in window;
+
+/* ⚠️ পর্দায় যেতে পারে কেবল এই ঘরগুলো — আর একটিও নয় */
+const STAGE_FIELDS = ["kind", "heading", "arabic", "translit", "text", "image"];
+
+const onlySlide = (sl) => {
+  if (!sl) return null;
+  const out = {};
+  for (const k of STAGE_FIELDS) if (sl[k] != null) out[k] = sl[k];
+  return out;
+};
+
+/* নতুন উইন্ডোটির নিজের document — ফন্ট ও ভিত্তি সাজ নিয়ে যেতে হয়,
+   নইলে আরবি মুসহাফের ফন্টে বসে না */
+const dressPip = (w) => {
+  try {
+    const d = w.document;
+    d.title = "TQA — উপস্থাপনা";
+    document.querySelectorAll('link[rel="stylesheet"]').forEach((l) => {
+      const c = d.createElement("link");
+      c.rel = "stylesheet";
+      c.href = l.href;
+      d.head.appendChild(c);
+    });
+    const st = d.createElement("style");
+    st.textContent =
+      "html,body{margin:0;padding:0;height:100%;overflow:hidden;" +
+      "background:#0b1f16}";
+    d.head.appendChild(st);
+  } catch {
+    /* ফন্ট নিতে না পারলেও পর্দা চলবে — শুধু সাজটা সাদামাটা হবে */
+  }
+};
+
+/* ভাসমান পর্দার ভেতরটা — উপস্থাপনা উইন্ডোর মতোই দেখতে */
+function FloatBody({ slide }) {
+  return (
+    <div
+      style={{
+        height: "100vh",
+        width: "100%",
+        background: artOf(slide?.kind)[0],
+        transition: "background 700ms ease",
+        color: "#fff",
+        display: "grid",
+        placeItems: "center",
+        fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <SlideArt kind={slide?.kind} />
+      <StageSlide slide={slide} />
+    </div>
+  );
+}
+
 /* ⚠️ এটিই সেই উইন্ডো যা জুমে শেয়ার করা হয়।
    এখানে কেবল শিক্ষার্থীর পর্দা — আর কিছুই নেই, থাকতেও পারবে না। */
 export function PresentWindow() {
@@ -20434,6 +20517,7 @@ function TeacherMode({ id, onClose }) {
   const [zoom, setZoom] = usePersistedState("tm_zoom", 1);
   // উপস্থাপনা উইন্ডো খোলা আছে কিনা (সে নিজে থেকে সাড়া দেয়)
   const [stageOk, setStageOk] = useState(false);
+  const [floatWin, setFloatWin] = useState(null); // ভাসমান পর্দার উইন্ডো
   const [prog, setProg] = useState(false); // অগ্রগতির পাতা খোলা আছে কিনা
   const stageWin = useRef(null);
   const lastBeat = useRef(0);
@@ -20537,6 +20621,51 @@ function TeacherMode({ id, onClose }) {
 
   // শিক্ষক মোড বন্ধ হলে উপস্থাপনার পর্দাও সমাপ্তি দেখাক
   useEffect(() => () => stageSend({ t: "bye" }), []);
+
+  /* 🔝 সবার উপরে ভাসমান পর্দা — জুমে এটিই শেয়ার করা সবচেয়ে নিরাপদ।
+     ⚠️ requestWindow ডাকতে হয় ক্লিকের ভেতর থেকেই, নইলে ব্রাউজার
+     আটকে দেয় — তাই এটি এফেক্টে নয়, বাটনের হাতেই। */
+  const openFloat = async () => {
+    if (floatWin) {
+      try {
+        floatWin.focus();
+      } catch {
+        /* উস্তাদ ইতিমধ্যে বন্ধ করে দিয়েছেন — কিছু করার নেই */
+      }
+      return;
+    }
+    if (!pipReady()) {
+      notice(
+        "এই ব্রাউজারে ভাসমান পর্দা নেই — ক্রোম বা এজ ব্যবহার করুন, " +
+          "নয়তো “🖥️ উপস্থাপনা” উইন্ডোটিই শেয়ার করুন।",
+      );
+      return;
+    }
+    try {
+      const w = await window.documentPictureInPicture.requestWindow({
+        width: 960,
+        height: 540,
+      });
+      dressPip(w);
+      // উস্তাদ নিজে বন্ধ করলে বাতিটাও নিভুক
+      w.addEventListener("pagehide", () => setFloatWin(null));
+      setFloatWin(w);
+    } catch (e) {
+      notice("ভাসমান পর্দা খোলা গেল না — " + (e?.message || ""));
+    }
+  };
+
+  // শিক্ষক মোড বন্ধ হলে ভাসমান পর্দাও যাক
+  useEffect(
+    () => () => {
+      try {
+        if (floatWin) floatWin.close();
+      } catch {
+        /* আগেই বন্ধ — ধরে নেওয়াই যথেষ্ট */
+      }
+    },
+    [floatWin],
+  );
 
   const openStage = () => {
     // আগেরটি খোলা থাকলে সেটিকেই সামনে আনি, নতুন করে খুলি না
@@ -20723,6 +20852,22 @@ function TeacherMode({ id, onClose }) {
           title="জুমে এই উইন্ডোটিই শেয়ার করবেন"
         >
           {stageOk ? "🟢" : "🖥️"} উপস্থাপনা
+        </button>
+        {/* ঢাকা পড়ে না, মিনিমাইজ লাগে না — তাই জুমের শেয়ার জমে যায় না */}
+        <button
+          style={{
+            ...barBtn,
+            background: floatWin ? "#1a7a4433" : "#ffffff14",
+            borderColor: floatWin ? "#4ade8077" : "#ffffff33",
+          }}
+          onClick={openFloat}
+          title={
+            floatWin
+              ? "ভাসমান পর্দা চলছে — জুমে এটিই শেয়ার করুন"
+              : "সবার উপরে ভাসমান পর্দা — ঢাকা পড়ে না, তাই শেয়ার জমে না"
+          }
+        >
+          {floatWin ? "🟢" : "🔝"} ভাসমান পর্দা
         </button>
         <button style={barBtn} onClick={() => setProg(true)}>
           📈 অগ্রগতি
@@ -20978,6 +21123,14 @@ function TeacherMode({ id, onClose }) {
           />
         </div>
       )}
+
+      {/* ভাসমান পর্দা — উস্তাদের এই গাছেরই ডাল, তাই ধাপ বদলালে সাথে
+          সাথেই বদলায়। ⚠️ onlySlide() ছাড়া কিছুই ভেতরে যায় না। */}
+      {floatWin &&
+        createPortal(
+          <FloatBody slide={onlySlide(step?.slide)} />,
+          floatWin.document.body,
+        )}
 
       {/* ───────── নিচের পট্টি ───────── */}
       <div
@@ -24432,6 +24585,9 @@ export {
   SlidePreview,
   StageSlide,
   SlideArt,
+  FloatBody,
+  onlySlide,
+  pipReady,
   SLIDE_KINDS,
   artOf,
   StepCard,
