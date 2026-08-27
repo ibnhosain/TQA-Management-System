@@ -1082,3 +1082,63 @@ class AFreshInstallWorks(TestCase):
         executor = MigrationExecutor(connection)
         plan = executor.migration_plan(executor.loader.graph.leaf_nodes())
         self.assertEqual(plan, [], "কিছু মাইগ্রেশন বাকি রয়ে গেছে")
+
+
+class TheRefreshNeverTouchesOtherLessons(TestCase):
+    """⚠️ হালনাগাদ যেন পরিচালকের নিজের লেখা দারসে হাত না দেয়।
+
+    ০০৩৯-এ একটি ফলব্যাক ছিল যা "একই ধরনের যেকোনো দারস" ধরত। শিরোনাম না
+    মিললে সেটি পরিচালকের নিজের হাতে লেখা দারস ধরে ফেলত, আর replace=True
+    তার সব ধাপ মুছে দিত। সরানো হয়েছে — এই পরীক্ষা পাহারা দেয়।
+    """
+
+    def refresh(self):
+        import importlib
+        from core.models import Lesson, LessonStep, StepSlide
+        m = importlib.import_module(
+            "core.migrations.0039_refresh_lesson_scripts")
+
+        class A:
+            def get_model(self, app, name):
+                return {"Lesson": Lesson, "LessonStep": LessonStep,
+                        "StepSlide": StepSlide}[name]
+        m.refresh(A(), None)
+
+    def test_a_directors_own_lesson_is_left_alone(self):
+        from core.models import Course, Lesson, LessonStep, StepSlide
+        c = Course.objects.create(name="নূরানী", teacher=None)
+        mine = Lesson.objects.create(course=c, title="আমার নিজের দারস",
+                                     kind="qaida", duration_min=15)
+        st = LessonStep.objects.create(lesson=mine, order=0, section="ক",
+                                       teacher_says="আমার নিজের লেখা")
+        StepSlide.objects.create(step=st, kind="letters", arabic="ا")
+        self.refresh()
+        mine.refresh_from_db()
+        self.assertEqual(mine.steps.count(), 1, "নিজের দারসের ধাপ বদলে গেছে")
+        self.assertEqual(mine.steps.first().teacher_says, "আমার নিজের লেখা",
+                         "নিজের লেখা মুছে গেছে")
+        self.assertEqual(mine.title, "আমার নিজের দারস")
+        self.assertEqual(mine.duration_min, 15)
+
+    def test_the_kind_fallback_is_gone(self):
+        """⚠️ পাহারা — কেউ যেন ফলব্যাকটি আবার যোগ না করে।"""
+        import inspect, importlib
+        m = importlib.import_module(
+            "core.migrations.0039_refresh_lesson_scripts")
+        src = inspect.getsource(m._find)
+        self.assertNotIn('kind=data["kind"]', src,
+                         "ধরন ধরে খোঁজার ফলব্যাক ফিরে এসেছে — পরিচালকের "
+                         "নিজের লেখা দারস মুছে যেতে পারে")
+
+    def test_the_real_lesson_is_still_refreshed(self):
+        """সাবধানতা যেন কাজটাই আটকে না দেয়।"""
+        from core.models import Course, Lesson, LessonStep, StepSlide
+        from core.sample_lessons import create_sample
+        c = Course.objects.create(name="নূরানী", teacher=None)
+        les, _ = create_sample(Lesson, LessonStep, StepSlide, c, "qaida")
+        les.steps.filter(slide__kind="write").delete()
+        self.refresh()
+        les.refresh_from_db()
+        self.assertEqual(les.steps.filter(slide__kind="write").count(), 5,
+                         "লেখার ধাপগুলো ফিরে আসেনি")
+        self.assertEqual(les.steps.count(), 29)

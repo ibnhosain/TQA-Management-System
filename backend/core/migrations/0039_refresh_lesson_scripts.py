@@ -16,21 +16,22 @@
 ⚠️ পরিচালক ওই দুটি দারসে নিজে কিছু লিখে থাকলে তা এখানে বদলে যাবে —
 পরিচালক নিজেই এটি চেয়েছেন ("পুরোনো গুলো মুছে ফেল")।
 
-⚠️ দারস খোঁজা হয় তিনভাবে — শিরোনাম, আরবি শিরোনাম, তারপর ধরন। শুধু
-শিরোনাম ধরলে পরিচালক নাম বদলে থাকলে মিলত না, আর হালনাগাদটাই বাদ পড়ত।
+⚠️ দারস খোঁজা হয় দুইভাবে — শিরোনাম, তারপর আরবি শিরোনাম। শুধু শিরোনাম
+ধরলে পরিচালক নাম বদলে থাকলে মিলত না। কিন্তু ধরন (kind) ধরে খোঁজা হয় না:
+তাতে পরিচালকের নিজের লেখা দারসও এর আওতায় পড়ে মুছে যেতে পারত।
 """
 from django.db import migrations
 
 
-def _find(Lesson, data, key):
+def _find(Lesson, data):
     """এই দারসটি ডাটাবেজে যেখানে যেখানে আছে।"""
     rows = list(Lesson.objects.filter(title=data["title"]))
     if not rows and data.get("title_ar"):
         rows = list(Lesson.objects.filter(title_ar=data["title_ar"]))
-    if not rows:
-        # শেষ চেষ্টা — একই ধরনের দারস, যেটিতে ধাপ আছে
-        rows = [x for x in Lesson.objects.filter(kind=data["kind"])
-                if x.steps.exists()]
+    # ⚠️ ধরন (kind) ধরে খোঁজা হয় না — ইচ্ছা করেই। "একই ধরনের যেকোনো
+    # দারস" ধরলে পরিচালকের নিজের হাতে লেখা দারসও এর আওতায় পড়ত, আর
+    # replace=True তার সব ধাপ মুছে দিত। শিরোনাম বা আরবি শিরোনাম না
+    # মিললে কিছুই না করাই নিরাপদ।
     return rows
 
 
@@ -42,7 +43,7 @@ def refresh(apps, schema_editor):
     StepSlide = apps.get_model("core", "StepSlide")
 
     for key, data in SAMPLES.items():
-        for lesson in _find(Lesson, data, key):
+        for lesson in _find(Lesson, data):
             create_sample(Lesson, LessonStep, StepSlide, lesson.course, key,
                           replace=True, target=lesson)
             # লেকচার প্ল্যানের টগলের লেখাও নতুন করে বসাই — পরিচালক
