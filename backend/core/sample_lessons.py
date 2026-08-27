@@ -4888,37 +4888,57 @@ QAIDA5 = {
 
 _BN_DIGITS = str.maketrans("০১২৩৪৫৬৭৮৯", "0123456789")
 _NO_RE = re.compile(
-    r"(?:lesson|sabaq|dars|দারস|সবক|পাঠ)\s*[-–—:.]?\s*0*(\d+)", re.I)
+    r"(?:lesson|sabaq|dars|লেসন|দারস|সবক|পাঠ|ক্লাস)"
+    r"\s*(?:no|নং|নাম্বার)?\s*[-–—:.#]?\s*0*(\d+)", re.I)
 
 
-def topic_number(text):
+def topic_number(text, strict=True):
     """টপিকের নামে লেখা দারস নম্বর — না পেলে None।
 
-    ⚠️ শেষ ভরসা হিসেবে নামের শেষের সংখ্যাটাও ধরা হয়, কারণ কেউ কেউ
-    কেবল "০৩" বা "Part 3" লেখেন।
+    strict=True (ডিফল্ট) — কেবল "Lesson 4", "দারস ৪", "Sabaq-05" এমন
+    স্পষ্ট লেখা হলেই। এটাই স্ক্রিপ্ট বসানোর সময় ব্যবহার করতে হবে।
+
+    ⚠️ strict=False দিলে নামের শেষের সংখ্যাটাও ধরা হয়। সেটি বিপজ্জনক:
+    "Memorized Hadith 4"-ও ৪ হয়ে যায়, আর দারস গিয়ে বসে ভুল হেডিংয়ে।
+    বাস্তবে ঠিক এই ভুলটাই হয়েছিল — তাই এখন ডিফল্ট strict।
     """
     t = str(text or "").translate(_BN_DIGITS)
     m = _NO_RE.search(t)
     if m:
         return int(m.group(1))
+    if strict:
+        return None
     tail = re.search(r"(\d+)\s*$", t)
     return int(tail.group(1)) if tail else None
 
 
-def topic_for_number(LectureTopic, Lesson, course, no):
+def topic_for_number(LectureTopic, Lesson, course, no, near=None):
     """ওই নম্বরের টপিক — যেখানে এখনো কোনো স্ক্রিপ্ট নেই।
 
-    ⚠️ স্ক্রিপ্ট থাকলে ফেরত দেওয়া হয় না — পরিচালকের লেখা কিছুর উপরে
-    কখনো বসানো চলবে না।
+    near দিলে (যেমন দারস ১-এর টপিক) তার হেডিং ও অধ্যায়কে অগ্রাধিকার
+    দেওয়া হয়। ⚠️ নইলে অন্য হেডিংয়ের কোনো টপিক আগে মিলে যেতে পারে —
+    বাস্তবে দারস ৪ ও ৫ গিয়ে বসেছিল "Memorized Hadith" হেডিংয়ে।
+
+    ⚠️ স্ক্রিপ্ট থাকা টপিক ফেরত দেওয়া হয় না — পরিচালকের লেখা কিছুর
+    উপরে কখনো বসানো চলবে না।
     """
-    for t in LectureTopic.objects.filter(
-            lecture__course=course).order_by("lecture__no", "order", "id"):
-        if topic_number(t.text) != no:
-            continue
-        if Lesson.objects.filter(topic=t).exists():
-            return None
-        return t
-    return None
+    rows = [t for t in LectureTopic.objects.filter(
+        lecture__course=course).order_by("lecture__no", "order", "id")
+        if topic_number(t.text) == no
+        and not Lesson.objects.filter(topic=t).exists()]
+    if not rows:
+        return None
+    if near is not None:
+        # ১) একই হেডিং, ২) একই অধ্যায় — এই ক্রমে খুঁজি
+        same_section = [t for t in rows
+                        if t.section_id and t.section_id == near.section_id]
+        if same_section:
+            return same_section[0]
+        same_lecture = [t for t in rows if t.lecture_id == near.lecture_id]
+        if same_lecture:
+            return same_lecture[0]
+    return rows[0]
+
 
 
 SAMPLES = {"ikhlas": IKHLAS, "qaida": QAIDA,

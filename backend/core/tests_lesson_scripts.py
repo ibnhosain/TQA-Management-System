@@ -1687,8 +1687,9 @@ class TopicNumbersAreReadFirst(TestCase):
             ("দারস ৪", 4),
             ("Sabaq-05", 5),
             ("পাঠ - ১২", 12),
-            ("Part 3", 3),
-            ("০৭", 7),
+            ("লেসন নং ৯", 9),
+            ("Lesson No 4", 4),
+            ("ক্লাস ৩", 3),
         ]
         for text, want in CASES:
             self.assertEqual(topic_number(text), want,
@@ -1697,8 +1698,12 @@ class TopicNumbersAreReadFirst(TestCase):
     def test_it_says_nothing_when_there_is_no_number(self):
         """⚠️ নম্বর না থাকলে অনুমান করা চলবে না — ভুল জায়গায় বসত।"""
         from core.sample_lessons import topic_number
+        # ⚠️ "Memorized Hadith 4"-ও একসময় ৪ হিসেবে ধরা পড়ত, আর দারস
+        # গিয়ে বসত ভুল হেডিংয়ে। তাই এখন কেবল স্পষ্ট "লেসন/দারস/Lesson"
+        # লেখা হলেই ধরা হয় — নিছক শেষের সংখ্যা নয়।
         for text in ("Al-Kawthar-الكوثر", "Noorani Qaida", "", None,
-                     "সূরা ইখলাস"):
+                     "সূরা ইখলাস", "Memorized Hadith 4", "Qirat 4",
+                     "Memorized Surah 2", "Part 3", "০৭", "Dua/Masala 5"):
             self.assertIsNone(topic_number(text),
                               "“%s” থেকে নম্বর পড়া উচিত নয়" % text)
 
@@ -1864,3 +1869,124 @@ class LessonsFourAndFiveLand(TestCase):
         self.first.refresh_from_db()
         self.assertEqual(self.first.steps.count(), before)
         self.assertEqual(self.first.title, "Qaida for Beginners — Lesson -01")
+
+
+class WrongHeadingIsRepaired(TestCase):
+    """🔧 মাইগ্রেশন ০০৪৪ — ভুল হেডিং থেকে সরিয়ে ঠিক জায়গায়।
+
+    ⚠️ যা হয়েছিল: "Memorized Hadith 4" নামটিও ৪ নম্বর হিসেবে ধরা পড়েছিল,
+    তাই দারস ৪ ও ৫ গিয়ে বসেছিল ভুল হেডিংয়ে। এখানে সেই অবস্থাই বানানো।
+    """
+
+    def setUp(self):
+        from core.models import (Course, Lesson, LessonStep, StepSlide,
+                                 Lecture, LectureTopic, LessonSection)
+        from core.sample_lessons import create_sample
+        self.Lesson, self.LectureTopic = Lesson, LectureTopic
+        self.c = Course.objects.create(name="Qaida", teacher=None)
+        lec = Lecture.objects.create(course=self.c, no=1, title="Q")
+        self.quran = LessonSection.objects.create(course=self.c,
+                                                  name="Quran/Qirat", order=0)
+        self.hadith = LessonSection.objects.create(
+            course=self.c, name="Memorized Hadith", order=1)
+        # ⚠️ ভুল হেডিংয়ের টপিকগুলো আগে বসানো — যাতে সেগুলোই আগে মেলে
+        self.wrong = {n: LectureTopic.objects.create(
+            lecture=lec, section=self.hadith,
+            text="Memorized Hadith %d" % n, order=n) for n in (4, 5)}
+        self.right = {n: LectureTopic.objects.create(
+            lecture=lec, section=self.quran,
+            text="Qaida for Beginners — Lesson-%02d" % n, order=20 + n)
+            for n in (1, 4, 5)}
+        self.first, _ = create_sample(Lesson, LessonStep, StepSlide,
+                                      self.c, "qaida", topic=self.right[1])
+
+    def seed_the_wrong_way(self):
+        """০০৪৩-এর আগের নিয়মে যেভাবে বসেছিল — ভুল হেডিংয়ে।"""
+        from core.models import Lesson, LessonStep, StepSlide
+        from core.sample_lessons import SAMPLES, create_sample
+        from core.stage_summary import summary_html
+        for n, key in ((4, "qaida4"), (5, "qaida5")):
+            t = self.wrong[n]
+            les, _ = create_sample(Lesson, LessonStep, StepSlide, self.c,
+                                   key, topic=t)
+            les.title = t.text
+            les.save(update_fields=["title"])
+            t.content = summary_html(les)
+            t.save(update_fields=["content"])
+
+    def run_it(self):
+        import importlib
+        from core.models import Lesson, LectureTopic
+        m = importlib.import_module(
+            "core.migrations.0044_move_qaida_4_5_to_right_heading")
+
+        class A:
+            def get_model(self, app, name):
+                return {"Lesson": Lesson, "LectureTopic": LectureTopic}[name]
+        m.fix(A(), None)
+
+    def test_they_move_to_the_right_heading(self):
+        """⚠️ আসল সারাই।"""
+        self.seed_the_wrong_way()
+        self.run_it()
+        for n in (4, 5):
+            les = self.Lesson.objects.filter(topic=self.right[n]).first()
+            self.assertIsNotNone(les, "Lesson-%02d-এ আসেনি" % n)
+            self.assertEqual(les.topic.section, self.quran,
+                             "এখনো ভুল হেডিংয়ে")
+            self.assertFalse(
+                self.Lesson.objects.filter(topic=self.wrong[n]).exists(),
+                "ভুল টপিকে রয়ে গেছে")
+
+    def test_the_name_follows_the_new_topic(self):
+        self.seed_the_wrong_way()
+        self.run_it()
+        les = self.Lesson.objects.filter(topic=self.right[4]).first()
+        self.assertEqual(les.title, "Qaida for Beginners — Lesson-04")
+
+    def test_the_practice_sheet_moves_too(self):
+        self.seed_the_wrong_way()
+        self.run_it()
+        for n in (4, 5):
+            self.wrong[n].refresh_from_db()
+            self.right[n].refresh_from_db()
+            self.assertEqual(self.wrong[n].content, "",
+                             "ভুল টগলে কাগজ রয়ে গেছে")
+            self.assertIn("Write in your notebook", self.right[n].content,
+                          "ঠিক টগলে কাগজ আসেনি")
+
+    def test_the_directors_own_toggle_text_is_kept(self):
+        """⚠️ পরিচালকের নিজের লেখা কখনো মোছা হবে না।"""
+        self.seed_the_wrong_way()
+        self.wrong[4].content = "<p>আমার নিজের হাতে লেখা</p>"
+        self.wrong[4].save()
+        self.run_it()
+        self.wrong[4].refresh_from_db()
+        self.assertEqual(self.wrong[4].content, "<p>আমার নিজের হাতে লেখা</p>",
+                         "পরিচালকের লেখা মুছে গেছে")
+
+    def test_the_steps_survive_the_move(self):
+        self.seed_the_wrong_way()
+        before = {l.title_ar: l.steps.count()
+                  for l in self.Lesson.objects.exclude(pk=self.first.pk)}
+        self.run_it()
+        for ar, n in before.items():
+            self.assertEqual(self.Lesson.objects.get(title_ar=ar).steps.count(),
+                             n, "ধাপ হারিয়েছে")
+
+    def test_running_it_twice_changes_nothing(self):
+        self.seed_the_wrong_way()
+        self.run_it()
+        a = [(l.pk, l.topic_id) for l in self.Lesson.objects.order_by("pk")]
+        self.run_it()
+        b = [(l.pk, l.topic_id) for l in self.Lesson.objects.order_by("pk")]
+        self.assertEqual(a, b, "দুবার চললে আবার নড়ে")
+
+    def test_nothing_moves_if_already_right(self):
+        from core.models import Lesson, LessonStep, StepSlide
+        from core.sample_lessons import create_sample
+        create_sample(Lesson, LessonStep, StepSlide, self.c, "qaida4",
+                      topic=self.right[4])
+        self.run_it()
+        les = self.Lesson.objects.filter(topic=self.right[4]).first()
+        self.assertIsNotNone(les, "ঠিক জায়গা থেকেও সরে গেছে")

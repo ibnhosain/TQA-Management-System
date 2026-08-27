@@ -39,7 +39,8 @@ def seed(apps, schema_editor):
         if Lesson.objects.filter(title_ar=data["title_ar"]).exists():
             continue                # আগেই বসানো হয়েছে
         topic = topic_for_number(LectureTopic, Lesson, course,
-                                 data["lesson_no"])
+                                 data["lesson_no"],
+                                 near=first.topic if first.topic_id else None)
         if topic is None:
             continue                # ওই নম্বরের খালি টপিক নেই
 
