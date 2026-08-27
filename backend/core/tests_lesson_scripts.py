@@ -595,3 +595,144 @@ class SavingStaysFast(TestCase):
         d = self.client.patch("/api/lessons/%d/" % self.lesson.id,
                               {"title": "গ"}, format="json").data
         self.assertEqual(len(d["steps"]), 33, "নিষ্ক্রিয় ধাপ ফিরে এসেছে")
+
+
+class ThePracticeSheet(TestCase):
+    """📋 টগলের লেখা — লেকচার প্ল্যানের মতো দেখায়, আবার অনুশীলনও করা যায়।
+
+    ⚠️ সবচেয়ে বড় নিয়ম: ক্লাসের বাইরের একটি অক্ষরও এখানে আসতে পারবে না।
+    যা আছে সবই স্লাইড থেকে — শিরোনামগুলো ছাড়া, সেগুলো কেবল সাজানোর ঘর।
+    """
+
+    LABELS = ("What we learned today", "Practise", "At home")
+
+    def setUp(self):
+        from core.models import Course, Lesson, LessonStep, StepSlide
+        from core.sample_lessons import create_sample
+        self.M = (Lesson, LessonStep, StepSlide)
+        self.c = Course.objects.create(name="হিফজ", teacher=None)
+        self.ikhlas, _ = create_sample(*self.M, self.c, "ikhlas")
+        self.qaida, _ = create_sample(*self.M, self.c, "qaida")
+
+    def html(self, lesson):
+        from core.stage_summary import summary_html
+        return summary_html(lesson)
+
+    # ───── ক্লাসের বাইরের কিছু নেই ─────
+    def test_nothing_comes_from_outside_the_class(self):
+        """⚠️ প্রতিটি লেখা স্লাইডেই ছিল কিনা — শিরোনাম ছাড়া।"""
+        import re
+        for les in (self.ikhlas, self.qaida):
+            said = " ".join(
+                (s.heading or "") + " " + (s.arabic or "") + " " +
+                (s.translit or "") + " " + (s.text or "")
+                for st in les.steps.all() for s in [st.slide] if s
+            )
+            said = re.sub(r"\s+", " ", said)
+            body = re.sub(r"<[^>]+>", " ", self.html(les))
+            for label in self.LABELS:
+                body = body.replace(label, " ")
+            for word in re.sub(r"\s+", " ", body).split():
+                if len(word) < 2 or word in ("·", "&nbsp;", "📖", "🎤", "📌"):
+                    continue
+                self.assertIn(word, said,
+                              "স্লাইডে ছিল না এমন লেখা টগলে গেছে: %r" % word)
+
+    def test_the_teacher_script_never_leaks(self):
+        """⚠️ expected/student_does এখানে ধরা হয় না — ওতে বাচ্চার বলার
+        কথা, অর্থাৎ আয়াতটাই থাকে, যা পর্দাতেও ছিল। উস্তাদের নিজের
+        কথাগুলোই আসল দেয়াল।"""
+        for les in (self.ikhlas, self.qaida):
+            body = self.html(les)
+            for st in les.steps.all():
+                for field in (st.teacher_says, st.teacher_does, st.correction,
+                              st.note):
+                    first = (field or "").strip().split("\n")[0]
+                    if len(first) > 20:
+                        self.assertNotIn(first, body,
+                                         "উস্তাদের স্ক্রিপ্ট ফাঁস হয়েছে")
+
+    # ───── লেকচার প্ল্যানের চেহারা ─────
+    def test_it_opens_with_what_was_taught(self):
+        h = self.html(self.ikhlas)
+        self.assertIn("What we learned today", h)
+        for v in (V1, V2, V3, V4):
+            self.assertIn(v, h, "আয়াতটি টগলে নেই")
+
+    def test_all_three_sections_are_there(self):
+        for les in (self.ikhlas, self.qaida):
+            h = self.html(les)
+            for label in self.LABELS:
+                self.assertIn(label, h, "“%s” অংশটি নেই" % label)
+
+    # ───── অনুশীলনের চেহারা ─────
+    def test_each_verse_gets_its_pieces_and_its_meaning(self):
+        h = self.html(self.ikhlas)
+        # আয়াত ১-এর টুকরোগুলো
+        for piece in ("قُلْ", "هُوَ ٱللَّهُ", "أَحَدٌ"):
+            self.assertIn(piece, h, "টুকরোটি নেই: " + piece)
+        self.assertIn("Allah is One", h, "অর্থ হারিয়েছে")
+
+    def test_the_qaida_letters_are_all_there(self):
+        h = self.html(self.qaida)
+        for letter in "ابتثجحخ":
+            self.assertIn(letter, h, "হরফটি নেই: " + letter)
+
+    def test_a_single_letter_is_not_treated_as_a_piece_of_a_word(self):
+        """⚠️ "ا" প্রায় প্রতিটি আরবি শব্দের ভেতরেই আছে। অক্ষর ধরে
+        মেলালে একটিমাত্র হরফ সূরার টুকরো হয়ে বসত — সব গুলিয়ে যেত।"""
+        from core.stage_summary import _inside
+        self.assertFalse(_inside("ا", "الحروف المفردة"),
+                         "হরফটি শব্দের টুকরো ধরা হয়েছে")
+        self.assertTrue(_inside("ا", "ا ب ت ث"), "সত্যিকারের টুকরো ধরা পড়েনি")
+        self.assertTrue(_inside("قُلْ", V1), "আয়াতের টুকরো ধরা পড়েনি")
+        self.assertFalse(_inside(V1, V1), "নিজেই নিজের টুকরো")
+
+    # ───── স্লাইডের হুবহু নকল নয় ─────
+    def test_it_is_not_a_copy_of_the_slides(self):
+        """একই আয়াত ১৫টি ধাপে বারবার আসে — টগলে একবারই আসা চাই।"""
+        h = self.html(self.ikhlas)
+        self.assertEqual(h.count(V1), 2,
+                         "আয়াতটি বারবার এসেছে (একবার উপরে, একবার কার্ডে)")
+
+    def test_the_classroom_bits_are_left_out(self):
+        """শাবাশ, খেলা, খালি পর্দা, বিদায়ের দুআ — অনুশীলনের বিষয় নয়।"""
+        h = self.html(self.ikhlas)
+        self.assertNotIn("بَارَكَ ٱللَّهُ فِيكَ", h, "বিদায়ের দুআ রয়ে গেছে")
+        self.assertNotIn("🎤</", h, "কেবল-ইমোজি পর্দা রয়ে গেছে")
+
+    # ───── সাজসজ্জা ─────
+    def test_it_is_laid_out_in_boxes(self):
+        for les in (self.ikhlas, self.qaida):
+            h = self.html(les)
+            self.assertGreaterEqual(h.count("border-radius"), 3,
+                                    "বাক্স-আকারে সাজানো হয়নি")
+            self.assertIn("background-color", h, "বাক্সের রং নেই")
+
+    def test_the_styling_survives_the_filter(self):
+        """⚠️ safe_html অনুমোদিত-তালিকার বাইরের সাজ মুছে দেয় — বাক্সের
+        সাজ যেন নিঃশব্দে হারিয়ে না যায়।"""
+        h = self.html(self.ikhlas)
+        for must in ("border:", "background-color:", "border-radius:",
+                     "padding:", "Amiri Quran", 'dir="rtl"'):
+            self.assertIn(must.rstrip(":").split(":")[0], h,
+                          "ছাঁকনি সাজটি মুছে দিয়েছে: " + must)
+
+    # ───── ভেঙে না পড়া ─────
+    def test_an_empty_lesson_gives_nothing(self):
+        from core.models import Lesson
+        empty = Lesson.objects.create(course=self.c, title="খালি",
+                                      kind="memorization")
+        self.assertEqual(self.html(empty), "")
+
+    def test_a_lesson_with_only_text_slides_still_works(self):
+        from core.models import Lesson, LessonStep, StepSlide
+        les = Lesson.objects.create(course=self.c, title="কেবল লেখা",
+                                    kind="memorization")
+        st = LessonStep.objects.create(lesson=les, order=0, section="ক",
+                                       teacher_says="x")
+        StepSlide.objects.create(step=st, kind="homework",
+                                 text="Read every day")
+        h = self.html(les)
+        self.assertIn("Read every day", h)
+        self.assertIn("At home", h)
