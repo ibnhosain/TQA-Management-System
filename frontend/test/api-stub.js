@@ -75,7 +75,20 @@ export const api = {
     { ...LESSON, id: 3, age_from: 9, age_to: 12, status: "draft" },
     LOOSE_LESSON,
   ]),
-  lessonSections: async () => (MODE === "empty" ? [] : SECTIONS),
+  // studentId দিলে ওই শিক্ষার্থীর কভারের টিকসহ — ৯ নং কভার করা,
+  // ১০ নং (ট্রায়াল) নয়
+  lessonSections: async (courseId, studentId) =>
+    MODE === "empty"
+      ? []
+      : SECTIONS.map((sec) => ({
+          ...sec,
+          topics: sec.topics.map((t) => ({
+            ...t,
+            covered:
+              studentId === 9 && t.id === 11 ? "covered" : "pending",
+          })),
+        })),
+  markTopic: async () => ({ ok: true }),
   addSection: async (course, name) => ({ id: 9, name, topics: [] }),
   renameSection: async () => ({}),
   delSection: async () => ({}),

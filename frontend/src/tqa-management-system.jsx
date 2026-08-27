@@ -19391,6 +19391,39 @@ function ProgressPanel({ lesson, atStep, onClose }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(0); // কোন শিক্ষার্থীরটি সংরক্ষণ হচ্ছে
   const [notes, setNotes] = useState({}); // খসড়া মন্তব্য
+  /* কার জন্য দারস পরিকল্পনার টপিকটি কভার — {studentId: "covered"|"missed"|"pending"}
+     ⚠️ এটি লেকচার প্ল্যানেরই টিক, আলাদা কিছু নয়। তাই এখানে বসালে সেখানেও
+     বসে, আর সেখানকার সব নিয়ম (উস্তাদ কেবল নিজের শিক্ষার্থীর, লাল ক্রস
+     কেবল পরিচালক) অবিকল খাটে — নতুন কোনো পথ বানানো হয়নি। */
+  const [cover, setCover] = useState({});
+
+  /* কার জন্য টপিকটি ইতিমধ্যে কভার — একেকজনের হিসাব আলাদা, তাই
+     একেকজনের জন্য আলাদা করে জানতে হয়।
+     ⚠️ শিক্ষার্থী বেশি হলে (৮-এর বেশি) আগেভাগে আনা হয় না — অনেকগুলো
+     অনুরোধে পাতা ভারী হতো। তখন বোতামটি থাকে, কেবল আগের অবস্থাটা দেখায় না। */
+  const loadCover = async (list) => {
+    if (!lesson.topic) return;
+    const real = (list || []).filter((x) => !x.is_trial);
+    if (!real.length || real.length > 8) return;
+    try {
+      const got = await Promise.all(
+        real.map((x) =>
+          api
+            .lessonSections(lesson.course, x.id)
+            .then((secs) => {
+              for (const sec of secs || [])
+                for (const t of sec.topics || [])
+                  if (t.id === lesson.topic) return [x.id, t.covered];
+              return [x.id, null];
+            })
+            .catch(() => [x.id, null]),
+        ),
+      );
+      setCover(Object.fromEntries(got.filter((g) => g[1])));
+    } catch (e) {
+      /* না এলে কেবল আগের অবস্থাটা দেখায় না — কাজ আটকায় না */
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -19407,6 +19440,7 @@ function ProgressPanel({ lesson, atStep, onClose }) {
         n[r.student] = r.note || "";
       });
       setNotes(n);
+      loadCover(st || []);
     } catch (e) {
       notice("তালিকা আনা যায়নি — " + (e?.data?.error || e?.message || ""));
     } finally {
@@ -19417,6 +19451,23 @@ function ProgressPanel({ lesson, atStep, onClose }) {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson.id]);
+
+  /* লেকচার প্ল্যানে কভার চিহ্নিত করা/ফিরিয়ে নেওয়া */
+  const mark_cover = async (sid, on) => {
+    setBusy(sid);
+    try {
+      await api.markTopic(lesson.topic, on ? true : null, sid);
+      setCover((c) => ({ ...c, [sid]: on ? "covered" : "pending" }));
+      notice(on ? "✔ লেকচার প্ল্যানে কভার হিসেবে বসেছে" : "↩️ টিকটি সরানো হলো");
+    } catch (e) {
+      notice(
+        "চিহ্নিত করা যায়নি — " +
+          (e?.data?.detail || e?.data?.error || e?.message || ""),
+      );
+    } finally {
+      setBusy(0);
+    }
+  };
 
   const rowOf = (sid) => rows.find((r) => r.student === sid);
 
@@ -19457,6 +19508,29 @@ function ProgressPanel({ lesson, atStep, onClose }) {
             পড়তে পারলে তবেই “মুখস্থ হয়েছে”। কয়েকবার আপনার সাথে বলতে পারা
             এখনো মুখস্থ নয়।
           </div>
+          {lesson.topic ? (
+            <div
+              style={{
+                fontSize: 12.5,
+                color: C.emeraldD,
+                background: C.greenBg,
+                borderRadius: 10,
+                padding: "8px 12px",
+                lineHeight: 1.7,
+              }}
+            >
+              ✔ “কভার হয়েছে” চাপলে দারস পরিকল্পনার{" "}
+              <b>{lesson.topic_text || "এই টপিক"}</b> টপিকটি ওই শিক্ষার্থীর
+              জন্য কভার হিসেবে বসে যাবে — লেকচার প্ল্যানেও তখনই দেখাবে।
+              প্রত্যেকের হিসাব আলাদা।
+            </div>
+          ) : (
+            <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
+              ⓘ এই স্ক্রিপ্টটি দারস পরিকল্পনার কোনো টপিকের সাথে যুক্ত নয়,
+              তাই এখান থেকে কভার চিহ্নিত করা যাচ্ছে না। স্ক্রিপ্ট খুলে
+              “দারস পরিকল্পনার টপিক” বেছে দিলে এখানে বোতামটি চলে আসবে।
+            </div>
+          )}
 
           {students.map((s) => {
             const r = rowOf(s.id);
@@ -19512,6 +19586,58 @@ function ProgressPanel({ lesson, atStep, onClose }) {
                     </Btn>
                   ))}
                 </div>
+
+                {/* দারস পরিকল্পনায় কভার — প্রত্যেকের হিসাব আলাদা */}
+                {lesson.topic && (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 6,
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                      marginTop: 8,
+                      paddingTop: 8,
+                      borderTop: `1px dashed ${C.line}`,
+                    }}
+                  >
+                    {s.is_trial ? (
+                      <span style={{ fontSize: 12, color: C.muted }}>
+                        ⓘ ট্রায়াল অতিথির দারস পরিকল্পনা আলাদা — কভারের টিক
+                        সেখানেই বসে
+                      </span>
+                    ) : cover[s.id] === "missed" ? (
+                      <>
+                        <Tag color={C.red} bg={C.redBg}>
+                          বাদ ✘
+                        </Tag>
+                        <span style={{ fontSize: 12, color: C.muted }}>
+                          লাল ক্রস কেবল পরিচালক ঠিক করতে পারেন
+                        </span>
+                      </>
+                    ) : cover[s.id] === "covered" ? (
+                      <>
+                        <Tag>দারস পরিকল্পনায় কভার ✔</Tag>
+                        <Btn
+                          sm
+                          kind="soft"
+                          disabled={busy === s.id}
+                          onClick={() => mark_cover(s.id, false)}
+                        >
+                          ↩️ টিকটি ফিরিয়ে নিন
+                        </Btn>
+                      </>
+                    ) : (
+                      <Btn
+                        sm
+                        kind="gold"
+                        disabled={busy === s.id}
+                        onClick={() => mark_cover(s.id, true)}
+                      >
+                        ✔ কভার হয়েছে চিহ্নিত করুন
+                      </Btn>
+                    )}
+                  </div>
+                )}
 
                 <input
                   style={{ ...S.input, marginTop: 8, fontSize: 13 }}
@@ -20511,7 +20637,7 @@ function TeacherMode({ id, onClose }) {
             }}
             onClick={() => setProg(true)}
           >
-            ✓ শেষ — অগ্রগতি লিখুন
+            ✓ শেষ — অগ্রগতি ও কভার
           </button>
         ) : (
           <button

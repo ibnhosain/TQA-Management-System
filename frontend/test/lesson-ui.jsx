@@ -135,6 +135,48 @@ export async function run() {
     <M.ProgressPanel lesson={LESSON} atStep={1} onClose={nop} />,
     { expect: ["S", "ট্রায়াল অতিথি", "মুখস্থ হয়েছে"] },
   );
+  /* ───── ধাপ ৩ — স্ক্রিপ্ট থেকে লেকচার প্ল্যানে কভার ───── */
+  await scene(
+    "অগ্রগতির পাতায় কভারের ব্যবস্থা",
+    <M.ProgressPanel lesson={LESSON} atStep={1} onClose={nop} />,
+    {
+      expect: [
+        "Al-Ikhlas-الإخلاص",              // কোন টপিকে বসবে তা বলে দেয়
+        "প্রত্যেকের হিসাব আলাদা",
+        "দারস পরিকল্পনায় কভার ✔",         // ৯ নং আগেই কভার করা
+        "↩️ টিকটি ফিরিয়ে নিন",
+        "ট্রায়াল অতিথির দারস পরিকল্পনা আলাদা", // অতিথির জন্য বোতাম নয়
+      ],
+    },
+  );
+  await scene(
+    "কভার ফিরিয়ে নিয়ে আবার বসানো",
+    <M.ProgressPanel lesson={LESSON} atStep={1} onClose={nop} />,
+    {
+      click: ["↩️ টিকটি ফিরিয়ে নিন", "✔ কভার হয়েছে চিহ্নিত করুন"],
+      expect: ["দারস পরিকল্পনায় কভার ✔"],
+    },
+  );
+  await scene(
+    "টপিকহীন স্ক্রিপ্টে কভারের বোতাম আসে না",
+    <M.ProgressPanel
+      lesson={{ ...LESSON, topic: null, topic_text: null }}
+      onClose={nop}
+    />,
+    {
+      expect: ["কোনো টপিকের সাথে যুক্ত নয়"],
+      notExpect: ["✔ কভার হয়েছে চিহ্নিত করুন"],
+    },
+  );
+  await scene(
+    "শিক্ষক মোডের শেষ ধাপে কভারের পাতা খোলে",
+    <M.TeacherMode id={1} onClose={nop} />,
+    {
+      click: ["পরের ধাপ", "পরের ধাপ", "পরের ধাপ", "✓ শেষ — অগ্রগতি ও কভার"],
+      expect: ["প্রত্যেকের হিসাব আলাদা"],
+    },
+  );
+
   await scene("শিক্ষার্থীর দারস", <M.StudentLessonsView />, {
     expect: ["My Lessons", "Revise", "Ask your teacher"],
   });
