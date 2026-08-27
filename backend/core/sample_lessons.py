@@ -99,7 +99,7 @@ def _chunk(section, arabic, lead, correction, note="", seconds=50):
             "Now you say it.\n"
             "[অপেক্ষা করুন — শিশু বলবে]\n\n"
             "MashaAllah! Very good.\n"
-            "Let us do it one more time.\n"
+            "Let's do it one more time.\n"
             + DOTS + "\n"
             "[আবার পড়ুন, তারপর অপেক্ষা করুন]\n\n"
             "Excellent! ⭐"
@@ -159,12 +159,12 @@ IKHLAS = {
             "says": "Assalamu alaikum, my dear student!\n"
                     "How are you today?\n"
                     "[অপেক্ষা করুন — শিশু উত্তর দেবে]\n\n"
-                    "MashaAllah! I am very happy to see you today.",
+                    "MashaAllah! I'm very happy to see you today.",
             "does": "হাসুন, হাত নাড়ুন। নাম ধরে একবার ডাকুন। উত্তরের জন্য "
                     "অপেক্ষা করুন — এই সময়টুকুই শিশুকে সহজ করে দেয়।",
             "student": "সালামের জবাব দেয় ও উত্তর দেয়।",
             "expected": "Wa alaikumus salam.",
-            "correction": "That is okay! Listen to me.\n"
+            "correction": "That's okay! Listen to me.\n"
                           "Assalamu alaikum.\n"
                           "Now you say it back to me.\n"
                           "[অপেক্ষা করুন]\n\n"
@@ -180,8 +180,8 @@ IKHLAS = {
                     "Qur'an?\n"
                     "[অপেক্ষা করুন]\n\n"
                     "Wonderful!\n"
-                    "Today, inshaAllah, we will learn Surah Al-Ikhlas.\n"
-                    "It is a very short Surah.\n"
+                    "Today, inshaAllah, we'll learn Surah Al-Ikhlas.\n"
+                    "It's a very short Surah.\n"
                     "It has only four verses.\n"
                     "Look at my hand. One, two, three, four!",
             "does": "চারটি আঙুল তুলে একসাথে গুনুন। এই চার আঙুলই পরে স্মৃতির "
@@ -197,25 +197,25 @@ IKHLAS = {
                       "arabic": "الإخلاص", "text": "1️⃣  2️⃣  3️⃣  4️⃣"},
         },
         {
-            "section": "Part 1 — How we will learn",
-            "says": "Do not worry if you cannot remember everything today.\n"
-                    "I will say it first.\n"
-                    "You will listen.\n"
-                    "Then you will say it after me.\n"
-                    "We will practise together.\n"
-                    "And then you will try by yourself.\n"
+            "section": "Part 1 — How we'll learn",
+            "says": "Don't worry if you can't remember everything today.\n"
+                    "I'll say it first.\n"
+                    "You'll listen.\n"
+                    "Then you'll say it after me.\n"
+                    "We'll practise together.\n"
+                    "And then you'll try by yourself.\n"
                     "Are you ready?\n"
                     "[অপেক্ষা করুন]\n\n"
-                    "Excellent! Let us begin. 🌟",
+                    "Excellent! Let's begin. 🌟",
             "does": "শান্ত ও উৎসাহী গলায় বলুন। শিশুর ভয় কাটানোই এই ধাপের কাজ।",
             "student": "শোনে, রাজি হয়।",
             "expected": "Yes! / মাথা নাড়ে।",
-            "correction": "It is very easy. I will help you.\n"
-                          "We will do it together.\n"
-                          "Ready? Let us begin!",
+            "correction": "It's very easy. I'll help you.\n"
+                          "We'll do it together.\n"
+                          "Ready? Let's begin!",
             "note": "",
             "seconds": 35,
-            "slide": {"kind": "title", "heading": "Let us begin!",
+            "slide": {"kind": "title", "heading": "Let's begin!",
                       "text": "👂 Listen\n🎤 Say it\n🌟 Try alone"},
         },
 
@@ -224,7 +224,7 @@ IKHLAS = {
             "section": "Part 2 — Just listen",
             "says": "Before we start, I want you to do one thing.\n"
                     "Just listen to me.\n"
-                    "Do not repeat yet.\n"
+                    "Don't repeat yet.\n"
                     "Sit nicely and listen carefully.\n"
                     + DOTS + "\n"
                     "[পুরো সূরাটি একবার ধীরে ও সুন্দর করে পড়ুন]",
@@ -245,20 +245,20 @@ IKHLAS = {
         _chunk(
             "Part 3 — قُلْ", C_QUL,
             "MashaAllah.\n"
-            "Now we will learn it one little part at a time.\n"
-            "Let us start with the first verse.",
+            "Now we'll learn it one little part at a time.\n"
+            "Let's start with the first verse.",
             "So close! Watch my mouth.\n"
             + DOTS + "\n"
             "[টুকরোটি আবার পড়ুন]\n\n"
             "Now you.\n"
             "[অপেক্ষা করুন]\n\n"
-            "MashaAllah! That is it.",
+            "MashaAllah! That's it.",
             seconds=55,
         ),
         _chunk(
             "Part 3 — هُوَ ٱللَّهُ", C_HUWALLAH,
             "Now the next part.",
-            "Nearly! Let us go very slowly.\n"
+            "Nearly! Let's go very slowly.\n"
             + DOTS + "\n"
             "[শব্দ দুটি আলাদা আলাদা করে পড়ুন, তারপর জোড়া লাগান]\n\n"
             "Now you say it.\n"
@@ -279,20 +279,20 @@ IKHLAS = {
         ),
         {
             "section": "Part 3 — Join verse 1",
-            "says": "Now we will put our little pieces together.\n"
+            "says": "Now we'll put our little pieces together.\n"
                     "Listen to me first.\n"
                     + DOTS + "\n"
                     "[পুরো ১ম আয়াতটি ধীরে পড়ুন]\n\n"
                     "Now you try.\n"
                     "[অপেক্ষা করুন — শিশু বলবে]\n\n"
                     "MashaAllah! 🌟\n"
-                    "Let us say it together one more time.\n"
+                    "Let's say it together one more time.\n"
                     "[শিশুর সাথে একসাথে পড়ুন]",
             "does": "প্রথমে একা পড়ুন, তারপর শিশু একা, তারপর দুজনে একসাথে।",
             "student": "পুরো আয়াতটি বলে।",
             "expected": V1,
-            "correction": "You are doing so well!\n"
-                          "Here is a little help.\n"
+            "correction": "You're doing so well!\n"
+                          "Here's a little help.\n"
                           + DOTS + "\n"
                           "[কেবল প্রথম শব্দটুকু বলুন, বাকিটা শিশু বলবে]\n\n"
                           "MashaAllah! You did it!",
@@ -303,7 +303,7 @@ IKHLAS = {
         },
         {
             "section": "Part 4 — Meaning of verse 1",
-            "says": "Now let us learn what this verse means.\n"
+            "says": "Now let's learn what this verse means.\n"
                     "It says — Allah is One.\n"
                     "Tell me, how many Allah?\n"
                     "[অপেক্ষা করুন]\n\n"
@@ -352,7 +352,7 @@ IKHLAS = {
         ),
         {
             "section": "Part 5 — Join verse 2",
-            "says": "Now let us put them together.\n"
+            "says": "Now let's put them together.\n"
                     + DOTS + "\n"
                     "[২য় আয়াতটি ধীরে পড়ুন]\n\n"
                     "Now you try.\n"
@@ -363,7 +363,7 @@ IKHLAS = {
             "does": "একা, তারপর শিশু, তারপর একসাথে।",
             "student": "পুরো ২য় আয়াতটি বলে।",
             "expected": V2,
-            "correction": "Let us try again slowly.\n"
+            "correction": "Let's try again slowly.\n"
                           + DOTS + "\n"
                           "[কেবল প্রথম শব্দটুকু বলুন]\n\n"
                           "MashaAllah!",
@@ -374,7 +374,7 @@ IKHLAS = {
         },
         {
             "section": "Part 6 — Meaning of verse 2",
-            "says": "Now let us understand this verse.\n"
+            "says": "Now let's understand this verse.\n"
                     "It means we need Allah.\n"
                     "Tell me — do we need Allah?\n"
                     "[অপেক্ষা করুন]\n\n"
@@ -383,7 +383,7 @@ IKHLAS = {
                     "[অপেক্ষা করুন]\n\n"
                     "MashaAllah!\n"
                     "We need Allah.\n"
-                    "Allah does not need anyone.",
+                    "Allah doesn't need anyone.",
             "does": "দুটি প্রশ্নেই আলাদা করে অপেক্ষা করুন। তাড়াহুড়ো করবেন না।",
             "student": "দুটি প্রশ্নের উত্তর দেয়।",
             "expected": "Yes! … No!",
@@ -400,15 +400,15 @@ IKHLAS = {
         },
         {
             "section": "Part 7 — Connect verse 1 + 2",
-            "says": "Now let us see if you remember the first two verses "
+            "says": "Now let's see if you remember the first two verses "
                     "together.\n"
-                    "I will help you.\n"
+                    "I'll help you.\n"
                     + DOTS + "\n"
                     "[১ম ও ২য় আয়াত একসাথে ধীরে পড়ুন]\n\n"
                     "Now you try.\n"
                     "[অপেক্ষা করুন]\n\n"
                     "MashaAllah! Excellent!\n"
-                    "You are doing a great job!",
+                    "You're doing a great job!",
             "does": "দুই আয়াত একসাথে পড়ুন, তারপর শিশুকে একা বলতে দিন।",
             "student": "দুই আয়াত একসাথে বলে।",
             "expected": V1 + " " + V2,
@@ -427,15 +427,15 @@ IKHLAS = {
         # ═══════════════ PART 8 — VERSE 3 ═══════════════
         {
             "section": "Part 8 — Verse 3 begins",
-            "says": "Now we are ready for verse number three.\n"
+            "says": "Now we're ready for verse number three.\n"
                     "This verse is a little different.\n"
                     "So listen very carefully.\n"
-                    "Do not worry. We will learn it slowly.",
+                    "Don't worry. We'll learn it slowly.",
             "does": "শিশুকে একটু সোজা হয়ে বসতে বলুন। এই আয়াতে মনোযোগ বেশি লাগে।",
             "student": "শোনে।",
             "expected": "মনোযোগ ফিরে এসেছে।",
             "correction": "Look at me. Are you ready?\n"
-                          "It is easy. I will help you.",
+                          "It's easy. I'll help you.",
             "note": "",
             "seconds": 25,
             "slide": {"kind": "title", "heading": "Verse 3",
@@ -477,7 +477,7 @@ IKHLAS = {
             "does": "একা পড়ুন, তারপর শিশু একা।",
             "student": "পুরো ৩য় আয়াতটি বলে।",
             "expected": V3,
-            "correction": "Let us clap.\n"
+            "correction": "Let's clap.\n"
                           "One clap for the first part.\n"
                           "Two claps for the second part.\n"
                           + DOTS + "\n"
@@ -491,9 +491,9 @@ IKHLAS = {
         },
         {
             "section": "Part 9 — Meaning of verse 3",
-            "says": "Now let us understand this verse.\n"
-                    "Allah does not have children.\n"
-                    "And Allah was not born.\n"
+            "says": "Now let's understand this verse.\n"
+                    "Allah doesn't have children.\n"
+                    "And Allah wasn't born.\n"
                     "Tell me — does Allah have children?\n"
                     "[অপেক্ষা করুন]\n\n"
                     "Very good!\n"
@@ -519,9 +519,9 @@ IKHLAS = {
         # ═══════════════ PART 10 — VERSE 4 ═══════════════
         {
             "section": "Part 10 — The last verse",
-            "says": "We are now at the last verse.\n"
-                    "It is a little long.\n"
-                    "So we will learn it in very small pieces.\n"
+            "says": "We're now at the last verse.\n"
+                    "It's a little long.\n"
+                    "So we'll learn it in very small pieces.\n"
                     "Listen carefully.",
             "does": "শিশুকে উৎসাহ দিন — শেষ আয়াত, প্রায় হয়েই গেছে।",
             "student": "শোনে।",
@@ -545,7 +545,7 @@ IKHLAS = {
         ),
         _chunk(
             "Part 10 — لَّهُۥ", C_LAHU, "Now this small one.",
-            "It is a tiny word.\n"
+            "It's a tiny word.\n"
             + DOTS + "\n"
             "[আবার পড়ুন]\n\n"
             "Now you.\n"
@@ -555,7 +555,7 @@ IKHLAS = {
         ),
         _chunk(
             "Part 10 — كُفُوًا", C_KUFUWAN, "Now listen.",
-            "Let us go slowly, piece by piece.\n"
+            "Let's go slowly, piece by piece.\n"
             + DOTS + "\n"
             "[শব্দটি ভেঙে ধীরে পড়ুন, তারপর একসাথে]\n\n"
             "Now you.\n"
@@ -585,11 +585,11 @@ IKHLAS = {
             "does": "প্রথমে দুই টুকরোয় ভেঙে দিন, তারপর জোড়া লাগান।",
             "student": "পুরো ৪র্থ আয়াতটি বলে।",
             "expected": V4,
-            "correction": "That is a long one!\n"
-                          "Let us do just the first half.\n"
+            "correction": "That's a long one!\n"
+                          "Let's do just the first half.\n"
                           + DOTS + "\n"
                           "[কেবল প্রথম অর্ধেকটা পড়ুন]\n\n"
-                          "Good! We will do the rest next time.",
+                          "Good! We'll do the rest next time.",
             "note": "শিশু না পারলে জোর করবেন না — অর্ধেক মুখস্থ হওয়া, "
                     "পুরোটা ভুলে যাওয়ার চেয়ে অনেক ভালো।",
             "seconds": 70,
@@ -620,7 +620,7 @@ IKHLAS = {
         # ═══════════════ PART 12 — খেলা ═══════════════
         {
             "section": "Part 12 — Four-finger memory game",
-            "says": "Now let us play a little memory game.\n"
+            "says": "Now let's play a little memory game.\n"
                     "Show me your fingers!\n"
                     "[অপেক্ষা করুন]\n\n"
                     "Great!\n"
@@ -648,16 +648,16 @@ IKHLAS = {
             "seconds": 80,
             "slide": {"kind": "activity", "heading": "Four-Finger Game",
                       "text": "1️⃣ Allah is One\n2️⃣ We need Allah\n"
-                              "3️⃣ Allah was not born\n"
+                              "3️⃣ Allah wasn't born\n"
                               "4️⃣ Nobody is like Allah"},
         },
         {
             "section": "Part 13 — Look and hide",
-            "says": "Now let us see how much you remember.\n"
+            "says": "Now let's see how much you remember.\n"
                     "Look at the screen. Read it with me.\n"
                     "[একসাথে পড়ুন]\n\n"
                     "Excellent!\n"
-                    "Now I am going to hide it.\n"
+                    "Now I'm going to hide it.\n"
                     "[পর্দা খালি করুন]\n\n"
                     "Can you say it?\n"
                     "[অপেক্ষা করুন — পাঁচ পর্যন্ত গুনুন]\n\n"
@@ -666,8 +666,8 @@ IKHLAS = {
                     "চুপ থাকুন — নীরবতাতেই স্মৃতি তৈরি হয়।",
             "student": "মুখস্থ থেকে বলে।",
             "expected": "আয়াতগুলো, ছোটখাটো থামা চলবে।",
-            "correction": "You are doing so well!\n"
-                          "Here is a little hint.\n"
+            "correction": "You're doing so well!\n"
+                          "Here's a little hint.\n"
                           + DOTS + "\n"
                           "[কেবল প্রথম শব্দটুকু বলুন]\n\n"
                           "MashaAllah!",
@@ -681,7 +681,7 @@ IKHLAS = {
         {
             "section": "Part 14 — The whole Surah",
             "says": "We have learned all four verses!\n"
-                    "Now let us recite the whole Surah together.\n"
+                    "Now let's recite the whole Surah together.\n"
                     + DOTS + "\n"
                     "[শিশুর সাথে একসাথে পুরো সূরা পড়ুন]\n\n"
                     "MashaAllah! 🌟\n"
@@ -689,7 +689,7 @@ IKHLAS = {
             "does": "শান্ত গতিতে একসাথে পড়ুন। ছোটখাটো ভুলে থামবেন না।",
             "student": "সাথে পুরো সূরা বলে।",
             "expected": "পুরো সূরা উস্তাদের সাথে।",
-            "correction": "Let us go a bit slower.\n"
+            "correction": "Let's go a bit slower.\n"
                           "Slow and beautiful. From the start again.",
             "note": "",
             "seconds": 70,
@@ -702,27 +702,27 @@ IKHLAS = {
             "says": "Now I want you to try by yourself.\n"
                     "You can do it.\n"
                     "Take your time.\n"
-                    "If you forget something, do not worry. I will help you.\n"
+                    "If you forget something, don't worry. I'll help you.\n"
                     "[একদম চুপ থাকুন — শিশু একা পড়বে]",
             "does": "একদম চুপ থাকুন। কোথায় থেমে যাচ্ছে তা মনে রাখুন, কিন্তু "
                     "পড়ার মাঝে থামাবেন না।",
             "student": "একা পুরো সূরা বলে।",
             "expected": "চার আয়াত একা, ঠিক ক্রমে, এক শব্দের ইশারাতেই সামলে "
                         "নেওয়া — আজকের জন্য এটাই মুখস্থ হওয়া।",
-            "correction": "That is okay. Let us try that part again.\n"
+            "correction": "That's okay. Let's try that part again.\n"
                           + DOTS + "\n"
                           "[কেবল প্রথম শব্দটুকু বলুন, বাকিটা শিশু বলবে]\n\n"
                           "MashaAllah! You remembered!",
-            "note": "⚠️ ভুল হলে কখনোই 'Wrong' বলবেন না। বলুন 'That is okay' — "
+            "note": "⚠️ ভুল হলে কখনোই 'Wrong' বলবেন না। বলুন 'That's okay' — "
                     "তারপর সবচেয়ে ছোট ইশারাটুকু দিন। শেষে কেবল একটি জিনিস "
                     "শুধরে দিন, একের বেশি নয়।",
             "seconds": 80,
             "slide": {"kind": "your_turn", "heading": "All By Yourself",
-                      "text": "🎤 I am listening.\nTake your time."},
+                      "text": "🎤 I'm listening.\nTake your time."},
         },
         {
             "section": "Part 16 — Final review",
-            "says": "Before we finish, let us remember what our Surah "
+            "says": "Before we finish, let's remember what our Surah "
                     "teaches us.\n"
                     "Is Allah One?\n"
                     "[অপেক্ষা করুন]\n\n"
@@ -740,7 +740,7 @@ IKHLAS = {
             "does": "প্রতিটি প্রশ্নের পরেই থামুন। দ্রুত জিজ্ঞেস করবেন না।",
             "student": "ছয়টি প্রশ্নের উত্তর দেয়।",
             "expected": "Yes! … Yes! … No! … No! … No! … No!",
-            "correction": "Let us do that one again.\n"
+            "correction": "Let's do that one again.\n"
                           "Allah is… One!\n"
                           "Now you say it.\n"
                           "[অপেক্ষা করুন]\n\n"
@@ -758,12 +758,12 @@ IKHLAS = {
             "says": "Do you know a secret?\n"
                     "This little Surah is very big with Allah!\n"
                     "Our Prophet ﷺ told us something amazing.\n"
-                    "Saying it is like reading a third of the Qur'an!",
+                    "Saying it's like reading a third of the Qur'an!",
             "does": "বিস্ময় নিয়ে বলুন। আবার চার আঙুল দেখান — এত ছোট সূরা, "
                     "এত বড় পুরস্কার।",
             "student": "শোনে।",
             "expected": "খুশি — বাড়িতেও পড়ার আগ্রহ।",
-            "correction": "It is a small Surah, right?\n"
+            "correction": "It's a small Surah, right?\n"
                           "But Allah loves it so much.\n"
                           "Say it lots at home!",
             "note": "সহীহ: নবী ﷺ বলেছেন কুল হুওয়াল্লাহু আহাদ কুরআনের এক "
@@ -779,7 +779,7 @@ IKHLAS = {
             "says": "Today you learned Surah Al-Ikhlas.\n"
                     "You learned that Allah is One.\n"
                     "You learned that we need Allah.\n"
-                    "You learned that Allah was not born.\n"
+                    "You learned that Allah wasn't born.\n"
                     "And nobody is like Allah.\n"
                     "Now a little homework.\n"
                     "Practise this Surah with your parents every day.\n"
@@ -790,7 +790,7 @@ IKHLAS = {
             "student": "শোনে, রাজি হয়।",
             "expected": "Yes!",
             "correction": "Just a few minutes a day.\n"
-                          "That is very small, right?\n"
+                          "That's very small, right?\n"
                           "You can do it!",
             "note": "অভিভাবকের জন্য — শুধু শুনুন আর হাসুন। রোজ অল্প করে "
                     "শোনাই একবারে অনেকক্ষণের চেয়ে ভালো। জোর করা বা বকা নয়; "
@@ -801,7 +801,7 @@ IKHLAS = {
         },
         {
             "section": "Part 17 — Closing",
-            "says": "Now let us recite it one more time together.\n"
+            "says": "Now let's recite it one more time together.\n"
                     + DOTS + "\n"
                     "[শিশুর সাথে একসাথে পুরো সূরা পড়ুন]\n\n"
                     "MashaAllah! Excellent work today! 🌟\n"
@@ -881,16 +881,16 @@ QAIDA = {
             "section": "Welcome",
             "says": S(
                 "Assalamu alaikum! How are you today?",
-                "I am so happy to see you!",
+                "I'm so happy to see you!",
                 "[অপেক্ষা করুন — শিশু সালামের জবাব দেবে]",
                 "",
-                "Are you ready to learn? Let us go!",
+                "Are you ready to learn? Let's go!",
             ),
             "does": "হাসুন, হাত নাড়ুন। নাম ধরে একবার ডাকুন।",
             "student": "সালামের জবাব দেয়।",
             "expected": "Wa alaikumus salam.",
             "correction": S(
-                "That is okay! Listen.",
+                "That's okay! Listen.",
                 "Assalamu alaikum.",
                 "Now you say it back to me.",
                 "[অপেক্ষা করুন]",
@@ -907,18 +907,18 @@ QAIDA = {
             "section": "Introduction",
             "says": S(
                 "The Qur'an is made of letters.",
-                "Today we will learn seven letters.",
+                "Today we'll learn seven letters.",
                 "Seven! Show me seven fingers.",
                 "[অপেক্ষা করুন — শিশু আঙুল দেখাবে]",
                 "",
-                "Let us count them together.",
+                "Let's count them together.",
                 "One, two, three, four, five, six, seven!",
             ),
             "does": "সাতটি আঙুল তুলে একসাথে গুনুন।",
             "student": "সাতটি আঙুল দেখায়, সাথে গোনে।",
             "expected": "সাতটি আঙুল উপরে।",
             "correction": S(
-                "Let us count together.",
+                "Let's count together.",
                 "One, two, three, four, five, six, seven.",
                 "Well done!",
             ),
@@ -1154,7 +1154,7 @@ QAIDA = {
                 "Now you.",
                 "[অপেক্ষা করুন]",
                 "",
-                "That is it!",
+                "That's it!",
             ),
             "note": "",
             "seconds": 45,
@@ -1239,7 +1239,7 @@ QAIDA = {
                 "One hides the tongue inside.",
                 "One lets the tongue peek out.",
                 "Now look at the screen.",
-                "I am pointing at this one. Which one is it?",
+                "I'm pointing at this one. Which one is it?",
                 "[একটিতে আঙুল রেখে অপেক্ষা করুন]",
                 "",
                 "MashaAllah! 🌟",
@@ -1325,7 +1325,7 @@ QAIDA = {
                 "",
                 "Try again with me.",
                 DOTS,
-                "That is much better!",
+                "That's much better!",
             ),
             "note": "",
             "seconds": 45,
@@ -1340,7 +1340,7 @@ QAIDA = {
                 "Put your hand on your throat, like me.",
                 "[অপেক্ষা করুন — শিশু গলায় হাত রাখবে]",
                 "",
-                "It is like warm breath on your hand.",
+                "It's like warm breath on your hand.",
                 DOTS,
                 "[ح হরফটি দেখিয়ে তার নাম বলুন]",
                 "",
@@ -1416,7 +1416,7 @@ QAIDA = {
             "expected": "خ — হরফের দিকে মনোযোগ।",
             "correction": S(
                 "Listen again.",
-                "It is scratchy — like this.",
+                "It's scratchy — like this.",
                 DOTS,
                 "[আবার বলুন — খসখসে ভাব স্পষ্ট করুন]",
             ),
@@ -1447,7 +1447,7 @@ QAIDA = {
             "student": "হরফটি বলে।",
             "expected": "خ — গলার উপর থেকে।",
             "correction": S(
-                "Let us try a game.",
+                "Let's try a game.",
                 "Pretend the window is cold.",
                 "Now blow on it — haaa.",
                 "[অপেক্ষা করুন — শিশু ফুঁ দেবে]",
@@ -1492,7 +1492,7 @@ QAIDA = {
             "student": "দুটি হরফই বলে।",
             "expected": "ح ও خ — দুটি স্পষ্টভাবে আলাদা শব্দ।",
             "correction": S(
-                "They sounded the same! Let us do just one.",
+                "They sounded the same! Let's do just one.",
                 DOTS,
                 "[ح বলুন — নরম ও উষ্ণ]",
                 "",
@@ -1519,7 +1519,7 @@ QAIDA = {
             "section": "Practice",
             "says": S(
                 "Now all seven letters together. From the start!",
-                "I will point, and we say them together. Ready?",
+                "I'll point, and we say them together. Ready?",
                 DOTS,
                 "[পর্দার সাতটি হরফে একে একে আঙুল রেখে নাম বলুন]",
                 "",
@@ -1533,7 +1533,7 @@ QAIDA = {
             "student": "সাথে পড়ে।",
             "expected": "ا ب ت ث ج ح خ — সাতটি হরফ ঠিক ক্রমে।",
             "correction": S(
-                "Let us go a bit slower. From the start.",
+                "Let's go a bit slower. From the start.",
                 DOTS,
                 "[প্রথম দুটি হরফের নাম ধীরে বলুন]",
                 "",
@@ -1622,7 +1622,7 @@ QAIDA = {
                 DOTS,
                 "[পর্দার চারটি হরফ একে একে নাম বলুন]",
                 "",
-                "Take your time. I am waiting.",
+                "Take your time. I'm waiting.",
                 "[অপেক্ষা করুন — তাড়া দেবেন না]",
                 "",
                 "Done? Hold your notebook up to the camera!",
@@ -1633,7 +1633,7 @@ QAIDA = {
             "student": "চারটি হরফ খাতায় লেখে, তারপর ক্যামেরায় দেখায়।",
             "expected": "খাতায় ا ب ت ث — যতটা পারে।",
             "correction": S(
-                "That is a good try!",
+                "That's a good try!",
                 "Look at mine, then try one more.",
                 "[পর্দার হরফটি দেখান]",
                 "",
@@ -1698,7 +1698,7 @@ QAIDA = {
             "expected": "সাতটি হরফ লেখা একটি পাতা।",
             "correction": S(
                 "Even two letters is wonderful.",
-                "You started today. That is the big thing.",
+                "You started today. That's the big thing.",
                 "Next time we write more.",
             ),
             "note": "কম লিখলেও প্রশংসা করুন। প্রথম দিনে দুটি হরফও যথেষ্ট — "
@@ -1712,7 +1712,7 @@ QAIDA = {
             "section": "Activity",
             "says": S(
                 "Game time!",
-                "I will point at a letter. You say its name.",
+                "I'll point at a letter. You say its name.",
                 "As fast as you can! Ready? Go!",
                 "[এলোমেলো ক্রমে ছয়-সাতবার আঙুল রাখুন — প্রতিবার অপেক্ষা করুন]",
                 "",
@@ -1732,7 +1732,7 @@ QAIDA = {
                 DOTS,
                 "[একসাথে বলুন]",
                 "",
-                "Good! Now watch, I am pointing again…",
+                "Good! Now watch, I'm pointing again…",
                 "Which one?",
                 "[অপেক্ষা করুন]",
             ),
@@ -1748,7 +1748,7 @@ QAIDA = {
             "section": "Assessment",
             "says": S(
                 "Now all by yourself!",
-                "I will just listen. Take your time.",
+                "I'll just listen. Take your time.",
                 "Off you go!",
                 "[চুপ থাকুন — শিশু সাতটি হরফ একা পড়বে]",
                 "",
@@ -1773,13 +1773,13 @@ QAIDA = {
             "seconds": 70,
             "slide": {"kind": "your_turn", "heading": "All By Yourself",
                       "arabic": "ا  ب  ت  ث  ج  ح  خ",
-                      "text": "🎤 I am listening."},
+                      "text": "🎤 I'm listening."},
         },
         {
             "section": "Homework",
             "says": S(
                 "MashaAllah! You did it!",
-                "I am so proud of you.",
+                "I'm so proud of you.",
                 "Now a little homework.",
                 "Before I see you again,",
                 "say these seven letters five times every day.",

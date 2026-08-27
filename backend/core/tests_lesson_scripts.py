@@ -1244,3 +1244,66 @@ class Privacy(TestCase):
             self.assertEqual(len(got), n,
                              "পরিচালক %s-এ %d নয়, %d দেখছেন"
                              % (p, n, len(got)))
+
+
+class TheEnglishIsSpokenEnglish(TestCase):
+    """⚠️ উস্তাদ যা পড়ে শোনাবেন তা যেন প্রচলিত, মুখের ইংরেজি হয়।
+
+    "Do not worry" নয় — "Don't worry"। "Let us begin" নয় — "Let's begin"।
+    বইয়ের ইংরেজি আর মুখের ইংরেজি এক নয়; শিশু যা কানে শোনে সেটাই বলা
+    চাই, নইলে অচেনা ঠেকে আর সে গুলিয়ে ফেলে।
+    """
+
+    # আনুষ্ঠানিক রূপ → যা হওয়া উচিত
+    FORMAL = [
+        ("do not", "don't"), ("does not", "doesn't"), ("did not", "didn't"),
+        ("cannot", "can't"), ("can not", "can't"), ("will not", "won't"),
+        ("is not", "isn't"), ("are not", "aren't"), ("was not", "wasn't"),
+        ("were not", "weren't"), ("have not", "haven't"),
+        ("should not", "shouldn't"), ("could not", "couldn't"),
+        ("would not", "wouldn't"), ("must not", "mustn't"),
+        ("let us", "let's"), ("I am", "I'm"), ("it is", "it's"),
+        ("that is", "that's"), ("you are", "you're"), ("we are", "we're"),
+        ("I will", "I'll"), ("you will", "you'll"), ("we will", "we'll"),
+        ("it will", "it'll"), ("they will", "they'll"),
+        ("there is", "there's"), ("here is", "here's"),
+        ("what is", "what's"), ("who is", "who's"),
+    ]
+
+    def spoken(self):
+        """উস্তাদ যা মুখে বলবেন, আর শিশু যা বলবে — বন্ধনীর নির্দেশনা বাদে।"""
+        for L in BOTH:
+            for i, st in enumerate(L["steps"], 1):
+                for f in ("says", "correction", "expected"):
+                    yield ("%s ধাপ %d · %s" % (L["title"][:14], i, f),
+                           spoken_only(st.get(f) or ""))
+
+    def test_no_formal_long_forms(self):
+        import re
+        bad = []
+        for where, text in self.spoken():
+            for old, new in self.FORMAL:
+                pat = r"\b%s\b" % old.replace(" ", r"\s")
+                if re.search(pat, text, re.I):
+                    bad.append("%s — “%s” হওয়া উচিত “%s”" % (where, old, new))
+        self.assertEqual(bad, [], "আনুষ্ঠানিক ইংরেজি:\n  " +
+                                  "\n  ".join(bad[:12]))
+
+    def test_the_contractions_are_really_there(self):
+        """⚠️ সাবধানতা যেন উল্টো দিকে না যায় — সংক্ষিপ্ত রূপ থাকা চাই।"""
+        import re
+        all_text = " ".join(t for _, t in self.spoken())
+        n = len(re.findall(r"\b\w+'(?:t|s|ll|re|ve|m)\b", all_text))
+        self.assertGreater(n, 40,
+                           "মুখের ইংরেজির সংক্ষিপ্ত রূপ প্রায় নেই (%d)" % n)
+
+    def test_the_words_stay_easy(self):
+        """৫-৭ বছরের শিশুর কাছে কঠিন ঠেকে এমন শব্দ নেই তো।"""
+        HARD = ["pronunciation", "articulation", "recitation", "commence",
+                "endeavour", "acquire", "comprehend", "utilise", "obtain",
+                "assist", "commence", "sufficient", "demonstrate",
+                "furthermore", "therefore", "however", "additionally"]
+        bad = [f"{where}: “{h}”"
+               for where, text in self.spoken()
+               for h in HARD if h in text.lower()]
+        self.assertEqual(bad, [], "বইয়ের ভারী শব্দ: " + ", ".join(bad))
