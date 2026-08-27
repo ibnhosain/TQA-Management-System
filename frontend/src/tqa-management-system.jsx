@@ -17278,6 +17278,11 @@ const kindLabel = (k) => {
   return row ? row[1] : k;
 };
 
+/* দারসের ধরন → কোন নমুনার স্ক্রিপ্ট তার সাথে যায়।
+   ⚠️ এখানে না থাকা ধরনের দারসে "নতুন নমুনা বসান" দেখানোই হয় না — তাই
+   পরিচালকের নিজের লেখা স্ক্রিপ্ট ভুল করে মুছে যাওয়ার পথ নেই। */
+const SAMPLE_FOR = { memorization: "ikhlas", qaida: "qaida" };
+
 const EMPTY_SLIDE = {
   kind: "title",
   heading: "",
@@ -18911,6 +18916,44 @@ function LessonsView({ user, courses }) {
       { yes: "হ্যাঁ, নকল করুন", no: "না, থাক" },
     );
 
+  /* ───── পুরনো লেখা মুছে নতুন নমুনা বসানো ─────
+     নমুনার স্ক্রিপ্ট উন্নত হলে পুরনো দারসগুলো নিজে থেকে বদলায় না — কারণ
+     সেগুলো ডেটাবেজে বসে আছে। এই বাটনটি সেই কাজটাই করে।
+
+     ⚠️ কেবল ধাপগুলো বদলায়। দারসের সারিটি, তার শিরোনাম ও শিক্ষার্থীদের
+     অগ্রগতি অক্ষত থাকে। কোন নমুনা বসবে তা দারসের ধরন দেখেই ঠিক হয়,
+     তাই ভুল নমুনা বসার আশঙ্কা নেই। */
+  const reseed = (l) => {
+    const which = SAMPLE_FOR[l.kind];
+    if (!which) return;
+    askConfirm(
+      `"${l.title}" স্ক্রিপ্টের এখনকার ${bn(l.step_count || 0)}টি ধাপ মুছে ` +
+        "নতুন নমুনার লেখা বসবে।" +
+        "\n\n" +
+        "⚠️ আপনি নিজে যা লিখেছেন বা বদলেছেন, তা এই স্ক্রিপ্টে আর থাকবে না।" +
+        "\n\n" +
+        "যা থাকবে: দারসটির নাম, দারস পরিকল্পনার টপিক, আর শিক্ষার্থীদের " +
+        "অগ্রগতি — কে কতটুকু শিখেছে সব ঠিক থাকবে।",
+      async () => {
+        try {
+          await api.seedSampleLesson(
+            Number(courseId),
+            which,
+            true,
+            l.topic || null,
+            l.id,
+          );
+          await load();
+          setOpenId(l.id);
+          notice("♻️ নতুন নমুনার লেখা বসেছে");
+        } catch (e) {
+          notice("বসানো যায়নি — " + (e?.data?.error || e?.message || ""));
+        }
+      },
+      { yes: "হ্যাঁ, নতুন লেখা বসান", no: "না, থাক" },
+    );
+  };
+
   const remove = (l) =>
     askConfirm(
       `"${l.title}" স্ক্রিপ্টটি চিরতরে মুছে ফেলা হবে — এর ${bn(l.step_count || 0)}টি ` +
@@ -19000,6 +19043,7 @@ function LessonsView({ user, courses }) {
     onProgress: (l) => setProgFor(l),
     onDuplicate: duplicate,
     onAgeVersion: (l, siblings) => setAgeFor({ lesson: l, siblings }),
+    onReseed: reseed,
     onRemove: remove,
   };
 
@@ -19581,7 +19625,7 @@ const statusTag = (st) => {
 /* একটি দারস — একই শিরোনামের কয়েকটি বয়সের সংস্করণ থাকলে সেগুলো একসাথে,
    আলাদা আলাদা সারি হিসেবে নয়। উস্তাদ এক চাপে বয়স বেছে নেন। */
 function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
-                     onDuplicate, onAgeVersion, onRemove }) {
+                     onDuplicate, onAgeVersion, onReseed, onRemove }) {
   const [pick, setPick] = useState(0);
   const items = group.items;
   const l = items[Math.min(pick, items.length - 1)];
@@ -19650,6 +19694,17 @@ function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
               <Btn sm kind="soft" onClick={() => onDuplicate(l)}>
                 📄 নকল
               </Btn>
+              {/* নমুনার লেখা উন্নত হলে পুরনো স্ক্রিপ্টে বসানোর পথ */}
+              {SAMPLE_FOR[l.kind] && (
+                <Btn
+                  sm
+                  kind="soft"
+                  title="এই স্ক্রিপ্টের লেখা মুছে নতুন নমুনার লেখা বসবে"
+                  onClick={() => onReseed(l)}
+                >
+                  ♻️ নতুন নমুনা
+                </Btn>
+              )}
               <Btn sm kind="danger" onClick={() => onRemove(l)}>
                 🗑️
               </Btn>

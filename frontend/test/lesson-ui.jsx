@@ -491,6 +491,28 @@ export async function run() {
     <M.TeachFromClass courseId={1} label="Q" />,
     { click: ["📗 শিক্ষক মোড"] },
   );
+  /* ───── পুরনো লেখা মুছে নতুন নমুনা বসানো ─────
+     ⚠️ ধ্বংসাত্মক কাজ — তাই বোতামটি কেবল পরিচালকের কাছেই, আর চাপলেই
+     সরাসরি না মুছে আগে নিশ্চিত করতে চায়। */
+  await scene(
+    "পরিচালক নতুন নমুনা বসানোর বোতাম পান",
+    <M.LessonsView user={director} courses={courses} />,
+    { expect: ["♻️ নতুন নমুনা"] },
+  );
+  await scene(
+    "উস্তাদের কাছে নতুন নমুনার বোতাম নেই",
+    <M.LessonsView user={teacher} courses={courses} />,
+    { notExpect: ["♻️ নতুন নমুনা"] },
+  );
+  /* এখানে confirmHandler বসানো নেই, তাই askConfirm সরাসরি কাজটাই চালায়
+     (অ্যাপের নিজেরই ফলব্যাক) — ফলে পুরো পথটা এক ক্লিকেই যাচাই হয়ে যায়:
+     নমুনা বসে, তালিকা নতুন করে আসে, আর স্ক্রিপ্টটি খুলে যায়। */
+  await scene(
+    "নতুন নমুনা বসিয়ে স্ক্রিপ্টটি খোলে",
+    <M.LessonsView user={director} courses={courses} />,
+    { click: ["♻️ নতুন নমুনা"], expect: ["← দারসের তালিকা", "+ নতুন ধাপ"] },
+  );
+
   await scene("শিক্ষার্থী → Revise → Next → Close", <M.StudentLessonsView />, {
     click: ["🔁 Revise", "Next", "Close"],
   });

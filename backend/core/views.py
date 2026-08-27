@@ -1751,6 +1751,33 @@ class LessonViewSet(viewsets.ModelViewSet):
                                             "partial_update")
         return ctx
 
+    def _fill_topic_summary(self, lesson):
+        """স্ক্রিপ্ট থেকে টপিকের টগলের লেখা নিজে থেকেই বসানো।
+
+        পরিচালককে যেন টগলের ভেতরের লেখা আলাদা করে লিখতে না হয় — স্ক্রিপ্টটি
+        দারস পরিকল্পনার কোনো টপিকের সাথে যুক্ত থাকলেই "আজ কী কী পড়ানো
+        হয়েছে" সেখানে চলে যায়।
+
+        ⚠️ কেবল টগলটি খালি থাকলেই। পরিচালক নিজে কিছু লিখে থাকলে তাতে
+        কখনো হাত দেওয়া হয় না — নতুন করে বসাতে চাইলে তিনি "📋 লেকচার
+        প্ল্যানে সারাংশ বসান" চাপবেন, সেটিই একমাত্র পথ যা লেখা মুছে।
+        """
+        from .stage_summary import summary_html
+        topic = lesson.topic
+        if topic is None or (topic.content or "").strip():
+            return False
+        html = summary_html(lesson)
+        if not html:
+            return False
+        topic.content = html
+        topic.save(update_fields=["content"])
+        return True
+
+    def perform_update(self, serializer):
+        # সংরক্ষণের পরেই — কারণ এখানেই পরিচালক টপিক বেছে দেন
+        super().perform_update(serializer)
+        self._fill_topic_summary(serializer.instance)
+
     @action(detail=False, methods=["post"], permission_classes=[IsDirector])
     def seed_sample(self, request):
         """নমুনা দারস কোনো কোর্সে বসিয়ে দেওয়া — পরিচালকের বাটন।
@@ -1775,15 +1802,27 @@ class LessonViewSet(viewsets.ModelViewSet):
             return Response({"error": "টপিকটি পাওয়া যায়নি"}, status=400)
         if topic and topic.lecture.course_id != course.id:
             return Response({"error": "টপিকটি এই কোর্সের নয়"}, status=400)
+        # lesson দিলে ঠিক ওই স্ক্রিপ্টটির উপরেই নতুন লেখা বসে — পরিচালক
+        # শিরোনাম বদলে থাকলেও যেন বদলানোর বদলে নকল তৈরি না হয়
+        target = _by_pk(Lesson, request.data.get("lesson"))
+        if request.data.get("lesson") and not target:
+            return Response({"error": "স্ক্রিপ্টটি পাওয়া যায়নি"}, status=404)
+        if target and target.course_id != course.id:
+            return Response({"error": "স্ক্রিপ্টটি এই কোর্সের নয়"}, status=400)
         lesson, existed = create_sample(
             Lesson, LessonStep, StepSlide, course, key,
-            replace=bool(request.data.get("replace")), topic=topic)
+            replace=bool(request.data.get("replace")), topic=topic,
+            target=target)
+        # নতুন স্ক্রিপ্ট বসলেই টপিকের টগলের লেখাও তৈরি হয়ে যাক — খালি
+        # থাকলেই, পরিচালকের নিজের লেখায় হাত না দিয়ে
+        filled = self._fill_topic_summary(lesson)
         ctx = self.get_serializer_context()
         ctx["with_steps"] = True
         data = LessonSerializer(lesson, context=ctx).data
         # আগে থেকেই ছিল কিনা — সামনের পর্দা এটা দেখেই জিজ্ঞেস করে
         # "নতুন করে আনব?"
         data["existed"] = existed
+        data["summary_filled"] = filled
         return Response(data, status=201)
 
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])

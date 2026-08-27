@@ -70,7 +70,7 @@ ALL_FOUR = V1 + "\n" + V2 + "\n" + V3 + "\n" + V4
 DOTS = "…………"
 
 
-def _chunk(section, arabic, lead, correction, note="", seconds=55):
+def _chunk(section, arabic, lead, correction, note="", seconds=50):
     """একটি ছোট টুকরো শেখানোর ধাপ — শোনা, বলা, আবার বলা।
 
     উস্তাদ শুধু পড়ে যাবেন। বর্গাকার বন্ধনীর বাংলা কথাগুলো তাঁর নিজের
@@ -110,10 +110,10 @@ IKHLAS = {
     "kind": "memorization",
     "age_from": 5,
     "age_to": 7,
-    "duration_min": 25,
+    "duration_min": 30,
     "objectives": (
         "<p><b>Surah Al-Ikhlas — Complete Teacher Script</b><br>"
-        "Age 5–7 · 20–25 minutes · Qur'an Memorization<br>"
+        "Age 5–7 · about 30 minutes · Qur'an Memorization<br>"
         "Listen → Repeat → Connect → Recall → Recite</p>"
         "<p><b>How to use this script</b> — open it and read straight "
         "through. Every English line is what you say out loud, word for "
@@ -123,6 +123,9 @@ IKHLAS = {
         "tell you when to pause and wait.</li>"
         "<li>Where you see <b>…………</b>, recite the Arabic shown on the "
         "screen. Arabic is never written in English letters.</li>"
+        "<li>If the child gets tired, stop after the four-finger game "
+        "(Part 12) and do the rest next class. Two short happy classes "
+        "beat one long tired one.</li>"
         "</ul>"
         "<p><b>By the end the student should be able to:</b></p>"
         "<ul>"
@@ -155,7 +158,7 @@ IKHLAS = {
                           "[অপেক্ষা করুন]\n\n"
                           "MashaAllah! Very good.",
             "note": "শুরুটা উষ্ণ ও ছোট রাখুন। এখনই পড়ানো শুরু নয়।",
-            "seconds": 45,
+            "seconds": 40,
             "slide": {"kind": "title", "heading": "Surah Al-Ikhlas",
                       "arabic": "الإخلاص", "text": "Assalamu alaikum! 🌙"},
         },
@@ -177,7 +180,7 @@ IKHLAS = {
                           "One, two, three, four.\n"
                           "Well done!",
             "note": "সূরা ১১২, চার আয়াত, মাক্কী।",
-            "seconds": 45,
+            "seconds": 40,
             "slide": {"kind": "title", "heading": "Only Four Verses",
                       "arabic": "الإخلاص", "text": "1️⃣  2️⃣  3️⃣  4️⃣"},
         },
@@ -199,7 +202,7 @@ IKHLAS = {
                           "We will do it together.\n"
                           "Ready? Let us begin!",
             "note": "",
-            "seconds": 40,
+            "seconds": 35,
             "slide": {"kind": "title", "heading": "Let us begin!",
                       "text": "👂 Listen\n🎤 Say it\n🌟 Try alone"},
         },
@@ -221,7 +224,7 @@ IKHLAS = {
                           "Listen again.",
             "note": "এই প্রথম শোনাটাই বাচ্চার মনে সুরটা বসিয়ে দেয় — যেভাবে "
                     "পড়বেন, সে হুবহু সেভাবেই শিখবে। ভালো করে পড়ুন।",
-            "seconds": 70,
+            "seconds": 65,
             "slide": {"kind": "listen", "heading": "Listen",
                       "arabic": ALL_FOUR, "text": "👂 Just listen."},
         },
@@ -238,7 +241,7 @@ IKHLAS = {
             "Now you.\n"
             "[অপেক্ষা করুন]\n\n"
             "MashaAllah! That is it.",
-            seconds=60,
+            seconds=55,
         ),
         _chunk(
             "Part 3 — هُوَ ٱللَّهُ", C_HUWALLAH,
@@ -282,7 +285,7 @@ IKHLAS = {
                           "[কেবল প্রথম শব্দটুকু বলুন, বাকিটা শিশু বলবে]\n\n"
                           "MashaAllah! You did it!",
             "note": "ইশারা দিন কেবল প্রথম শব্দটুকু — পুরো আয়াত বলে দেবেন না।",
-            "seconds": 70,
+            "seconds": 65,
             "slide": {"kind": "verse", "heading": "Verse 1",
                       "arabic": V1, "text": "🎤 All together now"},
         },
@@ -305,7 +308,7 @@ IKHLAS = {
                           "Well done!",
             "note": "অনুবাদ: 'বলো, তিনি আল্লাহ, এক।' উপরের কথাগুলো বাচ্চার "
                     "জন্য সহজ ব্যাখ্যা, অনুবাদ নয়।",
-            "seconds": 50,
+            "seconds": 45,
             "slide": {"kind": "meaning", "heading": "Allah is One",
                       "arabic": V1, "text": "1️⃣\nAllah is One. ☝️"},
         },
@@ -333,7 +336,7 @@ IKHLAS = {
             "MashaAllah!",
             note="ص একটি ভারী হরফ — এই সূরার সবচেয়ে বেশি ভুল হওয়া জায়গা। "
                  "নিয়মের নাম বলবেন না, শুধু করে দেখান।",
-            seconds=60,
+            seconds=55,
         ),
         {
             "section": "Part 5 — Join verse 2",
@@ -353,7 +356,7 @@ IKHLAS = {
                           "[কেবল প্রথম শব্দটুকু বলুন]\n\n"
                           "MashaAllah!",
             "note": "",
-            "seconds": 55,
+            "seconds": 50,
             "slide": {"kind": "verse", "heading": "Verse 2",
                       "arabic": V2, "text": "🎤 All together now"},
         },
@@ -378,7 +381,7 @@ IKHLAS = {
                           "So we need Allah.\n"
                           "Say it with me — we need Allah.",
             "note": "অনুবাদ: 'আল্লাহ অমুখাপেক্ষী।' এই বয়সে প্রথম অংশটুকুই যথেষ্ট।",
-            "seconds": 60,
+            "seconds": 55,
             "slide": {"kind": "question", "heading": "Do we need Allah?",
                       "arabic": V2,
                       "text": "We need Allah. 🤲\nAllah needs no one."},
@@ -404,7 +407,7 @@ IKHLAS = {
                           "Off you go!",
             "note": "শুরুতেই জোড়া লাগানো জরুরি — নইলে প্রতিটি আয়াত আলাদা "
                     "দ্বীপের মতো মুখস্থ হয়, এক আয়াত থেকে পরেরটায় যেতে পারে না।",
-            "seconds": 60,
+            "seconds": 55,
             "slide": {"kind": "repeat", "heading": "Verses 1 and 2",
                       "arabic": V1 + "\n" + V2, "text": "🎤 Together now"},
         },
@@ -422,7 +425,7 @@ IKHLAS = {
             "correction": "Look at me. Are you ready?\n"
                           "It is easy. I will help you.",
             "note": "",
-            "seconds": 30,
+            "seconds": 25,
             "slide": {"kind": "title", "heading": "Verse 3",
                       "arabic": V3, "text": "👂 Listen very carefully"},
         },
@@ -449,7 +452,7 @@ IKHLAS = {
             "Excellent!",
             note="এই দুটি শব্দ উল্টে ফেলাই এই সূরার সবচেয়ে সাধারণ ভুল। "
                  "তালির ছন্দে ক্রমটা মনে থাকে।",
-            seconds=65,
+            seconds=60,
         ),
         {
             "section": "Part 8 — Join verse 3",
@@ -470,7 +473,7 @@ IKHLAS = {
                           "Now you say it with the claps.\n"
                           "You did it!",
             "note": "",
-            "seconds": 55,
+            "seconds": 50,
             "slide": {"kind": "verse", "heading": "Verse 3",
                       "arabic": V3, "text": "🎤 All together now"},
         },
@@ -496,7 +499,7 @@ IKHLAS = {
                           "Well done!",
             "note": "অনুবাদ: 'তিনি কাউকে জন্ম দেননি, তাঁকেও জন্ম দেওয়া হয়নি।' "
                     "গভীর আলোচনায় যাবেন না।",
-            "seconds": 55,
+            "seconds": 50,
             "slide": {"kind": "question", "heading": "Was Allah born?",
                       "arabic": V3, "text": "No! ✨\nAllah was always here."},
         },
@@ -514,7 +517,7 @@ IKHLAS = {
             "correction": "You have done three verses already!\n"
                           "Only one more. You can do it!",
             "note": "এটি সবচেয়ে লম্বা আয়াত — টুকরো করাই এর চাবি।",
-            "seconds": 30,
+            "seconds": 25,
             "slide": {"kind": "title", "heading": "The Last Verse",
                       "arabic": V4, "text": "🌟 Almost done!"},
         },
@@ -526,7 +529,7 @@ IKHLAS = {
             "Now you.\n"
             "[অপেক্ষা করুন]\n\n"
             "Very good!",
-            seconds=50,
+            seconds=45,
         ),
         _chunk(
             "Part 10 — لَّهُۥ", C_LAHU, "Now this small one.",
@@ -536,7 +539,7 @@ IKHLAS = {
             "Now you.\n"
             "[অপেক্ষা করুন]\n\n"
             "Excellent!",
-            seconds=45,
+            seconds=40,
         ),
         _chunk(
             "Part 10 — كُفُوًا", C_KUFUWAN, "Now listen.",
@@ -546,7 +549,7 @@ IKHLAS = {
             "Now you.\n"
             "[অপেক্ষা করুন]\n\n"
             "Very good!",
-            seconds=50,
+            seconds=45,
         ),
         _chunk(
             "Part 10 — أَحَدٌۢ", C_AHADUN,
@@ -557,7 +560,7 @@ IKHLAS = {
             "Now you.\n"
             "[অপেক্ষা করুন]\n\n"
             "MashaAllah!",
-            seconds=45,
+            seconds=40,
         ),
         {
             "section": "Part 10 — Join verse 4",
@@ -577,7 +580,7 @@ IKHLAS = {
                           "Good! We will do the rest next time.",
             "note": "শিশু না পারলে জোর করবেন না — অর্ধেক মুখস্থ হওয়া, "
                     "পুরোটা ভুলে যাওয়ার চেয়ে অনেক ভালো।",
-            "seconds": 80,
+            "seconds": 70,
             "slide": {"kind": "verse", "heading": "Verse 4",
                       "arabic": V4, "text": "🎤 All together now"},
         },
@@ -597,7 +600,7 @@ IKHLAS = {
                           "Is anyone like Allah? No!\n"
                           "Say it with me — nobody is like Allah.",
             "note": "অনুবাদ: 'আর তাঁর সমকক্ষ কেউ নেই।'",
-            "seconds": 50,
+            "seconds": 45,
             "slide": {"kind": "question", "heading": "Is anyone like Allah?",
                       "arabic": V4, "text": "No! 💚\nNobody is like Allah."},
         },
@@ -630,7 +633,7 @@ IKHLAS = {
                           "Well done!",
             "note": "নড়াচড়া ক্রম মনে রাখতে সাহায্য করে — শুধু বারবার বলার "
                     "চেয়ে বেশি। হাতটাই বাচ্চার নিজের মনে করিয়ে দেওয়ার যন্ত্র।",
-            "seconds": 90,
+            "seconds": 80,
             "slide": {"kind": "activity", "heading": "Four-Finger Game",
                       "text": "1️⃣ Allah is One\n2️⃣ We need Allah\n"
                               "3️⃣ Allah was not born\n"
@@ -657,7 +660,7 @@ IKHLAS = {
                           "[কেবল প্রথম শব্দটুকু বলুন]\n\n"
                           "MashaAllah!",
             "note": "শিশু ক্লান্ত হলে জোর করবেন না। ইশারা দিন কেবল এক শব্দের।",
-            "seconds": 90,
+            "seconds": 80,
             "slide": {"kind": "blank", "heading": "Look & Hide",
                       "text": "🙈 Can you say it by heart?"},
         },
@@ -677,7 +680,7 @@ IKHLAS = {
             "correction": "Let us go a bit slower.\n"
                           "Slow and beautiful. From the start again.",
             "note": "",
-            "seconds": 80,
+            "seconds": 70,
             "slide": {"kind": "repeat", "heading": "All Four Verses",
                       "arabic": ALL_FOUR,
                       "text": "🎤 Together, from the start"},
@@ -701,7 +704,7 @@ IKHLAS = {
             "note": "⚠️ ভুল হলে কখনোই 'Wrong' বলবেন না। বলুন 'That is okay' — "
                     "তারপর সবচেয়ে ছোট ইশারাটুকু দিন। শেষে কেবল একটি জিনিস "
                     "শুধরে দিন, একের বেশি নয়।",
-            "seconds": 90,
+            "seconds": 80,
             "slide": {"kind": "your_turn", "heading": "All By Yourself",
                       "text": "🎤 I am listening.\nTake your time."},
         },
@@ -732,7 +735,7 @@ IKHLAS = {
                           "Well done!",
             "note": "এই সূরার শিক্ষা: তাওহীদ — আল্লাহ এক, তিনি কারও "
                     "মুখাপেক্ষী নন, আর কেউ তাঁর মতো নয়।",
-            "seconds": 80,
+            "seconds": 70,
             "slide": {"kind": "review", "heading": "What did we learn?",
                       "text": "☝️ Allah is One\n🤲 We need Allah\n"
                               "✨ Allah was always here\n"
@@ -754,7 +757,7 @@ IKHLAS = {
             "note": "সহীহ: নবী ﷺ বলেছেন কুল হুওয়াল্লাহু আহাদ কুরআনের এক "
                     "তৃতীয়াংশের সমান — সহীহ বুখারী ৫০১৩, সহীহ মুসলিম ৮১১। "
                     "এর বেশি বাড়াবেন না, সূত্রহীন কোনো ফাযীলত যোগ করবেন না।",
-            "seconds": 45,
+            "seconds": 40,
             "slide": {"kind": "reminder", "heading": "A Big Secret!",
                       "text": "This little Surah is like reading\n"
                               "a third of the Qur'an. 🌙"},
@@ -780,7 +783,7 @@ IKHLAS = {
             "note": "অভিভাবকের জন্য — শুধু শুনুন আর হাসুন। রোজ অল্প করে "
                     "শোনাই একবারে অনেকক্ষণের চেয়ে ভালো। জোর করা বা বকা নয়; "
                     "আটকে গেলে প্রথম শব্দটা বলে দিন, বাকিটা সে করবে।",
-            "seconds": 55,
+            "seconds": 50,
             "slide": {"kind": "homework", "heading": "Until Next Time",
                       "text": "📖 Practise every day\n🤲 And say it in Salah"},
         },
@@ -805,7 +808,7 @@ IKHLAS = {
                     "চার আয়াতই টুকরো করে করানো হয়েছে · আয়াত জোড়া লাগানো "
                     "হয়েছে · ভারী হরফ দেখা হয়েছে · ৩য় আয়াতের দুই শব্দ আলাদা "
                     "হয়েছে · না দেখে বলেছে · অর্থ বলেছে · বাড়ির কাজ দেওয়া হয়েছে।",
-            "seconds": 70,
+            "seconds": 65,
             "slide": {"kind": "end", "heading": "JazakAllahu Khairan",
                       "arabic": "بَارَكَ ٱللَّهُ فِيكَ",
                       "text": "See you next time, in shaa Allah. 👋"},
@@ -815,25 +818,41 @@ IKHLAS = {
 
 
 # ──────────────────── Easy Noorani Qaida · দারস ১ · ৫–৭ বছর ────────────────────
+def S(*lines):
+    """স্ক্রিপ্টের কয়েকটি লাইন জোড়া দেয় — খালি স্ট্রিং দিলে ফাঁকা লাইন।
+
+    উস্তাদ পর্দায় লাইনগুলো আলাদা আলাদা দেখেন, তাই পড়তে সুবিধা হয়।
+    """
+    return "\n".join(lines)
+
+
 QAIDA = {
     "title": "Easy Noorani Qaida — Lesson 1: The First Seven Letters",
     "title_ar": "الحروف المفردة",
     "kind": "qaida",
     "age_from": 5,
     "age_to": 7,
-    "duration_min": 25,
+    "duration_min": 20,
     "objectives": (
-        "<p><b>Learning objectives</b> — by the end of this lesson the student "
-        "should be able to:</p>"
+        "<p><b>Noorani Qaida — Lesson 1 · Teacher Script</b><br>"
+        "Age 5–7 · about 20 minutes · The first seven letters<br>"
+        "Listen → Watch the mouth → Say → Compare → Play</p>"
+        "<p><b>How to use this script</b> — open it and read straight "
+        "through. Every English line is what you say out loud, word for "
+        "word. You never have to make up any English yourself.</p>"
+        "<ul>"
+        "<li>Bengali lines in [square brackets] are for you only — they "
+        "tell you when to pause, what to show, and which letter to name.</li>"
+        "<li>Where you see <b>…………</b>, say the name of the letter shown "
+        "on the screen. Arabic is never written in English letters.</li>"
+        "</ul>"
+        "<p><b>By the end the student should be able to:</b></p>"
         "<ul>"
         "<li>Know the letters <b>ا ب ت ث ج ح خ</b> on sight, in any order</li>"
         "<li>Say each letter with the right sound</li>"
         "<li>Tell <b>ت</b> from <b>ث</b>, and <b>ح</b> from <b>خ</b></li>"
         "<li>Read all seven letters in order without help</li>"
         "</ul>"
-        "<p><b>How to use this script</b> — every line in “উস্তাদ বলবেন” and "
-        "“ভুল হলে” is written to be read out loud, word for word. You do not "
-        "need to make up any English yourself. Read it warmly and slowly.</p>"
         "<p><b>Mastery</b> — the child names all seven letters when you point "
         "at them in any order, not only down the list, and keeps ت/ث and ح/خ "
         "apart. Saying the list from memory is <i>not</i> mastery.</p>"
@@ -843,13 +862,24 @@ QAIDA = {
     "steps": [
         {
             "section": "Welcome",
-            "says": "Assalamu alaikum! How are you today? I am so happy to see "
-                    "you! Are you ready to learn? Let us go!",
+            "says": S(
+                "Assalamu alaikum! How are you today?",
+                "I am so happy to see you!",
+                "[অপেক্ষা করুন — শিশু সালামের জবাব দেবে]",
+                "",
+                "Are you ready to learn? Let us go!",
+            ),
             "does": "হাসুন, হাত নাড়ুন। নাম ধরে একবার ডাকুন।",
             "student": "সালামের জবাব দেয়।",
             "expected": "Wa alaikumus salam.",
-            "correction": "That is okay! Listen. Assalamu alaikum. Now you say "
-                          "it back — Wa alaikumus salam. Lovely!",
+            "correction": S(
+                "That is okay! Listen.",
+                "Assalamu alaikum.",
+                "Now you say it back to me.",
+                "[অপেক্ষা করুন]",
+                "",
+                "Lovely!",
+            ),
             "note": "উষ্ণ শুরু। এখনই পড়ানো নয়।",
             "seconds": 45,
             "slide": {"kind": "title", "heading": "Noorani Qaida — Lesson 1",
@@ -858,14 +888,23 @@ QAIDA = {
         },
         {
             "section": "Introduction",
-            "says": "The Qur'an is made of letters. Today we will learn seven "
-                    "letters. Seven! Show me seven fingers. Let us count them. "
-                    "One, two, three, four, five, six, seven!",
+            "says": S(
+                "The Qur'an is made of letters.",
+                "Today we will learn seven letters.",
+                "Seven! Show me seven fingers.",
+                "[অপেক্ষা করুন — শিশু আঙুল দেখাবে]",
+                "",
+                "Let us count them together.",
+                "One, two, three, four, five, six, seven!",
+            ),
             "does": "সাতটি আঙুল তুলে একসাথে গুনুন।",
             "student": "সাতটি আঙুল দেখায়, সাথে গোনে।",
             "expected": "সাতটি আঙুল উপরে।",
-            "correction": "Let us count together. One, two, three, four, five, "
-                          "six, seven. Well done!",
+            "correction": S(
+                "Let us count together.",
+                "One, two, three, four, five, six, seven.",
+                "Well done!",
+            ),
             "note": "এই বয়সে এক দারসে সাতটিই যথেষ্ট। শিশু দ্রুত পারলেও আর "
                     "বাড়াবেন না — পরের দারসে বাকিগুলো আছে।",
             "seconds": 40,
@@ -875,13 +914,31 @@ QAIDA = {
         },
         {
             "section": "Ta'awwudh",
-            "says": "We always start with Bismillah. Listen to me first. "
-                    "Bismillahir-Rahmanir-Rahim. Now say it with me!",
+            "says": S(
+                "We always start with Bismillah.",
+                "Listen to me first.",
+                DOTS,
+                "[পর্দার আরবিটি ধীরে ও স্পষ্ট করে পড়ুন]",
+                "",
+                "Now say it with me!",
+                DOTS,
+                "[একসাথে পড়ুন]",
+                "",
+                "Beautiful!",
+            ),
             "does": "প্রথমে একা, তারপর একসাথে।",
             "student": "সাথে বলে।",
-            "expected": "Bismillahir-Rahmanir-Rahim.",
-            "correction": "Good try! Just the small bit. Bismillah. Again — "
-                          "Bismillah. Now all of it. Mashaa Allah!",
+            "expected": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+            "correction": S(
+                "Good try! Just the small bit first.",
+                "[শুধু প্রথম শব্দটি পড়ুন]",
+                "",
+                "Again — with me.",
+                DOTS,
+                "[আবার পুরোটা একসাথে]",
+                "",
+                "MashaAllah!",
+            ),
             "note": "এখানে উচ্চারণ শোধরাবেন না — অভ্যাসটাই আজ বড়।",
             "seconds": 40,
             "slide": {"kind": "repeat", "heading": "Say With Me",
@@ -889,118 +946,264 @@ QAIDA = {
                       "text": "🤲 We always start with this."},
         },
         {
-            "section": "Alif — Listen",
-            "says": "Look at the screen. This is our first letter. Its name is "
-                    "Alif. Listen to me. Alif. Again — Alif.",
+            "section": "ا — Listen",
+            "says": S(
+                "Look at the screen.",
+                "This is our first letter.",
+                "Its name is …………",
+                "[ا হরফটি দেখিয়ে তার নাম বলুন]",
+                "",
+                "Listen to me. Say nothing yet.",
+                DOTS,
+                "[আবার নাম বলুন — ধীরে, স্পষ্ট]",
+            ),
             "does": "পর্দার হরফটি দেখিয়ে দুবার স্পষ্ট করে বলুন।",
             "student": "হরফটির দিকে তাকায়, শোনে।",
-            "expected": "হরফের দিকে চোখ।",
-            "correction": "Look here — at this letter on the screen. Now "
-                          "listen again. Alif. Did you hear it? Alif.",
+            "expected": "ا — হরফের দিকে চোখ।",
+            "correction": S(
+                "Look here — at this letter on the screen.",
+                "Now listen again.",
+                DOTS,
+                "[আবার নাম বলুন]",
+                "",
+                "Did you hear it?",
+            ),
             "note": "মাখরাজ: গলার গভীর থেকে — খোলা, ফাঁকা শব্দ।",
             "seconds": 35,
-            "slide": {"kind": "letters", "heading": "Alif — Listen",
+            "slide": {"kind": "letters", "heading": "Listen",
                       "arabic": "ا", "text": "👂"},
         },
         {
-            "section": "Alif — Repeat",
-            "says": "Now your turn! Open your mouth big. Say Alif. Again — "
-                    "Alif. One more — Alif. Now all by yourself!",
+            "section": "ا — Repeat",
+            "says": S(
+                "Now your turn!",
+                "Open your mouth big, like me.",
+                DOTS,
+                "[হরফের নাম বলুন — শিশু সাথে বলবে]",
+                "",
+                "Again!",
+                DOTS,
+                "One more time!",
+                DOTS,
+                "[প্রতিবার একসাথে বলুন]",
+                "",
+                "Now all by yourself!",
+                "[অপেক্ষা করুন — শিশু একা বলবে]",
+                "",
+                "MashaAllah! ⭐",
+            ),
             "does": "তিনবার একসাথে, তারপর একা।",
             "student": "হরফটি বলে।",
-            "expected": "Alif — খোলা, পরিষ্কার শব্দ।",
-            "correction": "Nearly! Open your mouth big, like me. Watch. Alif. "
-                          "Then stop. Now you — Alif. Lovely!",
+            "expected": "ا — খোলা, পরিষ্কার শব্দ।",
+            "correction": S(
+                "Nearly! Open your mouth big, like me.",
+                "Watch.",
+                DOTS,
+                "[মুখ বড় করে খুলে নাম বলুন, তারপর থামুন]",
+                "",
+                "Then stop. Now you.",
+                "[অপেক্ষা করুন]",
+                "",
+                "Lovely!",
+            ),
             "note": "শেষে গুনগুন এলে বলুন মুখ খুলে থামতে।",
             "seconds": 45,
             "slide": {"kind": "your_turn", "heading": "Your Turn",
                       "arabic": "ا", "text": "🎤"},
         },
         {
-            "section": "Ba — Listen",
-            "says": "Next letter. Its name is Ba. Watch my lips. They close "
-                    "together — like this. Ba! Again — Ba.",
+            "section": "ب — Listen",
+            "says": S(
+                "Next letter. Look at the screen.",
+                "Watch my lips. They close together — like this.",
+                DOTS,
+                "[ب হরফটি দেখিয়ে তার নাম বলুন, ঠোঁট স্পষ্ট দেখান]",
+                "",
+                "Again — watch my lips.",
+                DOTS,
+                "[আবার বলুন]",
+            ),
             "does": "ঠোঁট দেখিয়ে দুবার বলুন, ক্যামেরার কাছে মুখ আনুন।",
             "student": "ঠোঁটের দিকে তাকায়, শোনে।",
-            "expected": "ঠোঁটের দিকে চোখ।",
-            "correction": "Look at my lips. Closed! Now open. Ba! Watch again.",
+            "expected": "ب — ঠোঁটের দিকে চোখ।",
+            "correction": S(
+                "Look at my lips. Closed! Now open.",
+                DOTS,
+                "[ঠোঁট বন্ধ করে খুলে নাম বলুন]",
+                "",
+                "Watch again.",
+            ),
             "note": "মাখরাজ: দুই ঠোঁট। শুধু বলবেন না — করে দেখান, এই দারসটা "
                     "নকল করেই শেখা হয়।",
             "seconds": 35,
-            "slide": {"kind": "letters", "heading": "Ba — Listen",
+            "slide": {"kind": "letters", "heading": "Listen",
                       "arabic": "ب",
                       "text": "👄 Watch the lips."},
         },
         {
-            "section": "Ba — Repeat",
-            "says": "Your turn! Close your lips. Now say Ba. Again — Ba. One "
-                    "more — Ba. Now all by yourself!",
+            "section": "ب — Repeat",
+            "says": S(
+                "Your turn! Close your lips.",
+                "Now say it with me.",
+                DOTS,
+                "Again!",
+                DOTS,
+                "One more time!",
+                DOTS,
+                "[তিনবার একসাথে বলুন]",
+                "",
+                "Now all by yourself!",
+                "[অপেক্ষা করুন]",
+                "",
+                "Excellent! ⭐",
+            ),
             "does": "তিনবার একসাথে, তারপর একা। ঠোঁট সত্যিই বন্ধ হচ্ছে কিনা দেখুন।",
             "student": "হরফটি বলে।",
-            "expected": "Ba — ঠোঁট পুরোপুরি মিলছে।",
-            "correction": "Almost! Your lips must touch. Press them together, "
-                          "like this. Now pop them open. Ba! Try again — Ba. "
-                          "Mashaa Allah!",
+            "expected": "ب — ঠোঁট পুরোপুরি মিলছে।",
+            "correction": S(
+                "Almost! Your lips must touch.",
+                "Press them together, like this.",
+                "Now pop them open.",
+                DOTS,
+                "[ঠোঁট চেপে ধরে ছেড়ে দিয়ে নাম বলুন]",
+                "",
+                "Try again with me.",
+                DOTS,
+                "MashaAllah!",
+            ),
             "note": "",
             "seconds": 45,
             "slide": {"kind": "your_turn", "heading": "Your Turn",
                       "arabic": "ب", "text": "🎤"},
         },
         {
-            "section": "Ta — Listen",
-            "says": "Next letter. Its name is Ta. Watch my tongue. It goes up "
-                    "and touches my top teeth. It stays inside. Ta! Again — Ta.",
+            "section": "ت — Listen",
+            "says": S(
+                "Next letter. Look at the screen.",
+                "Watch my tongue.",
+                "It goes up and touches my top teeth.",
+                "It stays inside my mouth.",
+                DOTS,
+                "[ت হরফটি দেখিয়ে তার নাম বলুন, জিভ ভেতরে রাখুন]",
+                "",
+                "Again — watch carefully.",
+                DOTS,
+            ),
             "does": "ধীরে জিভের অবস্থান দেখান।",
             "student": "মুখের দিকে তাকায়, শোনে।",
-            "expected": "মুখের দিকে মনোযোগ।",
-            "correction": "Watch my tongue. Up! And inside. Listen again. Ta.",
+            "expected": "ت — মুখের দিকে মনোযোগ।",
+            "correction": S(
+                "Watch my tongue. Up! And inside.",
+                "Listen again.",
+                DOTS,
+                "[আবার বলুন — জিভ ভেতরেই]",
+            ),
             "note": "মাখরাজ: জিভের ডগা উপরের দাঁতের পেছনের মাড়িতে — জিভ "
                     "মুখের ভেতরেই থাকে।",
             "seconds": 35,
-            "slide": {"kind": "letters", "heading": "Ta — Listen",
+            "slide": {"kind": "letters", "heading": "Listen",
                       "arabic": "ت",
                       "text": "👅 Tongue up, inside."},
         },
         {
-            "section": "Ta — Repeat",
-            "says": "Your turn! Tongue up. Keep it inside your mouth. Say Ta. "
-                    "Again — Ta. One more — Ta. Now all by yourself!",
+            "section": "ت — Repeat",
+            "says": S(
+                "Your turn! Tongue up.",
+                "Keep it inside your mouth.",
+                "Say it with me.",
+                DOTS,
+                "Again!",
+                DOTS,
+                "One more time!",
+                DOTS,
+                "[তিনবার একসাথে বলুন]",
+                "",
+                "Now all by yourself!",
+                "[অপেক্ষা করুন]",
+                "",
+                "Very good! ⭐",
+            ),
             "does": "তিনবার একসাথে, তারপর একা।",
             "student": "হরফটি বলে।",
-            "expected": "Ta — পরিষ্কার, জিভ মুখের ভেতরে।",
-            "correction": "Oh, your tongue came out! That one is a different "
-                          "letter. For Ta, keep your tongue inside. Watch me. "
-                          "Ta. Now you — Ta. That is it!",
+            "expected": "ت — পরিষ্কার, জিভ মুখের ভেতরে।",
+            "correction": S(
+                "Oh, your tongue came out!",
+                "That one is a different letter.",
+                "For this letter, keep your tongue inside.",
+                "Watch me.",
+                DOTS,
+                "[জিভ ভেতরে রেখে নাম বলুন]",
+                "",
+                "Now you.",
+                "[অপেক্ষা করুন]",
+                "",
+                "That is it!",
+            ),
             "note": "",
             "seconds": 45,
             "slide": {"kind": "your_turn", "heading": "Your Turn",
                       "arabic": "ت", "text": "🎤"},
         },
         {
-            "section": "Tha — Listen",
-            "says": "Now a new one. Its name is Tha. This time my tongue comes "
-                    "out a little. Look — you can see it! Tha. Again — Tha.",
+            "section": "ث — Listen",
+            "says": S(
+                "Now a new one. Look at the screen.",
+                "This time my tongue comes out a little.",
+                "Look — you can see it!",
+                DOTS,
+                "[ث হরফটি দেখিয়ে তার নাম বলুন, জিভের ডগা দাঁতের ফাঁকে]",
+                "",
+                "Again — can you see my tongue?",
+                DOTS,
+            ),
             "does": "দাঁতের ফাঁকে জিভ স্পষ্ট করে দেখান।",
             "student": "মুখের দিকে তাকায়, শোনে।",
-            "expected": "মুখের দিকে মনোযোগ।",
-            "correction": "Look — my tongue is out. Can you see it? Listen "
-                          "again. Tha.",
+            "expected": "ث — মুখের দিকে মনোযোগ।",
+            "correction": S(
+                "Look — my tongue is out.",
+                "Can you see it?",
+                "Listen again.",
+                DOTS,
+                "[আবার বলুন — জিভ বাইরে]",
+            ),
             "note": "মাখরাজ: জিভের ডগা উপরের ও নিচের সামনের দাঁতের মাঝে।",
             "seconds": 35,
-            "slide": {"kind": "letters", "heading": "Tha — Listen",
+            "slide": {"kind": "letters", "heading": "Listen",
                       "arabic": "ث",
                       "text": "👅 Tongue comes out."},
         },
         {
-            "section": "Tha — Repeat",
-            "says": "Your turn! Let your tongue come out a little. Now blow "
-                    "softly. Tha. Again — Tha. One more — Tha. All by yourself!",
+            "section": "ث — Repeat",
+            "says": S(
+                "Your turn!",
+                "Let your tongue come out a little.",
+                "Now blow softly. Say it with me.",
+                DOTS,
+                "Again!",
+                DOTS,
+                "One more time!",
+                DOTS,
+                "[তিনবার একসাথে বলুন]",
+                "",
+                "Now all by yourself!",
+                "[অপেক্ষা করুন]",
+                "",
+                "MashaAllah! ⭐",
+            ),
             "does": "তিনবার একসাথে, তারপর একা। জিভ বেরোচ্ছে কিনা দেখুন।",
             "student": "হরফটি বলে।",
-            "expected": "Tha — জিভের ডগা দেখা যাচ্ছে।",
-            "correction": "Nearly! Your tongue is still inside. Let it come "
-                          "out — like this. Now blow softly. Tha. Try again — "
-                          "Tha. Mashaa Allah!",
+            "expected": "ث — জিভের ডগা দেখা যাচ্ছে।",
+            "correction": S(
+                "Nearly! Your tongue is still inside.",
+                "Let it come out — like this.",
+                "Now blow softly.",
+                DOTS,
+                "[জিভ বের করে নাম বলুন]",
+                "",
+                "Try again with me.",
+                DOTS,
+                "MashaAllah!",
+            ),
             "note": "",
             "seconds": 45,
             "slide": {"kind": "your_turn", "heading": "Your Turn",
@@ -1008,15 +1211,40 @@ QAIDA = {
         },
         {
             "section": "Compare ت / ث",
-            "says": "Listen carefully. Ta … Tha. Ta — the tongue hides inside. "
-                    "Tha — the tongue comes out. Now look at the screen. I am "
-                    "pointing at this one. Which one is it?",
+            "says": S(
+                "Listen very carefully. Two letters.",
+                DOTS,
+                "[ت হরফটি দেখিয়ে তার নাম বলুন]",
+                "",
+                DOTS,
+                "[ث হরফটি দেখিয়ে তার নাম বলুন]",
+                "",
+                "One hides the tongue inside.",
+                "One lets the tongue peek out.",
+                "Now look at the screen.",
+                "I am pointing at this one. Which one is it?",
+                "[একটিতে আঙুল রেখে অপেক্ষা করুন]",
+                "",
+                "MashaAllah! 🌟",
+            ),
             "does": "দুটো পরপর বলুন, তারপর একটিতে আঙুল রেখে জিজ্ঞেস করুন।",
             "student": "হরফের নাম বলে।",
             "expected": "যেটিতে আঙুল রেখেছেন, তার নাম।",
-            "correction": "Look again. Is the tongue hiding, or coming out? "
-                          "Watch my mouth. Ta … Tha. Now you tell me. Which "
-                          "one? Well done!",
+            "correction": S(
+                "Look again.",
+                "Is the tongue hiding, or coming out?",
+                "Watch my mouth.",
+                DOTS,
+                "[ت বলুন — জিভ ভেতরে]",
+                "",
+                DOTS,
+                "[ث বলুন — জিভ বাইরে]",
+                "",
+                "Now you tell me. Which one?",
+                "[অপেক্ষা করুন]",
+                "",
+                "Well done!",
+            ),
             "note": "এই জোড়াটাই এই দারসের সবচেয়ে বড় গোলমাল। এখানে সময় দিন — "
                     "আজ ঠিক না হলে পরে গোটা শব্দেও ভুল হতে থাকবে।",
             "seconds": 70,
@@ -1025,89 +1253,194 @@ QAIDA = {
                       "text": "❓ One hides. One comes out."},
         },
         {
-            "section": "Jeem — Listen",
-            "says": "Next letter. Its name is Jeem. The middle of my tongue "
-                    "pushes up. Jeem! Again — Jeem.",
+            "section": "ج — Listen",
+            "says": S(
+                "Next letter. Look at the screen.",
+                "The middle of my tongue pushes up.",
+                DOTS,
+                "[ج হরফটি দেখিয়ে তার নাম বলুন]",
+                "",
+                "Again — listen to the strong sound.",
+                DOTS,
+            ),
             "does": "স্পষ্ট করে দুবার বলুন।",
             "student": "শোনে।",
-            "expected": "হরফের দিকে মনোযোগ।",
-            "correction": "Watch my mouth. My tongue goes up in the "
-                          "middle. Listen once more. Jeem. Did you hear it?",
+            "expected": "ج — হরফের দিকে মনোযোগ।",
+            "correction": S(
+                "Watch my mouth.",
+                "My tongue goes up in the middle.",
+                "Listen once more.",
+                DOTS,
+                "[আবার বলুন]",
+                "",
+                "Did you hear it?",
+            ),
             "note": "মাখরাজ: জিভের মাঝখান তালুর শক্ত অংশে।",
             "seconds": 35,
-            "slide": {"kind": "letters", "heading": "Jeem — Listen",
+            "slide": {"kind": "letters", "heading": "Listen",
                       "arabic": "ج", "text": "👂"},
         },
         {
-            "section": "Jeem — Repeat",
-            "says": "Your turn! Push your tongue up. Now say Jeem. Again — "
-                    "Jeem. One more — Jeem. All by yourself!",
+            "section": "ج — Repeat",
+            "says": S(
+                "Your turn! Push your tongue up.",
+                "Now say it with me.",
+                DOTS,
+                "Again!",
+                DOTS,
+                "One more time!",
+                DOTS,
+                "[তিনবার একসাথে বলুন]",
+                "",
+                "Now all by yourself!",
+                "[অপেক্ষা করুন]",
+                "",
+                "Excellent! ⭐",
+            ),
             "does": "তিনবার একসাথে, তারপর একা।",
             "student": "হরফটি বলে।",
-            "expected": "Jeem — ভরাট, নরম 'ঝ'-এর মতো নয়।",
-            "correction": "Almost! Make it a big strong sound. Push your "
-                          "tongue up hard. Now let it go. Jeem! Try again — "
-                          "Jeem. That is much better!",
+            "expected": "ج — ভরাট, নরম 'ঝ'-এর মতো নয়।",
+            "correction": S(
+                "Almost! Make it a big strong sound.",
+                "Push your tongue up hard. Now let it go.",
+                DOTS,
+                "[জোর দিয়ে নাম বলুন]",
+                "",
+                "Try again with me.",
+                DOTS,
+                "That is much better!",
+            ),
             "note": "",
             "seconds": 45,
             "slide": {"kind": "your_turn", "heading": "Your Turn",
                       "arabic": "ج", "text": "🎤"},
         },
         {
-            "section": "Ḥa — Listen",
-            "says": "Next letter. Its name is Ḥa. This one comes from here — "
-                    "my throat. Put your hand on your throat, like me. It is "
-                    "like warm breath on your hand. Ḥa! Again — Ḥa.",
+            "section": "ح — Listen",
+            "says": S(
+                "Next letter. Look at the screen.",
+                "This one comes from here — my throat.",
+                "Put your hand on your throat, like me.",
+                "[অপেক্ষা করুন — শিশু গলায় হাত রাখবে]",
+                "",
+                "It is like warm breath on your hand.",
+                DOTS,
+                "[ح হরফটি দেখিয়ে তার নাম বলুন]",
+                "",
+                "Again — feel the warm air.",
+                DOTS,
+            ),
             "does": "গলায় হাত রাখুন, শিশুও যেন একই কাজ করে।",
             "student": "শোনে, গলায় হাত রাখে।",
-            "expected": "গলার দিকে মনোযোগ।",
-            "correction": "Put your hand here, on your throat. Feel it? "
-                          "Listen again. Ḥa.",
+            "expected": "ح — গলার দিকে মনোযোগ।",
+            "correction": S(
+                "Put your hand here, on your throat.",
+                "Feel it? Listen again.",
+                DOTS,
+                "[আবার বলুন]",
+            ),
             "note": "মাখরাজ: গলার মাঝখান। মসৃণ ও উষ্ণ — খসখসে নয়।",
             "seconds": 40,
-            "slide": {"kind": "letters", "heading": "Ḥa — Listen",
+            "slide": {"kind": "letters", "heading": "Listen",
                       "arabic": "ح",
                       "text": "🌬️ Warm breath."},
         },
         {
-            "section": "Ḥa — Repeat",
-            "says": "Your turn! Warm breath from your throat. Say Ḥa. Again — "
-                    "Ḥa. One more — Ḥa. All by yourself!",
+            "section": "ح — Repeat",
+            "says": S(
+                "Your turn! Warm breath from your throat.",
+                "Say it with me.",
+                DOTS,
+                "Again!",
+                DOTS,
+                "One more time!",
+                DOTS,
+                "[তিনবার একসাথে বলুন]",
+                "",
+                "Now all by yourself!",
+                "[অপেক্ষা করুন]",
+                "",
+                "MashaAllah! ⭐",
+            ),
             "does": "তিনবার একসাথে, তারপর একা।",
             "student": "হরফটি বলে।",
-            "expected": "Ḥa — মসৃণ, গলার মাঝ থেকে।",
-            "correction": "Nearly! That was a small breath. Make it warmer "
-                          "and stronger. Blow on your hand — like this. Ḥa. "
-                          "Now you — Ḥa. Mashaa Allah!",
+            "expected": "ح — মসৃণ, গলার মাঝ থেকে।",
+            "correction": S(
+                "Nearly! That was a small breath.",
+                "Make it warmer and stronger.",
+                "Blow on your hand — like this.",
+                DOTS,
+                "[হাতে গরম নিঃশ্বাস দিয়ে নাম বলুন]",
+                "",
+                "Now you.",
+                "[অপেক্ষা করুন]",
+                "",
+                "MashaAllah!",
+            ),
             "note": "",
             "seconds": 45,
             "slide": {"kind": "your_turn", "heading": "Your Turn",
                       "arabic": "ح", "text": "🎤"},
         },
         {
-            "section": "Kha — Listen",
-            "says": "Our last letter today! Its name is Kha. This one is a bit "
-                    "scratchy. Listen. Kha! Again — Kha.",
-            "does": "একটু বাড়িয়ে বলুন যাতে Ḥa-এর সাথে পার্থক্য স্পষ্ট হয়।",
+            "section": "خ — Listen",
+            "says": S(
+                "Our last letter today! Look at the screen.",
+                "This one is a bit scratchy.",
+                "Listen.",
+                DOTS,
+                "[خ হরফটি দেখিয়ে তার নাম বলুন]",
+                "",
+                "Again — hear the scratchy sound.",
+                DOTS,
+            ),
+            "does": "একটু বাড়িয়ে বলুন যাতে ح-এর সাথে পার্থক্য স্পষ্ট হয়।",
             "student": "শোনে।",
-            "expected": "হরফের দিকে মনোযোগ।",
-            "correction": "Listen again. It is scratchy — like this. Kha.",
+            "expected": "خ — হরফের দিকে মনোযোগ।",
+            "correction": S(
+                "Listen again.",
+                "It is scratchy — like this.",
+                DOTS,
+                "[আবার বলুন — খসখসে ভাব স্পষ্ট করুন]",
+            ),
             "note": "মাখরাজ: গলার উপরের অংশ, হালকা খসখসে ভাব।",
             "seconds": 40,
-            "slide": {"kind": "letters", "heading": "Kha — Listen",
+            "slide": {"kind": "letters", "heading": "Listen",
                       "arabic": "خ",
                       "text": "👂 A bit scratchy."},
         },
         {
-            "section": "Kha — Repeat",
-            "says": "Your turn! Make it scratchy. Say Kha. Again — Kha. One "
-                    "more — Kha. All by yourself!",
+            "section": "خ — Repeat",
+            "says": S(
+                "Your turn! Make it scratchy.",
+                "Say it with me.",
+                DOTS,
+                "Again!",
+                DOTS,
+                "One more time!",
+                DOTS,
+                "[তিনবার একসাথে বলুন]",
+                "",
+                "Now all by yourself!",
+                "[অপেক্ষা করুন]",
+                "",
+                "Well done! ⭐",
+            ),
             "does": "তিনবার একসাথে, তারপর একা।",
             "student": "হরফটি বলে।",
-            "expected": "Kha — গলার উপর থেকে।",
-            "correction": "Let us try a game. Pretend the window is cold. Now "
-                          "blow on it — haaa. Good! Now make it scratchy at "
-                          "the back. Kha! You did it!",
+            "expected": "خ — গলার উপর থেকে।",
+            "correction": S(
+                "Let us try a game.",
+                "Pretend the window is cold.",
+                "Now blow on it — haaa.",
+                "[অপেক্ষা করুন — শিশু ফুঁ দেবে]",
+                "",
+                "Good! Now make it scratchy at the back.",
+                DOTS,
+                "[খসখসে করে নাম বলুন]",
+                "",
+                "You did it!",
+            ),
             "note": "",
             "seconds": 45,
             "slide": {"kind": "your_turn", "heading": "Your Turn",
@@ -1115,16 +1448,50 @@ QAIDA = {
         },
         {
             "section": "Compare ح / خ",
-            "says": "Listen carefully. Ḥa … Kha. Ḥa is soft. Kha is scratchy. "
-                    "Now say them after me. Ḥa … Kha. Again! Ḥa … Kha. Now you "
-                    "say both, all by yourself.",
+            "says": S(
+                "Listen very carefully. Two letters.",
+                DOTS,
+                "[ح হরফটির নাম বলুন — নরম ও উষ্ণ]",
+                "",
+                DOTS,
+                "[خ হরফটির নাম বলুন — খসখসে]",
+                "",
+                "One is soft. One is scratchy.",
+                "Now say them after me.",
+                DOTS,
+                DOTS,
+                "[দুটো পরপর বলুন, শিশু সাথে বলবে]",
+                "",
+                "Again!",
+                DOTS,
+                DOTS,
+                "",
+                "Now you say both, all by yourself.",
+                "[অপেক্ষা করুন]",
+                "",
+                "MashaAllah! 🌟",
+            ),
             "does": "জোড়াটি তিনবার বলুন, তারপর শিশুকে একা বলতে দিন।",
             "student": "দুটি হরফই বলে।",
-            "expected": "দুটি স্পষ্টভাবে আলাদা শব্দ।",
-            "correction": "They sounded the same! Let us do just one. Ḥa — "
-                          "soft and warm. Say it. Lovely! Now the scratchy "
-                          "one. Kha. Now both. Ḥa … Kha. Mashaa Allah!",
-            "note": "এই দারসের দ্বিতীয় বড় গোলমাল। দুটো এক শোনালে Ḥa-তে ফিরে "
+            "expected": "ح ও خ — দুটি স্পষ্টভাবে আলাদা শব্দ।",
+            "correction": S(
+                "They sounded the same! Let us do just one.",
+                DOTS,
+                "[ح বলুন — নরম ও উষ্ণ]",
+                "",
+                "Say it.",
+                "[অপেক্ষা করুন]",
+                "",
+                "Lovely! Now the scratchy one.",
+                DOTS,
+                "[خ বলুন]",
+                "",
+                "Now both together.",
+                DOTS,
+                DOTS,
+                "MashaAllah!",
+            ),
+            "note": "এই দারসের দ্বিতীয় বড় গোলমাল। দুটো এক শোনালে ح-তে ফিরে "
                     "গিয়ে সেটা আগে ঠিক করুন।",
             "seconds": 60,
             "slide": {"kind": "question", "heading": "Soft or Scratchy?",
@@ -1133,14 +1500,28 @@ QAIDA = {
         },
         {
             "section": "Practice",
-            "says": "Now all seven letters together. From the start! I will "
-                    "point, and we say them together. Ready? Alif, Ba, Ta, "
-                    "Tha, Jeem, Ḥa, Kha. Beautiful! One more time.",
+            "says": S(
+                "Now all seven letters together. From the start!",
+                "I will point, and we say them together. Ready?",
+                DOTS,
+                "[পর্দার সাতটি হরফে একে একে আঙুল রেখে নাম বলুন]",
+                "",
+                "Beautiful! One more time.",
+                DOTS,
+                "[আবার শুরু থেকে, শান্তভাবে]",
+                "",
+                "MashaAllah! 🌟",
+            ),
             "does": "প্রতিটি হরফে আঙুল রাখুন, একসাথে বলুন। দুবার, শান্তভাবে।",
             "student": "সাথে পড়ে।",
-            "expected": "সাতটি হরফ ঠিক ক্রমে।",
-            "correction": "Let us go a bit slower. From the start. Alif … Ba "
-                          "… good, carry on!",
+            "expected": "ا ب ت ث ج ح خ — সাতটি হরফ ঠিক ক্রমে।",
+            "correction": S(
+                "Let us go a bit slower. From the start.",
+                DOTS,
+                "[প্রথম দুটি হরফের নাম ধীরে বলুন]",
+                "",
+                "Good, carry on!",
+            ),
             "note": "একটি ভুলে থামবেন না — বরং গতি কমান।",
             "seconds": 70,
             "slide": {"kind": "letters", "heading": "All Together",
@@ -1149,13 +1530,32 @@ QAIDA = {
         },
         {
             "section": "Activity",
-            "says": "Game time! I will point at a letter. You say its name. "
-                    "As fast as you can! Ready? Go!",
+            "says": S(
+                "Game time!",
+                "I will point at a letter. You say its name.",
+                "As fast as you can! Ready? Go!",
+                "[এলোমেলো ক্রমে ছয়-সাতবার আঙুল রাখুন — প্রতিবার অপেক্ষা করুন]",
+                "",
+                "Faster! 🌟",
+                "[গতি বাড়ান]",
+                "",
+                "MashaAllah! You know them all!",
+            ),
             "does": "এলোমেলো ক্রমে ছয়-সাতবার আঙুল রাখুন, ধীরে ধীরে গতি বাড়ান।",
             "student": "প্রতিটি হরফের নাম বলে।",
             "expected": "সঠিক নাম, প্রতি দফায় আরও দ্রুত।",
-            "correction": "Ooh, nearly! This one is Tha. Say it — Tha. Good! "
-                          "Now watch, I am pointing again… which one?",
+            "correction": S(
+                "Ooh, nearly! This one is …………",
+                "[যে হরফে আঙুল, তার নাম বলুন]",
+                "",
+                "Say it with me.",
+                DOTS,
+                "[একসাথে বলুন]",
+                "",
+                "Good! Now watch, I am pointing again…",
+                "Which one?",
+                "[অপেক্ষা করুন]",
+            ),
             "note": "এলোমেলো ক্রমে জিজ্ঞেস করলেই বোঝা যায় সত্যিই চিনেছে "
                     "কিনা; সাজানো ক্রমে কেবল তালিকা মুখস্থ হয়েছে বোঝায়। "
                     "এই খেলাটাই আজকের আসল পরীক্ষা।",
@@ -1166,14 +1566,29 @@ QAIDA = {
         },
         {
             "section": "Assessment",
-            "says": "Now all by yourself! I will just listen. Take your time. "
-                    "Off you go!",
+            "says": S(
+                "Now all by yourself!",
+                "I will just listen. Take your time.",
+                "Off you go!",
+                "[চুপ থাকুন — শিশু সাতটি হরফ একা পড়বে]",
+                "",
+                "MashaAllah! 🌟",
+            ),
             "does": "চুপ থাকুন। কোথায় থেমে যাচ্ছে মনে রাখুন।",
             "student": "সাতটি হরফ একা পড়ে।",
             "expected": "সাতটি একা, ت/ث আর ح/خ আলাদা — আজকের জন্য এটাই "
                         "মুখস্থ হওয়া।",
-            "correction": "Mashaa Allah, that was lovely! One tiny thing. "
-                          "This letter — say it after me. Now you know it!",
+            "correction": S(
+                "MashaAllah, that was lovely!",
+                "One tiny thing. This letter —",
+                DOTS,
+                "[যে হরফে ভুল হয়েছে, তার নাম বলুন]",
+                "",
+                "Say it after me.",
+                "[অপেক্ষা করুন]",
+                "",
+                "Now you know it!",
+            ),
             "note": "পড়ার মাঝে থামাবেন না। শেষে কেবল একটি জিনিস বলুন।",
             "seconds": 70,
             "slide": {"kind": "your_turn", "heading": "All By Yourself",
@@ -1182,15 +1597,26 @@ QAIDA = {
         },
         {
             "section": "Homework",
-            "says": "Mashaa Allah! You did it! I am so proud of you. Now a "
-                    "little homework. Before I see you again, say these seven "
-                    "letters five times every day. Can you do that? Lovely!",
+            "says": S(
+                "MashaAllah! You did it!",
+                "I am so proud of you.",
+                "Now a little homework.",
+                "Before I see you again,",
+                "say these seven letters five times every day.",
+                "Can you do that?",
+                "[অপেক্ষা করুন]",
+                "",
+                "Lovely!",
+            ),
             "does": "মন থেকে প্রশংসা করুন — আজ কোনটা ভালো হয়েছে নাম ধরে বলুন। "
                     "বাড়ির কাজটা ধীরে বলুন, অভিভাবক শুনলে যেন লিখে নিতে পারেন।",
             "student": "শোনে, রাজি হয়।",
             "expected": "Yes!",
-            "correction": "Just five times a day. It only takes one minute. "
-                          "You can do it!",
+            "correction": S(
+                "Just five times a day.",
+                "It only takes one minute.",
+                "You can do it!",
+            ),
             "note": "অভিভাবকের জন্য — শুধু শুনুন আর হাসুন। দিনে এক মিনিটই "
                     "যথেষ্ট। কোনো হরফ ভুল হলে বাড়িতে ঠিক করতে যাবেন না, "
                     "উস্তাদের জন্য রেখে দিন।",
@@ -1201,13 +1627,21 @@ QAIDA = {
         },
         {
             "section": "Closing",
-            "says": "Well done today! You worked so hard. Baraka Allahu fik. "
-                    "Assalamu alaikum wa rahmatullah!",
+            "says": S(
+                "Well done today! You worked so hard.",
+                "Baraka Allahu fik.",
+                "Assalamu alaikum wa rahmatullah!",
+            ),
             "does": "হাসুন। উষ্ণভাবে শেষ করুন।",
             "student": "সালামের জবাব দেয়।",
             "expected": "Wa alaikumus salam.",
-            "correction": "Assalamu alaikum! Say it back to me — Wa alaikumus "
-                          "salam. See you next time!",
+            "correction": S(
+                "Assalamu alaikum!",
+                "Say it back to me.",
+                "[অপেক্ষা করুন]",
+                "",
+                "See you next time!",
+            ),
             "note": "শেষ করার আগে মিলিয়ে নিন: প্রতিটি হরফ করে দেখানো হয়েছে · "
                     "শিশু মুখের দিকে তাকিয়েছে · প্রতিটি হরফ একা বলেছে · "
                     "ت/ث মেলানো হয়েছে · ح/خ মেলানো হয়েছে · এলোমেলো ক্রমের "
@@ -1220,11 +1654,12 @@ QAIDA = {
     ],
 }
 
+
 SAMPLES = {"ikhlas": IKHLAS, "qaida": QAIDA}
 
 
 def create_sample(Lesson, LessonStep, StepSlide, course, key,
-                  status="published", replace=False, topic=None):
+                  status="published", replace=False, topic=None, target=None):
     """নমুনা দারসটি ওই কোর্সে তৈরি করে ফেরত দেয় — (দারস, আগে থেকে ছিল কিনা)।
 
     মডেলগুলো বাইরে থেকে নেওয়া হয় — মাইগ্রেশন ঐতিহাসিক মডেল পাঠায়, ভিউ
@@ -1234,13 +1669,20 @@ def create_sample(Lesson, LessonStep, StepSlide, course, key,
       replace=False : কিছুই বদলানো হয় না, ওটাই ফেরত যায় (বারবার ডাকা নিরাপদ)
       replace=True  : ধাপগুলো মুছে নতুন লেখা বসে
 
+    target দিলে ঠিক ওই দারসটির উপরেই নতুন লেখা বসে। ⚠️ এটা না থাকলে
+    পুরনো দারসটি খোঁজা হয় টপিক বা শিরোনাম মিলিয়ে — পরিচালক শিরোনাম বদলে
+    থাকলে সেটি আর মিলত না, আর "বদলে দিন" চাপলে বদলানোর বদলে একটি নকল
+    দারস তৈরি হয়ে যেত।
+
     ⚠️ replace-এ দারসের সারিটি মোছা হয় না, কেবল তার ধাপগুলো — তাই
     শিক্ষার্থীদের অগ্রগতি (LessonProgress) অক্ষত থাকে।
     """
     data = SAMPLES[key]
     # টপিক দেওয়া থাকলে "আগে থেকে আছে কিনা" ওই টপিক ধরেই দেখি — একই নমুনা
     # আলাদা আলাদা টপিকে বসাতে চাইলে যেন আটকে না যায়
-    if topic is not None:
+    if target is not None:
+        existing = target
+    elif topic is not None:
         existing = Lesson.objects.filter(topic=topic).first()
     else:
         existing = Lesson.objects.filter(course=course,
