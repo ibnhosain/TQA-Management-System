@@ -20,7 +20,11 @@ let ran = 0;
 const failures = [];
 
 /* একটি দৃশ্য — আঁকা, এফেক্ট চলা, তথ্য আসা, তারপর (চাইলে) বোতামে চাপ */
-async function scene(name, node, { expect = [], click = [] } = {}) {
+async function scene(
+  name,
+  node,
+  { expect = [], notExpect = [], click = [] } = {},
+) {
   ran++;
   const host = document.createElement("div");
   document.body.appendChild(host);
@@ -55,6 +59,11 @@ async function scene(name, node, { expect = [], click = [] } = {}) {
     for (const want of expect) {
       if (!(host.textContent || "").includes(want))
         throw new Error(`পর্দায় “${want}” নেই`);
+    }
+    // যা পর্দায় থাকার কথা *নয়* — যেমন উস্তাদের কাছে সম্পাদনার বোতাম
+    for (const no of notExpect) {
+      if ((host.textContent || "").includes(no))
+        throw new Error(`পর্দায় “${no}” থাকার কথা নয়`);
     }
     if (errs.length) throw new Error(errs[0]);
   } catch (e) {
@@ -193,6 +202,42 @@ export async function run() {
     { click: ["✍️ স্ক্রিপ্ট লিখুন", "নমুনা — সূরা আল-ইখলাস"],
       expect: ["পড়ানোর ধাপ"] },
   );
+  /* ───── ধাপ ২ — হেডিং ও টপিক এখান থেকেই ───── */
+  await scene(
+    "পরিচালক হেডিংয়ের বোতামগুলো দেখেন",
+    <M.LessonsView user={director} courses={courses} />,
+    { expect: ["✏️ টপিক", "নাম", "➕ নতুন হেডিং"] },
+  );
+  await scene(
+    "উস্তাদ হেডিং সাজাতে পারেন না",
+    <M.LessonsView user={teacher} courses={courses} />,
+    { expect: ["Memorized Surah"], notExpect: ["➕ নতুন হেডিং", "✏️ টপিক"] },
+  );
+  await scene(
+    "➕ নতুন হেডিং → নাম লেখার পাতা",
+    <M.LessonsView user={director} courses={courses} />,
+    { click: ["➕ নতুন হেডিং"], expect: ["নতুন হেডিং", "হেডিংয়ের নাম"] },
+  );
+  await scene(
+    "নাম → হেডিংয়ের নাম বদলানোর পাতা",
+    <M.LessonsView user={director} courses={courses} />,
+    { click: ["নাম"], expect: ["হেডিংয়ের নাম", "Memorized Surah"] },
+  );
+  await scene(
+    "✏️ টপিক → টপিক সাজানোর পাতা",
+    <M.LessonsView user={director} courses={courses} />,
+    {
+      click: ["✏️ টপিক"],
+      expect: ["টপিক সাজান", "Al-Ikhlas-الإخلاص", "Al-Kawthar-الكوثر",
+               "স্ক্রিপ্ট আছে", "+ যোগ", "💾 সংরক্ষণ করুন"],
+    },
+  );
+  await scene(
+    "টপিক সাজানো → যোগ করে সংরক্ষণ",
+    <M.LessonsView user={director} courses={courses} />,
+    { click: ["✏️ টপিক", "+ যোগ", "💾 সংরক্ষণ করুন"] },
+  );
+
   await scene(
     "সম্পাদকে টপিক বেছে দেওয়া যায়",
     <M.LessonEditor id={1} canEdit onClose={nop} onChanged={nop} />,

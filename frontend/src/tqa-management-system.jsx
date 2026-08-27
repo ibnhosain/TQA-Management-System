@@ -18091,6 +18091,202 @@ function TeachFromClass({ courseId, label }) {
   );
 }
 
+/* একটিমাত্র নাম লেখার ছোট পাতা — হেডিংয়ের নাম দিতে/বদলাতে */
+function NameModal({ title, label, value, ph, onClose, onSave }) {
+  const [v, setV] = useState(value || "");
+  const [busy, setBusy] = useState(false);
+  const go = async () => {
+    const t = v.trim();
+    if (!t) return notice("নামটি লিখুন");
+    setBusy(true);
+    try {
+      await onSave(t);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal title={title} onClose={onClose}>
+      <label style={S.label}>{label}</label>
+      <input
+        autoFocus
+        style={S.input}
+        placeholder={ph}
+        value={v}
+        onChange={(e) => setV(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") go();
+        }}
+      />
+      <div
+        style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}
+      >
+        <Btn sm kind="soft" onClick={onClose}>
+          বাতিল
+        </Btn>
+        <Btn sm onClick={go} disabled={busy}>
+          {busy ? "সংরক্ষণ হচ্ছে…" : "💾 সংরক্ষণ"}
+        </Btn>
+      </div>
+    </Modal>
+  );
+}
+
+/* একটি হেডিংয়ের টপিকগুলো সাজানো — যোগ, নাম বদল, ক্রম, মুছে ফেলা।
+
+   ⚠️ সংরক্ষণে পুরো তালিকাটাই পাঠানো হয়, তাই প্রতিটি টপিকের `content`
+   (লেকচার প্ল্যানের টগলের ভেতরের লেখা) হুবহু সাথে নিয়ে যেতে হয় — নইলে
+   পরিচালকের লেখা ওই অংশটুকু মুছে যেত। */
+function TopicsEditor({ section, scripted, onClose, onSaved }) {
+  const [rows, setRows] = useState(() =>
+    (section.topics || []).map((t) => ({
+      id: t.id,
+      text: t.text,
+      content: t.content || "",
+    })),
+  );
+  const [add, setAdd] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const set = (i, text) =>
+    setRows((r) => r.map((x, j) => (j === i ? { ...x, text } : x)));
+  const move = (i, d) =>
+    setRows((r) => {
+      const j = i + d;
+      if (j < 0 || j >= r.length) return r;
+      const n = [...r];
+      [n[i], n[j]] = [n[j], n[i]];
+      return n;
+    });
+  const addOne = () => {
+    const t = add.trim();
+    if (!t) return;
+    setRows((r) => [...r, { text: t, content: "" }]);
+    setAdd("");
+  };
+  const drop = (i) => {
+    const row = rows[i];
+    const has = row.id && scripted.includes(row.id);
+    askConfirm(
+      `“${row.text}” টপিকটি সরিয়ে ফেলা হবে।` +
+        (has
+          ? "\n\n⚠️ এই টপিকের একটি ক্লাস স্ক্রিপ্ট আছে। স্ক্রিপ্টটি মুছবে " +
+            "না — কিন্তু টপিকের সাথে সংযোগ হারিয়ে “টপিকের বাইরে” দলে চলে " +
+            "যাবে। পরে সেখান থেকে আবার টপিক বেছে দেওয়া যাবে।"
+          : "") +
+        "\n\n" +
+        "লেকচার প্ল্যানেও টপিকটি আর থাকবে না, আর এতে দেওয়া কভারের টিকগুলোও " +
+        "চলে যাবে।",
+      () => setRows((r) => r.filter((_, j) => j !== i)),
+      { yes: "হ্যাঁ, সরিয়ে ফেলুন", no: "না, থাক" },
+    );
+  };
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      await api.saveSectionTopics(section.id, rows);
+      notice("✅ টপিক সংরক্ষিত");
+      onSaved();
+    } catch (e) {
+      notice("সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title={`✏️ টপিক সাজান — ${section.name}`} onClose={onClose} wide>
+      <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7, marginBottom: 10 }}>
+        এই তালিকাটি দারস পরিকল্পনার সাথে এক — এখানে বদলালে লেকচার প্ল্যানেও
+        বদলাবে। টগলের ভেতরের লেখা এখানে ছোঁয়া হয় না, আগের মতোই থাকে।
+      </div>
+
+      <div style={{ display: "grid", gap: 6, marginBottom: 12 }}>
+        {rows.length === 0 && (
+          <div style={{ color: C.muted, fontSize: 13 }}>
+            এখনো কোনো টপিক নেই — নিচে লিখে যোগ করুন।
+          </div>
+        )}
+        {rows.map((r, i) => (
+          <div
+            key={r.id || `new-${i}`}
+            style={{ display: "flex", gap: 6, alignItems: "center" }}
+          >
+            <span
+              style={{
+                width: 26,
+                fontSize: 12,
+                color: C.muted,
+                textAlign: "right",
+              }}
+            >
+              {bn(i + 1)}.
+            </span>
+            <input
+              style={{ ...S.input, flex: 1, fontSize: 13.5 }}
+              value={r.text}
+              onChange={(e) => set(i, e.target.value)}
+            />
+            {r.id && scripted.includes(r.id) && (
+              <Tag color={C.green} bg={C.greenBg}>
+                স্ক্রিপ্ট আছে
+              </Tag>
+            )}
+            <Btn
+              sm
+              kind="soft"
+              onClick={() => move(i, -1)}
+              disabled={i === 0}
+              style={{ opacity: i === 0 ? 0.4 : 1 }}
+            >
+              ▲
+            </Btn>
+            <Btn
+              sm
+              kind="soft"
+              onClick={() => move(i, 1)}
+              disabled={i === rows.length - 1}
+              style={{ opacity: i === rows.length - 1 ? 0.4 : 1 }}
+            >
+              ▼
+            </Btn>
+            <Btn sm kind="danger" onClick={() => drop(i)}>
+              🗑
+            </Btn>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 6 }}>
+        <input
+          style={{ ...S.input, flex: 1 }}
+          placeholder="নতুন টপিকের নাম — যেমন: An-Nas-الناس"
+          value={add}
+          onChange={(e) => setAdd(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") addOne();
+          }}
+        />
+        <Btn sm kind="ghost" onClick={addOne}>
+          + যোগ
+        </Btn>
+      </div>
+
+      <div
+        style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}
+      >
+        <Btn sm kind="soft" onClick={onClose}>
+          বাতিল
+        </Btn>
+        <Btn sm onClick={save} disabled={busy}>
+          {busy ? "সংরক্ষণ হচ্ছে…" : "💾 সংরক্ষণ করুন"}
+        </Btn>
+      </div>
+    </Modal>
+  );
+}
+
 /* ⚠️ ইচ্ছা করেই NewScriptModal-এর বাইরে। রেন্ডারের ভেতরে কম্পোনেন্ট
    বানালে প্রতি রেন্ডারে সেটি নতুন ধরন হয়ে যায় — React পুরনোটি সরিয়ে
    নতুন বসায়। */
@@ -18156,10 +18352,22 @@ function NewScriptModal({ topic, onClose, onPick }) {
 /* একটি হেডিং ও তার নিচের টপিকগুলো — লেকচার প্ল্যানের মতোই সাজানো।
    ⚠️ এখানে কভার/বাদ/রিসেটের টিক নেই — সেটি লেকচার প্ল্যানেরই কাজ।
    টপিকে চাপলে তার ক্লাস স্ক্রিপ্ট খোলে। */
-function SectionBlock({ section, lessons, prog, canEdit, rowProps, onNew }) {
+function SectionBlock({ section, lessons, prog, canEdit, rowProps, onNew,
+                       first, last, onRename, onTopics, onMove, onDrop }) {
   const topics = section.topics || [];
   const scriptsOf = (t) => lessons.filter((l) => l.topic === t.id);
   const done = topics.filter((t) => scriptsOf(t).length).length;
+  const hb = {
+    border: "1px solid #ffffff44",
+    background: "#ffffff1f",
+    color: "#fff",
+    borderRadius: 8,
+    padding: "4px 9px",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  };
   return (
     <div style={{ marginBottom: 18 }}>
       <div
@@ -18180,6 +18388,33 @@ function SectionBlock({ section, lessons, prog, canEdit, rowProps, onNew }) {
         <span style={{ fontSize: 12, color: "#ffffffcc" }}>
           {bn(done)}/{bn(topics.length)} টপিকে স্ক্রিপ্ট আছে
         </span>
+        {canEdit && (
+          <span style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <button style={hb} onClick={onTopics} title="টপিক যোগ/বদল/ক্রম">
+              ✏️ টপিক
+            </button>
+            <button style={hb} onClick={onRename} title="হেডিংয়ের নাম বদলান">
+              নাম
+            </button>
+            <button
+              style={{ ...hb, opacity: first ? 0.4 : 1 }}
+              disabled={first}
+              onClick={() => onMove(-1)}
+            >
+              ▲
+            </button>
+            <button
+              style={{ ...hb, opacity: last ? 0.4 : 1 }}
+              disabled={last}
+              onClick={() => onMove(1)}
+            >
+              ▼
+            </button>
+            <button style={hb} onClick={onDrop} title="হেডিংটি মুছুন">
+              🗑
+            </button>
+          </span>
+        )}
       </div>
 
       <div
@@ -18258,6 +18493,8 @@ function LessonsView({ user, courses }) {
   const [progFor, setProgFor] = useState(null);
   const [ageFor, setAgeFor] = useState(null);
   const [newFor, setNewFor] = useState(null); // কোন টপিকে নতুন স্ক্রিপ্ট
+  const [nameFor, setNameFor] = useState(null); // হেডিংয়ের নাম দেওয়া/বদলানো
+  const [topicsFor, setTopicsFor] = useState(null); // কোন হেডিংয়ের টপিক সাজানো
 
   /* ⚠️ এখানে আর ছাঁকা যাবে না — courses ইতিমধ্যেই myCourses() হয়ে এসেছে,
      আর সার্ভারও রোল অনুযায়ী ছেঁকে দিয়েছে। উস্তাদ কোর্স পান দুই সূত্রে:
@@ -18378,6 +18615,68 @@ function LessonsView({ user, courses }) {
       { yes: "হ্যাঁ, চিরতরে মুছুন", no: "না, থাক" },
     );
 
+  /* ───── হেডিং সামলানো — লেকচার প্ল্যানের সাথে এক তালিকা ─────
+     ⚠️ একই API, তাই এখানে বদলালে লেকচার প্ল্যানেও বদলায়। এটাই উদ্দেশ্য —
+     দুই পাতায় দুই রকম তালিকা থাকলে গুলিয়ে যেত। */
+  const addSection = async (name) => {
+    try {
+      await api.addSection(Number(courseId), name, sections.length);
+      setNameFor(null);
+      await load();
+      notice("✅ হেডিং যোগ হয়েছে");
+    } catch (e) {
+      notice("যোগ করা যায়নি — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
+  const renameSection = async (sec, name) => {
+    try {
+      await api.renameSection(sec.id, name);
+      setNameFor(null);
+      await load();
+      notice("✅ নাম বদলানো হয়েছে");
+    } catch (e) {
+      notice("বদলানো যায়নি — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
+  const moveSection = async (i, d) => {
+    const j = i + d;
+    if (j < 0 || j >= sections.length) return;
+    const ids = sections.map((x) => x.id);
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    try {
+      await api.reorderSections(ids);
+      await load();
+    } catch (e) {
+      notice("ক্রম বদলানো যায়নি — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
+  const dropSection = (sec) => {
+    const n = (sec.topics || []).length;
+    askConfirm(
+      `“${sec.name}” হেডিংটি মুছে ফেলা হবে।` +
+        (n
+          ? "\n\n⚠️ এর নিচের " + bn(n) + "টি টপিক মুছবে না — কিন্তু " +
+            "হেডিংহীন হয়ে যাবে, আর লেকচার প্ল্যানের “অন্যান্য” অংশে চলে " +
+            "যাবে। এই পাতায় তখন সেগুলো আর দেখা যাবে না।" +
+            "\n\nচাইলে আগে “✏️ টপিক” দিয়ে টপিকগুলো সরিয়ে নিতে পারেন।"
+          : "") +
+        "\n\nলেকচার প্ল্যানেও হেডিংটি আর থাকবে না।",
+      async () => {
+        try {
+          await api.delSection(sec.id);
+          await load();
+          notice("🗑️ হেডিংটি মুছে ফেলা হয়েছে");
+        } catch (e) {
+          notice("মোছা যায়নি — " + (e?.data?.error || e?.message || ""));
+        }
+      },
+      { yes: "হ্যাঁ, মুছে ফেলুন", no: "না, থাক" },
+    );
+  };
+
   const rowProps = {
     onOpen: (l) => setOpenId(l.id),
     onTeach: (l) => setTeachId(l.id),
@@ -18409,6 +18708,31 @@ function LessonsView({ user, courses }) {
       lesson={progFor}
       onClose={() => {
         setProgFor(null);
+        load();
+      }}
+    />
+  );
+
+  const nameOverlay = nameFor && (
+    <NameModal
+      title={nameFor.sec ? "✏️ হেডিংয়ের নাম" : "➕ নতুন হেডিং"}
+      label="হেডিংয়ের নাম"
+      ph="যেমন: Memorized Surah"
+      value={nameFor.sec ? nameFor.sec.name : ""}
+      onClose={() => setNameFor(null)}
+      onSave={(v) =>
+        nameFor.sec ? renameSection(nameFor.sec, v) : addSection(v)
+      }
+    />
+  );
+
+  const topicsOverlay = topicsFor && (
+    <TopicsEditor
+      section={topicsFor}
+      scripted={lessons.filter((l) => l.topic).map((l) => l.topic)}
+      onClose={() => setTopicsFor(null)}
+      onSaved={() => {
+        setTopicsFor(null);
         load();
       }}
     />
@@ -18473,6 +18797,8 @@ function LessonsView({ user, courses }) {
       {progOverlay}
       {ageOverlay}
       {newOverlay}
+      {nameOverlay}
+      {topicsOverlay}
 
       {loading && <Loader text="দারস লোড হচ্ছে" />}
 
@@ -18482,13 +18808,13 @@ function LessonsView({ user, courses }) {
             <div style={{ ...S.card, color: C.muted, fontSize: 14, lineHeight: 1.8 }}>
               এই কোর্সে এখনো দারস পরিকল্পনার কোনো হেডিং নেই।
               <br />
-              “📋 লেকচার প্ল্যান” পাতায় হেডিং ও টপিক সাজিয়ে নিলে সেগুলো
-              এখানে চলে আসবে, আর প্রতিটি টপিকের জন্য ক্লাস স্ক্রিপ্ট লেখা
-              যাবে।
+              নিচের “➕ নতুন হেডিং” দিয়ে শুরু করুন — যেমন “Memorized Surah”।
+              তারপর তার নিচে টপিক যোগ করে প্রতিটির জন্য ক্লাস স্ক্রিপ্ট
+              লিখতে পারবেন। এই তালিকাটি “📋 লেকচার প্ল্যান” পাতার সাথে এক।
             </div>
           )}
 
-          {sections.map((sec) => (
+          {sections.map((sec, i) => (
             <SectionBlock
               key={sec.id}
               section={sec}
@@ -18497,8 +18823,22 @@ function LessonsView({ user, courses }) {
               canEdit={canEdit}
               rowProps={rowProps}
               onNew={setNewFor}
+              first={i === 0}
+              last={i === sections.length - 1}
+              onRename={() => setNameFor({ sec })}
+              onTopics={() => setTopicsFor(sec)}
+              onMove={(d) => moveSection(i, d)}
+              onDrop={() => dropSection(sec)}
             />
           ))}
+
+          {canEdit && courseId && (
+            <div style={{ textAlign: "center", marginTop: 4, marginBottom: 14 }}>
+              <Btn sm kind="ghost" onClick={() => setNameFor({ sec: null })}>
+                ➕ নতুন হেডিং
+              </Btn>
+            </div>
+          )}
 
           {loose.length > 0 && (
             <div style={{ marginBottom: 18 }}>

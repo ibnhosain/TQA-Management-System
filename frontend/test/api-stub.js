@@ -76,6 +76,12 @@ export const api = {
     LOOSE_LESSON,
   ]),
   lessonSections: async () => (MODE === "empty" ? [] : SECTIONS),
+  addSection: async (course, name) => ({ id: 9, name, topics: [] }),
+  renameSection: async () => ({}),
+  delSection: async () => ({}),
+  reorderSections: async () => ({}),
+  saveSectionTopics: async () => ({}),
+  ensureSections: async () => SECTIONS,
   lesson: async (id) => (Number(id) === 2 ? EMPTY_LESSON : LESSON),
   lessonStage: async () => ({
     id: 1, title: LESSON.title, title_ar: LESSON.title_ar,
