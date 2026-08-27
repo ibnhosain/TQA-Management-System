@@ -19335,6 +19335,281 @@ function AgeVersionModal({ lesson, existing, onClose, onDone }) {
   );
 }
 
+/* ─────────── শিক্ষার্থীর নিজের দারস ও পুনরাবৃত্তি ───────────
+   ⚠️ এখানে শিক্ষার্থী কেবল পর্দাটুকুই দেখেন — যা ক্লাসে তাঁর সামনে ছিল।
+   উস্তাদের স্ক্রিপ্ট এই পাতার কোথাও নেই, সার্ভারও তা পাঠায় না। */
+function StudentLessonPlayer({ lessonId, title, onClose }) {
+  const [stage, setStage] = useState(null);
+  const [i, setI] = useState(0);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setStage(await api.lessonStage(lessonId));
+      } catch (e) {
+        setErr(e?.data?.error || e?.message || "Could not open this lesson");
+      }
+    })();
+  }, [lessonId]);
+
+  const steps = stage?.steps || [];
+  const go = (n) => n >= 0 && n < steps.length && setI(n);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight" || e.key === " ") go(i + 1);
+      else if (e.key === "ArrowLeft") go(i - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i, steps.length]);
+
+  const btn = {
+    border: "1px solid #ffffff33",
+    background: "#ffffff14",
+    color: "#fff",
+    borderRadius: 10,
+    padding: "10px 18px",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 120,
+        // পর্দার রংও স্লাইড অনুযায়ী — শিক্ষার্থী ক্লাসে যা দেখেছে, তাই
+        background: artOf(steps[i]?.slide?.kind)[0],
+        transition: "background 700ms ease",
+        color: "#fff",
+        display: "flex",
+        flexDirection: "column",
+        fontFamily: "inherit",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 14px",
+          borderBottom: "1px solid #ffffff1f",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        <div style={{ flex: 1, fontWeight: 800, fontSize: 14.5 }}>{title}</div>
+        {steps.length > 0 && (
+          <span style={{ fontSize: 12.5, color: "#ffffff99" }}>
+            {i + 1} / {steps.length}
+          </span>
+        )}
+        <button style={btn} onClick={onClose}>
+          ✕ Close
+        </button>
+      </div>
+
+      <div style={{ height: 4, background: "#ffffff1a" }}>
+        <div
+          style={{
+            height: "100%",
+            width: steps.length ? `${((i + 1) / steps.length) * 100}%` : "0%",
+            background: C.goldL,
+            transition: "width .25s",
+          }}
+        />
+      </div>
+
+      <div
+        style={{
+          flex: 1,
+          display: "grid",
+          placeItems: "center",
+          overflowY: "auto",
+          padding: "18px 0",
+        }}
+      >
+        {err ? (
+          <div style={{ color: "#ffffffbb", fontSize: 15 }}>{err}</div>
+        ) : !stage ? (
+          <div style={{ color: "#ffffff88" }}>Loading…</div>
+        ) : (
+          <>
+            <SlideArt kind={steps[i]?.slide?.kind} />
+            <StageSlide slide={steps[i]?.slide} />
+          </>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          padding: "10px 14px",
+          borderTop: "1px solid #ffffff1f",
+        }}
+      >
+        <button
+          style={{ ...btn, opacity: i === 0 ? 0.4 : 1 }}
+          disabled={i === 0}
+          onClick={() => go(i - 1)}
+        >
+          ← Back
+        </button>
+        <div style={{ flex: 1 }} />
+        {i === steps.length - 1 ? (
+          <button
+            style={{ ...btn, background: C.gold, border: "none" }}
+            onClick={onClose}
+          >
+            ✓ Done
+          </button>
+        ) : (
+          <button
+            style={{ ...btn, background: C.emeraldL, border: "none" }}
+            onClick={() => go(i + 1)}
+            disabled={!steps.length}
+          >
+            Next →
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const STUDENT_STATUS = {
+  learning: ["Still learning", C.gold, C.amberBg],
+  review: ["Needs revision", C.blue, C.blueBg],
+  mastered: ["Memorised 🌟", C.green, C.greenBg],
+};
+
+function StudentLessonsView() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [play, setPlay] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setRows((await api.lessonProgress()) || []);
+      } catch (e) {
+        notice("Could not load your lessons.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const todo = rows.filter((r) => r.status !== "mastered").length;
+
+  return (
+    <Section
+      title="📗 My Lessons"
+      sub="Go through a lesson again, at your own pace"
+    >
+      {play && (
+        <StudentLessonPlayer
+          lessonId={play.lesson}
+          title={play.lesson_title}
+          onClose={() => setPlay(null)}
+        />
+      )}
+
+      {loading && <Loader text="Loading your lessons" />}
+
+      {!loading && rows.length === 0 && (
+        <div style={{ ...S.card, color: C.muted, fontSize: 14 }}>
+          Your lessons will appear here after your teacher marks them.
+        </div>
+      )}
+
+      {!loading && rows.length > 0 && (
+        <>
+          <div style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}>
+            {rows.length} lesson{rows.length > 1 ? "s" : ""} ·{" "}
+            {todo ? `${todo} still to revise` : "all memorised, mashaa Allah 🌟"}
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {rows.map((r) => {
+              const st = STUDENT_STATUS[r.status] || ["", C.muted, C.cream];
+              return (
+                <div
+                  key={r.id}
+                  style={{
+                    ...S.card,
+                    padding: 14,
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 190 }}>
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        display: "flex",
+                        gap: 8,
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {r.lesson_title}
+                      <Tag color={st[1]} bg={st[2]}>
+                        {st[0]}
+                      </Tag>
+                    </div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
+                      Studied {r.times_taught} time
+                      {r.times_taught > 1 ? "s" : ""}
+                      {r.last_taught ? ` · last on ${fmtDate(r.last_taught)}` : ""}
+                    </div>
+                    {r.note && (
+                      <div
+                        style={{
+                          fontSize: 12.5,
+                          color: C.text,
+                          background: C.cream,
+                          borderRadius: 8,
+                          padding: "6px 10px",
+                          marginTop: 6,
+                        }}
+                      >
+                        🧕 {r.note}
+                      </div>
+                    )}
+                  </div>
+                  {/* প্রকাশিত না থাকলে /stage/ খোলে না — তখন বোতামটি
+                      দেখালে চেপে কেবল ব্যর্থতাই দেখতেন */}
+                  {r.lesson_status === "published" ? (
+                    <Btn sm kind="gold" onClick={() => setPlay(r)}>
+                      🔁 Revise
+                    </Btn>
+                  ) : (
+                    <span style={{ fontSize: 12, color: C.muted }}>
+                      Ask your teacher to open this again
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </Section>
+  );
+}
+
+
 /* দারসের অবস্থার চিহ্ন। ⚠️ মডিউল-স্তরে — LessonRow এটি ব্যবহার করে, আর
    সেটি নিজেও মডিউল-স্তরের কম্পোনেন্ট। আগে এটি LessonsView-এর ভেতরে ছিল,
    ফলে LessonRow-এর কাছে ছিলই না — তালিকায় একটিও দারস থাকলেই পাতা ভেঙে
@@ -24541,6 +24816,8 @@ export {
   ProgressSummary,
   AgeVersionModal,
   TeacherMode,
+  StudentLessonPlayer,
+  StudentLessonsView,
   TeachFromClass,
   statusTag,
   kindLabel,
