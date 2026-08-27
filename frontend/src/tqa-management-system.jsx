@@ -20346,10 +20346,28 @@ export function PresentWindow() {
     });
     // "আমি এসেছি" — উস্তাদের উইন্ডো শুনলেই এখনকার ধাপটি পাঠিয়ে দেবে
     stageSend({ t: "hello" });
-    const beat = setInterval(() => stageSend({ t: "here" }), 3000);
+    const beat = setInterval(
+      () => stageSend({ t: "here", hidden: !!document.hidden }),
+      3000,
+    );
+
+    /* ⚠️ এই উইন্ডো ঢাকা পড়লে বা মিনিমাইজ হলে ক্রোম ছবি আঁকা বন্ধ করে
+       দেয় — তখন জুমে শিক্ষার্থী পুরনো স্লাইডেই আটকে থাকে, অথচ উস্তাদ
+       তা টেরই পান না। তাই সাথে সাথে খবরটা পাঠিয়ে দিই।
+
+       ⚠️ খবরটা ইভেন্টেই পাঠানো জরুরি — লুকানো উইন্ডোতে টাইমার মিনিটে
+       একবারে নেমে আসে, তাই উপরের হৃৎস্পন্দনের ভরসায় থাকা যায় না। */
+    const onVis = () => stageSend({ t: "vis", hidden: !!document.hidden });
+    document.addEventListener("visibilitychange", onVis);
+    // বন্ধ হয়ে যাওয়া আর ঢাকা পড়া এক নয় — উস্তাদকে আলাদা করে জানাই
+    const onGone = () => stageSend({ t: "gone" });
+    window.addEventListener("pagehide", onGone);
+
     return () => {
       off();
       clearInterval(beat);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pagehide", onGone);
     };
   }, []);
 
@@ -20518,6 +20536,8 @@ function TeacherMode({ id, onClose }) {
   // উপস্থাপনা উইন্ডো খোলা আছে কিনা (সে নিজে থেকে সাড়া দেয়)
   const [stageOk, setStageOk] = useState(false);
   const [floatWin, setFloatWin] = useState(null); // ভাসমান পর্দার উইন্ডো
+  // উপস্থাপনা উইন্ডোটি ঢাকা পড়েছে/মিনিমাইজ — জুমে ছবি জমে আছে
+  const [stageHidden, setStageHidden] = useState(false);
   const [prog, setProg] = useState(false); // অগ্রগতির পাতা খোলা আছে কিনা
   const stageWin = useRef(null);
   const lastBeat = useRef(0);
@@ -20601,10 +20621,25 @@ function TeacherMode({ id, onClose }) {
         if (lesson)
           stageSend({ t: "step", lesson: lesson.id, i, sid: steps[i]?.id });
         setStageOk(true);
+        setStageHidden(false);
         lastBeat.current = Date.now();
       } else if (m.t === "here") {
         setStageOk(true);
+        setStageHidden(!!m.hidden);
         lastBeat.current = Date.now();
+      } else if (m.t === "vis") {
+        /* ⚠️ ঢাকা পড়লে ওই উইন্ডোর টাইমার প্রায় থেমে যায়, তাই সবুজ
+           বাতিটাও নিভে যাবে। কিন্তু উইন্ডোটি বেঁচেই আছে — কেবল দেখা
+           যাচ্ছে না। তাই এই খবরটা বাতির উপর নির্ভর করে না। */
+        setStageHidden(!!m.hidden);
+        if (!m.hidden) {
+          setStageOk(true);
+          lastBeat.current = Date.now();
+        }
+      } else if (m.t === "gone") {
+        // বন্ধ হয়ে গেছে — "ঢাকা পড়েছে" বলাটা তখন ভুল হতো
+        setStageHidden(false);
+        setStageOk(false);
       }
     });
     // সাড়া থেমে গেলে (উইন্ডো বন্ধ) সবুজ বাতিটাও নিভে যাক
@@ -20879,6 +20914,43 @@ function TeacherMode({ id, onClose }) {
           ✕ বন্ধ
         </button>
       </div>
+
+      {/* ⚠️ পর্দা ঢাকা পড়লে জুমে শিক্ষার্থী পুরনো স্লাইডেই আটকে থাকেন,
+          অথচ উস্তাদ তা টেরই পান না — তাই এই সতর্কবার্তা।
+          ভাসমান পর্দা চললে দেখানোর দরকার নেই, তখন সমস্যাটাই নেই। */}
+      {stageHidden && !floatWin && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            padding: "9px 14px",
+            background: "#7a2e0e",
+            borderBottom: "1px solid #ffb87755",
+            color: "#ffe3c9",
+            fontSize: 13.5,
+            fontWeight: 700,
+            flexShrink: 0,
+          }}
+        >
+          <span>
+            ⚠️ জুমে স্ক্রিন ঢাকা পড়েছে। স্টুডেন্ট দেখতে পাচ্ছে না — ভাসমান
+            স্ক্রিন ব্যবহার করুন।
+          </span>
+          <button
+            style={{
+              ...barBtn,
+              background: "#ffffff26",
+              borderColor: "#ffffff55",
+            }}
+            onClick={openFloat}
+          >
+            🔝 ভাসমান পর্দা খুলুন
+          </button>
+        </div>
+      )}
 
       {/* অগ্রগতির রেখা */}
       <div style={{ height: 4, background: "#ffffff1a", flexShrink: 0 }}>

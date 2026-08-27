@@ -30,6 +30,23 @@ const eq = (a, b, why) => {
     throw new Error(`${why} · পেলাম ${JSON.stringify(a)}`);
 };
 const nop = () => {};
+
+/* উপস্থাপনা উইন্ডো থেকে আসা বার্তার নকল — দুই উইন্ডোর সেতুটি
+   localStorage-ও ব্যবহার করে, তাই এখানেই সেটাকে ধরা যায় */
+const stageFire = (msg) => {
+  const v = JSON.stringify({ ...msg, at: Date.now() });
+  try {
+    window.localStorage.setItem("tqa_stage_msg", v);
+  } catch (e) {
+    /* jsdom-এ না থাকলেও ইভেন্টটাই আসল */
+  }
+  window.dispatchEvent(
+    new window.StorageEvent("storage", {
+      key: "tqa_stage_msg",
+      newValue: v,
+    }),
+  );
+};
 let ran = 0;
 const failures = [];
 
@@ -51,7 +68,7 @@ function typeInto(el, text) {
 async function scene(
   name,
   node,
-  { expect = [], notExpect = [], click = [], steps = [], mode } = {},
+  { expect = [], notExpect = [], click = [], steps = [], mode, after } = {},
 ) {
   ran++;
   // প্রতিটি দৃশ্য আগের অবস্থা থেকেই শুরু হোক
@@ -113,6 +130,13 @@ async function scene(
           typeInto(box, text);
         });
       }
+      await settle();
+    }
+    // বাইরের কোনো ঘটনা (যেমন অন্য উইন্ডো থেকে আসা বার্তা)
+    if (after) {
+      await act(async () => {
+        await after(host);
+      });
       await settle();
     }
     /* ⚠️ ঘরের ভেতরের লেখা (input/textarea-এর value) textContent-এ আসে
@@ -587,6 +611,59 @@ export async function run() {
     "ভাসমান পর্দা না থাকলেও চাপলে ভাঙে না",
     <M.TeacherMode id={1} onClose={nop} />,
     { click: ["🔝 ভাসমান পর্দা"], expect: ["🔝 ভাসমান পর্দা"] },
+  );
+
+  /* ───── ⚠️ পর্দা ঢাকা পড়েছে — উস্তাদকে জানানো ─────
+     জুমে শিক্ষার্থী তখন পুরনো স্লাইডেই আটকে থাকেন, অথচ উস্তাদ পড়িয়েই
+     যান। এই সতর্কবার্তাটাই একমাত্র উপায় যাতে তিনি টের পান। */
+  const WARN = "জুমে স্ক্রিন ঢাকা পড়েছে";
+  await scene(
+    "স্বাভাবিক অবস্থায় সতর্কবার্তা নেই",
+    <M.TeacherMode id={1} onClose={nop} />,
+    { notExpect: [WARN] },
+  );
+  await scene(
+    "পর্দা ঢাকা পড়লে উস্তাদ সতর্কবার্তা দেখেন",
+    <M.TeacherMode id={1} onClose={nop} />,
+    {
+      after: () => stageFire({ t: "vis", hidden: true }),
+      expect: [WARN, "স্টুডেন্ট দেখতে পাচ্ছে না", "🔝 ভাসমান পর্দা খুলুন"],
+    },
+  );
+  await scene(
+    "আবার দেখা গেলে সতর্কবার্তা চলে যায়",
+    <M.TeacherMode id={1} onClose={nop} />,
+    {
+      after: async () => {
+        stageFire({ t: "vis", hidden: true });
+        await sleep(2);
+        stageFire({ t: "vis", hidden: false });
+      },
+      notExpect: [WARN],
+    },
+  );
+  /* ⚠️ বন্ধ করা আর ঢাকা পড়া এক নয় — বন্ধ উইন্ডো নিয়ে
+     "স্টুডেন্ট দেখতে পাচ্ছে না" বলা ভুল হতো */
+  await scene(
+    "উইন্ডো বন্ধ হলে সতর্কবার্তা নয়",
+    <M.TeacherMode id={1} onClose={nop} />,
+    {
+      after: async () => {
+        stageFire({ t: "vis", hidden: true });
+        await sleep(2);
+        stageFire({ t: "gone" });
+      },
+      notExpect: [WARN],
+    },
+  );
+  /* হৃৎস্পন্দনেও খবরটা থাকে — ইভেন্ট কোনো কারণে হারালেও ধরা পড়ে */
+  await scene(
+    "হৃৎস্পন্দনেও ঢাকা পড়ার খবর আসে",
+    <M.TeacherMode id={1} onClose={nop} />,
+    {
+      after: () => stageFire({ t: "here", hidden: true }),
+      expect: [WARN],
+    },
   );
 
   await scene("শিক্ষার্থী → Revise → Next → Close", <M.StudentLessonsView />, {
