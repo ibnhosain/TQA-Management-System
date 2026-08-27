@@ -968,6 +968,60 @@ export async function run() {
     if (M.pipReady() !== false)
       throw new Error("jsdom-এ তো documentPictureInPicture নেই");
   });
+  /* ───── 🎥 উস্তাদের জুম-বাটন ─────
+     ⚠️ বাগ ছিল: জয়েন ও রিজয়েনের শর্ত দুই জায়গায় আলাদা লেখা, আর দুটোই
+     হুবহু এক। তাই উস্তাদ জয়েন করার পরেও "জুমে জয়েন করুন" থেকে যেত, আর
+     জয়েন-রিজয়েন পাশাপাশি দেখা যেত। নিয়মটা এক জায়গায় আনা হয়েছে। */
+  const zoomAct = (o) =>
+    M.teacherZoomAction({
+      joinable: true, postponed: false, joined: false, rejoinActive: false,
+      ...o,
+    });
+
+  check("জয়েন করার আগে — জয়েন দেখাবে", () => {
+    eq(zoomAct({}), "join", "১ম পর্বে জয়েনের বাটনই থাকার কথা");
+  });
+  check("জয়েন করার পরে — জয়েন উধাও, রিজয়েন", () => {
+    eq(zoomAct({ joined: true }), "rejoin",
+       "জয়েন করার পরেও জয়েনের বাটন থেকে যাচ্ছে");
+  });
+  check("১ম পর্ব শেষ করার পরে — রিজয়েন", () => {
+    eq(zoomAct({ rejoinActive: true }), "rejoin",
+       "১ম পর্ব শেষ হলে রিজয়েনই একমাত্র পথ");
+  });
+  check("২য় পর্বে জয়েন করা অবস্থায় — রিজয়েন", () => {
+    eq(zoomAct({ joined: true, rejoinActive: true }), "rejoin");
+  });
+  check("⚠️ জয়েন ও রিজয়েন কখনো একসাথে নয়", () => {
+    for (const j of [false, true])
+      for (const r of [false, true]) {
+        const a = zoomAct({ joined: j, rejoinActive: r });
+        if (a !== "join" && a !== "rejoin")
+          throw new Error(`joined=${j} rejoin=${r} → ${a}`);
+      }
+  });
+  check("⚠️ কোনো অবস্থাতেই দুটোই উধাও নয়", () => {
+    // ক্লাস চালু থাকলে অন্তত একটি পথ খোলা থাকতেই হবে
+    for (const j of [false, true])
+      for (const r of [false, true])
+        if (zoomAct({ joined: j, rejoinActive: r }) === null)
+          throw new Error(`joined=${j} rejoin=${r} — কোনো পথই নেই`);
+  });
+  check("ক্লাস শেষ হলে কোনো বাটনই নয়", () => {
+    eq(zoomAct({ joinable: false }), null, "শেষ ক্লাসেও বাটন দেখাচ্ছে");
+    eq(zoomAct({ joinable: false, joined: true }), null);
+    eq(zoomAct({ joinable: false, rejoinActive: true }), null);
+  });
+  check("স্থগিত ক্লাসে কোনো বাটনই নয়", () => {
+    eq(zoomAct({ postponed: true }), null, "স্থগিত ক্লাসেও বাটন দেখাচ্ছে");
+    eq(zoomAct({ postponed: true, joined: true }), null);
+  });
+  check("পুনঃসংযোগের পর আবার জয়েন করা যায়", () => {
+    // 🔄 পুনঃসংযোগ = সেগমেন্ট শেষ, কিন্তু পর্ব শেষ নয় → ১ম লিংকেই ফেরা
+    eq(zoomAct({ joined: false, rejoinActive: false }), "join",
+       "পুনঃসংযোগের পর ফেরার পথ বন্ধ হয়ে গেছে");
+  });
+
   /* ───── মেনুর নাম ─────
      ⚠️ একই পাতা দুই নামে: পরিচালক-উস্তাদের কাছে "লেকচার প্ল্যান",
      শিক্ষার্থীর কাছে "My Lessons"। আলাদা কোনো পাতা নয় — আগে একটি
