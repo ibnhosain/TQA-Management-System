@@ -616,6 +616,48 @@ export async function run() {
   /* ───── ⚠️ পর্দা ঢাকা পড়েছে — উস্তাদকে জানানো ─────
      জুমে শিক্ষার্থী তখন পুরনো স্লাইডেই আটকে থাকেন, অথচ উস্তাদ পড়িয়েই
      যান। এই সতর্কবার্তাটাই একমাত্র উপায় যাতে তিনি টের পান। */
+  /* ───── ↤ লেখার দিক বদলানোর টুল ─────
+     ⚠️ আরবি বাঁ-থেকে-ডান অনুচ্ছেদে বসলে শব্দগুলো উল্টো ক্রমে সাজে —
+     শেষ শব্দটাই আগে পড়া হয়। পরিচালক যেন নিজেই ঠিক করতে পারেন। */
+  await scene(
+    "সম্পাদকে দিক বদলানোর বোতাম আছে",
+    <M.RichText value="<p>قُلْ هُوَ ٱللَّهُ</p>" onChange={nop} />,
+    { expect: ["↤ ডান→বাঁ", "বাঁ→ডান ↦"] },
+  );
+  {
+    ran++;
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let html = "<p>قُلْ هُوَ ٱللَّهُ</p>";
+    await act(async () => {
+      root.render(<M.RichText value={html} onChange={(v) => (html = v)} />);
+    });
+    for (let k = 0; k < 4; k++) await act(async () => { await sleep(0); });
+    const btn = [...host.querySelectorAll("button")].find(
+      (b) => (b.textContent || "").includes("ডান→বাঁ"));
+    if (!btn) failures.push("দিক বদলানোর বোতামটি পাওয়া গেল না");
+    else {
+      await act(async () => { btn.click(); });
+      const why = [];
+      if (!/dir="rtl"/.test(html)) why.push("dir বসেনি");
+      if (!/direction:\s*rtl/.test(html)) why.push("direction বসেনি");
+      if (!/قُلْ/.test(html)) why.push("লেখাটাই হারিয়েছে");
+      if (why.length)
+        failures.push("দিক বদলালে লেখায় বসে → " + why.join(" · ") +
+                      " · পেলাম: " + html.slice(0, 90));
+      // এবার উল্টোটা
+      const back = [...host.querySelectorAll("button")].find(
+        (b) => (b.textContent || "").includes("বাঁ→ডান"));
+      await act(async () => { back.click(); });
+      if (!/dir="ltr"/.test(html))
+        failures.push("বাঁ→ডান চাপলে ফিরে আসে না · পেলাম: " +
+                      html.slice(0, 90));
+    }
+    await act(async () => root.unmount());
+    host.remove();
+  }
+
   const WARN = "জুমে স্ক্রিন ঢাকা পড়েছে";
   await scene(
     "স্বাভাবিক অবস্থায় সতর্কবার্তা নেই",

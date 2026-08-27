@@ -736,3 +736,101 @@ class ThePracticeSheet(TestCase):
         h = self.html(les)
         self.assertIn("Read every day", h)
         self.assertIn("At home", h)
+
+
+class ArabicReadsRightToLeft(TestCase):
+    """⚠️ আরবি ডান থেকে বাঁয়ে — নইলে শেষ শব্দটাই আগে পড়া হয়।
+
+    টুকরোগুলো পাশাপাশি বসে বাইরের বাক্সের দিক ধরে। বাক্স বাঁ-থেকে-ডান
+    হলে "قُلْ · هُوَ ٱللَّهُ · أَحَدٌ" উল্টো ক্রমে পড়া হতো — শিশু ভুল
+    ক্রমে মুখস্থ করে ফেলত।
+    """
+
+    def setUp(self):
+        from core.models import Course, Lesson, LessonStep, StepSlide
+        from core.sample_lessons import create_sample
+        from core.stage_summary import summary_html
+        self.c = Course.objects.create(name="হিফজ", teacher=None)
+        self.lesson, _ = create_sample(Lesson, LessonStep, StepSlide,
+                                       self.c, "ikhlas")
+        self.html = summary_html(self.lesson)
+
+    def test_every_box_holding_arabic_has_a_direction(self):
+        import re
+        boxes = re.findall(r'<div[^>]*>(?=[^<]*<span dir="rtl")', self.html)
+        self.assertTrue(boxes, "আরবি ধরে রাখা কোনো বাক্সই পাওয়া গেল না")
+        for b in boxes:
+            self.assertIn('dir="rtl"', b,
+                          "আরবির বাক্সে দিক বসানো নেই: %s" % b[:70])
+            self.assertIn("direction: rtl", b,
+                          "বাক্সে direction নেই: %s" % b[:70])
+
+    def test_the_pieces_row_reads_right_to_left(self):
+        self.assertIn("direction: rtl", self.html)
+        # টুকরোর পট্টিটিতে দিক আছে তো
+        i = self.html.find("#faf7ef")
+        self.assertGreater(i, -1, "টুকরোর পট্টিই নেই")
+        box = self.html[max(0, i - 120):i + 160]
+        self.assertIn("direction: rtl", box, "টুকরোগুলো উল্টো ক্রমে পড়া হবে")
+
+    def test_the_filter_keeps_the_direction(self):
+        """⚠️ safe_html দিক মুছে দিলে সব ভেস্তে যেত।"""
+        from core.safe_html import clean_html
+        got = clean_html('<div dir="rtl" style="direction:rtl;'
+                         'text-align:center">قُلْ</div>')
+        self.assertIn('dir="rtl"', got, "ছাঁকনি dir মুছে দিয়েছে")
+        self.assertIn("direction: rtl", got, "ছাঁকনি direction মুছে দিয়েছে")
+
+
+class TheMushafMarks(TestCase):
+    """📖 আয়াতের শেষে মুসহাফের গোল নকশা।"""
+
+    AYAH = "\u06dd"          # ۝ — ARABIC END OF AYAH
+    DIGITS = "١٢٣٤"
+
+    def test_every_verse_ends_with_its_number(self):
+        from core.sample_lessons import V1, V2, V3, V4
+        for i, v in enumerate((V1, V2, V3, V4), 1):
+            want = self.AYAH + self.DIGITS[i - 1]
+            self.assertTrue(v.rstrip().endswith(want),
+                            "আয়াত %d-এর শেষে চিহ্ন নেই: %r" % (i, v[-6:]))
+
+    def test_the_marks_reach_the_practice_sheet(self):
+        from core.models import Course, Lesson, LessonStep, StepSlide
+        from core.sample_lessons import create_sample
+        from core.stage_summary import summary_html
+        c = Course.objects.create(name="হিফজ", teacher=None)
+        les, _ = create_sample(Lesson, LessonStep, StepSlide, c, "ikhlas")
+        h = summary_html(les)
+        for d in self.DIGITS:
+            self.assertIn(self.AYAH + d, h, "টগলে আয়াত-চিহ্ন %s নেই" % d)
+
+    def test_the_verses_themselves_are_untouched(self):
+        """⚠️ চিহ্ন বসাতে গিয়ে আয়াতের একটি অক্ষরও যেন না বদলায়।"""
+        from core.sample_lessons import V1, V2, V3, V4
+        WORDS = ("قُلْ هُوَ ٱللَّهُ أَحَدٌ", "ٱللَّهُ ٱلصَّمَدُ",
+                 "لَمْ يَلِدْ وَلَمْ يُولَدْ",
+                 "وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ")
+        for v, w in zip((V1, V2, V3, V4), WORDS):
+            self.assertTrue(v.startswith(w), "আয়াতের পাঠ বদলে গেছে: %r" % v)
+
+    def test_no_waqf_sign_was_invented(self):
+        """⚠️ সূরা ইখলাসে মুসহাফে কোনো ওয়াকফ চিহ্ন নেই — বসানো চলবে না।"""
+        from core.sample_lessons import V1, V2, V3, V4
+        WAQF = "\u06d6\u06d7\u06d8\u06d9\u06da\u06db"  # ۖ ۗ ۘ ۙ ۚ ۛ
+        for v in (V1, V2, V3, V4):
+            for w in WAQF:
+                self.assertNotIn(w, v, "নেই এমন ওয়াকফ চিহ্ন বসানো হয়েছে")
+
+    def test_the_chunks_carry_no_verse_number(self):
+        """টুকরো তো আয়াত নয় — তার শেষে নম্বর বসলে ভুল শেখানো হতো।"""
+        from core.sample_lessons import IKHLAS
+        for st in IKHLAS["steps"]:
+            ar = st["slide"].get("arabic") or ""
+            for line in ar.split("\n"):
+                line = line.strip()
+                if not line or self.AYAH not in line:
+                    continue
+                self.assertGreater(len(line.split()), 1,
+                                   "একটিমাত্র টুকরোর সাথে আয়াত-নম্বর: %r"
+                                   % line)

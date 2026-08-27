@@ -77,11 +77,15 @@ NUM = (
     "font-size:12px;font-weight:700;color:#8a7a55;"
     "margin:0 0 6px 0"
 )
+# ⚠️ dir="rtl" কেবল <span>-এ দিলে হয় না। টুকরোগুলো পাশাপাশি বসে
+# বাইরের বাক্সের দিক ধরে — বাক্স বাঁ-থেকে-ডান হলে "قُلْ · هُوَ ٱللَّهُ ·
+# أَحَدٌ" বাঁ দিক থেকে সাজে, অথচ আরবি পড়া হয় ডান থেকে। ফলে শেষ
+# টুকরোটাই আগে পড়ে ফেলতেন। তাই বাক্সগুলোতেই দিক বসাতে হয়।
 PIECE_ROW = (
     "background-color:#faf7ef;border-radius:10px;padding:8px 10px;"
-    "margin:0 0 8px 0;text-align:center"
+    "margin:0 0 8px 0;text-align:center;direction:rtl"
 )
-WHOLE_ROW = "text-align:center;margin:0 0 6px 0"
+WHOLE_ROW = "text-align:center;margin:0 0 6px 0;direction:rtl"
 MEAN_ROW = (
     "font-size:13.5px;color:#4b5563;font-style:italic;"
     "text-align:center;margin:0"
@@ -204,7 +208,8 @@ def summary_html(lesson):
     if full:
         out.append(
             '<div style="%s"><div style="%s">📖 What we learned today</div>'
-            '<div style="text-align:center">%s</div></div>'
+            '<div dir="rtl" style="text-align:center;direction:rtl">'
+            '%s</div></div>'
             % (CARD % ("#cfe7d8", "#f3fbf6"), HEAD % "#1a5c3a", _ar(full))
         )
 
@@ -217,12 +222,13 @@ def summary_html(lesson):
         # টুকরোগুলো — এক পট্টিতে, মাঝে বিন্দু দিয়ে আলাদা করা
         if g["pieces"]:
             bits.append(
-                '<div style="%s">%s</div>'
+                '<div dir="rtl" style="%s">%s</div>'
                 % (PIECE_ROW,
                    " &nbsp;·&nbsp; ".join(_ar(p, PIECE_STYLE)
                                           for p in g["pieces"]))
             )
-        bits.append('<div style="%s">%s</div>' % (WHOLE_ROW, _ar(g["whole"])))
+        bits.append('<div dir="rtl" style="%s">%s</div>'
+                    % (WHOLE_ROW, _ar(g["whole"])))
         # ⚠️ ব্যাখ্যা কখনো পুরোটার সাথে, কখনো টুকরোর সাথে জড়ানো থাকে
         # (যেমন কায়দার "ت না ث?" তুলনা) — দুটোই দেখাই, নইলে হারিয়ে যেত
         notes = []

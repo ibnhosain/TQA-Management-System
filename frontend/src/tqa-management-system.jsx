@@ -4694,6 +4694,63 @@ function RichText({ value, onChange, placeholder }) {
     push();
   };
   // নির্বাচিত অংশকে আরবি বানাই — ডান-থেকে-বাঁ ও আমিরি ফন্ট
+  /* লেখার দিক — পুরো অনুচ্ছেদের।
+
+     ⚠️ "ع" বোতামটি কেবল নির্বাচিত টুকরোকে ইনলাইনভাবে আরবি করে, অনুচ্ছেদের
+     দিক বদলায় না। কিন্তু আসল গোলমাল হয় দিক নিয়েই: অনুচ্ছেদ বাঁ-থেকে-ডান
+     থাকলে পাশাপাশি বসা আরবি শব্দগুলো উল্টো ক্রমে সাজে — শেষ শব্দটাই আগে
+     পড়া হয়। তাই অনুচ্ছেদ ধরে দিক বদলানোর দরকার।
+
+     ⚠️ style ও dir — দুটোই বসাই। ছাঁকনি (safe_html) দুটোকেই চেনে, আর
+     পুরনো ব্রাউজারে একটি না চললে অন্যটি কাজ করে। */
+  const setDir = (rtl) => {
+    const box = ref.current;
+    if (!box) return;
+    box.focus();
+    restoreCaret();
+    const sel = window.getSelection();
+    let node = sel && sel.anchorNode;
+    if (!node || !box.contains(node)) {
+      // কোথাও কার্সর নেই — পুরো লেখার দিকই বদলাই
+      node = box;
+    }
+    // কার্সর যে অনুচ্ছেদে আছে সেটি খুঁজি (এডিটরের বাইরে যাব না)
+    let el = node.nodeType === 1 ? node : node.parentElement;
+    let block = null;
+    while (el && el !== box) {
+      if (/^(P|DIV|LI|H1|H2|H3|H4|BLOCKQUOTE|TD|TH)$/.test(el.tagName)) {
+        block = el;
+        break;
+      }
+      el = el.parentElement;
+    }
+    const dress = (t) => {
+      t.setAttribute("dir", rtl ? "rtl" : "ltr");
+      t.style.direction = rtl ? "rtl" : "ltr";
+      t.style.textAlign = rtl ? "right" : "left";
+    };
+    if (block) {
+      dress(block);
+    } else {
+      /* ⚠️ কার্সর কোনো অনুচ্ছেদে নেই — তখন পুরো লেখারই দিক বদলাই।
+         সম্পাদকের মূল ঘরে বসালে হতো না: সংরক্ষণের সময় কেবল ভেতরের
+         লেখাটুকুই নেওয়া হয়, ঘরটির নিজের সাজ নয়। তাই ভেতরের প্রতিটি
+         অনুচ্ছেদে বসাই; একটিও অনুচ্ছেদ না থাকলে আগে একটি বানিয়ে নিই। */
+      const kids = [...box.children];
+      if (kids.length) {
+        kids.forEach(dress);
+      } else if ((box.textContent || "").trim()) {
+        const wrap = box.ownerDocument.createElement("div");
+        while (box.firstChild) wrap.appendChild(box.firstChild);
+        box.appendChild(wrap);
+        dress(wrap);
+      }
+    }
+    push();
+    notice(rtl ? "এই অনুচ্ছেদ এখন ডান থেকে বাঁয়ে"
+               : "এই অনুচ্ছেদ এখন বাঁ থেকে ডানে");
+  };
+
   const arabic = () => {
     ref.current?.focus();
     const sel = window.getSelection();
@@ -4901,6 +4958,23 @@ function RichText({ value, onChange, placeholder }) {
         <button type="button" onMouseDown={noBlur} title="বাঁয়ে" style={tool} onClick={() => cmd("justifyLeft")}>⇤</button>
         <button type="button" onMouseDown={noBlur} title="মাঝবরাবর" style={tool} onClick={() => cmd("justifyCenter")}>⇔</button>
         <button type="button" onMouseDown={noBlur} title="ডানে" style={tool} onClick={() => cmd("justifyRight")}>⇥</button>
+        {/* অনুচ্ছেদের দিক — আরবি উল্টো ক্রমে বসলে এখান থেকেই ঠিক করা যায় */}
+        <button
+          type="button" onMouseDown={noBlur}
+          title="এই অনুচ্ছেদ ডান থেকে বাঁয়ে (আরবি) — শব্দ উল্টো বসলে এটি চাপুন"
+          style={tool}
+          onClick={() => setDir(true)}
+        >
+          ↤ ডান→বাঁ
+        </button>
+        <button
+          type="button" onMouseDown={noBlur}
+          title="এই অনুচ্ছেদ বাঁ থেকে ডানে (বাংলা/ইংরেজি)"
+          style={tool}
+          onClick={() => setDir(false)}
+        >
+          বাঁ→ডান ↦
+        </button>
         <button
           type="button" onMouseDown={noBlur}
           title="নির্বাচিত লেখাকে আরবি করুন (ডান থেকে বাঁ)"
@@ -24853,6 +24927,7 @@ export default function App() {
    ───────────────────────────────────────────────────────────────── */
 export {
   loginErrorText,
+  RichText,
   FitBox,
   fitScale,
   FIT_W,
