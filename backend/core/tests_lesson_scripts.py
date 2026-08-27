@@ -1424,7 +1424,13 @@ class NoLessonIsACopyOfAnother(TestCase):
 
 
 class TheNewQaidaLessonsLand(TestCase):
-    """♻️ মাইগ্রেশন ০০৪১ — দারস ২ ও ৩ কোর্সে ও লেকচার প্ল্যানে বসে।"""
+    """♻️ মাইগ্রেশন ০০৪১ — দারস ২ ও ৩ পরিচালকের নিজের টপিকে বসে।
+
+    ⚠️ চালু সাইটের হুবহু অবস্থা বানানো হয়েছে: পরিচালক দারস ১-এর নাম
+    বদলে "Qaida for Beginners — Lesson -01" রেখেছেন, আর লেকচার প্ল্যানে
+    নিজের নামে ১২টি টপিক সাজিয়েছেন। নতুন টপিক বানালে তাঁর তালিকায়
+    ডুপ্লিকেট ঢুকত — তাই খালি টপিকেই বসাতে হবে।
+    """
 
     def setUp(self):
         from core.models import (Course, Lesson, LessonStep, StepSlide,
@@ -1432,19 +1438,24 @@ class TheNewQaidaLessonsLand(TestCase):
         from core.sample_lessons import create_sample
         self.M = (Lesson, LessonStep, StepSlide)
         self.Lesson, self.LectureTopic = Lesson, LectureTopic
-        self.c = Course.objects.create(name="নূরানী কায়দা", teacher=None)
-        lec = Lecture.objects.create(course=self.c, no=1, title="কায়দা")
-        self.topic = LectureTopic.objects.create(lecture=lec, text="দারস ১",
-                                                 order=0)
-        # দারস ১ আগে থেকেই আছে — চালু সাইটের মতো
+        self.c = Course.objects.create(name="Easy Noorani Qaida", teacher=None)
+        lec = Lecture.objects.create(course=self.c, no=1, title="Qaida")
+        self.topics = [
+            LectureTopic.objects.create(
+                lecture=lec, text="Qaida for Beginners — Lesson-%02d" % n,
+                order=n - 1)
+            for n in range(1, 13)]
         self.first, _ = create_sample(*self.M, self.c, "qaida",
-                                      topic=self.topic)
+                                      topic=self.topics[0])
+        self.first.title = "Qaida for Beginners — Lesson -01"
+        self.first.save()
 
     def run_it(self):
         import importlib
         from core.models import (Lesson, LessonStep, StepSlide, Lecture,
                                  LectureTopic)
-        m = importlib.import_module("core.migrations.0041_qaida_lessons_2_and_3")
+        m = importlib.import_module(
+            "core.migrations.0041_qaida_lessons_2_and_3")
 
         class A:
             def get_model(self, app, name):
@@ -1453,61 +1464,73 @@ class TheNewQaidaLessonsLand(TestCase):
                         "LectureTopic": LectureTopic}[name]
         m.seed(A(), None)
 
-    def test_both_lessons_are_created(self):
+    def test_no_new_topic_is_created(self):
+        """⚠️ পরিচালকের তালিকায় ডুপ্লিকেট টপিক ঢুকবে না।"""
+        before = self.LectureTopic.objects.count()
         self.run_it()
-        self.assertEqual(self.Lesson.objects.filter(course=self.c).count(), 3,
-                         "তিনটি দারস হওয়ার কথা")
-        for L in QAIDAS[1:]:
-            self.assertTrue(
-                self.Lesson.objects.filter(title=L["title"]).exists(),
-                "বসেনি: " + L["title"][:40])
+        self.assertEqual(self.LectureTopic.objects.count(), before,
+                         "নতুন টপিক তৈরি হয়েছে")
 
-    def test_each_gets_its_own_lecture_topic(self):
+    def test_they_land_in_the_next_free_topics(self):
+        from core.sample_lessons import SAMPLES
         self.run_it()
-        for L in QAIDAS[1:]:
-            t = self.LectureTopic.objects.filter(text=L["title"]).first()
-            self.assertIsNotNone(t, "টপিক তৈরি হয়নি: " + L["title"][:40])
-            self.assertTrue((t.content or "").strip(),
-                            "টগলের লেখা খালি: " + L["title"][:40])
-            self.assertIn("Practise", t.content)
-            self.assertIn("Write in your notebook", t.content,
-                          "লেখার অংশটি টগলে নেই")
+        for n, key in ((2, "qaida2"), (3, "qaida3")):
+            les = self.Lesson.objects.filter(topic=self.topics[n - 1]).first()
+            self.assertIsNotNone(les, "টপিক %d-এ স্ক্রিপ্ট বসেনি" % n)
+            self.assertEqual(les.title_ar, SAMPLES[key]["title_ar"],
+                             "ভুল দারস বসেছে টপিক %d-এ" % n)
 
-    def test_the_lessons_are_linked_to_their_topics(self):
+    def test_the_directors_own_naming_is_kept(self):
+        """⚠️ দারসের নাম টপিকের নাম থেকেই — তাঁর নামকরণ বদলাবে না।"""
         self.run_it()
-        for L in QAIDAS[1:]:
-            les = self.Lesson.objects.get(title=L["title"])
-            self.assertIsNotNone(les.topic_id, "টপিকের সাথে যুক্ত নয়")
-            self.assertEqual(les.topic.text, L["title"])
+        les = self.Lesson.objects.filter(topic=self.topics[1]).first()
+        self.assertEqual(les.title, "Qaida for Beginners — Lesson-02")
 
-    def test_the_steps_and_slides_all_arrive(self):
+    def test_the_toggle_gets_the_practice_sheet(self):
         self.run_it()
-        for L in QAIDAS[1:]:
-            les = self.Lesson.objects.get(title=L["title"])
+        for n in (2, 3):
+            self.topics[n - 1].refresh_from_db()
+            c = self.topics[n - 1].content or ""
+            self.assertTrue(c.strip(), "টগল খালি — টপিক %d" % n)
+            self.assertIn("Write in your notebook", c, "লেখার অংশ নেই")
+
+    def test_steps_and_slides_all_arrive(self):
+        self.run_it()
+        for n, L in ((2, QAIDAS[1]), (3, QAIDAS[2])):
+            les = self.Lesson.objects.filter(topic=self.topics[n - 1]).first()
             self.assertEqual(les.steps.count(), len(L["steps"]))
             missing = [s.order for s in les.steps.all()
                        if getattr(s, "slide", None) is None]
             self.assertEqual(missing, [], "কিছু ধাপে পর্দা নেই")
 
     def test_lesson_one_is_untouched(self):
-        """⚠️ নতুন দুটি বসাতে গিয়ে পুরনোটা যেন না বদলায়।"""
         before = self.first.steps.count()
         self.run_it()
         self.first.refresh_from_db()
         self.assertEqual(self.first.steps.count(), before)
-        self.assertEqual(self.first.topic_id, self.topic.id)
+        self.assertEqual(self.first.title, "Qaida for Beginners — Lesson -01",
+                         "পরিচালকের দেওয়া নাম বদলে গেছে")
 
-    def test_running_it_twice_makes_no_duplicates(self):
+    def test_a_topic_that_already_has_a_script_is_skipped(self):
+        """⚠️ পরিচালকের লেখা স্ক্রিপ্টের উপরে কখনো বসবে না।"""
+        from core.models import Lesson
+        mine = Lesson.objects.create(course=self.c, title="আমার নিজের",
+                                     kind="qaida", topic=self.topics[1])
         self.run_it()
+        mine.refresh_from_db()
+        self.assertEqual(mine.title, "আমার নিজের")
+        self.assertEqual(mine.steps.count(), 0, "আমার দারস বদলে গেছে")
+        self.assertIsNotNone(
+            self.Lesson.objects.filter(topic=self.topics[2]).first(),
+            "দারস ২ পরের খালি টপিকে বসেনি")
+
+    def test_running_it_twice_changes_nothing(self):
         self.run_it()
-        self.assertEqual(self.Lesson.objects.filter(course=self.c).count(), 3)
-        for L in QAIDAS[1:]:
-            self.assertEqual(
-                self.LectureTopic.objects.filter(text=L["title"]).count(), 1,
-                "টপিক দুবার তৈরি হয়েছে")
+        n = self.Lesson.objects.count()
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.count(), n, "দুবার বসেছে")
 
     def test_nothing_happens_without_lesson_one(self):
-        """কায়দার কোর্সই না থাকলে চুপচাপ কিছু না করাই নিরাপদ।"""
         self.first.delete()
         self.run_it()
         self.assertEqual(self.Lesson.objects.count(), 0)
