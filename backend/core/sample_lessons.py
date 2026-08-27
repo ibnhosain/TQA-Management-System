@@ -46,6 +46,8 @@
 — তাই ভবিষ্যতে মডেল বদলালেও পুরনো মাইগ্রেশন ভাঙে না।
 """
 
+import re
+
 # ─────────────────────────── সূরা আল-ইখলাস · ৫–৭ বছর ───────────────────────────
 # উসমানী রসম, হাফস 'আন 'আসিম — সূরা ১১২, আয়াত ১–৪
 # ⚠️ আয়াতের শেষে মুসহাফের গোল নকশা — ۝ (U+06DD) আর তার সাথে আরবি
@@ -841,6 +843,7 @@ def S(*lines):
 QAIDA = {
     "title": "Easy Noorani Qaida — Lesson 1: The First Seven Letters",
     "title_ar": "الحروف المفردة",
+    "lesson_no": 1,
     "kind": "qaida",
     "age_from": 5,
     "age_to": 7,
@@ -1846,6 +1849,7 @@ QAIDA = {
 QAIDA2 = {
     "title": "Easy Noorani Qaida — Lesson 2: The Dot Detective",
     "title_ar": "الحروف المفردة ٢",
+    "lesson_no": 2,
     "kind": "qaida",
     "age_from": 5,
     "age_to": 7,
@@ -2626,6 +2630,7 @@ QAIDA2 = {
 QAIDA3 = {
     "title": "Easy Noorani Qaida — Lesson 3: Light and Heavy",
     "title_ar": "الحروف المفردة ٣",
+    "lesson_no": 3,
     "kind": "qaida",
     "age_from": 5,
     "age_to": 7,
@@ -3441,6 +3446,51 @@ QAIDA3 = {
         },
     ],
 }
+
+
+
+# ═══════════ টপিকের নাম থেকে দারসের নম্বর ═══════════
+# ⚠️ কেন দরকার — পরিচালক লেকচার প্ল্যানে নিজের নামে টপিক সাজান, যেমন
+# "Qaida for Beginners — Lesson-02"। নতুন দারস বসানোর সময় আগে ক্রম ধরে
+# খোঁজা হতো, তাতে দারস ২ ও ৩ গিয়ে বসেছিল ৯ ও ১০ নম্বরে। কারণ টপিকের
+# order-এর মান আর পরিচালকের দেওয়া নম্বর এক নয়।
+#
+# তাই এখন নামের ভেতরের নম্বরটাই পড়া হয়। "Lesson-02", "Lesson - 3",
+# "দারস ৪", "Sabaq 5" — সব ধরনই চলে।
+
+_BN_DIGITS = str.maketrans("০১২৩৪৫৬৭৮৯", "0123456789")
+_NO_RE = re.compile(
+    r"(?:lesson|sabaq|dars|দারস|সবক|পাঠ)\s*[-–—:.]?\s*0*(\d+)", re.I)
+
+
+def topic_number(text):
+    """টপিকের নামে লেখা দারস নম্বর — না পেলে None।
+
+    ⚠️ শেষ ভরসা হিসেবে নামের শেষের সংখ্যাটাও ধরা হয়, কারণ কেউ কেউ
+    কেবল "০৩" বা "Part 3" লেখেন।
+    """
+    t = str(text or "").translate(_BN_DIGITS)
+    m = _NO_RE.search(t)
+    if m:
+        return int(m.group(1))
+    tail = re.search(r"(\d+)\s*$", t)
+    return int(tail.group(1)) if tail else None
+
+
+def topic_for_number(LectureTopic, Lesson, course, no):
+    """ওই নম্বরের টপিক — যেখানে এখনো কোনো স্ক্রিপ্ট নেই।
+
+    ⚠️ স্ক্রিপ্ট থাকলে ফেরত দেওয়া হয় না — পরিচালকের লেখা কিছুর উপরে
+    কখনো বসানো চলবে না।
+    """
+    for t in LectureTopic.objects.filter(
+            lecture__course=course).order_by("lecture__no", "order", "id"):
+        if topic_number(t.text) != no:
+            continue
+        if Lesson.objects.filter(topic=t).exists():
+            return None
+        return t
+    return None
 
 
 SAMPLES = {"ikhlas": IKHLAS, "qaida": QAIDA,

@@ -1665,3 +1665,83 @@ class TheRepairMigration(TestCase):
         self.run_it()
         b = (self.Lesson.objects.count(), self.LectureTopic.objects.count())
         self.assertEqual(a, b, "দুবার চললে বদলে যাচ্ছে")
+
+
+class TopicNumbersAreReadFirst(TestCase):
+    """🔢 পরিচালকের দেওয়া দারস-নম্বর পড়ে তবেই স্ক্রিপ্ট বসবে।
+
+    ⚠️ আগে টপিকের ক্রম (order) ধরে বসানো হতো। তাতে দারস ২ ও ৩ গিয়ে
+    বসেছিল পরিচালকের ৯ ও ১০ নম্বর টপিকে — কারণ order-এর মান আর তাঁর
+    দেওয়া নম্বর এক নয়। এখন নামের ভেতরের নম্বরটাই পড়া হয়।
+    """
+
+    def test_it_reads_the_directors_numbering(self):
+        from core.sample_lessons import topic_number
+        CASES = [
+            ("Qaida for Beginners — Lesson-02", 2),
+            ("Qaida for Beginners — Lesson- 03", 3),
+            ("Lesson 1: The First Seven Letters", 1),
+            ("দারস ৪", 4),
+            ("Sabaq-05", 5),
+            ("পাঠ - ১২", 12),
+            ("Part 3", 3),
+            ("০৭", 7),
+        ]
+        for text, want in CASES:
+            self.assertEqual(topic_number(text), want,
+                             "“%s” থেকে %s পড়া উচিত" % (text, want))
+
+    def test_it_says_nothing_when_there_is_no_number(self):
+        """⚠️ নম্বর না থাকলে অনুমান করা চলবে না — ভুল জায়গায় বসত।"""
+        from core.sample_lessons import topic_number
+        for text in ("Al-Kawthar-الكوثر", "Noorani Qaida", "", None,
+                     "সূরা ইখলাস"):
+            self.assertIsNone(topic_number(text),
+                              "“%s” থেকে নম্বর পড়া উচিত নয়" % text)
+
+    def test_leading_zeros_do_not_confuse_it(self):
+        from core.sample_lessons import topic_number
+        for text in ("Lesson-02", "Lesson-002", "Lesson 2"):
+            self.assertEqual(topic_number(text), 2)
+
+    def test_each_qaida_lesson_knows_its_number(self):
+        """⚠️ দারস নিজে না জানলে কোন টপিকে বসবে তা বোঝা যেত না।"""
+        for i, L in enumerate(QAIDAS, 1):
+            self.assertEqual(L.get("lesson_no"), i,
+                             "%s — নম্বর নেই বা ভুল" % L["title"][:40])
+
+    def test_it_picks_the_topic_with_the_matching_number(self):
+        from core.models import Course, Lesson, Lecture, LectureTopic
+        from core.sample_lessons import topic_for_number
+        c = Course.objects.create(name="কায়দা", teacher=None)
+        lec = Lecture.objects.create(course=c, no=1, title="Q")
+        # ⚠️ order আর নম্বর ইচ্ছা করেই উল্টো — আসল সমস্যাটাই এমন ছিল
+        made = {}
+        for n, order in ((1, 8), (2, 3), (3, 11), (4, 0)):
+            made[n] = LectureTopic.objects.create(
+                lecture=lec, text="Lesson-%02d" % n, order=order)
+        for n in (1, 2, 3, 4):
+            got = topic_for_number(LectureTopic, Lesson, c, n)
+            self.assertEqual(got, made[n],
+                             "নম্বর %d-এ ভুল টপিক বাছা হয়েছে" % n)
+
+    def test_a_topic_that_already_has_a_script_is_refused(self):
+        """⚠️ পরিচালকের লেখা স্ক্রিপ্টের উপরে কখনো বসবে না।"""
+        from core.models import Course, Lesson, Lecture, LectureTopic
+        from core.sample_lessons import topic_for_number
+        c = Course.objects.create(name="কায়দা", teacher=None)
+        lec = Lecture.objects.create(course=c, no=1, title="Q")
+        t = LectureTopic.objects.create(lecture=lec, text="Lesson-02",
+                                        order=0)
+        Lesson.objects.create(course=c, title="আমার নিজের", kind="qaida",
+                              topic=t)
+        self.assertIsNone(topic_for_number(LectureTopic, Lesson, c, 2),
+                          "স্ক্রিপ্ট থাকা টপিক বাছা হয়েছে")
+
+    def test_a_missing_number_gives_nothing(self):
+        from core.models import Course, Lesson, Lecture, LectureTopic
+        from core.sample_lessons import topic_for_number
+        c = Course.objects.create(name="কায়দা", teacher=None)
+        Lecture.objects.create(course=c, no=1, title="Q")
+        self.assertIsNone(topic_for_number(LectureTopic, Lesson, c, 5),
+                          "নেই এমন নম্বরের টপিক ফেরত এসেছে")
