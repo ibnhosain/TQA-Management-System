@@ -129,7 +129,6 @@ export const api = {
   },
   delLesson: async () => ({}),
   duplicateLesson: async () => ({ ...LESSON, id: 4 }),
-  seedSampleLesson: async () => LESSON,
   addLessonStep: async () => mkStep(9),
   editLessonStep: async (id, patch) => {
     const st = LESSON.steps.find((x) => x.id === Number(id));

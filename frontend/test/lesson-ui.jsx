@@ -317,22 +317,6 @@ export async function run() {
     { click: ["Al-Ikhlas-الإخلاص"], expect: ["পড়ানোর ধাপ"] },
   );
   await scene(
-    "স্ক্রিপ্টহীন টপিক → ✍️ স্ক্রিপ্ট লিখুন → বিকল্প দেখায়",
-    <M.LessonsView user={director} courses={courses} />,
-    {
-      click: ["✍️ স্ক্রিপ্ট লিখুন"],
-      expect: ["খালি থেকে শুরু", "নমুনা — সূরা আল-ইখলাস",
-               "নমুনা — Noorani Qaida"],
-    },
-  );
-  await scene(
-    "স্ক্রিপ্টহীন টপিক → নমুনা থেকে শুরু",
-    <M.LessonsView user={director} courses={courses} />,
-    { click: ["✍️ স্ক্রিপ্ট লিখুন", "নমুনা — সূরা আল-ইখলাস"],
-      expect: ["পড়ানোর ধাপ"] },
-  );
-  /* ───── ধাপ ২ — হেডিং ও টপিক এখান থেকেই ───── */
-  await scene(
     "পরিচালক হেডিংয়ের বোতামগুলো দেখেন",
     <M.LessonsView user={director} courses={courses} />,
     { expect: ["✏️ টপিক", "নাম", "➕ নতুন হেডিং"] },
@@ -529,66 +513,6 @@ export async function run() {
     <M.TeachFromClass courseId={1} label="Q" />,
     { click: ["📗 শিক্ষক মোড"] },
   );
-  /* ───── পুরনো লেখা মুছে নতুন নমুনা বসানো ─────
-     ⚠️ ধ্বংসাত্মক কাজ — তাই বোতামটি কেবল পরিচালকের কাছেই, আর চাপলেই
-     সরাসরি না মুছে আগে নিশ্চিত করতে চায়। */
-  await scene(
-    "পরিচালক নতুন নমুনা বসানোর বোতাম পান",
-    <M.LessonsView user={director} courses={courses} />,
-    { expect: ["♻️ নতুন নমুনা"] },
-  );
-  await scene(
-    "উস্তাদের কাছে নতুন নমুনার বোতাম নেই",
-    <M.LessonsView user={teacher} courses={courses} />,
-    { notExpect: ["♻️ নতুন নমুনা"] },
-  );
-  /* এখানে confirmHandler বসানো নেই, তাই askConfirm সরাসরি কাজটাই চালায়
-     (অ্যাপের নিজেরই ফলব্যাক) — ফলে পুরো পথটা এক ক্লিকেই যাচাই হয়ে যায়:
-     নমুনা বসে, তালিকা নতুন করে আসে, আর স্ক্রিপ্টটি খুলে যায়। */
-  await scene(
-    "নতুন নমুনা বসিয়ে স্ক্রিপ্টটি খোলে",
-    <M.LessonsView user={director} courses={courses} />,
-    { click: ["♻️ নতুন নমুনা"], expect: ["← দারসের তালিকা", "+ নতুন ধাপ"] },
-  );
-
-  /* ───── 🔝 সবার উপরে ভাসমান পর্দা ─────
-     ⚠️ এটি উস্তাদের উইন্ডোর ভেতরেই আঁকা হয়, তাই "শুধু স্লাইডের ঘর যাবে"
-     দেয়ালটা এখানে কোডেই — onlySlide()। সেটি ফুটো হলে বাচ্চার পর্দায়
-     উস্তাদের স্ক্রিপ্ট ভেসে উঠত, তাই সবচেয়ে কড়া পরীক্ষাটি এখানে। */
-  check("ভাসমান পর্দায় উস্তাদের স্ক্রিপ্ট যেতে পারে না", () => {
-    const dirty = {
-      kind: "verse",
-      heading: "Say it with me",
-      arabic: "قُلْ",
-      text: "🎤",
-      // ⚠️ নিচেরগুলো কখনো যেতে পারবে না
-      teacher_says: "Listen carefully",
-      correction: "Almost! Try again",
-      note: "মাখরাজ: গলার গভীর থেকে",
-      expected: "قُلْ",
-      student_does: "বলে",
-    };
-    const out = M.onlySlide(dirty);
-    eq(Object.keys(out).sort(), ["arabic", "heading", "kind", "text"],
-       "অনুমোদিত ঘরের বাইরে কিছু গেছে");
-    for (const bad of ["teacher_says", "correction", "note", "expected",
-                       "student_does"]) {
-      if (bad in out) throw new Error(`“${bad}” ঘরটি পার হয়ে গেছে`);
-    }
-  });
-  check("স্লাইড না থাকলে ভাসমান পর্দা খালি", () => {
-    eq(M.onlySlide(null), null, "null-এর বদলে অন্য কিছু");
-    eq(M.onlySlide(undefined), null, "undefined-এর বদলে অন্য কিছু");
-  });
-  check("খালি ঘর বাদ যায়, শূন্য নয়", () => {
-    eq(M.onlySlide({ kind: "title", heading: "", arabic: null, text: "হ্যাঁ" }),
-       { kind: "title", heading: "", text: "হ্যাঁ" },
-       "null বাদ পড়েনি বা খালি লেখা হারিয়েছে");
-  });
-  check("এই ব্রাউজারে ভাসমান পর্দা নেই — তা বোঝা যায়", () => {
-    if (M.pipReady() !== false)
-      throw new Error("jsdom-এ তো documentPictureInPicture নেই");
-  });
   await scene(
     "ভাসমান পর্দা স্লাইডটাই আঁকে",
     <M.FloatBody slide={{ kind: "verse", heading: "Say it with me",
@@ -1018,6 +942,70 @@ export async function run() {
     if (tight.includes("clamp("))
       throw new Error("fixed দিলেও clamp রয়ে গেছে — বাক্সে ফিট হবে না");
   });
+
+  /* ───── 🔝 সবার উপরে ভাসমান পর্দা ─────
+     ⚠️ এটি উস্তাদের উইন্ডোর ভেতরেই আঁকা হয়, তাই "শুধু স্লাইডের ঘর যাবে"
+     দেয়ালটা এখানে কোডেই — onlySlide()। সেটি ফুটো হলে বাচ্চার পর্দায়
+     উস্তাদের স্ক্রিপ্ট ভেসে উঠত, তাই সবচেয়ে কড়া পরীক্ষাটি এখানে। */
+  check("ভাসমান পর্দায় উস্তাদের স্ক্রিপ্ট যেতে পারে না", () => {
+    const dirty = {
+      kind: "verse",
+      heading: "Say it with me",
+      arabic: "قُلْ",
+      text: "🎤",
+      // ⚠️ নিচেরগুলো কখনো যেতে পারবে না
+      teacher_says: "Listen carefully",
+      correction: "Almost! Try again",
+      note: "মাখরাজ: গলার গভীর থেকে",
+      expected: "قُلْ",
+      student_does: "বলে",
+    };
+    const out = M.onlySlide(dirty);
+    eq(Object.keys(out).sort(), ["arabic", "heading", "kind", "text"],
+       "অনুমোদিত ঘরের বাইরে কিছু গেছে");
+    for (const bad of ["teacher_says", "correction", "note", "expected",
+                       "student_does"]) {
+      if (bad in out) throw new Error(`“${bad}” ঘরটি পার হয়ে গেছে`);
+    }
+  });
+  check("স্লাইড না থাকলে ভাসমান পর্দা খালি", () => {
+    eq(M.onlySlide(null), null, "null-এর বদলে অন্য কিছু");
+    eq(M.onlySlide(undefined), null, "undefined-এর বদলে অন্য কিছু");
+  });
+  check("খালি ঘর বাদ যায়, শূন্য নয়", () => {
+    eq(M.onlySlide({ kind: "title", heading: "", arabic: null, text: "হ্যাঁ" }),
+       { kind: "title", heading: "", text: "হ্যাঁ" },
+       "null বাদ পড়েনি বা খালি লেখা হারিয়েছে");
+  });
+  check("এই ব্রাউজারে ভাসমান পর্দা নেই — তা বোঝা যায়", () => {
+    if (M.pipReady() !== false)
+      throw new Error("jsdom-এ তো documentPictureInPicture নেই");
+  });
+  /* ───── স্ক্রিপ্ট তৈরি ─────
+     ⚠️ "নমুনা" ব্যবস্থাটি তুলে দেওয়া হয়েছে — দারসগুলো এখন সরাসরি আসল
+     দারস। টপিকে চাপলে বিকল্প বাছার মডাল আর আসে না, খালি স্ক্রিপ্ট
+     তৈরি হয়ে সরাসরি খুলে যায়। */
+  await scene(
+    "নমুনার বিকল্প আর দেখায় না",
+    <M.LessonsView user={director} courses={courses} />,
+    { notExpect: ["নমুনা", "খালি থেকে শুরু", "কীভাবে শুরু করবেন"] },
+  );
+  await scene(
+    "স্ক্রিপ্ট লেখার বোতামটি আছে",
+    <M.LessonsView user={director} courses={courses} />,
+    { expect: ["✍️ স্ক্রিপ্ট লিখুন"] },
+  );
+  await scene(
+    "চাপলে খালি স্ক্রিপ্ট তৈরি হয়ে খোলে",
+    <M.LessonsView user={director} courses={courses} />,
+    { click: ["✍️ স্ক্রিপ্ট লিখুন"],
+      expect: ["← দারসের তালিকা", "+ নতুন ধাপ"] },
+  );
+  await scene(
+    "তালিকায় নতুন নমুনার বোতাম নেই",
+    <M.LessonsView user={director} courses={courses} />,
+    { notExpect: ["♻️ নতুন নমুনা"] },
+  );
 
   await scene("শিক্ষার্থী → Revise → Next → Close", <M.StudentLessonsView />, {
     click: ["🔁 Revise", "Next", "Close"],

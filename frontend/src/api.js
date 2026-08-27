@@ -495,22 +495,6 @@ export const api = {
   // নকল — একই বিষয়ের আলাদা বয়সের সংস্করণ বানানোর সহজ পথ
   duplicateLesson: (id, d) =>
     request(`/lessons/${id}/duplicate/`, { method: "POST", body: d || {} }),
-  // topic দিলে নমুনাটি ওই টপিকের স্ক্রিপ্ট হিসেবেই বসে।
-  // replace=true দিলে আগের নমুনাটির ধাপগুলো মুছে নতুন লেখা বসে
-  // (দারসের সারি থেকেই যায়, তাই অগ্রগতি হারায় না)
-  // lesson দিলে ঠিক ওই স্ক্রিপ্টটির উপরেই নতুন লেখা বসে — শিরোনাম
-  // বদলে থাকলেও যেন বদলানোর বদলে নকল তৈরি না হয়
-  seedSampleLesson: (course, which, replace, topic, lesson) =>
-    request("/lessons/seed_sample/", {
-      method: "POST",
-      body: {
-        course,
-        which,
-        ...(replace ? { replace: true } : {}),
-        ...(topic ? { topic } : {}),
-        ...(lesson ? { lesson } : {}),
-      },
-    }),
   addLessonStep: (d) => request("/lesson-steps/", { method: "POST", body: d }),
   editLessonStep: (id, d) =>
     request(`/lesson-steps/${id}/`, { method: "PATCH", body: d }),

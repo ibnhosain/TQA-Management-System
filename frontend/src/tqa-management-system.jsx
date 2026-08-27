@@ -17401,10 +17401,6 @@ const kindLabel = (k) => {
   return row ? row[1] : k;
 };
 
-/* দারসের ধরন → কোন নমুনার স্ক্রিপ্ট তার সাথে যায়।
-   ⚠️ এখানে না থাকা ধরনের দারসে "নতুন নমুনা বসান" দেখানোই হয় না — তাই
-   পরিচালকের নিজের লেখা স্ক্রিপ্ট ভুল করে মুছে যাওয়ার পথ নেই। */
-const SAMPLE_FOR = { memorization: "ikhlas", qaida: "qaida" };
 
 const EMPTY_SLIDE = {
   kind: "title",
@@ -18732,68 +18728,6 @@ function TopicsEditor({ section, scripted, onClose, onSaved }) {
   );
 }
 
-/* ⚠️ ইচ্ছা করেই NewScriptModal-এর বাইরে। রেন্ডারের ভেতরে কম্পোনেন্ট
-   বানালে প্রতি রেন্ডারে সেটি নতুন ধরন হয়ে যায় — React পুরনোটি সরিয়ে
-   নতুন বসায়। */
-const ScriptChoice = ({ title, sub, busy, onPick }) => (
-  <button
-    disabled={busy}
-    onClick={onPick}
-    style={{
-      ...S.card,
-      padding: 12,
-      textAlign: "left",
-      cursor: busy ? "default" : "pointer",
-      fontFamily: "inherit",
-      border: `1.5px solid ${C.emerald}`,
-      opacity: busy ? 0.6 : 1,
-    }}
-  >
-    <div style={{ fontWeight: 800, color: C.text }}>{title}</div>
-    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{sub}</div>
-  </button>
-);
-
-/* টপিকে এখনো স্ক্রিপ্ট নেই — কীভাবে শুরু করবেন */
-function NewScriptModal({ topic, onClose, onPick }) {
-  const [busy, setBusy] = useState(false);
-  const go = async (how) => {
-    setBusy(true);
-    try {
-      await onPick(how);
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Modal title={`✍️ স্ক্রিপ্ট লিখুন — ${topic.text}`} onClose={onClose}>
-      <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.8, marginBottom: 12 }}>
-        এই টপিকের ক্লাস স্ক্রিপ্ট তৈরি হবে। কীভাবে শুরু করবেন?
-      </div>
-      <div style={{ display: "grid", gap: 8 }}>
-        <ScriptChoice
-          busy={busy}
-          onPick={() => go("blank")}
-          title="🗒️ খালি থেকে শুরু করি"
-          sub="নিজের মতো করে ধাপে ধাপে লিখবেন"
-        />
-        <ScriptChoice
-          busy={busy}
-          onPick={() => go("ikhlas")}
-          title="📥 নমুনা — সূরা আল-ইখলাস (মুখস্থ)"
-          sub="২৫ ধাপ · ৫–৭ বছর · পড়ে দেখে নিজের মতো বদলে নিতে পারবেন"
-        />
-        <ScriptChoice
-          busy={busy}
-          onPick={() => go("qaida")}
-          title="📥 নমুনা — Noorani Qaida দারস ১ (কায়েদা)"
-          sub="২৪ ধাপ · প্রথম সাত হরফ · ৫–৭ বছর"
-        />
-      </div>
-    </Modal>
-  );
-}
-
 /* একটি হেডিং ও তার নিচের টপিকগুলো — লেকচার প্ল্যানের মতোই সাজানো।
    ⚠️ এখানে কভার/বাদ/রিসেটের টিক নেই — সেটি লেকচার প্ল্যানেরই কাজ।
    টপিকে চাপলে তার ক্লাস স্ক্রিপ্ট খোলে। */
@@ -18937,7 +18871,6 @@ function LessonsView({ user, courses }) {
   const [teachId, setTeachId] = useState(null);
   const [progFor, setProgFor] = useState(null);
   const [ageFor, setAgeFor] = useState(null);
-  const [newFor, setNewFor] = useState(null); // কোন টপিকে নতুন স্ক্রিপ্ট
   const [nameFor, setNameFor] = useState(null); // হেডিংয়ের নাম দেওয়া/বদলানো
   const [topicsFor, setTopicsFor] = useState(null); // কোন হেডিংয়ের টপিক সাজানো
 
@@ -18993,24 +18926,15 @@ function LessonsView({ user, courses }) {
     }
   };
 
-  /* টপিকের স্ক্রিপ্ট শুরু — খালি থেকে, নাকি নমুনা থেকে */
-  const startScript = async (topic, how) => {
+  /* টপিকের স্ক্রিপ্ট শুরু — খালি পাতা থেকে, পরিচালক নিজে লিখবেন */
+  const startScript = async (topic) => {
     try {
-      const l =
-        how === "blank"
-          ? await api.addLesson({
-              course: Number(courseId),
-              title: topic.text,
-              topic: topic.id,
-              status: "draft",
-            })
-          : await api.seedSampleLesson(
-              Number(courseId),
-              how,
-              false,
-              topic.id,
-            );
-      setNewFor(null);
+      const l = await api.addLesson({
+        course: Number(courseId),
+        title: topic.text,
+        topic: topic.id,
+        status: "draft",
+      });
       await load();
       setOpenId(l.id);
       notice("✍️ স্ক্রিপ্ট তৈরি — এখন লিখে নিন");
@@ -19038,44 +18962,6 @@ function LessonsView({ user, courses }) {
       },
       { yes: "হ্যাঁ, নকল করুন", no: "না, থাক" },
     );
-
-  /* ───── পুরনো লেখা মুছে নতুন নমুনা বসানো ─────
-     নমুনার স্ক্রিপ্ট উন্নত হলে পুরনো দারসগুলো নিজে থেকে বদলায় না — কারণ
-     সেগুলো ডেটাবেজে বসে আছে। এই বাটনটি সেই কাজটাই করে।
-
-     ⚠️ কেবল ধাপগুলো বদলায়। দারসের সারিটি, তার শিরোনাম ও শিক্ষার্থীদের
-     অগ্রগতি অক্ষত থাকে। কোন নমুনা বসবে তা দারসের ধরন দেখেই ঠিক হয়,
-     তাই ভুল নমুনা বসার আশঙ্কা নেই। */
-  const reseed = (l) => {
-    const which = SAMPLE_FOR[l.kind];
-    if (!which) return;
-    askConfirm(
-      `"${l.title}" স্ক্রিপ্টের এখনকার ${bn(l.step_count || 0)}টি ধাপ মুছে ` +
-        "নতুন নমুনার লেখা বসবে।" +
-        "\n\n" +
-        "⚠️ আপনি নিজে যা লিখেছেন বা বদলেছেন, তা এই স্ক্রিপ্টে আর থাকবে না।" +
-        "\n\n" +
-        "যা থাকবে: দারসটির নাম, দারস পরিকল্পনার টপিক, আর শিক্ষার্থীদের " +
-        "অগ্রগতি — কে কতটুকু শিখেছে সব ঠিক থাকবে।",
-      async () => {
-        try {
-          await api.seedSampleLesson(
-            Number(courseId),
-            which,
-            true,
-            l.topic || null,
-            l.id,
-          );
-          await load();
-          setOpenId(l.id);
-          notice("♻️ নতুন নমুনার লেখা বসেছে");
-        } catch (e) {
-          notice("বসানো যায়নি — " + (e?.data?.error || e?.message || ""));
-        }
-      },
-      { yes: "হ্যাঁ, নতুন লেখা বসান", no: "না, থাক" },
-    );
-  };
 
   const remove = (l) =>
     askConfirm(
@@ -19166,7 +19052,6 @@ function LessonsView({ user, courses }) {
     onProgress: (l) => setProgFor(l),
     onDuplicate: duplicate,
     onAgeVersion: (l, siblings) => setAgeFor({ lesson: l, siblings }),
-    onReseed: reseed,
     onRemove: remove,
   };
 
@@ -19222,13 +19107,6 @@ function LessonsView({ user, courses }) {
     />
   );
 
-  const newOverlay = newFor && (
-    <NewScriptModal
-      topic={newFor}
-      onClose={() => setNewFor(null)}
-      onPick={(how) => startScript(newFor, how)}
-    />
-  );
 
   if (openId)
     return (
@@ -19280,7 +19158,6 @@ function LessonsView({ user, courses }) {
       {teachOverlay}
       {progOverlay}
       {ageOverlay}
-      {newOverlay}
       {nameOverlay}
       {topicsOverlay}
 
@@ -19306,7 +19183,7 @@ function LessonsView({ user, courses }) {
               prog={prog}
               canEdit={canEdit}
               rowProps={rowProps}
-              onNew={setNewFor}
+              onNew={startScript}
               first={i === 0}
               last={i === sections.length - 1}
               onRename={() => setNameFor({ sec })}
@@ -19748,7 +19625,7 @@ const statusTag = (st) => {
 /* একটি দারস — একই শিরোনামের কয়েকটি বয়সের সংস্করণ থাকলে সেগুলো একসাথে,
    আলাদা আলাদা সারি হিসেবে নয়। উস্তাদ এক চাপে বয়স বেছে নেন। */
 function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
-                     onDuplicate, onAgeVersion, onReseed, onRemove }) {
+                     onDuplicate, onAgeVersion, onRemove }) {
   const [pick, setPick] = useState(0);
   const items = group.items;
   const l = items[Math.min(pick, items.length - 1)];
@@ -19817,17 +19694,6 @@ function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
               <Btn sm kind="soft" onClick={() => onDuplicate(l)}>
                 📄 নকল
               </Btn>
-              {/* নমুনার লেখা উন্নত হলে পুরনো স্ক্রিপ্টে বসানোর পথ */}
-              {SAMPLE_FOR[l.kind] && (
-                <Btn
-                  sm
-                  kind="soft"
-                  title="এই স্ক্রিপ্টের লেখা মুছে নতুন নমুনার লেখা বসবে"
-                  onClick={() => onReseed(l)}
-                >
-                  ♻️ নতুন নমুনা
-                </Btn>
-              )}
               <Btn sm kind="danger" onClick={() => onRemove(l)}>
                 🗑️
               </Btn>
