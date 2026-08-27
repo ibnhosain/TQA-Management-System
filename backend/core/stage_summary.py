@@ -46,6 +46,11 @@ MEANING_KINDS = {"meaning", "question"}
 # বাড়ির কাজ ও শেষের কথা
 HOME_KINDS = {"homework"}
 
+# ✏️ খাতায় লেখার ধাপ — কায়দায় পড়ার পাশাপাশি লেখাও শেখা হয়। শিশু নিজের
+# খাতায় পেনসিল দিয়ে লিখে উস্তাদকে দেখায়, তাই বাড়িতেও অনুশীলনটা জানা
+# দরকার — নইলে অভিভাবক বুঝতেন না কী লেখাতে হবে।
+WRITE_KINDS = {"write"}
+
 # কুরআনের আরবির সাজ। Amiri Quran কুরআনের জন্যই বানানো মুসহাফ-ধাঁচের
 # নাসখ ফন্ট — যের-যবর-শাদ্দা-তানভীন মুসহাফের মতোই বসে।
 # ⚠️ মাপ উদার — ৫-৭ বছরের শিশু যের-যবর-শাদ্দা আলাদা করে চিনতে পারা চাই
@@ -125,6 +130,7 @@ def _collect(lesson):
     joined = set()    # যেগুলো একাধিক লাইনে ছিল = "একসাথে পড়া"
     meanings = {}     # কোন আরবির সাথে কোন ব্যাখ্যা
     home = []
+    write = []        # খাতায় কী কী লিখতে হবে
     longest_multi = ""
 
     for st in lesson.steps.all().select_related("slide").order_by("order",
@@ -149,8 +155,11 @@ def _collect(lesson):
             meanings.setdefault(ar, sl.text)
         if sl.kind in HOME_KINDS and _useful(sl.text):
             home.append(sl.text)
+        # লেখার ধাপে আরবিটাই আসল — কী লিখতে হবে। সাথে ছোট নির্দেশনা।
+        if sl.kind in WRITE_KINDS and ar:
+            write.append((ar, sl.text if _useful(sl.text) else ""))
 
-    return arabics, joined, meanings, home, longest_multi
+    return arabics, joined, meanings, home, write, longest_multi
 
 
 def _inside(small, big):
@@ -193,7 +202,7 @@ def _group(arabics, joined):
 
 def summary_html(lesson):
     """দারসটির স্লাইড থেকে শিক্ষার্থীর অনুশীলনের কাগজ।"""
-    arabics, joined, meanings, home, full = _collect(lesson)
+    arabics, joined, meanings, home, write, full = _collect(lesson)
     if not arabics and not home:
         return ""
 
@@ -248,7 +257,29 @@ def summary_html(lesson):
         out.append('<div style="%s">🎤 Practise</div>' % (HEAD % "#c9962a"))
         out.extend(rows)
 
-    # ───── ৩. বাড়িতে ─────
+    # ───── ৩. খাতায় লেখা ─────
+    # ⚠️ একই আরবি একাধিক ধাপে এলে একবারই দেখাই
+    if write:
+        seen_w = set()
+        rows_w = []
+        for ar, hint in write:
+            if ar in seen_w:
+                continue
+            seen_w.add(ar)
+            bits = ['<div dir="rtl" style="%s">%s</div>'
+                    % (WHOLE_ROW, _ar(ar))]
+            if hint:
+                bits.append('<div style="%s">%s</div>'
+                            % (MEAN_ROW, _lines(hint)))
+            rows_w.append("".join(bits))
+        out.append(
+            '<div style="%s"><div style="%s">✏️ Write in your notebook</div>'
+            "%s</div>"
+            % (CARD % ("#cfe0ea", "#f4fafd"), HEAD % "#175066",
+               "".join(rows_w))
+        )
+
+    # ───── ৪. বাড়িতে ─────
     if home:
         out.append(
             '<div style="%s"><div style="%s">📌 At home</div>'

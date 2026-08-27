@@ -839,11 +839,14 @@ QAIDA = {
     "kind": "qaida",
     "age_from": 5,
     "age_to": 7,
-    "duration_min": 20,
+    # ⚠️ খাতায় লেখার পাঁচটি ধাপ যোগ হওয়ায় সময় বেড়েছে (২০ → ২৪)।
+    # গায়ে লেখা সময় আর ধাপগুলোর যোগফল সবসময় মিলতে হবে — নইলে উস্তাদ
+    # রুটিন সাজাতে গিয়ে ঠকে যান। একটি পরীক্ষা সেটা পাহারা দেয়।
+    "duration_min": 24,
     "objectives": (
         "<p><b>Noorani Qaida — Lesson 1 · Teacher Script</b><br>"
-        "Age 5–7 · about 20 minutes · The first seven letters<br>"
-        "Listen → Watch the mouth → Say → Compare → Play</p>"
+        "Age 5–7 · about 24 minutes · The first seven letters<br>"
+        "Listen → Watch the mouth → Say → Compare → Write → Play</p>"
         "<p><b>How to use this script</b> — open it and read straight "
         "through. Every English line is what you say out loud, word for "
         "word. You never have to make up any English yourself.</p>"
@@ -858,6 +861,8 @@ QAIDA = {
         "<li>Know the letters <b>ا ب ت ث ج ح خ</b> on sight, in any order</li>"
         "<li>Say each letter with the right sound</li>"
         "<li>Tell <b>ت</b> from <b>ث</b>, and <b>ح</b> from <b>خ</b></li>"
+        "<li>Write all seven in their own notebook, right to left, "
+        "and show the page to the teacher</li>"
         "<li>Read all seven letters in order without help</li>"
         "</ul>"
         "<p><b>Mastery</b> — the child names all seven letters when you point "
@@ -1535,6 +1540,169 @@ QAIDA = {
                       "arabic": "ا  ب  ت  ث  ج  ح  خ",
                       "text": "🎤 From the start."},
         },
+        # ───────── ✏️ খাতায় লেখা ─────────
+        # কায়দায় শুধু পড়া নয়, লেখাও শেখা হয়। বাচ্চা নিজের খাতায় পেনসিল
+        # দিয়ে লেখে, তারপর ক্যামেরায় উস্তাদকে দেখায়। জুমে এটাই একমাত্র
+        # উপায় যাতে উস্তাদ হাতের লেখা দেখতে পান।
+        #
+        # ⚠️ পাঁচ বছরের শিশুর হাত এখনো শক্ত হয়নি — সুন্দর হওয়ার চেয়ে
+        # চেষ্টা করাটাই বড়। তাই কোথাও "ঠিক হয়নি" বলা হয় না।
+        {
+            "section": "Writing — get ready",
+            "says": S(
+                "Now we write! Get your notebook.",
+                "And your pencil.",
+                "[অপেক্ষা করুন — খাতা ও পেনসিল আনতে সময় দিন]",
+                "",
+                "Ready? Show me your pencil!",
+                "[শিশু পেনসিল দেখালে হাসুন]",
+                "",
+                "MashaAllah! Now sit up straight.",
+            ),
+            "does": "তাড়া দেবেন না — খাতা-পেনসিল আনতে সময় দিন। নিজেও একটি "
+                    "পেনসিল হাতে নিন, শিশু দেখে উৎসাহ পায়। বসার ভঙ্গি "
+                    "ঠিক আছে কিনা দেখুন।",
+            "student": "খাতা ও পেনসিল আনে, দেখায়।",
+            "expected": "খাতা খোলা, পেনসিল হাতে।",
+            "correction": S(
+                "No notebook? Any paper is fine.",
+                "Even one page. Go and get it.",
+                "[অপেক্ষা করুন]",
+                "",
+                "Good! Now we can start.",
+            ),
+            "note": "খাতা না থাকলে যেকোনো কাগজেই চলবে — শিশু যেন বাদ না পড়ে। "
+                    "অভিভাবককে পরে বলে দিন একটি খাতা রাখতে।",
+            "seconds": 45,
+            "slide": {"kind": "write", "heading": "Notebook Time",
+                      "text": "✏️ Pencil ready?"},
+        },
+        {
+            "section": "Writing — watch me",
+            "says": S(
+                "Watch my finger. I write in the air.",
+                DOTS,
+                "[বাতাসে হরফটি বড় করে আঁকুন — ডান থেকে বাঁয়ে]",
+                "",
+                "See? We start from the right.",
+                "Now you do it in the air with me.",
+                "[একসাথে বাতাসে আঁকুন]",
+                "",
+                "Lovely!",
+            ),
+            "does": "⚠️ আরবি ডান থেকে বাঁয়ে লেখা হয় — এটি প্রথম দিনেই "
+                    "শেখানো জরুরি, নইলে অভ্যাস উল্টো হয়ে যায়। বাতাসে বড় "
+                    "করে আঁকুন যাতে ক্যামেরায় দেখা যায়। ধীরে।",
+            "student": "বাতাসে হরফটি আঁকে।",
+            "expected": "ডান থেকে বাঁয়ে আঙুল চালায়।",
+            "correction": S(
+                "Start over here — on this side.",
+                "[ডান দিকটা দেখিয়ে দিন]",
+                "",
+                "That way. Try again with me.",
+                DOTS,
+            ),
+            "note": "হাত ধরে দেখানো যায় না বলে বাতাসে আঁকা-ই সবচেয়ে কাজের। "
+                    "শিশু ভুল দিকে গেলে বকবেন না, শুধু আবার দেখান।",
+            "seconds": 55,
+            "slide": {"kind": "write", "heading": "Right to Left",
+                      "arabic": "ا",
+                      "text": "✏️ Watch, then write in the air."},
+        },
+        {
+            "section": "Writing — ا ب ت ث",
+            "says": S(
+                "Now write in your notebook.",
+                "Four letters. One line each.",
+                DOTS,
+                "[পর্দার চারটি হরফ একে একে নাম বলুন]",
+                "",
+                "Take your time. I am waiting.",
+                "[অপেক্ষা করুন — তাড়া দেবেন না]",
+                "",
+                "Done? Hold your notebook up to the camera!",
+            ),
+            "does": "লেখার সময় চুপ থাকুন — শিশুকে মন দিতে দিন। ৪০-৫০ সেকেন্ড "
+                    "সময় দিন। তারপর খাতা ক্যামেরায় দেখাতে বলুন, আর যা "
+                    "ভালো হয়েছে তার নাম ধরে প্রশংসা করুন।",
+            "student": "চারটি হরফ খাতায় লেখে, তারপর ক্যামেরায় দেখায়।",
+            "expected": "খাতায় ا ب ت ث — যতটা পারে।",
+            "correction": S(
+                "That is a good try!",
+                "Look at mine, then try one more.",
+                "[পর্দার হরফটি দেখান]",
+                "",
+                "Better! Keep going.",
+            ),
+            "note": "⚠️ হাতের লেখা এখন সুন্দর হবে না — হবেও না। এই বয়সে "
+                    "লক্ষ্য কেবল আকৃতিটা চেনা ও পেনসিল ধরা। বিন্দু (নুকতা) "
+                    "কয়টা তা মিলিয়ে দিন — ب এক, ت দুই, ث তিন।",
+            "seconds": 90,
+            "slide": {"kind": "write", "heading": "Write These Four",
+                      "arabic": "ا  ب  ت  ث",
+                      "text": "✏️ One line each."},
+        },
+        {
+            "section": "Writing — ج ح خ",
+            "says": S(
+                "Three more. Same way.",
+                DOTS,
+                "[পর্দার তিনটি হরফ একে একে নাম বলুন]",
+                "",
+                "Look — these three are brothers.",
+                "Same shape. Only the dot moves.",
+                "Write them now.",
+                "[অপেক্ষা করুন]",
+                "",
+                "Show me!",
+            ),
+            "does": "তিনটি হরফের মিলটা দেখিয়ে দিন — একই আকৃতি, শুধু বিন্দু "
+                    "আলাদা: ج-এর ভেতরে, ح-এর কোথাও নেই, خ-এর উপরে। এতে "
+                    "মনে রাখা সহজ হয়।",
+            "student": "তিনটি হরফ লেখে, দেখায়।",
+            "expected": "খাতায় ج ح خ — বিন্দু আলাদা আলাদা।",
+            "correction": S(
+                "Almost! Where does the dot go?",
+                "[পর্দায় বিন্দুটি দেখিয়ে দিন]",
+                "",
+                "Yes! Try that one again.",
+            ),
+            "note": "বিন্দুর জায়গাই এখানে আসল শিক্ষা — আকৃতি এক, বিন্দুতেই "
+                    "পার্থক্য। এটি ধরতে পারলে পরের দারস অনেক সহজ হবে।",
+            "seconds": 85,
+            "slide": {"kind": "write", "heading": "The Three Brothers",
+                      "arabic": "ج  ح  خ",
+                      "text": "✏️ Same shape — the dot moves."},
+        },
+        {
+            "section": "Writing — show the teacher",
+            "says": S(
+                "Now hold up your whole page.",
+                "Let me see all seven!",
+                "[খাতাটি ক্যামেরার সামনে ধরতে বলুন, একটু অপেক্ষা করুন]",
+                "",
+                "MashaAllah! Look at that! 🌟",
+                "You wrote Arabic today.",
+                "Your very first time!",
+            ),
+            "does": "⚠️ এই ধাপটি বাদ দেবেন না — নিজের লেখা উস্তাদকে দেখানোর "
+                    "আনন্দেই শিশু পরের দিন আবার লিখতে চায়। খাতার দিকে "
+                    "সত্যিই তাকান, আর অন্তত একটি হরফের নাম ধরে প্রশংসা করুন। "
+                    "অভিভাবক পাশে থাকলে তাঁকেও দেখান।",
+            "student": "পুরো পাতা ক্যামেরায় দেখায়।",
+            "expected": "সাতটি হরফ লেখা একটি পাতা।",
+            "correction": S(
+                "Even two letters is wonderful.",
+                "You started today. That is the big thing.",
+                "Next time we write more.",
+            ),
+            "note": "কম লিখলেও প্রশংসা করুন। প্রথম দিনে দুটি হরফও যথেষ্ট — "
+                    "উদ্দেশ্য পেনসিল ধরা শুরু করা, পাতা ভরানো নয়।",
+            "seconds": 50,
+            "slide": {"kind": "write", "heading": "Show Me Your Page",
+                      "arabic": "ا  ب  ت  ث  ج  ح  خ",
+                      "text": "📓 Hold it up to the camera!"},
+        },
         {
             "section": "Activity",
             "says": S(
@@ -1610,6 +1778,7 @@ QAIDA = {
                 "Now a little homework.",
                 "Before I see you again,",
                 "say these seven letters five times every day.",
+                "And write them once a day in your notebook.",
                 "Can you do that?",
                 "[অপেক্ষা করুন]",
                 "",
@@ -1626,11 +1795,13 @@ QAIDA = {
             ),
             "note": "অভিভাবকের জন্য — শুধু শুনুন আর হাসুন। দিনে এক মিনিটই "
                     "যথেষ্ট। কোনো হরফ ভুল হলে বাড়িতে ঠিক করতে যাবেন না, "
-                    "উস্তাদের জন্য রেখে দিন।",
+                    "উস্তাদের জন্য রেখে দিন। লেখার সময় শুধু খেয়াল রাখুন "
+                    "যেন ডান দিক থেকে শুরু করে — বাকিটা ক্লাসে দেখা হবে।",
             "seconds": 45,
             "slide": {"kind": "homework", "heading": "Until Next Time",
                       "arabic": "ا  ب  ت  ث  ج  ح  خ",
-                      "text": "📖 Say them 5 times every day."},
+                      "text": "📖 Say them 5 times every day.\n"
+                              "✏️ Write them once a day."},
         },
         {
             "section": "Closing",
@@ -1651,8 +1822,9 @@ QAIDA = {
             ),
             "note": "শেষ করার আগে মিলিয়ে নিন: প্রতিটি হরফ করে দেখানো হয়েছে · "
                     "শিশু মুখের দিকে তাকিয়েছে · প্রতিটি হরফ একা বলেছে · "
-                    "ت/ث মেলানো হয়েছে · ح/خ মেলানো হয়েছে · এলোমেলো ক্রমের "
-                    "খেলা হয়েছে · বাড়ির কাজ দেওয়া হয়েছে।",
+                    "ت/ث মেলানো হয়েছে · ح/خ মেলানো হয়েছে · খাতায় লিখেছে ও "
+                    "ক্যামেরায় দেখিয়েছে · এলোমেলো ক্রমের খেলা হয়েছে · "
+                    "বাড়ির কাজ দেওয়া হয়েছে।",
             "seconds": 25,
             "slide": {"kind": "end", "heading": "Jazakumullahu Khairan",
                       "arabic": "بَارَكَ ٱللَّهُ فِيكَ",

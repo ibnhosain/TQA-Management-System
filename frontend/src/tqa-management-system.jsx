@@ -17168,6 +17168,8 @@ const SLIDE_ART = {
   reminder: ["linear-gradient(160deg,#08243d,#0d3559 60%,#124875)", "moon", "#ffe9a8"],
   praise: ["linear-gradient(160deg,#6b4a05,#8f6408 50%,#b8830c)", "burst", "#fff2b8"],
   review: ["linear-gradient(160deg,#14464a,#1a5f65 60%,#217a82)", "waves", "#a8e6e6"],
+  // ✏️ খাতায় লেখার ধাপ — খাতার পাতার মতো শান্ত রং, চোখ ধাঁধায় না
+  write: ["linear-gradient(160deg,#123a4a,#175066 60%,#1d6785)", "frame", "#bfe6f5"],
   homework: ["linear-gradient(160deg,#123f28,#19583a 60%,#1f7049)", "stars", "#ffe9a8"],
   end: ["linear-gradient(160deg,#4a2410,#6b3a18 55%,#8c5220)", "burst", "#ffd8a0"],
   blank: ["#0b1f16", "none", "#0b1f16"],
@@ -17381,6 +17383,7 @@ const SLIDE_KINDS = [
   ["question", "❓ প্রশ্ন"],
   ["meaning", "💡 অর্থ"],
   ["visual", "🖼️ ছবি"],
+  ["write", "✏️ খাতায় লেখো"],
   ["activity", "🎲 খেলা"],
   ["reminder", "🌙 মনে রেখো"],
   ["praise", "🌟 শাবাশ"],

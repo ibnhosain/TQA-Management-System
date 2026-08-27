@@ -177,7 +177,7 @@ class TheLessonIsWhole(TestCase):
 
     def test_it_is_a_real_class(self):
         self.assertGreaterEqual(len(IKHLAS["steps"]), 30)
-        self.assertEqual(len(QAIDA["steps"]), 24)
+        self.assertEqual(len(QAIDA["steps"]), 29)
         for L in BOTH:
             self.assertEqual((L["age_from"], L["age_to"]), (5, 7))
 
@@ -304,7 +304,7 @@ class ReseedingAnExistingScript(TestCase):
         self.assertEqual(self.lesson.title, "আমাদের প্রথম হরফের দারস",
                          "পরিচালকের দেওয়া নামটি মুছে গেছে")
         new_steps = list(self.lesson.steps.values_list("id", flat=True))
-        self.assertEqual(len(new_steps), 24)
+        self.assertEqual(len(new_steps), 29)
         self.assertFalse(set(old_steps) & set(new_steps), "পুরনো ধাপ রয়ে গেছে")
 
     def test_the_new_text_actually_lands(self):
@@ -328,7 +328,7 @@ class ReseedingAnExistingScript(TestCase):
         r = self.post(course=other.id, which="qaida", replace=True,
                       lesson=self.lesson.id)
         self.assertEqual(r.status_code, 400)
-        self.assertEqual(self.lesson.steps.count(), 24, "অন্য কোর্সের "
+        self.assertEqual(self.lesson.steps.count(), 29, "অন্য কোর্সের "
                                                         "স্ক্রিপ্ট বদলে গেছে")
 
     def test_junk_ids_do_not_crash(self):
@@ -604,7 +604,8 @@ class ThePracticeSheet(TestCase):
     যা আছে সবই স্লাইড থেকে — শিরোনামগুলো ছাড়া, সেগুলো কেবল সাজানোর ঘর।
     """
 
-    LABELS = ("What we learned today", "Practise", "At home")
+    LABELS = ("What we learned today", "Practise",
+              "Write in your notebook", "At home")
 
     def setUp(self):
         from core.models import Course, Lesson, LessonStep, StepSlide
@@ -659,11 +660,27 @@ class ThePracticeSheet(TestCase):
         for v in (V1, V2, V3, V4):
             self.assertIn(v, h, "আয়াতটি টগলে নেই")
 
-    def test_all_three_sections_are_there(self):
+    def test_the_core_sections_are_there(self):
         for les in (self.ikhlas, self.qaida):
             h = self.html(les)
-            for label in self.LABELS:
+            for label in ("What we learned today", "Practise", "At home"):
                 self.assertIn(label, h, "“%s” অংশটি নেই" % label)
+
+    def test_writing_shows_only_where_it_is_taught(self):
+        """✏️ কায়দায় লেখা শেখানো হয়, হিফজে নয় — বাক্সটিও তাই।"""
+        self.assertIn("Write in your notebook", self.html(self.qaida),
+                      "কায়দায় লেখার অংশটি নেই")
+        self.assertNotIn("Write in your notebook", self.html(self.ikhlas),
+                         "যেখানে লেখা শেখানো হয় না সেখানেও বাক্সটি এসেছে")
+
+    def test_the_writing_box_says_what_to_write(self):
+        h = self.html(self.qaida)
+        i = h.find("Write in your notebook")
+        self.assertGreater(i, -1)
+        box = h[i:i + 2500]
+        for letter in "ابتثجحخ":
+            self.assertIn(letter, box, "লেখার তালিকায় হরফটি নেই: " + letter)
+        self.assertIn("dir=\"rtl\"", box, "লেখার বাক্সে দিক বসেনি")
 
     # ───── অনুশীলনের চেহারা ─────
     def test_each_verse_gets_its_pieces_and_its_meaning(self):
@@ -834,3 +851,81 @@ class TheMushafMarks(TestCase):
                 self.assertGreater(len(line.split()), 1,
                                    "একটিমাত্র টুকরোর সাথে আয়াত-নম্বর: %r"
                                    % line)
+
+
+class WritingIsTaught(TestCase):
+    """✏️ কায়দায় পড়ার পাশাপাশি খাতায় লেখাও।
+
+    শিশু নিজের খাতায় পেনসিল দিয়ে লেখে, তারপর ক্যামেরায় উস্তাদকে দেখায় —
+    জুমে এটাই একমাত্র উপায় যাতে উস্তাদ হাতের লেখা দেখতে পান।
+    """
+
+    def steps(self):
+        return [st for st in QAIDA["steps"]
+                if st["slide"]["kind"] == "write"]
+
+    def test_the_qaida_has_writing_steps(self):
+        self.assertGreaterEqual(len(self.steps()), 4,
+                                "লেখার ধাপ প্রায় নেই")
+
+    def test_the_child_writes_in_a_notebook_with_a_pencil(self):
+        said = " ".join(spoken_only(st["says"]) for st in self.steps()).lower()
+        for word in ("notebook", "pencil", "write"):
+            self.assertIn(word, said, "“%s” কথাটাই বলা হয়নি" % word)
+
+    def test_the_child_shows_the_page_to_the_teacher(self):
+        """⚠️ দেখানোর ধাপটাই আসল — নইলে উস্তাদ হাতের লেখা দেখতেই পান না।"""
+        said = " ".join(spoken_only(st["says"]) for st in self.steps()).lower()
+        self.assertIn("camera", said, "ক্যামেরায় দেখানোর কথা নেই")
+        self.assertTrue("show me" in said or "hold" in said,
+                        "খাতা দেখাতে বলা হয়নি")
+
+    def test_the_direction_is_taught_from_the_first_day(self):
+        """⚠️ আরবি ডান থেকে বাঁয়ে — প্রথম দিনেই না শেখালে অভ্যাস উল্টো হয়।"""
+        said = " ".join(spoken_only(st["says"]) + " " + (st["does"] or "")
+                        for st in self.steps()).lower()
+        self.assertIn("right", said, "ডান থেকে শুরুর কথা নেই")
+        bn = " ".join(st["does"] or "" for st in self.steps())
+        self.assertIn("ডান থেকে বাঁয়ে", bn, "উস্তাদের নির্দেশনায় দিকটা নেই")
+
+    def test_all_seven_letters_get_written(self):
+        ar = " ".join(st["slide"].get("arabic", "") for st in self.steps())
+        for letter in "ابتثجحخ":
+            self.assertIn(letter, ar, "এই হরফটি লেখানো হয় না: " + letter)
+
+    def test_a_child_without_a_notebook_is_not_left_out(self):
+        """⚠️ খাতা না থাকলেও যেন ক্লাস থেকে বাদ না পড়ে।"""
+        text = " ".join((st["correction"] or "") + " " + (st["note"] or "")
+                        for st in self.steps())
+        self.assertIn("paper", text.lower() + " ",
+                      "খাতা না থাকলে কী করবেন তা বলা নেই")
+
+    def test_bad_handwriting_is_never_scolded(self):
+        """⚠️ পাঁচ বছরের হাত এখনো শক্ত নয় — চেষ্টাটাই বড়।"""
+        for st in self.steps():
+            c = (st["correction"] or "").lower()
+            for bad in ("wrong", "bad", "ugly", "no."):
+                self.assertNotIn(bad, c,
+                                 "লেখার ভুলে কঠিন কথা: %r" % st["section"])
+
+    def test_the_writing_steps_follow_the_same_language_rules(self):
+        """বাকি স্ক্রিপ্টের মতোই — বলার কথা ইংরেজি, নির্দেশনা বাংলা।"""
+        for st in self.steps():
+            self.assertFalse(BN.search(spoken_only(st["says"])),
+                             "বলার কথায় বাংলা: %r" % st["section"])
+            self.assertTrue(BN.search(st["does"] or ""),
+                            "নির্দেশনা বাংলায় নয়: %r" % st["section"])
+
+    def test_writing_comes_after_the_letters_are_learned(self):
+        """⚠️ চেনার আগে লিখতে বললে শিশু ভড়কে যায়।"""
+        kinds = [st["slide"]["kind"] for st in QAIDA["steps"]]
+        first_write = kinds.index("write")
+        self.assertGreater(kinds[:first_write].count("your_turn"), 5,
+                           "হরফগুলো বলা শেষ হওয়ার আগেই লেখা শুরু হয়েছে")
+
+    def test_the_homework_asks_for_writing_too(self):
+        home = [st for st in QAIDA["steps"]
+                if st["slide"]["kind"] == "homework"]
+        text = " ".join(spoken_only(st["says"]) + " " +
+                        (st["slide"].get("text") or "") for st in home)
+        self.assertIn("rite", text, "বাড়ির কাজে লেখার কথা নেই")
