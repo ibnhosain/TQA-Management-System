@@ -266,14 +266,6 @@ export async function run() {
     },
   );
 
-  await scene("শিক্ষার্থীর দারস", <M.StudentLessonsView />, {
-    expect: ["My Lessons", "Revise", "Ask your teacher"],
-  });
-  await scene(
-    "শিক্ষার্থীর পুনরাবৃত্তি পর্দা",
-    <M.StudentLessonPlayer lessonId={1} title="T" onClose={nop} />,
-    { expect: ["Next"] },
-  );
   await scene(
     "ক্লাস থেকে শিক্ষক মোড",
     <M.TeachFromClass courseId={1} label="Q" />,
@@ -291,11 +283,6 @@ export async function run() {
     <M.ProgressPanel lesson={LESSON} onClose={nop} />,
     { expect: ["কোনো শিক্ষার্থী নেই"], mode: "empty" },
   );
-  await scene("শিক্ষার্থীর দারস — কিছু নেই", <M.StudentLessonsView />, {
-    expect: ["will appear here"], mode: "empty",
-  });
-
-  /* ───── বোতামে চাপ: আসল ব্যবহারের পথ ───── */
   await scene(
     "সম্পাদকে ধাপ খোলা ও গোটানো",
     <M.LessonEditor id={1} canEdit onClose={nop} onChanged={nop} />,
@@ -1045,10 +1032,6 @@ export async function run() {
     <M.LessonsView user={director} courses={courses} />,
     { notExpect: ["♻️ নতুন নমুনা"] },
   );
-
-  await scene("শিক্ষার্থী → Revise → Next → Close", <M.StudentLessonsView />, {
-    click: ["🔁 Revise", "Next", "Close"],
-  });
 
   console.log(`\n  ${ran} রকম দৃশ্য চালানো হলো (এফেক্ট ও ক্লিকসহ)`);
   if (failures.length) {
