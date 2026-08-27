@@ -285,6 +285,27 @@ export async function run() {
     <M.LessonEditor id={1} canEdit onClose={nop} onChanged={nop} />,
     { expect: ["দারস পরিকল্পনার টপিক", "কোনো টপিকের সাথে যুক্ত নয়"] },
   );
+
+  /* ───── ধাপ ৪ — স্ক্রিপ্ট থেকে টগলের লেখা ───── */
+  await scene(
+    "টপিকযুক্ত স্ক্রিপ্টে সারাংশের বোতাম আসে",
+    <M.LessonEditor id={1} canEdit onClose={nop} onChanged={nop} />,
+    {
+      expect: ["📋 লেকচার প্ল্যানে সারাংশ বসান",
+               "শিক্ষার্থী পরে দেখে রিভিশন দিতে পারবেন",
+               "নিজের মতো বদলে নিতে পারবেন"],
+    },
+  );
+  await scene(
+    "সারাংশ বসানো — নিশ্চিত করে",
+    <M.LessonEditor id={1} canEdit onClose={nop} onChanged={nop} />,
+    { click: ["📋 লেকচার প্ল্যানে সারাংশ বসান"] },
+  );
+  await scene(
+    "কেবল দেখা-মাত্র হলে বোতামটি নেই",
+    <M.LessonEditor id={1} canEdit={false} onClose={nop} />,
+    { notExpect: ["📋 লেকচার প্ল্যানে সারাংশ বসান"] },
+  );
   await scene(
     "তালিকা → শিক্ষক মোড → বন্ধ",
     <M.LessonsView user={teacher} courses={courses} />,

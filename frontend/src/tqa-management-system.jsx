@@ -17674,6 +17674,44 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
     }
   };
 
+  /* স্ক্রিপ্ট → দারস পরিকল্পনার টগলের লেখা।
+     ⚠️ কেবল স্লাইড থেকে তৈরি হয় — উস্তাদের স্ক্রিপ্ট এতে যায় না। */
+  const pushSummary = () => {
+    const topic = sections
+      .flatMap((x) => x.topics || [])
+      .find((t) => t.id === lesson.topic);
+    const had = !!(topic && (topic.content || "").trim());
+    askConfirm(
+      "ধাপগুলোর পর্দা থেকে সারাংশ তৈরি হয়ে দারস পরিকল্পনার টপিকের টগলে " +
+        "বসবে — শিক্ষার্থী পরে দেখে রিভিশন দিতে পারবেন।" +
+        "\n\n" +
+        "শুধু বাচ্চার পর্দায় যা ছিল তাই যাবে — আপনার লেখা উস্তাদের " +
+        "স্ক্রিপ্ট (বলবেন, করবেন, ভুল হলে, টীকা) যাবে না।" +
+        "\n\n" +
+        (had
+          ? "⚠️ এই টগলে আগে থেকেই লেখা আছে — সেটি মুছে নতুন সারাংশ বসবে।"
+          : "বসার পরেও আপনি লেকচার প্ল্যানে গিয়ে নিজের মতো বদলে নিতে পারবেন।"),
+      async () => {
+        setBusy(true);
+        try {
+          const r = await api.pushLessonSummary(lesson.id);
+          notice(
+            r.had_content
+              ? "📋 টগলের লেখা নতুন করে বসানো হয়েছে"
+              : "📋 সারাংশ বসানো হয়েছে",
+          );
+          const secs = await api.lessonSections(lesson.course).catch(() => null);
+          if (secs) setSections(secs);
+        } catch (e) {
+          notice("বসানো যায়নি — " + (e?.data?.error || e?.message || ""));
+        } finally {
+          setBusy(false);
+        }
+      },
+      { yes: had ? "হ্যাঁ, নতুন করে বসান" : "হ্যাঁ, বসান", no: "না, থাক" },
+    );
+  };
+
   const saveStep = async (d) => {
     try {
       await api.editLessonStep(d.id, {
@@ -17908,6 +17946,21 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
             <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
               এই কোর্সে এখনো কোনো টপিক নেই — “📋 লেকচার প্ল্যান” পাতায়
               সাজিয়ে নিলে এখানে চলে আসবে।
+            </div>
+          )}
+
+          {/* টগলের লেখা আলাদা করে লিখতে হয় না — স্ক্রিপ্ট থেকেই তৈরি হয় */}
+          {canEdit && lesson.topic && (
+            <div style={{ marginTop: 8 }}>
+              <Btn sm kind="ghost" onClick={pushSummary} disabled={busy}>
+                📋 লেকচার প্ল্যানে সারাংশ বসান
+              </Btn>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 4, lineHeight: 1.7 }}>
+                ধাপগুলোর পর্দা থেকে “আজ কী কী পড়ানো হয়েছে” তৈরি হয়ে টপিকের
+                টগলে বসে যাবে — শিক্ষার্থী পরে দেখে রিভিশন দিতে পারবেন।
+                বসার পরেও আপনি লেকচার প্ল্যানে গিয়ে নিজের মতো বদলে নিতে
+                পারবেন।
+              </div>
             </div>
           )}
         </div>

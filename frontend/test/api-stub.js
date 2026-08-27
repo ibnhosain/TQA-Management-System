@@ -89,6 +89,9 @@ export const api = {
           })),
         })),
   markTopic: async () => ({ ok: true }),
+  pushLessonSummary: async () => ({
+    ok: true, had_content: false, content: "<p><b>Line 1</b></p>",
+  }),
   addSection: async (course, name) => ({ id: 9, name, topics: [] }),
   renameSection: async () => ({}),
   delSection: async () => ({}),

@@ -1787,6 +1787,36 @@ class LessonViewSet(viewsets.ModelViewSet):
         return Response(data, status=201)
 
     @action(detail=True, methods=["post"], permission_classes=[IsDirector])
+    def push_summary(self, request, pk=None):
+        """স্ক্রিপ্ট থেকে দারস পরিকল্পনার টগলের লেখা বসানো।
+
+        পরিচালককে যেন টগলের ভেতরের লেখা আলাদা করে লিখতে না হয় — স্ক্রিপ্ট
+        একবার লিখলেই "আজ কী কী পড়ানো হয়েছে" তৈরি হয়ে যায়, শিক্ষার্থী পরে
+        দেখে রিভিশন দিতে পারেন।
+
+        ⚠️ লেখাটি তৈরি হয় কেবল স্লাইড থেকে — ক্লাসে বাচ্চার পর্দায় যা ছিল
+        ঠিক সেটুকু। উস্তাদের স্ক্রিপ্টের কোনো ঘর এখানে যায় না।
+        ⚠️ বসানোর পরেও পরিচালক লেখাটি লেকচার প্ল্যানে নিজের মতো সম্পাদনা
+        করতে পারেন — এটি কেবল শুরুটা করে দেয়।
+        """
+        from .stage_summary import summary_html
+        lesson = self.get_object()
+        if not lesson.topic_id:
+            return Response(
+                {"error": "এই স্ক্রিপ্টটি দারস পরিকল্পনার কোনো টপিকের সাথে "
+                          "যুক্ত নয় — আগে টপিক বেছে দিন।"}, status=400)
+        html = summary_html(lesson)
+        if not html:
+            return Response(
+                {"error": "স্লাইডে দেখানোর মতো কিছু নেই — আগে ধাপগুলোর "
+                          "পর্দা সাজিয়ে নিন।"}, status=400)
+        topic = lesson.topic
+        had = bool((topic.content or "").strip())
+        topic.content = html
+        topic.save(update_fields=["content"])
+        return Response({"ok": True, "had_content": had, "content": html})
+
+    @action(detail=True, methods=["post"], permission_classes=[IsDirector])
     def duplicate(self, request, pk=None):
         """দারসটির হুবহু নকল — ধাপ ও স্লাইডসহ।
 

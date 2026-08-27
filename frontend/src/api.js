@@ -488,6 +488,10 @@ export const api = {
   addLesson: (d) => request("/lessons/", { method: "POST", body: d }),
   editLesson: (id, d) => request(`/lessons/${id}/`, { method: "PATCH", body: d }),
   delLesson: (id) => request(`/lessons/${id}/`, { method: "DELETE" }),
+  // স্ক্রিপ্ট থেকে দারস পরিকল্পনার টগলের লেখা বসানো।
+  // ⚠️ কেবল স্লাইড থেকে — উস্তাদের স্ক্রিপ্ট এতে যায় না।
+  pushLessonSummary: (id) =>
+    request(`/lessons/${id}/push_summary/`, { method: "POST" }),
   // নকল — একই বিষয়ের আলাদা বয়সের সংস্করণ বানানোর সহজ পথ
   duplicateLesson: (id, d) =>
     request(`/lessons/${id}/duplicate/`, { method: "POST", body: d || {} }),
