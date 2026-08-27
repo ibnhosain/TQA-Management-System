@@ -41,7 +41,10 @@ def summary_html(lesson):
     যে ধাপে পর্দায় কিছুই ছিল না, সেটি বাদ যায়।
     """
     out = []
-    for st in lesson.steps.all().order_by("order", "id"):
+    # ⚠️ select_related("slide") ছাড়া প্রতিটি ধাপের পর্দা আলাদা প্রশ্নে আসত —
+    # ৩৪ ধাপের দারসে ৩৫টি প্রশ্ন। ডাটাবেজ দূরে (ভার্জিনিয়া) বলে সেটাই
+    # কয়েক সেকেন্ড দেরি করিয়ে দিত। এখন একটিমাত্র প্রশ্নে সব আসে।
+    for st in lesson.steps.all().select_related("slide").order_by("order", "id"):
         if not st.is_active:
             continue
         sl = getattr(st, "slide", None)

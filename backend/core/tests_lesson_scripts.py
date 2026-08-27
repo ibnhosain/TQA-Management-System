@@ -495,3 +495,103 @@ class TheSummaryGoesInByItself(TestCase):
                 if len(first) > 20:
                     self.assertNotIn(first, self.topic.content,
                                      "উস্তাদের স্ক্রিপ্ট ফাঁস হয়েছে")
+
+
+class SavingStaysFast(TestCase):
+    """⚠️ সংরক্ষণে ডাটাবেজে ক'টা প্রশ্ন যায় — পাহারা।
+
+    ডাটাবেজ ভার্জিনিয়ায়, ব্যাকএন্ড সিঙ্গাপুরে। তাই প্রতিটি প্রশ্নেই
+    প্রায় এক-চতুর্থাংশ সেকেন্ড যায়, আর প্রশ্ন বাড়লেই পরিচালক "লোড হতে
+    সময় নেয়" টের পান। একসময় একটি দারস সংরক্ষণে ৪০টি প্রশ্ন যেত — তার
+    ৩৫টিই ছিল ধাপগুলোর পর্দা, একটি একটি করে।
+    """
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+        from core.models import (Course, Lesson, LessonStep, StepSlide,
+                                 Lecture, LectureTopic, User)
+        from core.sample_lessons import create_sample
+        self.boss = User.objects.create(username="পরিচালক", role="director")
+        self.c = Course.objects.create(name="হিফজ", teacher=None)
+        lec = Lecture.objects.create(course=self.c, no=1, title="অধ্যায় ১")
+        self.topic = LectureTopic.objects.create(lecture=lec, text="ইখলাস",
+                                                 order=0)
+        self.lesson, _ = create_sample(Lesson, LessonStep, StepSlide,
+                                       self.c, "ikhlas")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.boss)
+
+    def count(self, fn):
+        from django.test.utils import CaptureQueriesContext
+        from django.db import connection
+        with CaptureQueriesContext(connection) as q:
+            r = fn()
+        return len(q), r
+
+    def test_saving_a_script_stays_cheap(self):
+        n, r = self.count(lambda: self.client.patch(
+            "/api/lessons/%d/" % self.lesson.id, {"title": "ক"},
+            format="json"))
+        self.assertEqual(r.status_code, 200)
+        self.assertLess(n, 12, "সংরক্ষণে %d প্রশ্ন — ধাপের সংখ্যার সাথে "
+                               "বাড়ছে কিনা দেখুন" % n)
+
+    def test_opening_a_script_stays_cheap(self):
+        n, r = self.count(lambda: self.client.get(
+            "/api/lessons/%d/" % self.lesson.id))
+        self.assertEqual(r.status_code, 200)
+        self.assertLess(n, 8, "খুলতে %d প্রশ্ন" % n)
+
+    def test_linking_a_topic_stays_cheap(self):
+        """সারাংশ তৈরির সময়ও যেন ধাপ ধরে ধরে প্রশ্ন না যায়।"""
+        n, r = self.count(lambda: self.client.patch(
+            "/api/lessons/%d/" % self.lesson.id, {"topic": self.topic.id},
+            format="json"))
+        self.assertEqual(r.status_code, 200)
+        self.assertLess(n, 15, "টপিক যুক্ত করতে %d প্রশ্ন" % n)
+
+    def test_the_cost_does_not_grow_with_steps(self):
+        """⚠️ আসল পরীক্ষা — ধাপ বাড়লে প্রশ্নও বাড়ে কিনা।"""
+        from core.models import Lesson, LessonStep, StepSlide
+        from core.sample_lessons import create_sample
+        small, _ = create_sample(Lesson, LessonStep, StepSlide, self.c,
+                                 "qaida")
+        a, _ = self.count(lambda: self.client.patch(
+            "/api/lessons/%d/" % small.id, {"title": "ছোট"}, format="json"))
+        b, _ = self.count(lambda: self.client.patch(
+            "/api/lessons/%d/" % self.lesson.id, {"title": "বড়"},
+            format="json"))
+        self.assertEqual(
+            a, b,
+            "২৪ ধাপে %d প্রশ্ন, ৩৪ ধাপে %d — ধাপ ধরে ধরে প্রশ্ন যাচ্ছে" % (a, b))
+
+    def test_the_answer_is_still_complete(self):
+        """⚠️ দ্রুত করতে গিয়ে উত্তর যেন এক বিন্দুও না কমে।"""
+        import json
+        opened = self.client.get("/api/lessons/%d/" % self.lesson.id).data
+        saved = self.client.patch("/api/lessons/%d/" % self.lesson.id,
+                                  {"title": self.lesson.title},
+                                  format="json").data
+        self.assertEqual(len(opened["steps"]), 34)
+        self.assertEqual(
+            json.dumps(opened["steps"], sort_keys=True, ensure_ascii=False),
+            json.dumps(saved["steps"], sort_keys=True, ensure_ascii=False),
+            "খোলা আর সংরক্ষণে আলাদা উত্তর")
+
+    def test_a_fresh_change_still_shows(self):
+        """⚠️ DRF ক্যাশ মোছে টাটকা তথ্যের জন্যই — সেটা যেন নষ্ট না হয়।"""
+        st = self.lesson.steps.order_by("order").first()
+        self.client.patch("/api/lesson-steps/%d/" % st.id,
+                          {"note": "একদম নতুন টীকা"}, format="json")
+        d = self.client.patch("/api/lessons/%d/" % self.lesson.id,
+                              {"title": "খ"}, format="json").data
+        self.assertIn("একদম নতুন টীকা", [s.get("note") for s in d["steps"]],
+                      "পুরনো তথ্য ফিরে এসেছে")
+
+    def test_inactive_steps_stay_hidden_after_saving(self):
+        st = self.lesson.steps.order_by("order").first()
+        st.is_active = False
+        st.save()
+        d = self.client.patch("/api/lessons/%d/" % self.lesson.id,
+                              {"title": "গ"}, format="json").data
+        self.assertEqual(len(d["steps"]), 33, "নিষ্ক্রিয় ধাপ ফিরে এসেছে")

@@ -139,8 +139,23 @@ class LessonSerializer(serializers.ModelSerializer):
         # তালিকা দেখানোর সময় ধাপগুলো পাঠানো হয় না — শুধু একটি দারস খুললেই
         if not self.context.get("with_steps"):
             return None
-        rows = [x for x in obj.steps.all() if x.is_active]
+        rows = [x for x in self._steps_with_slides(obj) if x.is_active]
         return LessonStepSerializer(rows, many=True, context=self.context).data
+
+    @staticmethod
+    def _steps_with_slides(obj):
+        """ধাপগুলো — পর্দাসহ, যত কম প্রশ্নে সম্ভব।
+
+        ⚠️ সংরক্ষণের (PATCH/PUT) পর DRF ইচ্ছা করেই prefetch-এর ক্যাশ মুছে
+        দেয়, যাতে উত্তরে টাটকা তথ্য যায়। ক্যাশ না থাকলে প্রতিটি ধাপের
+        পর্দা আলাদা প্রশ্নে আসত — ৩৪ ধাপের দারসে ৩৫টি প্রশ্ন। ডাটাবেজ
+        দূরে (ভার্জিনিয়া) বলে সেটাই প্রতিবার সংরক্ষণে কয়েক সেকেন্ড দেরি
+        করিয়ে দিত। তাই ক্যাশ না থাকলে জোড়া (join) দিয়ে একবারেই আনি।
+        """
+        cache = getattr(obj, "_prefetched_objects_cache", None) or {}
+        if "steps" in cache:
+            return obj.steps.all()  # আগেই আনা আছে — নতুন প্রশ্ন নয়
+        return obj.steps.all().select_related("slide")
 
     def get_topic_text(self, obj):
         # ⚠️ source="topic.text" ব্যবহার করা যায় না — টপিক না থাকলে DRF
