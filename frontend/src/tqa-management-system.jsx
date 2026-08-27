@@ -2450,14 +2450,15 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
         : T(
             "সত্যিই কি ১ম পর্ব শেষ করতে চান?" +
               "\n\n" +
-              "শেষ করলে শিক্ষার্থীদের পোর্টালে সাথে সাথেই রিজয়েন বাটন চলে " +
-              "যাবে। এরপর আপনি \"🔁 রিজয়েন করুন\" চেপে ২য় পর্ব শুরু করবেন।" +
+              "শেষ করলে কয়েক সেকেন্ডের মধ্যেই শিক্ষার্থীদের পোর্টালে রিজয়েন " +
+              "বাটন চলে যাবে। এরপর আপনি \"🔁 রিজয়েন করুন\" চেপে ২য় পর্ব " +
+              "শুরু করবেন।" +
               "\n\n" +
               "এতে ক্লাস শেষ হবে না — ক্লাসটি আজকের তালিকাতেই থাকবে।",
             "Do you really want to end the first part?" +
               "\n\n" +
-              "Your students will get the rejoin button right away. Then " +
-              "press \"🔁 Rejoin\" to start the second part." +
+              "Your students will get the rejoin button within a few " +
+              "seconds. Then press \"🔁 Rejoin\" to start the second part." +
               "\n\n" +
               "This does not end the class — it stays in today's list.",
           ),
