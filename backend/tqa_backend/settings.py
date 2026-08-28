@@ -119,6 +119,20 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# ── পাসওয়ার্ড হ্যাশিং ──────────────────────────────────────────────
+# Django-র ডিফল্ট (১২ লাখ iterations) এই সার্ভারের CPU-তে লগইনের ~০.৫৮
+# সেকেন্ড খেয়ে ফেলে। ৬ লাখ = OWASP-এর সুপারিশ ও Django 4.2-এর ডিফল্ট।
+# কারণ ও প্রভাব বিস্তারিত লেখা আছে core/hashers.py-তে।
+#
+# ⚠️ তালিকার প্রথমটিই নতুন পাসওয়ার্ড বানাতে ব্যবহৃত হয়। এখানে Django-র
+# আসল PBKDF2PasswordHasher রাখা যাবে না — একই algorithm নাম হওয়ায় সেটি
+# আমাদেরটিকে চাপা দিয়ে দিত (Django hasher-দের algorithm ধরে dict বানায়,
+# পরেরটি আগেরটিকে মুছে ফেলে)।
+PASSWORD_HASHERS = [
+    "core.hashers.TQAPBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+]
+
 # ===== TQA-MS =====
 AUTH_USER_MODEL = "core.User"
 
