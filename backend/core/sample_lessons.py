@@ -5611,6 +5611,900 @@ KAWTHAR = {
     ],
 }
 
+# ═══════════════ সূরা আন-নাস ═══════════════
+# ⚠️ কাউসারের ছাঁচে নয়। কাউসার শুরু হয়েছিল গল্প দিয়ে (জান্নাতের নদী),
+# আর এগোয় আয়াত ধরে ধরে। আন-নাসের নিজস্ব চাবি আছে: ٱلنَّاسِ শব্দটি ছয়
+# আয়াতের প্রত্যেকটির শেষে ফিরে আসে। ৫-৭ বছরের শিশুর জন্য এটি সোনার
+# খনি — একটি শব্দ শিখলেই ছয় আয়াতের শেষটুকু তার জানা হয়ে যায়।
+#
+# তাই এই দারস শুরু হয় ধাঁধা দিয়ে: "একটি শব্দ ছয়বার লুকিয়ে আছে, খুঁজে
+# পাও কি?" শিশু নিজে আবিষ্কার করে — শোনানো হয় না।
+N1 = "قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ ۝١"
+N2 = "مَلِكِ ٱلنَّاسِ ۝٢"
+N3 = "إِلَٰهِ ٱلنَّاسِ ۝٣"
+N4 = "مِن شَرِّ ٱلْوَسْوَاسِ ٱلْخَنَّاسِ ۝٤"
+N5 = "ٱلَّذِى يُوَسْوِسُ فِى صُدُورِ ٱلنَّاسِ ۝٥"
+N6 = "مِنَ ٱلْجِنَّةِ وَٱلنَّاسِ ۝٦"
+
+NAS_ALL = "\n".join((N1, N2, N3, N4, N5, N6))
+NAS_123 = "\n".join((N1, N2, N3))
+NAS_456 = "\n".join((N4, N5, N6))
+
+# টুকরোগুলো — আয়াত নয়, তাই কোনোটির শেষে আয়াত-নম্বর বসে না
+W_NAS = "ٱلنَّاسِ"
+W_QUL = "قُلْ أَعُوذُ"
+W_RABB = "بِرَبِّ ٱلنَّاسِ"
+W_SHARR = "مِن شَرِّ"
+W_WASWAS = "ٱلْوَسْوَاسِ ٱلْخَنَّاسِ"
+W_ALLADHI = "ٱلَّذِى يُوَسْوِسُ"
+W_SUDUR = "فِى صُدُورِ ٱلنَّاسِ"
+W_THREE = "رَبِّ · مَلِكِ · إِلَٰهِ"
+
+NAS = {
+    "title": "Surah An-Nas",
+    "title_ar": "الناس",
+    "kind": "memorization",
+    "age_from": 5,
+    "age_to": 7,
+    "duration_min": 26,
+    "objectives": (
+        "<p><b>Surah An-Nas — Teacher Script</b><br>"
+        "Age 5-7 · about 26 minutes · Six verses, and one word that comes "
+        "back in five of them<br>"
+        "A puzzle &rarr; Find the word &rarr; Listen &rarr; Say &rarr; "
+        "Meaning &rarr; The echo game</p>"
+        "<p><b>How to use this script</b> — open it and read straight "
+        "through. Every English line is what you say out loud, word for "
+        "word. You never have to make up any English yourself.</p>"
+        "<ul>"
+        "<li>Bengali lines in [square brackets] are for you only — they "
+        "tell you when to pause and what to show.</li>"
+        "<li>Where you see <b>…………</b>, recite the Arabic shown on the "
+        "screen. Arabic is never written in English letters.</li>"
+        "</ul>"
+        "<p><b>What makes this lesson different</b> — don't open with a "
+        "story today. Open with a puzzle and let the child find the "
+        "hidden word. The whole lesson hangs on that one discovery.</p>"
+        "<p><b>By the end the student should be able to:</b></p>"
+        "<ul>"
+        "<li>Recite all six verses of Surah An-Nas from memory</li>"
+        "<li>Point out the word that ends five of the six verses</li>"
+        "<li>Say what it means to run to Allah for shelter</li>"
+        "<li>Say it at bedtime and whenever they feel afraid</li>"
+        "</ul>"
+    ),
+    "steps": [
+        {
+            "section": "Part 1 — A puzzle, not a story",
+            "says": S(
+                "Assalamu alaikum! No story today. Today we've got a puzzle.",
+                "[অপেক্ষা করুন — শিশু কৌতূহলী হবে]",
+                "",
+                "There's one word hiding in our Surah.",
+                "It hides five times. Five!",
+                "Here it is. Look at the screen.",
+                DOTS,
+                "[পর্দার শব্দটি বলুন]",
+            ),
+            "does": "⚠️ আজ গল্প নয় — ধাঁধা। কাউসারে গল্প দিয়ে শুরু হয়েছিল, "
+                    "আজ সেটি করবেন না। রহস্যের সুরে বলুন, চোখ বড় করুন। "
+                    "শিশু নিজে খুঁজে পেলে শব্দটা তার নিজের হয়ে যায়।",
+            "student": "পর্দার দিকে তাকায়, শব্দটি শোনে।",
+            "expected": "শব্দটির দিকে তাকায়।",
+            "correction": S(
+                "Look here. Just this one word.",
+                DOTS,
+                "[আঙুল দিয়ে দেখান]",
+            ),
+            "note": "একটিমাত্র শব্দ দিয়ে শুরু — ছয় আয়াতের ভার একসাথে "
+                    "চাপালে শিশু ভয় পায়। একটি শব্দ সে সহজেই ধরে ফেলে।",
+            "seconds": 55,
+            "slide": {"kind": "title", "heading": "One Word Hides Five Times",
+                      "arabic": W_NAS,
+                      "text": "🔍 Can you find it five times?"},
+        },
+        {
+            "section": "Part 1 — What the word means",
+            "says": S(
+                "Say it with me.",
+                DOTS,
+                "[একসাথে বলুন]",
+                "",
+                "It means people.",
+                "You're people. I'm people. Your Ammu, your Abbu.",
+                "Everyone in the whole world.",
+                "Now say it once more.",
+                DOTS,
+            ),
+            "does": "নিজের দিকে, শিশুর দিকে, চারদিকে হাত দেখিয়ে বলুন — "
+                    "তাতে 'মানুষ' কথাটা চোখে দেখা যায়। দুবার বলান।",
+            "student": "শব্দটি বলে, অর্থ বোঝে।",
+            "expected": "People — মানুষ।",
+            "correction": S(
+                "Listen once. Then you say it.",
+                DOTS,
+                "[ধীরে বলুন]",
+                "",
+                "That's it! People.",
+            ),
+            "note": "অর্থ আগে, মুখস্থ পরে — অর্থ জানা থাকলে শব্দটি মনে "
+                    "থাকে বেশি দিন।",
+            "seconds": 45,
+            "slide": {"kind": "meaning", "heading": "It Means People",
+                      "arabic": W_NAS,
+                      "text": "👨‍👩‍👧 You. Me. Everyone."},
+        },
+        {
+            "section": "Part 1 — Five times, six verses",
+            "says": S(
+                "Our Surah has six verses. Count with me.",
+                "One, two, three, four, five, six.",
+                "[আঙুল গুনে দেখান]",
+                "",
+                "Our word hides at the end of five of them.",
+                "One verse is different. We'll hunt for it later!",
+            ),
+            "does": "ছয়টি আঙুল তুলে গুনুন, শিশুকেও গুনতে বলুন। এই ছক "
+                    "বোঝা গেলে বাকি দারস অনেক সহজ হয়ে যায়।",
+            "student": "ছয় পর্যন্ত গোনে।",
+            "expected": "Six!",
+            "correction": S(
+                "Let's count again, slowly.",
+                "One, two, three, four, five, six.",
+                "[আঙুল ধরে গুনুন]",
+            ),
+            "note": "⚠️ ছয় আয়াতের পাঁচটি ٱلنَّاسِ দিয়ে শেষ — ১, ২, ৩, ৫ ও ৬। "
+                    "৪ নম্বর আয়াত শেষ হয় ٱلْخَنَّاسِ দিয়ে, শুনতে প্রায় "
+                    "একরকম হলেও শব্দটি আলাদা। কখনো বলবেন না "
+                    "'প্রতিটি আয়াতে আছে' — সেটা ভুল শেখানো হবে।",
+            "seconds": 50,
+            "slide": {"kind": "title", "heading": "Six Verses",
+                      "arabic": "١ ٢ ٣ ٤ ٥ ٦",
+                      "text": "🔢 One word ends five of them."},
+        },
+        {
+            "section": "Part 2 — Listen and catch it",
+            "says": S(
+                "Now I'll read the whole Surah.",
+                "Your job is to catch our word.",
+                "Put up one finger each time you hear it.",
+                "[হাত তুলে দেখিয়ে দিন]",
+                "",
+                "Ready? Listen.",
+                DOTS,
+                "[পুরো সূরা ধীরে পড়ুন]",
+                "",
+                "How many fingers have you got?",
+            ),
+            "does": "⚠️ এটি নীরব শোনা নয় — শিশু হাত তুলে অংশ নেবে। ধীরে "
+                    "পড়ুন, প্রতিবার ٱلنَّاسِ-এ একটু থামুন যেন সে ধরতে পারে। "
+                    "পাঁচ আঙুল উঠলে খুব প্রশংসা করুন। ⚠️ ৪ নম্বর আয়াতে "
+                    "শব্দটি নেই — সেখানে থামবেন না।",
+            "student": "শোনে আর প্রতিবার আঙুল তোলে।",
+            "expected": "Five fingers!",
+            "correction": S(
+                "Nearly! Let's listen once more together.",
+                DOTS,
+                "[আরও ধীরে পড়ুন, প্রতিবার থামুন]",
+                "",
+                "There! Did you catch them all?",
+            ),
+            "note": "কাউসারে প্রথম শোনাটা ছিল চুপচাপ। এখানে শিশু কাজ করতে "
+                    "করতে শোনে — তাই মনোযোগ ধরে রাখা সহজ।",
+            "seconds": 70,
+            "slide": {"kind": "listen", "heading": "Catch The Word",
+                      "arabic": NAS_ALL,
+                      "text": "✋ One finger each time you hear it."},
+        },
+        {
+            "section": "Part 3 — قُلْ أَعُوذُ",
+            "says": S(
+                "Now we build verse one. Two pieces.",
+                "Here's the first piece. Listen.",
+                DOTS,
+                "[টুকরোটি বলুন]",
+                "",
+                "Your turn.",
+                DOTS,
+            ),
+            "does": "টুকরোটি দুবার বলুন, তারপর শিশুকে বলতে দিন। তাড়া "
+                    "দেবেন না — সে নিজের গতিতে বলুক।",
+            "student": "টুকরোটি বলে।",
+            "expected": "قُلْ أَعُوذُ",
+            "correction": S(
+                "Almost there. Listen again.",
+                DOTS,
+                "[আরও ধীরে বলুন]",
+                "",
+                "Now you.",
+                DOTS,
+            ),
+            "note": "টুকরো করে শেখানো — একবারে পুরো আয়াত দিলে শিশু আটকে যায়।",
+            "seconds": 55,
+            "slide": {"kind": "verse", "heading": "Verse 1 — First Piece",
+                      "arabic": W_QUL, "text": "🎤 Say it after me."},
+        },
+        {
+            "section": "Part 3 — بِرَبِّ ٱلنَّاسِ",
+            "says": S(
+                "Second piece. And look who's at the end!",
+                "Our hidden word.",
+                "Listen.",
+                DOTS,
+                "[টুকরোটি বলুন]",
+                "",
+                "Your turn.",
+                DOTS,
+            ),
+            "does": "শেষের ٱلنَّاسِ শব্দটি আঙুল দিয়ে দেখান — শিশু যেন "
+                    "চিনতে পারে যে এটাই তার শেখা শব্দ।",
+            "student": "টুকরোটি বলে, শেষের শব্দটি চিনে ফেলে।",
+            "expected": "بِرَبِّ ٱلنَّاسِ",
+            "correction": S(
+                "You know the last bit already. Listen.",
+                DOTS,
+                "[শেষের শব্দে জোর দিন]",
+                "",
+                "Try once more.",
+                DOTS,
+            ),
+            "note": "চেনা শব্দ দিয়ে টুকরো শেষ হলে শিশুর আত্মবিশ্বাস বাড়ে।",
+            "seconds": 55,
+            "slide": {"kind": "verse", "heading": "Verse 1 — Second Piece",
+                      "arabic": W_RABB, "text": "🎤 Our word is at the end!"},
+        },
+        {
+            "section": "Part 3 — Join verse 1",
+            "says": S(
+                "Now stick the two pieces together.",
+                "[দুই হাত জোড়া লাগিয়ে দেখান]",
+                "",
+                "Listen first.",
+                DOTS,
+                "",
+                "Now you say the whole verse.",
+                DOTS,
+            ),
+            "does": "দুই হাত জুড়ে দেখান — জোড়া লাগানোর ব্যাপারটা চোখে "
+                    "দেখলে শিশু বোঝে। পুরো আয়াত একবার সে একা বলুক।",
+            "student": "পুরো প্রথম আয়াত বলে।",
+            "expected": "قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ",
+            "correction": S(
+                "Let's do it together this time.",
+                DOTS,
+                "[একসাথে বলুন]",
+                "",
+                "Lovely. Now on your own.",
+                DOTS,
+            ),
+            "note": "টুকরো → জোড়া — এই ছকটাই ছয় আয়াতে চলবে।",
+            "seconds": 55,
+            "slide": {"kind": "repeat", "heading": "Verse 1 Together",
+                      "arabic": N1, "text": "🎤 The whole verse now."},
+        },
+        {
+            "section": "Part 4 — Running to Allah",
+            "says": S(
+                "What does verse one mean? Something beautiful.",
+                "It means: I run to Allah to keep me safe.",
+                "[দৌড়ে গিয়ে জড়িয়ে ধরার ভঙ্গি করুন]",
+                "",
+                "Like running to your Ammu when you're afraid.",
+                "But Allah is stronger than anyone.",
+                "Say the verse once more.",
+                DOTS,
+            ),
+            "does": "⚠️ ভঙ্গিটা করে দেখান — দৌড়ে গিয়ে আশ্রয় নেওয়া। শিশু "
+                    "ভয় পেলে মায়ের কাছে ছোটে, এই তুলনাটা সে সাথে সাথে বোঝে।",
+            "student": "অর্থ বোঝে, আয়াত বলে।",
+            "expected": "I run to Allah.",
+            "correction": S(
+                "Who do you run to when you're scared?",
+                "[অপেক্ষা করুন]",
+                "",
+                "Yes! And we run to Allah too.",
+            ),
+            "note": "أعوذ মানে আশ্রয় চাওয়া। শিশুর জীবনের চেনা ছবি দিয়ে "
+                    "বোঝালে অর্থটা মনে গেঁথে যায়।",
+            "seconds": 55,
+            "slide": {"kind": "meaning", "heading": "I Run To Allah",
+                      "arabic": N1,
+                      "text": "🏃 Allah keeps me safe."},
+        },
+        {
+            "section": "Part 5 — مَلِكِ ٱلنَّاسِ",
+            "says": S(
+                "Verse two is tiny. Only two words.",
+                "And you already know the second one!",
+                "Listen.",
+                DOTS,
+                "",
+                "Your turn.",
+                DOTS,
+            ),
+            "does": "খুব ছোট আয়াত — একবারেই পুরোটা দিন, টুকরো করার দরকার "
+                    "নেই। 'তুমি তো অর্ধেকটা জানোই' বলে উৎসাহ দিন।",
+            "student": "দ্বিতীয় আয়াত বলে।",
+            "expected": "مَلِكِ ٱلنَّاسِ",
+            "correction": S(
+                "Just two words. Listen.",
+                DOTS,
+                "[ধীরে বলুন]",
+                "",
+                "Now you try.",
+                DOTS,
+            ),
+            "note": "ছোট আয়াতে দ্রুত সাফল্য আসে — তাতে বড়গুলোর সাহস জন্মায়।",
+            "seconds": 50,
+            "slide": {"kind": "verse", "heading": "Verse 2",
+                      "arabic": N2, "text": "🎤 Only two words."},
+        },
+        {
+            "section": "Part 5 — إِلَٰهِ ٱلنَّاسِ",
+            "says": S(
+                "Verse three. Two words again.",
+                "And guess what's at the end?",
+                "[অপেক্ষা করুন]",
+                "",
+                "Listen.",
+                DOTS,
+                "",
+                "Your turn.",
+                DOTS,
+            ),
+            "does": "শেষে কোন শব্দ আসবে সেটা শিশুকেই বলতে দিন — সে "
+                    "পারলে খুব খুশি হবে। তারপর পুরো আয়াত।",
+            "student": "শেষের শব্দটি আগে বলে, পরে পুরো আয়াত।",
+            "expected": "إِلَٰهِ ٱلنَّاسِ",
+            "correction": S(
+                "Our hidden word again. Listen.",
+                DOTS,
+                "[শেষের শব্দে জোর দিন]",
+                "",
+                "Now you.",
+                DOTS,
+            ),
+            "note": "শিশু নিজে অনুমান করতে পারছে — মানে ছকটা সে ধরে ফেলেছে।",
+            "seconds": 50,
+            "slide": {"kind": "verse", "heading": "Verse 3",
+                      "arabic": N3, "text": "🎤 Guess the last word!"},
+        },
+        {
+            "section": "Part 6 — Three names",
+            "says": S(
+                "Look at the screen. Three special words.",
+                DOTS,
+                "[তিনটি শব্দ একে একে বলুন]",
+                "",
+                "The One who cares for you.",
+                "The King of everyone.",
+                "The only God we pray to.",
+                "All three are Allah.",
+            ),
+            "does": "তিনটি শব্দ আলাদা আলাদা দেখান, প্রতিটির অর্থ বলুন। "
+                    "তাড়াহুড়ো নয় — এখানেই সূরার হৃদয়।",
+            "student": "তিনটি নাম শোনে, অর্থ বোঝে।",
+            "expected": "All three are Allah.",
+            "correction": S(
+                "One at a time. Look here.",
+                DOTS,
+                "[একটি একটি করে দেখান]",
+                "",
+                "They're all Allah. Three beautiful names.",
+            ),
+            "note": "রব্ব, মালিক, ইলাহ — তিনটি নামই আল্লাহর। এই তিনটি "
+                    "একসাথে আসা আন-নাসের নিজস্ব বৈশিষ্ট্য।",
+            "seconds": 60,
+            "slide": {"kind": "meaning", "heading": "Three Names Of Allah",
+                      "arabic": W_THREE,
+                      "text": "💚 Your Carer. Your King. Your God."},
+        },
+        {
+            "section": "Part 7 — Verses 1, 2 and 3",
+            "says": S(
+                "Half the Surah done! Let's put them together.",
+                "Listen to all three.",
+                DOTS,
+                "",
+                "Now say all three with me.",
+                DOTS,
+                "[একসাথে বলুন]",
+            ),
+            "does": "অর্ধেক হয়ে গেছে — এটা বলে দিন, শিশু নিজের অগ্রগতি "
+                    "টের পেলে উৎসাহ পায়। একসাথে বলুন, একা নয়।",
+            "student": "তিনটি আয়াত পরপর বলে।",
+            "expected": "তিনটি আয়াত একসাথে বলে।",
+            "correction": S(
+                "One verse at a time. I'll start.",
+                DOTS,
+                "[একটি করে দিন]",
+                "",
+                "Now all three.",
+                DOTS,
+            ),
+            "note": "মাঝপথে জোড়া দেওয়া — শেষে গিয়ে একসাথে ছয়টি দিলে "
+                    "শিশুর উপর চাপ পড়ে।",
+            "seconds": 55,
+            "slide": {"kind": "review", "heading": "Half Way!",
+                      "arabic": NAS_123, "text": "🎤 All three together."},
+        },
+        {
+            "section": "Part 8 — The sneaky whisper",
+            "says": S(
+                "Now something sneaky. Come closer.",
+                "[ফিসফিস করে বলুন]",
+                "",
+                "Sometimes a bad idea whispers in your heart.",
+                "Take that toy. Don't listen to Ammu.",
+                "But when you say this Surah, it runs away!",
+                "[হাত দিয়ে পালিয়ে যাওয়া দেখান]",
+            ),
+            "does": "⚠️ গলা নামিয়ে ফিসফিস করে বলুন — তাতে শিশু বুঝবে "
+                    "ফিসফিস কাকে বলে। ভয় দেখাবেন না, বরং মজা করুন। শেষে "
+                    "জোরে বলুন 'runs away!' আর হাত দিয়ে পালানো দেখান।",
+            "student": "কাছে আসে, ফিসফিস শোনে, হাসে।",
+            "expected": "It runs away!",
+            "correction": S(
+                "It's a sneaky whisper. But it's a coward.",
+                "Say the Surah and off it goes!",
+                "[পালিয়ে যাওয়ার ভঙ্গি করুন]",
+            ),
+            "note": "الخنّاس মানে যে পিছিয়ে যায়, পালায়। শিশুকে ভয় নয়, "
+                    "সাহস দিতে হবে — সে জানুক এই সূরাই তার ঢাল।",
+            "seconds": 55,
+            "slide": {"kind": "activity", "heading": "It Runs Away",
+                      "arabic": W_WASWAS,
+                      "text": "🤫 A sneaky whisper… 💨 and it's gone!"},
+        },
+        {
+            "section": "Part 8 — مِن شَرِّ",
+            "says": S(
+                "Verse four. First piece. Listen.",
+                DOTS,
+                "[টুকরোটি বলুন]",
+                "",
+                "Your turn.",
+                DOTS,
+            ),
+            "does": "ছোট টুকরো — দুবার বলে শিশুকে দিন। এই আয়াতটি লম্বা, "
+                    "তাই টুকরো করা জরুরি।",
+            "student": "টুকরোটি বলে।",
+            "expected": "مِن شَرِّ",
+            "correction": S(
+                "Short and easy. Listen.",
+                DOTS,
+                "[ধীরে বলুন]",
+                "",
+                "Now you.",
+                DOTS,
+            ),
+            "note": "লম্বা আয়াত ছোট টুকরোয় ভাগ — নইলে শিশু হাল ছেড়ে দেয়।",
+            "seconds": 50,
+            "slide": {"kind": "verse", "heading": "Verse 4 — First Piece",
+                      "arabic": W_SHARR, "text": "🎤 Say it after me."},
+        },
+        {
+            "section": "Part 8 — ٱلْوَسْوَاسِ ٱلْخَنَّاسِ",
+            "says": S(
+                "Second piece. Here's the odd one!",
+                "It sounds like our hidden word. But it isn't.",
+                "This is the one verse that's different.",
+                "Listen carefully.",
+                DOTS,
+                "[খুব ধীরে বলুন]",
+                "",
+                "Now you. Take your time.",
+                DOTS,
+            ),
+            "does": "⚠️ এই টুকরোটাই আজকের সবচেয়ে কঠিন। খুব ধীরে বলুন, "
+                    "দরকার হলে তিনবার। শিশু আটকে গেলেও চাপ দেবেন না।",
+            "student": "লম্বা টুকরোটি বলার চেষ্টা করে।",
+            "expected": "ٱلْوَسْوَاسِ ٱلْخَنَّاسِ",
+            "correction": S(
+                "It's a long one. Let's do it in two halves.",
+                DOTS,
+                "[দুই ভাগে ভেঙে বলুন]",
+                "",
+                "Now both halves together.",
+                DOTS,
+            ),
+            "note": "⚠️ এখানেই সেই ব্যতিক্রম — ٱلْخَنَّاسِ, ٱلنَّاسِ নয়। দুটোর "
+                    "মিল শিশুকে দেখান, তাতে সে দুটোকে আলাদা করে চেনে। "
+                    "শব্দটি লম্বা — অর্ধেক করে দিলে সে পারে। না পারলে "
+                    "পরের ক্লাসে আবার দেখা হবে, আজ জোর নয়।",
+            "seconds": 55,
+            "slide": {"kind": "verse", "heading": "Verse 4 — Second Piece",
+                      "arabic": W_WASWAS, "text": "🎤 Sounds like our word — but it's not!"},
+        },
+        {
+            "section": "Part 8 — Join verse 4",
+            "says": S(
+                "Both pieces together now.",
+                "Listen.",
+                DOTS,
+                "",
+                "Your turn. You can do it.",
+                DOTS,
+            ),
+            "does": "উৎসাহ দিন — 'তুমি পারবে'। এই আয়াতটি পারলে বাকিটা "
+                    "সহজ মনে হবে তার কাছে।",
+            "student": "চতুর্থ আয়াত বলে।",
+            "expected": "مِن شَرِّ ٱلْوَسْوَاسِ ٱلْخَنَّاسِ",
+            "correction": S(
+                "Let's say it together first.",
+                DOTS,
+                "[একসাথে বলুন]",
+                "",
+                "Now you on your own.",
+                DOTS,
+            ),
+            "note": "একসাথে বলা → একা বলা — এই দুই ধাপ সবসময় রাখুন।",
+            "seconds": 55,
+            "slide": {"kind": "repeat", "heading": "Verse 4 Together",
+                      "arabic": N4, "text": "🎤 You can do it!"},
+        },
+        {
+            "section": "Part 9 — ٱلَّذِى يُوَسْوِسُ",
+            "says": S(
+                "Verse five. First piece. Listen.",
+                DOTS,
+                "[টুকরোটি বলুন]",
+                "",
+                "Your turn.",
+                DOTS,
+            ),
+            "does": "আগের আয়াতের সাথে মিল আছে — সেটা মনে করিয়ে দিন, "
+                    "তাতে শিশুর কাছে চেনা ঠেকবে।",
+            "student": "টুকরোটি বলে।",
+            "expected": "ٱلَّذِى يُوَسْوِسُ",
+            "correction": S(
+                "Listen once more, then you.",
+                DOTS,
+                "[ধীরে বলুন]",
+                "",
+                "Good one!",
+            ),
+            "note": "এই শব্দটিও ফিসফিসের কথা বলে — আগের ধাপের ভঙ্গিটা "
+                    "মনে করিয়ে দিলে অর্থ ধরা সহজ হয়।",
+            "seconds": 55,
+            "slide": {"kind": "verse", "heading": "Verse 5 — First Piece",
+                      "arabic": W_ALLADHI, "text": "🎤 Say it after me."},
+        },
+        {
+            "section": "Part 9 — فِى صُدُورِ ٱلنَّاسِ",
+            "says": S(
+                "Second piece. Our hidden word is back!",
+                "[বুকে হাত রাখুন]",
+                "",
+                "This one talks about your heart. Listen.",
+                DOTS,
+                "",
+                "Your turn.",
+                DOTS,
+            ),
+            "does": "বুকে হাত রেখে বলুন — শিশুও হাত রাখবে। শরীর দিয়ে "
+                    "শেখা কথা বেশি দিন মনে থাকে।",
+            "student": "বুকে হাত রেখে টুকরোটি বলে।",
+            "expected": "فِى صُدُورِ ٱلنَّاسِ",
+            "correction": S(
+                "Hand on your heart, like this.",
+                "[বুকে হাত রাখুন]",
+                "",
+                "Now listen and say it.",
+                DOTS,
+            ),
+            "note": "صدور মানে বুক। হাত রাখার ভঙ্গিতে অর্থটা শেখানো হয়ে যায়।",
+            "seconds": 55,
+            "slide": {"kind": "verse", "heading": "Verse 5 — Second Piece",
+                      "arabic": W_SUDUR, "text": "🫀 In people's hearts."},
+        },
+        {
+            "section": "Part 9 — Join verse 5",
+            "says": S(
+                "Put them together. Listen first.",
+                DOTS,
+                "",
+                "Now the whole verse. Your turn.",
+                DOTS,
+            ),
+            "does": "জোড়া লাগানোর ধাপ — আগের মতোই দুই হাত জুড়ে দেখান।",
+            "student": "পঞ্চম আয়াত বলে।",
+            "expected": "ٱلَّذِى يُوَسْوِسُ فِى صُدُورِ ٱلنَّاسِ",
+            "correction": S(
+                "Together with me first.",
+                DOTS,
+                "[একসাথে বলুন]",
+                "",
+                "Now you alone. Beautiful.",
+            ),
+            "note": "পাঁচটি হয়ে গেল — একটি বাকি। শিশুকে বলে দিন।",
+            "seconds": 55,
+            "slide": {"kind": "repeat", "heading": "Verse 5 Together",
+                      "arabic": N5, "text": "🎤 One more verse to go!"},
+        },
+        {
+            "section": "Part 10 — The last verse",
+            "says": S(
+                "The last one! Verse six. It's short.",
+                "Listen.",
+                DOTS,
+                "",
+                "Your turn.",
+                DOTS,
+                "[অপেক্ষা করুন]",
+                "",
+                "You've got all six now!",
+            ),
+            "does": "শেষ আয়াত — উৎসাহ ভরা গলায় বলুন। ছয়টিই হয়ে গেছে, "
+                    "এটা বলে হাততালি দিন।",
+            "student": "ষষ্ঠ আয়াত বলে।",
+            "expected": "مِنَ ٱلْجِنَّةِ وَٱلنَّاسِ",
+            "correction": S(
+                "Nearly! Listen once more.",
+                DOTS,
+                "[ধীরে বলুন]",
+                "",
+                "There you go. All six!",
+            ),
+            "note": "শেষ আয়াতেও ٱلنَّاسِ — ধাঁধার উত্তর এখানে পূর্ণ হলো।",
+            "seconds": 50,
+            "slide": {"kind": "verse", "heading": "Verse 6 — The Last One",
+                      "arabic": N6, "text": "🎉 All six done!"},
+        },
+        {
+            "section": "Part 11 — What verses 4 to 6 mean",
+            "says": S(
+                "What do these last verses mean?",
+                "Keep me safe from the sneaky whisper.",
+                "The one that whispers inside our hearts.",
+                "[বুকে হাত রাখুন]",
+                "",
+                "Now say those three verses once.",
+                DOTS,
+            ),
+            "does": "অর্থ সহজ করে বলুন, ভয় দেখাবেন না। শেষে তিনটি আয়াত "
+                    "একসাথে বলান।",
+            "student": "অর্থ শোনে, তিনটি আয়াত বলে।",
+            "expected": "Keep me safe from the whisper.",
+            "correction": S(
+                "It's about staying safe. That's all.",
+                "Allah keeps us safe. Say them with me.",
+                DOTS,
+            ),
+            "note": "সূরার মূল কথা — আল্লাহর কাছে আশ্রয়। শিশু যেন ভয় নয়, "
+                    "নিরাপত্তা অনুভব করে।",
+            "seconds": 55,
+            "slide": {"kind": "meaning", "heading": "Keep Me Safe",
+                      "arabic": NAS_456,
+                      "text": "🛡️ Allah keeps me safe."},
+        },
+        {
+            "section": "Part 12 — All six together",
+            "says": S(
+                "Big moment. The whole Surah, start to finish.",
+                "I'll say it. You listen.",
+                DOTS,
+                "",
+                "Now together, you and me.",
+                DOTS,
+                "[একসাথে বলুন]",
+            ),
+            "does": "প্রথমে আপনি, তারপর একসাথে। এখনো একা বলতে বলবেন না — "
+                    "পরের ধাপে সেটা আসবে।",
+            "student": "পুরো সূরা একসাথে বলে।",
+            "expected": "পুরো সূরা একসাথে বলে।",
+            "correction": S(
+                "Let's go slower. Verse by verse.",
+                DOTS,
+                "[একটি একটি করে দিন]",
+                "",
+                "Now all six.",
+                DOTS,
+            ),
+            "note": "একসাথে বলা মানে ভুলের ভয় নেই — শিশু নির্ভয়ে বলে।",
+            "seconds": 65,
+            "slide": {"kind": "memorization", "heading": "The Whole Surah",
+                      "arabic": NAS_ALL, "text": "🎤 All six, together."},
+        },
+        {
+            "section": "Part 13 — The echo game",
+            "says": S(
+                "Let's play the echo game!",
+                "I say the front of a verse. You say the ending.",
+                "Our hidden word. Ready?",
+                DOTS,
+                "[একটি আয়াতের শুরুটা বলুন, থেমে যান]",
+                "",
+                "[অপেক্ষা করুন — শিশু শেষটুকু বলবে]",
+                "",
+                "Yes! Again.",
+                DOTS,
+            ),
+            "does": "⚠️ এটি আজকের নিজস্ব খেলা। প্রতিটি আয়াতের শুরুটা বলে "
+                    "থেমে যান, শিশু শেষ শব্দটি বলবে। ⚠️ পাঁচবার খেলুন — ১, ২, "
+                    "৩, ৫ ও ৬ নম্বর আয়াত। ৪ নম্বর বাদ, সেখানে শব্দটি "
+                    "নেই। থামার "
+                    "জায়গায় সত্যিই থামুন — নইলে খেলা হয় না।",
+            "student": "প্রতিবার আয়াতের শেষ শব্দটি বলে।",
+            "expected": "ٱلنَّاسِ — প্রতিবার শেষ শব্দটি বলে।",
+            "correction": S(
+                "Remember our hidden word? Say just that bit.",
+                DOTS,
+                "[শব্দটি মনে করিয়ে দিন]",
+                "",
+                "Now let's try again.",
+            ),
+            "note": "প্রতিধ্বনির খেলা — এই সূরার গঠনই খেলাটা তৈরি করে "
+                    "দিয়েছে। অন্য কোনো দারসে এটি নেই।",
+            "seconds": 60,
+            "slide": {"kind": "activity", "heading": "The Echo Game",
+                      "arabic": W_NAS,
+                      "text": "🔊 I start… you finish!"},
+        },
+        {
+            "section": "Part 14 — Eyes closed",
+            "says": S(
+                "Now close your eyes. No screen.",
+                "[পর্দা সরিয়ে দিন]",
+                "",
+                "Say the whole Surah on your own.",
+                "Take your time. I'm right here.",
+                "[অপেক্ষা করুন — তাড়া দেবেন না]",
+                "",
+                "Open your eyes. That was wonderful!",
+            ),
+            "does": "⚠️ কাউসারে পর্দা ঢেকে দেখা হয়েছিল। আজ চোখ বন্ধ — "
+                    "শিশু ভেতর থেকে মনে করে বলবে। আটকে গেলে প্রথম শব্দটি "
+                    "ফিসফিস করে ধরিয়ে দিন, পুরোটা বলে দেবেন না।",
+            "student": "চোখ বন্ধ করে পুরো সূরা বলার চেষ্টা করে।",
+            "expected": "চোখ বন্ধ করে সূরা বলে।",
+            "correction": S(
+                "Stuck? I'll give you the first word only.",
+                DOTS,
+                "[কেবল প্রথম শব্দটি ফিসফিস করে বলুন]",
+                "",
+                "Keep going. You've got it.",
+            ),
+            "note": "না দেখে বলা — এতেই বোঝা যায় সত্যিই মুখস্থ হয়েছে কিনা।",
+            "seconds": 55,
+            "slide": {"kind": "blank", "heading": "Eyes Closed",
+                      "arabic": "",
+                      "text": "😌 From your heart now."},
+        },
+        {
+            "section": "Part 15 — At bedtime",
+            "says": S(
+                "Here's something our Prophet ﷺ used to do.",
+                "Every night, before sleeping.",
+                "He'd cup his hands, like this.",
+                "[দুই হাত জোড়া করে দেখান]",
+                "",
+                "Then read, blow softly, and wipe over himself.",
+                "[ফুঁ দিয়ে হাত বুলিয়ে দেখান]",
+                "",
+                "Would you like to try tonight?",
+            ),
+            "does": "ভঙ্গিটা ধীরে করে দেখান, শিশুকেও করতে বলুন। রাতে "
+                    "মায়ের সাথে করতে বলুন — অভ্যাসটা ঘরে গড়ে উঠবে।",
+            "student": "হাত জোড়া করে, ফুঁ দেয়, হাত বুলায়।",
+            "expected": "Yes!",
+            "correction": S(
+                "Like this. Cup your hands.",
+                "[হাত ধরে দেখিয়ে দিন]",
+                "",
+                "Now blow softly. That's it.",
+            ),
+            "note": "রাসূল ﷺ ঘুমানোর আগে মুআওবিযাত পড়ে হাতে ফুঁ দিয়ে "
+                    "শরীরে বুলাতেন — বুখারী ৫০১৭, মুসলিম। সহীহ, তাই "
+                    "নিশ্চিন্তে শেখানো যায়।",
+            "seconds": 55,
+            "slide": {"kind": "reminder", "heading": "Before You Sleep",
+                      "arabic": NAS_ALL,
+                      "text": "🌙 Cup · read · blow · wipe."},
+        },
+        {
+            "section": "Part 16 — When you feel afraid",
+            "says": S(
+                "One more thing. Listen well.",
+                "When you feel scared at night, say this Surah.",
+                "When a bad idea whispers, say this Surah.",
+                "Allah is listening. Always.",
+                "Say the first verse once more.",
+                DOTS,
+            ),
+            "does": "শান্ত গলায় বলুন। শিশু যেন বোঝে সূরাটা তার হাতিয়ার — "
+                    "কেবল মুখস্থ করার জিনিস নয়।",
+            "student": "শোনে, প্রথম আয়াত বলে।",
+            "expected": "قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ",
+            "correction": S(
+                "Say it and you'll feel better. Try it.",
+                DOTS,
+                "[একসাথে বলুন]",
+            ),
+            "note": "কখন কাজে লাগবে তা জানলে শিশু নিজেই পড়তে শুরু করে।",
+            "seconds": 50,
+            "slide": {"kind": "reminder", "heading": "Whenever You're Afraid",
+                      "arabic": N1,
+                      "text": "🌟 Allah is always listening."},
+        },
+        {
+            "section": "Part 17 — Well done",
+            "says": S(
+                "Look what you did today!",
+                "You found the hidden word. Five times.",
+                "You learned all six verses.",
+                "I'm so proud of you.",
+            ),
+            "does": "নির্দিষ্ট করে প্রশংসা করুন — কী কী পেরেছে তা বলে "
+                    "দিন। শুধু 'ভালো হয়েছে' নয়।",
+            "student": "হাসে, খুশি হয়।",
+            "expected": "হাসিমুখে শোনে।",
+            "correction": S(
+                "You worked hard today. That's what counts.",
+                "Well done!",
+            ),
+            "note": "নির্দিষ্ট প্রশংসা শিশুকে পরের ক্লাসের জন্য টেনে আনে।",
+            "seconds": 40,
+            "slide": {"kind": "praise", "heading": "Well Done!",
+                      "arabic": "أَحْسَنْتَ",
+                      "text": "⭐ You found it five times!"},
+        },
+        {
+            "section": "Part 18 — Homework",
+            "says": S(
+                "Tonight, two little jobs.",
+                "One: say the Surah before you sleep.",
+                "Two: teach the hidden word to someone at home.",
+                "Your Ammu, or your little brother.",
+                "Will you do that?",
+            ),
+            "does": "দুটি কাজ — বেশি নয়। বাড়িতে কাউকে শেখানো মানে "
+                    "শিশু নিজেই আরেকবার ঝালিয়ে নেবে।",
+            "student": "কাজ দুটি মনে রাখে।",
+            "expected": "Yes!",
+            "correction": S(
+                "Just two small things. Can you remember them?",
+                "[অপেক্ষা করুন]",
+            ),
+            "note": "শেখানোর মধ্য দিয়ে শেখা — বাড়ির কাজটাই সবচেয়ে ভালো "
+                    "পুনরাবৃত্তি।",
+            "seconds": 45,
+            "slide": {"kind": "homework", "heading": "At Home Tonight",
+                      "arabic": NAS_ALL,
+                      "text": "🌙 Say it before sleeping.\n"
+                              "👨‍👩‍👧 Teach the hidden word to someone."},
+        },
+        {
+            "section": "Part 19 — Closing",
+            "says": S(
+                "That's our class. You did beautifully today.",
+                "Don't forget your hidden word!",
+                "[অপেক্ষা করুন — শিশু শব্দটি বলতে পারে]",
+                "",
+                "Assalamu alaikum wa rahmatullah.",
+                "See you next time!",
+            ),
+            "does": "শেষে আরেকবার লুকানো শব্দটি জিজ্ঞেস করুন — হাসিমুখে "
+                    "বিদায় দিন।",
+            "student": "শব্দটি বলে, সালামের উত্তর দেয়।",
+            "expected": "ٱلنَّاسِ — শব্দটি বলে।",
+            "correction": S(
+                "Our hidden word, remember? Say it once.",
+                DOTS,
+                "[মনে করিয়ে দিন]",
+            ),
+            "note": "মিলিয়ে নিন: ধাঁধা ধরেছে · শব্দ পাঁচবার খুঁজে পেয়েছে · "
+                    "ছয় আয়াত টুকরো করে ও জুড়ে বলেছে · ব্যতিক্রম আয়াতটি "
+                    "চিনেছে · তিনটি নাম জেনেছে · "
+                    "চোখ বন্ধ করে বলেছে · ঘুমের আগের নিয়ম শিখেছে।",
+            "seconds": 35,
+            "slide": {"kind": "end", "heading": "Jazakumullahu Khairan",
+                      "arabic": W_NAS,
+                      "text": "👋 Don't forget the hidden word!"},
+        },
+    ],
+}
+
 # ═══════════ টপিকের নাম থেকে দারসের নম্বর ═══════════
 # ⚠️ কেন দরকার — পরিচালক লেকচার প্ল্যানে নিজের নামে টপিক সাজান, যেমন
 # "Qaida for Beginners — Lesson-02"। নতুন দারস বসানোর সময় আগে ক্রম ধরে
@@ -5678,7 +6572,8 @@ def topic_for_number(LectureTopic, Lesson, course, no, near=None):
 SAMPLES = {"ikhlas": IKHLAS, "qaida": QAIDA,
            "qaida2": QAIDA2, "qaida3": QAIDA3,
            "qaida4": QAIDA4, "qaida5": QAIDA5,
-           "kawthar": KAWTHAR}
+           "kawthar": KAWTHAR,
+           "nas": NAS}
 
 
 def create_sample(Lesson, LessonStep, StepSlide, course, key,

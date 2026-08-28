@@ -9,7 +9,7 @@
 import re
 from django.test import TestCase
 from core.sample_lessons import (IKHLAS, QAIDA, QAIDA2, QAIDA3,
-                                 QAIDA4, QAIDA5, KAWTHAR,
+                                 QAIDA4, QAIDA5, KAWTHAR, NAS,
                                  DOTS,
                                  V1, V2, V3, V4)
 
@@ -18,7 +18,7 @@ CUE = re.compile(r"\[[^\]]*\]")       # [বাংলা নির্দেশ�
 SPOKEN = ("says", "correction")
 # ⚠️ প্রতিটি দারসই একই নিয়মে বাঁধা — নতুন দারস যোগ করলে এখানেও যোগ
 # করতে হবে, নইলে সেটি পাহারার বাইরে থেকে যায়
-ALL = (IKHLAS, QAIDA, QAIDA2, QAIDA3, QAIDA4, QAIDA5, KAWTHAR)
+ALL = (IKHLAS, QAIDA, QAIDA2, QAIDA3, QAIDA4, QAIDA5, KAWTHAR, NAS)
 # কায়দার সব দারস — লেখার ধাপ ও হরফের নিয়ম কেবল এগুলোতেই খাটে
 QAIDAS = (QAIDA, QAIDA2, QAIDA3, QAIDA4, QAIDA5)
 BOTH = ALL  # পুরনো নাম, আগের পরীক্ষাগুলো এটাই ব্যবহার করে
@@ -2240,3 +2240,202 @@ class MissingLessonsGetFilledIn(TestCase):
         self.LectureTopic.objects.all().delete()
         self.run_it()
         self.assertEqual(self.Lesson.objects.count(), 0)
+
+
+class TheNasScriptIsItsOwn(TestCase):
+    """📗 সূরা আন-নাস — নিজস্ব চরিত্রের দারস, কাউসারের ছাঁচ নয়।"""
+
+    def test_the_six_verses_are_exact(self):
+        from core.sample_lessons import N1, N2, N3, N4, N5, N6
+        WORDS = ("قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ", "مَلِكِ ٱلنَّاسِ",
+                 "إِلَٰهِ ٱلنَّاسِ", "مِن شَرِّ ٱلْوَسْوَاسِ ٱلْخَنَّاسِ",
+                 "ٱلَّذِى يُوَسْوِسُ فِى صُدُورِ ٱلنَّاسِ",
+                 "مِنَ ٱلْجِنَّةِ وَٱلنَّاسِ")
+        for v, w in zip((N1, N2, N3, N4, N5, N6), WORDS):
+            self.assertTrue(v.startswith(w), "আয়াতের পাঠ বদলে গেছে: %r" % v)
+
+    def test_every_verse_ends_with_its_number(self):
+        from core.sample_lessons import N1, N2, N3, N4, N5, N6
+        for i, v in enumerate((N1, N2, N3, N4, N5, N6), 1):
+            want = "۝" + "١٢٣٤٥٦"[i - 1]
+            self.assertTrue(v.rstrip().endswith(want),
+                            "আয়াত %d-এর শেষে চিহ্ন নেই: %r" % (i, v[-6:]))
+
+    def test_no_waqf_sign_was_invented(self):
+        """⚠️ নেই এমন ওয়াকফ চিহ্ন বসানো চলবে না।"""
+        from core.sample_lessons import N1, N2, N3, N4, N5, N6
+        for v in (N1, N2, N3, N4, N5, N6):
+            for w in "ۖۗۘۙۚۛ":
+                self.assertNotIn(w, v, "বানানো ওয়াকফ চিহ্ন: %r" % v)
+
+    def test_the_chunks_carry_no_verse_number(self):
+        """টুকরো তো আয়াত নয় — শেষে নম্বর বসলে ভুল শেখানো হতো।"""
+        for st in NAS["steps"]:
+            for line in (st["slide"].get("arabic") or "").split("\n"):
+                line = line.strip()
+                if line and "۝" in line:
+                    self.assertGreater(len(line.split()), 1,
+                                       "টুকরোর সাথে আয়াত-নম্বর: %r" % line)
+
+    def test_the_echo_word_ends_five_verses_not_six(self):
+        """⚠️ এই দারসের চাবি — কিন্তু চাবিটা পাঁচটির, ছয়টির নয়।
+
+        ৪ নম্বর আয়াত শেষ হয় ٱلْخَنَّاسِ দিয়ে — শুনতে প্রায় একরকম, কিন্তু
+        আলাদা শব্দ। প্রথমে দারসে "ছয়বার" লেখা হয়েছিল; সেটি শিশুকে
+        কুরআন সম্পর্কে ভুল শেখাত। এই পরীক্ষাটি সেই ভুল ফিরে আসতে দেবে না।
+        """
+        from core.sample_lessons import N1, N2, N3, N4, N5, N6
+        for i, v in ((1, N1), (2, N2), (3, N3), (5, N5), (6, N6)):
+            body = v.rsplit("۝", 1)[0].strip()
+            self.assertTrue(body.endswith("ٱلنَّاسِ"),
+                            "আয়াত %d ٱلنَّاسِ দিয়ে শেষ হয়নি" % i)
+        body4 = N4.rsplit("۝", 1)[0].strip()
+        self.assertTrue(body4.endswith("ٱلْخَنَّاسِ"),
+                        "৪ নম্বর আয়াতের শেষটা বদলে গেছে")
+        self.assertFalse(body4.endswith("ٱلنَّاسِ"))
+
+    def test_the_script_never_claims_six(self):
+        """⚠️ "ছয়বার" বা "প্রতিটি আয়াতে" — এমন দাবি যেন না থাকে।"""
+        spoken = " ".join(spoken_only(st[k]) for st in NAS["steps"]
+                          for k in SPOKEN).lower()
+        for claim in ("six times", "every single verse", "end of every",
+                      "all six verses end"):
+            self.assertNotIn(claim, spoken, "ভুল দাবি: " + claim)
+        self.assertIn("five times", spoken, "পাঁচবারের কথা বলা হয়নি")
+
+    def test_the_odd_verse_is_actually_taught(self):
+        """ব্যতিক্রমটা লুকিয়ে না রেখে শিশুকে চিনিয়ে দেওয়া হয়েছে তো?"""
+        spoken = " ".join(spoken_only(st["says"]) for st in NAS["steps"])
+        self.assertIn("odd one", spoken.lower())
+        notes = " ".join(st["note"] for st in NAS["steps"])
+        self.assertIn("ٱلْخَنَّاسِ", notes, "উস্তাদকে ব্যতিক্রমটি বলা হয়নি")
+
+    def test_it_opens_with_a_puzzle_not_a_story(self):
+        """⚠️ কাউসার গল্প দিয়ে শুরু — আন-নাস ধাঁধা দিয়ে।"""
+        first = spoken_only(NAS["steps"][0]["says"]).lower()
+        self.assertIn("puzzle", first)
+        self.assertIn("hiding", first)
+
+    def test_it_is_not_a_copy_of_kawthar(self):
+        """⚠️ কোনো ধাপের বলার কথা হুবহু কাউসারে নেই তো?"""
+        kaw = {" ".join(spoken_only(st["says"]).split())
+               for st in KAWTHAR["steps"]}
+        for i, st in enumerate(NAS["steps"], 1):
+            t = " ".join(spoken_only(st["says"]).split())
+            if len(t.split()) >= 8:
+                self.assertNotIn(t, kaw, "কাউসারের কথাই ধাপ %d-এ" % i)
+
+    def test_the_openings_and_closings_differ(self):
+        for k in (0, -1):
+            a = " ".join(spoken_only(NAS["steps"][k]["says"]).split()[:6])
+            b = " ".join(spoken_only(KAWTHAR["steps"][k]["says"]).split()[:6])
+            self.assertNotEqual(a, b, "কাউসারের সাথে একই কথা")
+
+    def test_it_has_its_own_game(self):
+        secs = " ".join(st["section"] for st in NAS["steps"]).lower()
+        self.assertIn("echo game", secs)
+        kaw = " ".join(st["section"] for st in KAWTHAR["steps"]).lower()
+        self.assertNotIn("echo game", kaw)
+
+    def test_the_bedtime_practice_carries_its_source(self):
+        """⚠️ ফযীলত বললে সূত্র থাকতেই হবে।"""
+        bed = [st for st in NAS["steps"] if "bedtime" in st["section"].lower()]
+        self.assertTrue(bed, "ঘুমের আগের ধাপটি নেই")
+        self.assertIn("বুখারী", bed[0]["note"])
+
+    def test_the_whisper_is_never_made_scary(self):
+        """⚠️ শিশুকে ভয় দেখানো চলবে না — সাহস দিতে হবে।"""
+        for st in NAS["steps"]:
+            for k in SPOKEN:
+                low = (st[k] or "").lower()
+                for bad in ("scary", "monster", "devil", "evil spirit"):
+                    self.assertNotIn(bad, low, "ভয় দেখানো হয়েছে: " + bad)
+
+
+class TheNasLessonLands(TestCase):
+    """🔧 মাইগ্রেশন ০০৪৭ — দারসটি ঠিক টপিকে বসে।"""
+
+    def setUp(self):
+        from core.models import (Course, Lesson, Lecture, LectureTopic,
+                                 LessonSection)
+        self.Lesson = Lesson
+        self.c = Course.objects.create(name="Easy Noorani Qaida", teacher=None)
+        lec = Lecture.objects.create(course=self.c, no=1, title="Q")
+        sec = LessonSection.objects.create(course=self.c,
+                                           name="Memorized Surah", order=1)
+        self.other = LectureTopic.objects.create(
+            lecture=lec, section=sec, text="Al-Kawthar-الكوثر", order=0)
+        self.t = LectureTopic.objects.create(
+            lecture=lec, section=sec, text="An-Nas-الناس", order=1)
+
+    def _apps(self):
+        from core.models import (Lesson, LessonStep, StepSlide, Lecture,
+                                 LectureTopic)
+
+        class A:
+            def get_model(self, app, name):
+                return {"Lesson": Lesson, "LessonStep": LessonStep,
+                        "StepSlide": StepSlide, "Lecture": Lecture,
+                        "LectureTopic": LectureTopic}[name]
+        return A()
+
+    def run_it(self, which="core.migrations.0047_nas_lesson"):
+        import importlib
+        importlib.import_module(which).fill(self._apps(), None)
+
+    def test_it_lands_on_the_nas_topic(self):
+        self.run_it()
+        les = self.Lesson.objects.filter(topic=self.t).first()
+        self.assertIsNotNone(les, "আন-নাস বসেনি")
+        self.assertEqual(les.title_ar, "الناس")
+
+    def test_it_does_not_land_on_the_kawthar_topic(self):
+        """⚠️ পাশের টপিকে ভুল করে বসে যায়নি তো?"""
+        self.run_it()
+        self.assertFalse(self.Lesson.objects.filter(topic=self.other).exists())
+
+    def test_the_directors_naming_is_kept(self):
+        self.run_it()
+        self.assertEqual(
+            self.Lesson.objects.filter(topic=self.t).first().title,
+            "An-Nas-الناس")
+
+    def test_the_toggle_gets_the_practice_sheet(self):
+        self.run_it()
+        self.t.refresh_from_db()
+        self.assertIn("What we learned today", self.t.content or "")
+        self.assertIn("ٱلنَّاسِ", self.t.content or "")
+
+    def test_a_topic_with_a_script_is_skipped(self):
+        """⚠️ পরিচালকের লেখা স্ক্রিপ্টের উপরে কখনো বসবে না।"""
+        mine = self.Lesson.objects.create(course=self.c, title="আমার নিজের",
+                                          kind="memorization", topic=self.t)
+        self.run_it()
+        mine.refresh_from_db()
+        self.assertEqual(mine.title, "আমার নিজের")
+        self.assertEqual(mine.steps.count(), 0)
+
+    def test_the_directors_toggle_text_is_kept(self):
+        self.t.content = "<p>আমার নিজের হাতে লেখা</p>"
+        self.t.save()
+        self.run_it()
+        self.t.refresh_from_db()
+        self.assertEqual(self.t.content, "<p>আমার নিজের হাতে লেখা</p>")
+
+    def test_running_it_twice_makes_no_duplicates(self):
+        self.run_it()
+        n = self.Lesson.objects.count()
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.count(), n, "দুবার বসেছে")
+
+    def test_nothing_happens_when_there_is_no_such_topic(self):
+        from core.models import LectureTopic
+        LectureTopic.objects.all().delete()
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.count(), 0)
+
+    def test_the_filler_migration_also_covers_it(self):
+        """⚠️ ভবিষ্যতে ডাটাবেজ সরালে ০০৪৬-ও যেন আন-নাস বসাতে পারে।"""
+        self.run_it("core.migrations.0046_seed_any_missing_lesson")
+        self.assertTrue(self.Lesson.objects.filter(topic=self.t).exists(),
+                        "০০৪৬ আন-নাস বসায়নি")

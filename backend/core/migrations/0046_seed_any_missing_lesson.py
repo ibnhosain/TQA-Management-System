@@ -22,6 +22,8 @@ from django.db import migrations
 
 # কোন দারস কোথায় বসবে — নম্বর ধরে, নাকি নাম ধরে
 BY_NUMBER = ["qaida2", "qaida3", "qaida4", "qaida5"]
+NAS_MARKS = ("الناس", "an-nas", "an nas", "annas",
+             "আন-নাস", "আন নাস", "আননাস")
 KAWTHAR_MARKS = ("الكوثر", "kawthar", "kawsar", "kausar", "kauthar",
                  "kaosar", "কাউসার", "কাওসার", "কাউছার", "কাওছার")
 
@@ -78,11 +80,13 @@ def fill(apps, schema_editor):
             if t is not None:
                 place(key, t)
 
-    # ── সূরা আল-কাউসার, নাম ধরে ──
-    if missing("kawthar"):
-        t = _topic_by_name(LectureTopic, Lesson, KAWTHAR_MARKS)
+    # ── মুখস্থ সূরাগুলো, নাম ধরে ──
+    for key, marks in (("kawthar", KAWTHAR_MARKS), ("nas", NAS_MARKS)):
+        if not missing(key):
+            continue
+        t = _topic_by_name(LectureTopic, Lesson, marks)
         if t is not None:
-            place("kawthar", t)
+            place(key, t)
 
 
 class Migration(migrations.Migration):
