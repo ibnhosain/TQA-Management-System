@@ -36,3 +36,7 @@ celerybeat.pid
 # OS
 .DS_Store
 Thumbs.db
+
+# ডেটাবেজ সরানোর কাজের ফাইল (শিক্ষার্থীর তথ্য — কখনো commit নয়)
+backup.json
+_before.json
