@@ -9,7 +9,8 @@
 import re
 from django.test import TestCase
 from core.sample_lessons import (IKHLAS, QAIDA, QAIDA2, QAIDA3,
-                                 QAIDA4, QAIDA5, DOTS,
+                                 QAIDA4, QAIDA5, KAWTHAR,
+                                 DOTS,
                                  V1, V2, V3, V4)
 
 BN = re.compile(r"[ঀ-৿]")
@@ -17,7 +18,7 @@ CUE = re.compile(r"\[[^\]]*\]")       # [বাংলা নির্দেশ�
 SPOKEN = ("says", "correction")
 # ⚠️ প্রতিটি দারসই একই নিয়মে বাঁধা — নতুন দারস যোগ করলে এখানেও যোগ
 # করতে হবে, নইলে সেটি পাহারার বাইরে থেকে যায়
-ALL = (IKHLAS, QAIDA, QAIDA2, QAIDA3, QAIDA4, QAIDA5)
+ALL = (IKHLAS, QAIDA, QAIDA2, QAIDA3, QAIDA4, QAIDA5, KAWTHAR)
 # কায়দার সব দারস — লেখার ধাপ ও হরফের নিয়ম কেবল এগুলোতেই খাটে
 QAIDAS = (QAIDA, QAIDA2, QAIDA3, QAIDA4, QAIDA5)
 BOTH = ALL  # পুরনো নাম, আগের পরীক্ষাগুলো এটাই ব্যবহার করে
@@ -1990,3 +1991,136 @@ class WrongHeadingIsRepaired(TestCase):
         self.run_it()
         les = self.Lesson.objects.filter(topic=self.right[4]).first()
         self.assertIsNotNone(les, "ঠিক জায়গা থেকেও সরে গেছে")
+
+
+class TheKawtharLessonLands(TestCase):
+    """🌊 সূরা আল-কাউসারের দারস — "Memorized Surah" হেডিংয়ের টপিকে।
+
+    ⚠️ এই টপিকের নামে নম্বর নেই ("Al-Kawthar-الكوثر"), তাই নম্বর ধরে
+    খোঁজা এখানে খাটে না — সূরার নাম ধরে খুঁজতে হয়।
+    """
+
+    def setUp(self):
+        from core.models import (Course, Lesson, Lecture, LectureTopic,
+                                 LessonSection)
+        self.Lesson, self.LectureTopic = Lesson, LectureTopic
+        self.c = Course.objects.create(name="Easy Noorani Qaida", teacher=None)
+        lec = Lecture.objects.create(course=self.c, no=1, title="Q")
+        self.qirat = LessonSection.objects.create(course=self.c,
+                                                  name="Quran/Qirat", order=0)
+        self.surah = LessonSection.objects.create(
+            course=self.c, name="Memorized Surah", order=1)
+        self.other = LectureTopic.objects.create(
+            lecture=lec, section=self.qirat,
+            text="Qaida for Beginners — Lesson-01", order=0)
+        self.topic = LectureTopic.objects.create(
+            lecture=lec, section=self.surah, text="Al-Kawthar-الكوثر",
+            order=1)
+
+    def run_it(self):
+        import importlib
+        from core.models import Lesson, LessonStep, StepSlide, LectureTopic
+        m = importlib.import_module("core.migrations.0045_kawthar_lesson")
+
+        class A:
+            def get_model(self, app, name):
+                return {"Lesson": Lesson, "LessonStep": LessonStep,
+                        "StepSlide": StepSlide,
+                        "LectureTopic": LectureTopic}[name]
+        m.seed(A(), None)
+
+    def test_it_lands_on_the_kawthar_topic(self):
+        self.run_it()
+        les = self.Lesson.objects.filter(topic=self.topic).first()
+        self.assertIsNotNone(les, "কাউসারের টপিকে বসেনি")
+        self.assertEqual(les.title_ar, "الكوثر", "ভুল দারস বসেছে")
+        self.assertEqual(les.topic.section, self.surah,
+                         "ভুল হেডিংয়ে বসেছে")
+
+    def test_the_directors_naming_is_kept(self):
+        self.run_it()
+        les = self.Lesson.objects.filter(topic=self.topic).first()
+        self.assertEqual(les.title, "Al-Kawthar-الكوثر")
+
+    def test_other_topics_are_left_alone(self):
+        """⚠️ কায়দার টপিকে যেন ভুল করে না বসে।"""
+        self.run_it()
+        self.assertFalse(
+            self.Lesson.objects.filter(topic=self.other).exists(),
+            "কায়দার টপিকে কাউসার বসে গেছে")
+
+    def test_all_three_verses_arrive(self):
+        self.run_it()
+        les = self.Lesson.objects.filter(topic=self.topic).first()
+        ar = " ".join(s.arabic or "" for st in les.steps.all()
+                      for s in [getattr(st, "slide", None)] if s)
+        for v in ("إِنَّآ أَعْطَيْنَٰكَ ٱلْكَوْثَرَ",
+                  "فَصَلِّ لِرَبِّكَ وَٱنْحَرْ",
+                  "إِنَّ شَانِئَكَ هُوَ ٱلْأَبْتَرُ"):
+            self.assertIn(v, ar, "আয়াতটি নেই: " + v)
+        for d in "١٢٣":
+            self.assertIn("\u06dd" + d, ar, "আয়াত-চিহ্ন %s নেই" % d)
+
+    def test_the_toggle_gets_the_practice_sheet(self):
+        self.run_it()
+        self.topic.refresh_from_db()
+        c = self.topic.content or ""
+        self.assertTrue(c.strip(), "টগল খালি")
+        self.assertIn("What we learned today", c)
+        self.assertIn("Practise", c)
+
+    def test_a_topic_with_a_script_is_skipped(self):
+        """⚠️ পরিচালকের লেখা স্ক্রিপ্টের উপরে কখনো বসবে না।"""
+        from core.models import Lesson
+        mine = Lesson.objects.create(course=self.c, title="আমার নিজের",
+                                     kind="memorization", topic=self.topic)
+        self.run_it()
+        mine.refresh_from_db()
+        self.assertEqual(mine.title, "আমার নিজের")
+        self.assertEqual(mine.steps.count(), 0, "আমার দারস বদলে গেছে")
+
+    def test_running_it_twice_makes_no_duplicate(self):
+        self.run_it()
+        self.run_it()
+        self.assertEqual(
+            self.Lesson.objects.filter(title_ar="الكوثر").count(), 1,
+            "দুবার বসেছে")
+
+    def test_nothing_happens_without_a_matching_topic(self):
+        self.topic.delete()
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.count(), 0,
+                         "টপিক না থাকলেও কোথাও বসিয়ে দিয়েছে")
+
+
+class TheKawtharScriptIsItsOwn(TestCase):
+    """⚠️ ইখলাসের দারসের নকল নয় — শুরু, সুতো ও গড়ন আলাদা।"""
+
+    def test_the_openings_are_different(self):
+        a = spoken_only(IKHLAS["steps"][0]["says"]).split()[:6]
+        b = spoken_only(KAWTHAR["steps"][0]["says"]).split()[:6]
+        self.assertNotEqual(a, b, "দুটো দারস একই কথায় শুরু হয়")
+
+    def test_no_step_is_copied_from_ikhlas(self):
+        ikh = {" ".join(spoken_only(st["says"]).split())
+               for st in IKHLAS["steps"]}
+        for i, st in enumerate(KAWTHAR["steps"], 1):
+            t = " ".join(spoken_only(st["says"]).split())
+            if len(t.split()) < 8:
+                continue
+            self.assertNotIn(t, ikh, "ধাপ %d ইখলাস থেকে হুবহু নকল" % i)
+
+    def test_the_lengths_differ(self):
+        self.assertNotEqual(len(KAWTHAR["steps"]), len(IKHLAS["steps"]),
+                            "দুটোতেই একই সংখ্যক ধাপ")
+
+    def test_it_starts_with_a_story(self):
+        """আজকের সুতো — জান্নাতের নদীর গল্প।"""
+        first = spoken_only(KAWTHAR["steps"][0]["says"]).lower()
+        self.assertIn("story", first, "গল্প দিয়ে শুরু হয়নি")
+        self.assertIn("jannah", first, "নদীর কথা নেই")
+
+    def test_it_teaches_where_to_use_it(self):
+        """⚠️ শেখা জিনিস কোথায় কাজে লাগবে — নামাযে।"""
+        said = " ".join(spoken_only(st["says"]) for st in KAWTHAR["steps"])
+        self.assertIn("Salah", said, "নামাযে ব্যবহারের কথা নেই")
