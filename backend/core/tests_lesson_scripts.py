@@ -2124,3 +2124,119 @@ class TheKawtharScriptIsItsOwn(TestCase):
         """⚠️ শেখা জিনিস কোথায় কাজে লাগবে — নামাযে।"""
         said = " ".join(spoken_only(st["says"]) for st in KAWTHAR["steps"])
         self.assertIn("Salah", said, "নামাযে ব্যবহারের কথা নেই")
+
+
+class MissingLessonsGetFilledIn(TestCase):
+    """🔧 মাইগ্রেশন ০০৪৬ — ডাটাবেজ বদলানোর পর যা যা বসেনি, কেবল তা।
+
+    ⚠️ ফাঁদটি: নতুন খালি ডাটাবেজে migrate চালালে দারস-বসানোর মাইগ্রেশন
+    "হয়ে গেছে" চিহ্নিত হয়ে যায় অথচ কিছুই বসায় না। তারপর loaddata পুরনো
+    তথ্য আনে — আর ব্যাকআপে যা ছিল না, তা আর কখনো বসে না।
+    """
+
+    def setUp(self):
+        from core.models import (Course, Lesson, LessonStep, StepSlide,
+                                 Lecture, LectureTopic, LessonSection)
+        from core.sample_lessons import create_sample
+        self.Lesson, self.LectureTopic = Lesson, LectureTopic
+        self.c = Course.objects.create(name="Easy Noorani Qaida", teacher=None)
+        lec = Lecture.objects.create(course=self.c, no=1, title="Q")
+        qirat = LessonSection.objects.create(course=self.c,
+                                             name="Quran/Qirat", order=0)
+        surah = LessonSection.objects.create(course=self.c,
+                                             name="Memorized Surah", order=1)
+        self.topics = {
+            n: LectureTopic.objects.create(
+                lecture=lec, section=qirat,
+                text="Qaida for Beginners — Lesson-%02d" % n, order=n)
+            for n in range(1, 6)}
+        self.kaw = LectureTopic.objects.create(
+            lecture=lec, section=surah, text="Al-Kawthar-الكوثر", order=9)
+        # loaddata যা এনেছে — কেবল কায়দা ১
+        self.first, _ = create_sample(Lesson, LessonStep, StepSlide,
+                                      self.c, "qaida", topic=self.topics[1])
+
+    def run_it(self):
+        import importlib
+        from core.models import (Lesson, LessonStep, StepSlide, Lecture,
+                                 LectureTopic)
+        m = importlib.import_module(
+            "core.migrations.0046_seed_any_missing_lesson")
+
+        class A:
+            def get_model(self, app, name):
+                return {"Lesson": Lesson, "LessonStep": LessonStep,
+                        "StepSlide": StepSlide, "Lecture": Lecture,
+                        "LectureTopic": LectureTopic}[name]
+        m.fill(A(), None)
+
+    def test_every_missing_lesson_is_created(self):
+        from core.sample_lessons import SAMPLES
+        self.run_it()
+        for key in ("qaida2", "qaida3", "qaida4", "qaida5", "kawthar"):
+            self.assertTrue(
+                self.Lesson.objects.filter(
+                    title_ar=SAMPLES[key]["title_ar"]).exists(),
+                "বসেনি: " + key)
+
+    def test_they_land_on_the_right_topics(self):
+        from core.sample_lessons import SAMPLES
+        self.run_it()
+        for n, key in ((2, "qaida2"), (3, "qaida3"), (4, "qaida4"),
+                       (5, "qaida5")):
+            les = self.Lesson.objects.filter(topic=self.topics[n]).first()
+            self.assertIsNotNone(les, "Lesson-%02d খালি" % n)
+            self.assertEqual(les.title_ar, SAMPLES[key]["title_ar"])
+        kaw = self.Lesson.objects.filter(topic=self.kaw).first()
+        self.assertIsNotNone(kaw, "কাউসার বসেনি")
+        self.assertEqual(kaw.title_ar, "الكوثر")
+
+    def test_the_directors_naming_is_kept(self):
+        self.run_it()
+        les = self.Lesson.objects.filter(topic=self.kaw).first()
+        self.assertEqual(les.title, "Al-Kawthar-الكوثر")
+
+    def test_the_toggles_get_the_practice_sheet(self):
+        self.run_it()
+        self.kaw.refresh_from_db()
+        self.assertIn("What we learned today", self.kaw.content or "")
+
+    def test_an_existing_lesson_is_never_touched(self):
+        """⚠️ যা আছে তাতে হাত পড়বে না।"""
+        before = self.first.steps.count()
+        title = self.first.title
+        self.run_it()
+        self.first.refresh_from_db()
+        self.assertEqual(self.first.steps.count(), before)
+        self.assertEqual(self.first.title, title)
+
+    def test_a_topic_with_a_script_is_skipped(self):
+        """⚠️ পরিচালকের লেখা স্ক্রিপ্টের উপরে কখনো বসবে না।"""
+        from core.models import Lesson
+        mine = Lesson.objects.create(course=self.c, title="আমার নিজের",
+                                     kind="memorization", topic=self.kaw)
+        self.run_it()
+        mine.refresh_from_db()
+        self.assertEqual(mine.title, "আমার নিজের")
+        self.assertEqual(mine.steps.count(), 0)
+
+    def test_the_directors_toggle_text_is_kept(self):
+        self.kaw.content = "<p>আমার নিজের হাতে লেখা</p>"
+        self.kaw.save()
+        self.run_it()
+        self.kaw.refresh_from_db()
+        self.assertEqual(self.kaw.content, "<p>আমার নিজের হাতে লেখা</p>",
+                         "পরিচালকের লেখা মুছে গেছে")
+
+    def test_running_it_twice_makes_no_duplicates(self):
+        self.run_it()
+        n = self.Lesson.objects.count()
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.count(), n, "দুবার বসেছে")
+
+    def test_nothing_happens_on_an_empty_database(self):
+        """⚠️ ফাঁকা ডাটাবেজে (migrate-এর সময়) যেন কিছুই না বসে।"""
+        self.Lesson.objects.all().delete()
+        self.LectureTopic.objects.all().delete()
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.count(), 0)

@@ -1,0 +1,7 @@
+# Local Development — এই ফাইল GitHub এ যাবে না (.gitignore এ আছে)
+SECRET_KEY=django-insecure-local-dev-only-change-in-production
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+CRON_SECRET=local-dev-cron-secret
+USE_CELERY=False
