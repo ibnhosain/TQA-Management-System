@@ -40,3 +40,7 @@ Thumbs.db
 # ডেটাবেজ সরানোর কাজের ফাইল (শিক্ষার্থীর তথ্য — কখনো commit নয়)
 backup.json
 _before.json
+
+# .env-এর যেকোনো কপি (Windows-এর "… copy", .env.bak ইত্যাদি) — SECRET_KEY থাকে
+.env*
+!.env.example
