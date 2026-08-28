@@ -42,11 +42,35 @@ router.register("library-books", views.LibraryBookViewSet)
 router.register("lesson-sections", views.LessonSectionViewSet, basename="lesson-sections")
 router.register("push-subscriptions", views.PushSubscriptionViewSet, basename="push-subscriptions")
 
+def _version(request):
+    """সার্ভারে কোন মাইগ্রেশন পর্যন্ত চলেছে — নির্ণয়ের জন্য।
+
+    ⚠️ কেন দরকার — "নতুন দারস বসেনি" বলার পর প্রতিবার অনুমান করতে হতো:
+    ডিপ্লয় হয়েছে কি হয়নি, মাইগ্রেশন চলেছে কি চলেনি। বাইরে থেকে দেখার
+    কোনো উপায় ছিল না। এই পথটি এক ডাকেই উত্তর দেয়।
+
+    ⚠️ কোনো তথ্য ফাঁস হয় না — কেবল শেষ মাইগ্রেশনের নাম ও সংখ্যা।
+    ⚠️ ফ্রন্টএন্ড এটি কখনো ডাকে না। আগে "ডাটাবেজ জাগানোর" একটি পথ
+    প্রতি পাতা-লোডে ডাকা হতো, আর তাতে ভিড়ের সময় অ্যাপ আটকে গিয়েছিল।
+    এটি কেবল হাতে ডাকার জন্য — কোনো স্বয়ংক্রিয় ডাক নেই।
+    """
+    try:
+        from django.db.migrations.recorder import MigrationRecorder
+        rows = MigrationRecorder.Migration.objects.filter(app="core")
+        last = rows.order_by("-id").first()
+        return JsonResponse({"core_last": last.name if last else None,
+                             "core_count": rows.count()})
+    except Exception as e:
+        return JsonResponse({"error": str(e)[:120]}, status=500)
+
+
 urlpatterns = [
     path("auth/login", FlexTokenObtainPairView.as_view()),  # আইডি/ইমেইল/ফোন — যেকোনোটা দিয়ে
     path("auth/refresh", TokenRefreshView.as_view()),
     # Render free tier ঘুম ভাঙানো — cron-job.org প্রতি ১৪ মিনিটে পিং করে
     path("ping/", lambda r: JsonResponse({"ok": True, "service": "TQA-MS"})),
+    # ⚠️ নির্ণয়ের পথ — সার্ভারে কোন মাইগ্রেশন পর্যন্ত চলেছে
+    path("version/", _version),
     # Cron endpoints (cron-job.org থেকে ডাকা হয় — Celery ছাড়া scheduled কাজ)
     path("cron/reminders/", cron.cron_reminders),
     path("cron/daily/", cron.cron_daily),
