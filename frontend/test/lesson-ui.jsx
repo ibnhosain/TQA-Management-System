@@ -1087,6 +1087,146 @@ export async function run() {
     { notExpect: ["♻️ নতুন নমুনা"] },
   );
 
+
+  /* ═══════════ ভাসমান পর্দার জুম ═══════════
+     উস্তাদ চাইলে শেয়ার করা পর্দার লেখা বড় করতে পারেন, যাতে
+     শিক্ষার্থীর পক্ষে পড়া সহজ হয়। ⚠️ কিন্তু ফিটের কাজটা যেন নষ্ট
+     না হয় — জুম ১.০ রাখলে আগের মতোই হুবহু বসতে হবে। */
+
+  const ZSL = { kind: "verse", heading: "Say it with me",
+               arabic: "قُلْ هُوَ ٱللَّهُ أَحَدٌ", text: "🎤 Together" };
+
+  check("জুম ১.০ মানে ঠিক আগের মতোই ফিট", () => {
+    for (const fit of [0.2, 0.5, 0.73, 1, 2]) {
+      if (M.zoomed(fit, 1) !== fit)
+        throw new Error(`fit=${fit} → ${M.zoomed(fit, 1)}, বদলে গেছে`);
+    }
+  });
+
+  check("জুম না দিলেও আগের মতোই", () => {
+    if (M.zoomed(0.5, undefined) !== 0.5) throw new Error("খালি জুমে বদলেছে");
+    if (M.zoomed(0.5, null) !== 0.5) throw new Error("null জুমে বদলেছে");
+    if (M.zoomed(0.5, 0) !== 0.5) throw new Error("০ জুমে বদলেছে");
+  });
+
+  check("বাড়ালে বড়, কমালে ছোট", () => {
+    const base = M.zoomed(0.5, 1);
+    if (!(M.zoomed(0.5, 1.5) > base)) throw new Error("বাড়ালে বড় হচ্ছে না");
+    if (!(M.zoomed(0.5, 0.8) < base)) throw new Error("কমালে ছোট হচ্ছে না");
+  });
+
+  check("⚠️ মাপ জানা না গেলে (০) জুমেও ০-ই থাকে", () => {
+    // নইলে সবে-খোলা উইন্ডোতে স্লাইড মিলিয়ে যেত
+    if (M.zoomed(0, 2) !== 0) throw new Error("০ থেকে মাপ বানিয়ে ফেলেছে");
+  });
+
+  check("⚠️ সীমার বাইরে যেতে দেয় না", () => {
+    const big = M.zoomed(0.5, 99);
+    const small = M.zoomed(0.5, 0.01);
+    if (big > M.zoomed(0.5, M.ZOOM_MAX))
+      throw new Error("সর্বোচ্চ সীমা ছাড়িয়ে গেছে");
+    if (small < M.zoomed(0.5, M.ZOOM_MIN))
+      throw new Error("সর্বনিম্ন সীমা ছাড়িয়ে গেছে");
+    if (!(M.ZOOM_MIN < 1 && M.ZOOM_MAX > 1))
+      throw new Error("সীমা দুটি ১.০-কে ঘিরে নেই");
+    if (!(M.ZOOM_STEP > 0 && M.ZOOM_STEP < 0.5))
+      throw new Error("এক চাপে বড্ড বেশি/কম লাফ");
+  });
+
+  check("⚠️ কোনো মাপই ঝাপসা-বড় হয় না", () => {
+    // fitScale-এর উপরের সীমা ৪ — জুম দিয়েও তা ছাড়ানো চলবে না
+    if (M.zoomed(3.9, M.ZOOM_MAX) > 4) throw new Error("৪ ছাড়িয়ে গেছে");
+  });
+
+  /* ⚠️ অঙ্ক ঠিক থাকলেই হয় না — পর্দায় সত্যিই বড় হচ্ছে কিনা দেখা */
+  const scaleWithZoom = async (w, h, z) => {
+    const host = document.createElement("div");
+    host.style.setProperty("--w", `${w}px`);
+    host.style.setProperty("--h", `${h}px`);
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(<M.FloatBody slide={ZSL} zoom={z} />);
+    });
+    for (let k = 0; k < 6; k++) await act(async () => { await sleep(0); });
+    const box = [...host.querySelectorAll("div")].find((d) =>
+      (d.style.transform || "").includes("scale("));
+    const got = box
+      ? parseFloat(box.style.transform.match(/scale\(([^)]+)\)/)[1])
+      : null;
+    await act(async () => root.unmount());
+    host.remove();
+    return got;
+  };
+
+  {
+    ran++;
+    const fit = await scaleWithZoom(960, 540, 1);
+    const want = M.fitScale(960, 540, M.FIT_W, M.FIT_H);
+    if (fit === null || Math.abs(fit - want) > 0.001)
+      failures.push(
+        `জুম ১.০-এ ভাসমান পর্দা আগের মতোই বসে → ${fit}, হওয়ার কথা ` +
+          `${want.toFixed(3)}`,
+      );
+  }
+
+  {
+    ran++;
+    const fit = await scaleWithZoom(960, 540, 1);
+    const big = await scaleWithZoom(960, 540, 1.6);
+    if (big === null || !(big > fit * 1.4))
+      failures.push(
+        `জুম বাড়ালে লেখা সত্যিই বড় হয় → ${fit} থেকে ${big}, বাড়েনি`,
+      );
+  }
+
+  {
+    ran++;
+    const fit = await scaleWithZoom(960, 540, 1);
+    const small = await scaleWithZoom(960, 540, 0.7);
+    if (small === null || !(small < fit))
+      failures.push(`জুম কমালে ছোট হয় → ${fit} থেকে ${small}, কমেনি`);
+  }
+
+  {
+    /* ⚠️ সবচেয়ে জরুরি — জুমের প্রপ না দিলে আজকের আচরণ অবিকল আগের মতো।
+       নইলে পুরনো কাজ ভেঙে নতুন সুবিধা যোগ করা হতো। */
+    ran++;
+    const withZoom = await scaleWithZoom(760, 420, 1);
+    const host = document.createElement("div");
+    host.style.setProperty("--w", "760px");
+    host.style.setProperty("--h", "420px");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(<M.FloatBody slide={ZSL} />);
+    });
+    for (let k = 0; k < 6; k++) await act(async () => { await sleep(0); });
+    const box = [...host.querySelectorAll("div")].find((d) =>
+      (d.style.transform || "").includes("scale("));
+    const plain = box
+      ? parseFloat(box.style.transform.match(/scale\(([^)]+)\)/)[1])
+      : null;
+    await act(async () => root.unmount());
+    host.remove();
+    if (plain === null || Math.abs(plain - withZoom) > 0.001)
+      failures.push(
+        `জুম ছাড়া ভাসমান পর্দা হুবহু আগের মতোই → ${plain} বনাম ${withZoom}`,
+      );
+  }
+
+  await scene(
+    "⚠️ জুমের বাটন ভাসমান পর্দার ভেতরে যায় না — শিক্ষার্থী দেখবে না",
+    <M.FloatBody slide={ZSL} zoom={1.5} />,
+    { notExpect: ["🔍−", "🔍+", "%"] },
+  );
+
+  await scene(
+    "জুম দিলেও স্লাইডের লেখা ঠিকই দেখা যায়",
+    <M.FloatBody slide={ZSL} zoom={2} />,
+    { expect: [ZSL.heading] },
+  );
+
   console.log(`\n  ${ran} রকম দৃশ্য চালানো হলো (এফেক্ট ও ক্লিকসহ)`);
   if (failures.length) {
     console.log(`\n❌ ব্যর্থ ${failures.length}টি:`);

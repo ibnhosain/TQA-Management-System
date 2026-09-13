@@ -19931,7 +19931,27 @@ const fitScale = (ow, oh, iw, ih) => {
   return Math.min(Math.max(s, 0.05), 4);
 };
 
-function FitBox({ children }) {
+/* ─── উস্তাদের হাতের জুম ───────────────────────────────────────────
+   ⚠️ fitScale() ঠিক করে স্লাইডটা পুরোপুরি বসতে কতটা ছোট-বড় হবে। তার
+   উপরে উস্তাদ নিজে আরও বড় করতে পারেন — জুমে শেয়ার করা পর্দায় লেখা
+   তখন বড় দেখায়, শিক্ষার্থীর পক্ষে পড়া সহজ হয়।
+
+   ১.০ মানে ঠিক ফিট — কিছুই কাটা পড়ে না। তার বেশি করলে লেখা বড় হয়,
+   বিনিময়ে কিনারা একটু কাটা পড়তে পারে; উস্তাদ ভাসমান উইন্ডোতে সাথে
+   সাথেই দেখতে পান, তাই বেশি হলে কমিয়ে নিতে পারেন। */
+const ZOOM_MIN = 0.6;
+const ZOOM_MAX = 2.5;
+const ZOOM_STEP = 0.15;
+
+const zoomed = (fit, zoom) => {
+  // মাপ এখনো জানা যায়নি (০) — তখন হাত দেওয়া চলবে না
+  if (!fit) return fit;
+  const z = Math.min(Math.max(+zoom || 1, ZOOM_MIN), ZOOM_MAX);
+  // খুব ছোট হলে পড়া যায় না, খুব বড় হলে ঝাপসা — fitScale-এর সীমাই
+  return Math.min(Math.max(fit * z, 0.05), 4);
+};
+
+function FitBox({ children, zoom = 1 }) {
   const outer = useRef(null);
   const inner = useRef(null);
   const [scale, setScale] = useState(1);
@@ -19991,6 +20011,11 @@ function FitBox({ children }) {
     };
   }, []);
 
+  /* ⚠️ জুম মাপার এফেক্টে ঢোকানো হয়নি ইচ্ছা করেই — ঢোকালে জুম বদলালেই
+     পুরো ResizeObserver ভেঙে আবার গড়া হতো। scale সবসময় খাঁটি ফিট,
+     জুম কেবল দেখানোর সময় গুণ হয়। */
+  const shown = zoomed(scale, zoom);
+
   return (
     <div
       ref={outer}
@@ -20020,7 +20045,7 @@ function FitBox({ children }) {
           minHeight: FIT_H,
           display: "grid",
           placeItems: "center",
-          transform: `translate(-50%, -50%) scale(${scale})`,
+          transform: `translate(-50%, -50%) scale(${shown})`,
           transformOrigin: "center center",
         }}
       >
@@ -20177,7 +20202,7 @@ const dressPip = (w) => {
 };
 
 /* ভাসমান পর্দার ভেতরটা — উপস্থাপনা উইন্ডোর মতোই দেখতে */
-function FloatBody({ slide }) {
+function FloatBody({ slide, zoom = 1 }) {
   return (
     <div
       style={{
@@ -20200,7 +20225,7 @@ function FloatBody({ slide }) {
           পুরোটা দেখা যাবে, কিছু কাটা পড়বে না।
           ⚠️ inset:0 — নইলে গ্রিডের ভেতরে বাক্সটি নিজের উচ্চতা জানত না। */}
       <div style={{ position: "absolute", inset: 0 }}>
-        <FitBox>
+        <FitBox zoom={zoom}>
           <StageSlide slide={slide} fixed />
         </FitBox>
       </div>
@@ -20446,6 +20471,9 @@ function TeacherMode({ id, onClose }) {
   const [running, setRunning] = useState(true);
   // অক্ষরের আকার উস্তাদের নিজের পছন্দ — পরেরবারও যেন মনে থাকে
   const [zoom, setZoom] = usePersistedState("tm_zoom", 1);
+  /* ভাসমান পর্দার লেখার আকার — শিক্ষার্থী জুমে যা দেখে, সেটাই বড়-ছোট
+     হয়। উস্তাদের নিজের স্ক্রিপ্টের আকার (উপরের zoom) আলাদা জিনিস। */
+  const [stageZoom, setStageZoom] = usePersistedState("tm_stage_zoom", 1);
   // উপস্থাপনা উইন্ডো খোলা আছে কিনা (সে নিজে থেকে সাড়া দেয়)
   const [stageOk, setStageOk] = useState(false);
   const [floatWin, setFloatWin] = useState(null); // ভাসমান পর্দার উইন্ডো
@@ -20785,6 +20813,43 @@ function TeacherMode({ id, onClose }) {
         >
           A+
         </button>
+        {/* ⚠️ ভাসমান পর্দার জুম — বাটনগুলো ইচ্ছা করেই এখানে, উস্তাদের
+            পর্দায়। ভাসমান উইন্ডোর ভেতরে বসালে জুমে শেয়ার হওয়ার সময়
+            শিক্ষার্থীও বাটন দেখত। উইন্ডোটি খোলা থাকলেই কেবল দেখায়,
+            নইলে বোঝা যেত না কিসের জুম। */}
+        {floatWin && (
+          <>
+            <button
+              style={barBtn}
+              title="ভাসমান পর্দার লেখা ছোট — শিক্ষার্থী যা দেখে"
+              onClick={() =>
+                setStageZoom((z) =>
+                  Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2)),
+                )
+              }
+            >
+              🔍−
+            </button>
+            <button
+              style={{ ...barBtn, minWidth: 56 }}
+              title="আবার ঠিক ফিট মাপে ফেরান"
+              onClick={() => setStageZoom(1)}
+            >
+              {bn(String(Math.round(stageZoom * 100)))}%
+            </button>
+            <button
+              style={barBtn}
+              title="ভাসমান পর্দার লেখা বড় — শিক্ষার্থী যা দেখে"
+              onClick={() =>
+                setStageZoom((z) =>
+                  Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2)),
+                )
+              }
+            >
+              🔍+
+            </button>
+          </>
+        )}
         {lesson.objectives && (
           <button style={barBtn} onClick={() => setGoal((g) => !g)}>
             🎯 লক্ষ্য
@@ -21113,7 +21178,7 @@ function TeacherMode({ id, onClose }) {
           সাথেই বদলায়। ⚠️ onlySlide() ছাড়া কিছুই ভেতরে যায় না। */}
       {floatWin &&
         createPortal(
-          <FloatBody slide={onlySlide(step?.slide)} />,
+          <FloatBody slide={onlySlide(step?.slide)} zoom={stageZoom} />,
           floatWin.document.body,
         )}
 
@@ -24571,6 +24636,10 @@ export {
   RichText,
   FitBox,
   fitScale,
+  zoomed,
+  ZOOM_MIN,
+  ZOOM_MAX,
+  ZOOM_STEP,
   FIT_W,
   FIT_H,
   SlidePreview,
