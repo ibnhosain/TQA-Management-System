@@ -11,6 +11,13 @@ tqa-backup-*.json
 backup.json
 _before.json
 
+# ⚠️ পাঠানো রসিদ — শিক্ষার্থী/উস্তাদের নাম, টাকার অঙ্ক ও পেমেন্টের তথ্য
+# থাকে। "Pyament history" ফোল্ডারটি ২০২৬-০৮-০১ থেকে public রিপোতে ছিল।
+# রসিদ রাখুন রিপোর বাইরে — Academy/Pyament history/।
+TQA-receipt-*.png
+Pyament history/
+Payment history/
+
 # ডেটাবেজ
 *.sqlite3
 
