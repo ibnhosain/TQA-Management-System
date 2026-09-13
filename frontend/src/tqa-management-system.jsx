@@ -53,14 +53,6 @@ const fmtDate = (iso) => {
     return `${d.getDate()} ${MONTHS_EN_FULL[d.getMonth()]} ${d.getFullYear()}`;
   return `${bn(d.getDate())} ${MONTHS_BN_FULL[d.getMonth()]} ${bn(d.getFullYear())}`;
 };
-// দারস/টপিকের তারিখ — ছোট করে ২৩/০৮/২০২৬ ধাঁচে (শিক্ষার্থীর জন্য ইংরেজি অঙ্কে)
-const fmtDMY = (iso) => {
-  if (!iso) return "";
-  const [y, m, d] = String(iso).split("-");
-  if (!y || !m || !d) return String(iso);
-  const t = `${d}/${m}/${y}`;
-  return CURRENT_LANG === "en" ? t : bn(t);
-};
 // রিসিট/ভাউচার সবসময় ইংরেজিতে থাকে (যে বানাচ্ছেন তার ভাষা নির্বিশেষে) — তাই
 // viewer-নির্ভর fmtDate() ব্যবহার না করে আলাদা এই হেল্পার
 const fmtDateEn = (iso) => {
