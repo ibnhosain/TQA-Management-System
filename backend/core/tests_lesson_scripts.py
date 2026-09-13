@@ -9,7 +9,7 @@
 import re
 from django.test import TestCase
 from core.sample_lessons import (IKHLAS, QAIDA, QAIDA2, QAIDA3,
-                                 QAIDA4, QAIDA5, KAWTHAR, NAS,
+                                 QAIDA4, QAIDA5, KAWTHAR, NAS, FALAQ,
                                  DOTS,
                                  V1, V2, V3, V4)
 
@@ -18,7 +18,8 @@ CUE = re.compile(r"\[[^\]]*\]")       # [বাংলা নির্দেশ�
 SPOKEN = ("says", "correction")
 # ⚠️ প্রতিটি দারসই একই নিয়মে বাঁধা — নতুন দারস যোগ করলে এখানেও যোগ
 # করতে হবে, নইলে সেটি পাহারার বাইরে থেকে যায়
-ALL = (IKHLAS, QAIDA, QAIDA2, QAIDA3, QAIDA4, QAIDA5, KAWTHAR, NAS)
+ALL = (IKHLAS, QAIDA, QAIDA2, QAIDA3, QAIDA4, QAIDA5, KAWTHAR, NAS,
+       FALAQ)
 # কায়দার সব দারস — লেখার ধাপ ও হরফের নিয়ম কেবল এগুলোতেই খাটে
 QAIDAS = (QAIDA, QAIDA2, QAIDA3, QAIDA4, QAIDA5)
 BOTH = ALL  # পুরনো নাম, আগের পরীক্ষাগুলো এটাই ব্যবহার করে
@@ -2439,3 +2440,292 @@ class TheNasLessonLands(TestCase):
         self.run_it("core.migrations.0046_seed_any_missing_lesson")
         self.assertTrue(self.Lesson.objects.filter(topic=self.t).exists(),
                         "০০৪৬ আন-নাস বসায়নি")
+
+
+class TheFalaqScriptIsItsOwn(TestCase):
+    """📙 সূরা আল-ফালাক — আন-নাসের যমজ বোন, কিন্তু নকল নয়।
+
+    ⚠️ দুই সূরার প্রথম আয়াত প্রায় এক (قُلْ أَعُوذُ بِرَبِّ …) — তাই
+    ছাঁচে ঢেলে দেওয়ার ঝুঁকি এখানে সবচেয়ে বেশি। এই পরীক্ষাগুলো সেটাই
+    আটকায়।
+    """
+
+    VERSES = ("قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ", "مِن شَرِّ مَا خَلَقَ",
+              "وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ",
+              "وَمِن شَرِّ ٱلنَّفَّٰثَٰتِ فِى ٱلْعُقَدِ",
+              "وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ")
+
+    def verses(self):
+        from core.sample_lessons import F1, F2, F3, F4, F5
+        return (F1, F2, F3, F4, F5)
+
+    def test_the_five_verses_are_exact(self):
+        for v, w in zip(self.verses(), self.VERSES):
+            self.assertTrue(v.startswith(w), "আয়াতের পাঠ বদলে গেছে: %r" % v)
+
+    def test_every_verse_ends_with_its_number(self):
+        for i, v in enumerate(self.verses(), 1):
+            want = "۝" + "١٢٣٤٥"[i - 1]
+            self.assertTrue(v.rstrip().endswith(want),
+                            "আয়াত %d-এর শেষে চিহ্ন নেই: %r" % (i, v[-6:]))
+
+    def test_no_waqf_sign_was_invented(self):
+        """⚠️ সূরা ফালাকের মুসহাফে কোনো ওয়াকফ চিহ্ন নেই — বসানো চলবে না।"""
+        for v in self.verses():
+            for w in "ۖۗۘۙۚۛ":
+                self.assertNotIn(w, v, "বানানো ওয়াকফ চিহ্ন: %r" % v)
+
+    def test_every_chunk_comes_from_a_verse(self):
+        """⚠️ টুকরো হাতে লেখা নয় — আয়াত থেকেই কাটা, তাই হুবহু মিলবে।"""
+        whole = " ".join(self.verses())
+        for i, st in enumerate(FALAQ["steps"], 1):
+            for line in (st["slide"].get("arabic") or "").split("\n"):
+                line = line.strip()
+                if not line or line == "أَحْسَنْتَ":
+                    continue
+                self.assertIn(line, whole,
+                              "ধাপ %d — এই আরবি আয়াতে নেই: %s" % (i, line))
+
+    def test_the_chunks_carry_no_verse_number(self):
+        """টুকরো তো আয়াত নয় — শেষে নম্বর বসলে ভুল শেখানো হতো।"""
+        for st in FALAQ["steps"]:
+            for line in (st["slide"].get("arabic") or "").split("\n"):
+                line = line.strip()
+                if line and "۝" in line:
+                    self.assertGreater(len(line.split()), 1,
+                                       "টুকরোর সাথে আয়াত-নম্বর: %r" % line)
+
+    def test_it_opens_with_the_dark_not_a_story_or_a_puzzle(self):
+        """⚠️ কাউসার গল্পে, আন-নাস ধাঁধায় — ফালাক শিশুর নিজের হাতে।"""
+        first = spoken_only(FALAQ["steps"][0]["says"]).lower()
+        self.assertIn("hands over your eyes", first)
+        self.assertIn("dark", first)
+        for borrowed in ("story", "puzzle", "hiding"):
+            self.assertNotIn(borrowed, first, "অন্য দারসের শুরু: " + borrowed)
+
+    def test_the_script_never_spells_the_verses(self):
+        """⚠️ আরবি কখনো ইংরেজি অক্ষরে নয় — বলার জায়গায় কেবল ডট।"""
+        WORDS = ["falaq", "falak", "qul", "auzu", "aoozu", "rabbil",
+                 "ghasiq", "ghasiqin", "waqab", "naffathat", "nafathat",
+                 "uqad", "hasid", "hasadin", "hasad", "sharr", "khalaq"]
+        pat = re.compile(r"\b(%s)\b" % "|".join(WORDS), re.I)
+        bad = ["ধাপ %d · %s: “%s”" % (i, k, m)
+               for i, st in enumerate(FALAQ["steps"], 1)
+               for k in SPOKEN
+               for m in pat.findall(st[k] or "")]
+        self.assertEqual(bad, [], "উচ্চারণ ইংরেজিতে লেখা হয়েছে: "
+                                  + ", ".join(bad))
+
+    def test_the_dots_stand_in_for_the_arabic(self):
+        """উস্তাদ কোথায় আরবি বলবেন তা ডট দিয়েই বোঝানো হয়েছে তো?"""
+        n = sum(st[k].count(DOTS) for st in FALAQ["steps"] for k in SPOKEN)
+        self.assertGreater(n, 40, "ডট প্রায় নেই, উস্তাদ কী বলবেন বুঝবেন না")
+    def test_the_name_is_taught_as_the_daybreak(self):
+        """⚠️ নামের অর্থই আজকের সুতো — সেটি হারালে দারসটাই অর্থহীন।"""
+        spoken = " ".join(spoken_only(st["says"]) for st in FALAQ["steps"])
+        self.assertIn("daybreak", spoken.lower(), "নামের অর্থ বলা হয়নি")
+        self.assertIn("daybreak", FALAQ["objectives"].lower())
+
+    def test_the_thread_runs_from_dark_to_light(self):
+        """অন্ধকারের কথা যেখানেই এসেছে, আলো/নিরাপত্তার কথাও আছে তো?"""
+        spoken = " ".join(spoken_only(st["says"]) for st in FALAQ["steps"])
+        low = spoken.lower()
+        for word in ("dark", "light", "morning", "safe"):
+            self.assertIn(word, low, "সুতোর শব্দটি নেই: " + word)
+
+    def test_it_is_not_a_copy_of_the_other_surahs(self):
+        """⚠️ কোনো ধাপের বলার কথা হুবহু আন-নাস বা কাউসারে নেই তো?"""
+        others = {" ".join(spoken_only(st["says"]).split())
+                  for L in (NAS, KAWTHAR, IKHLAS) for st in L["steps"]}
+        for i, st in enumerate(FALAQ["steps"], 1):
+            t = " ".join(spoken_only(st["says"]).split())
+            if len(t.split()) >= 8:
+                self.assertNotIn(t, others,
+                                 "অন্য দারসের কথাই ধাপ %d-এ" % i)
+
+    def test_the_openings_and_closings_differ(self):
+        for k in (0, -1):
+            mine = " ".join(spoken_only(FALAQ["steps"][k]["says"]).split()[:6])
+            for L in (NAS, KAWTHAR):
+                theirs = " ".join(spoken_only(L["steps"][k]["says"]).split()[:6])
+                self.assertNotEqual(mine, theirs,
+                                    "%s-এর সাথে একই কথা" % L["title"][:14])
+
+    def test_it_has_its_own_game(self):
+        secs = " ".join(st["section"] for st in FALAQ["steps"]).lower()
+        self.assertIn("sunrise game", secs)
+        for L in (NAS, KAWTHAR, IKHLAS):
+            other = " ".join(st["section"] for st in L["steps"]).lower()
+            self.assertNotIn("sunrise game", other)
+            for borrowed in ("echo game", "three-finger", "four-finger"):
+                self.assertNotIn(borrowed, secs, "ধার করা খেলা: " + borrowed)
+
+    def test_the_child_recites_the_whole_surah_alone(self):
+        """⚠️ একা না বললে বোঝাই যায় না মুখস্থ হয়েছে কিনা।"""
+        game = [st for st in FALAQ["steps"]
+                if "sunrise game" in st["section"].lower()][0]
+        self.assertIn("say the surah", spoken_only(game["says"]).lower())
+        self.assertIn("একা", game["note"] + game["student"])
+
+    def test_the_morning_and_evening_practice_carries_its_source(self):
+        """⚠️ ফযীলত বললে সূত্র থাকতেই হবে।"""
+        step = [st for st in FALAQ["steps"]
+                if "morning and evening" in st["section"].lower()]
+        self.assertTrue(step, "সকাল-সন্ধ্যার ধাপটি নেই")
+        self.assertIn("আবু দাউদ", step[0]["note"])
+        self.assertIn("তিরমিযী", step[0]["note"])
+
+    def test_the_virtue_of_these_verses_carries_its_source(self):
+        notes = " ".join(st["note"] for st in FALAQ["steps"])
+        self.assertIn("মুসলিম", notes, "ফযীলতের সূত্র নেই")
+
+    def test_the_dark_is_never_made_scary(self):
+        """⚠️ সূরাটি অন্ধকারের কথা বলে, কিন্তু শিশুকে ভয় দেখানো চলবে না।"""
+        for st in FALAQ["steps"]:
+            for k in SPOKEN:
+                low = (st[k] or "").lower()
+                for bad in ("scary", "monster", "devil", "evil spirit",
+                            "magic", "witch", "ghost"):
+                    self.assertNotIn(bad, low, "ভয় দেখানো হয়েছে: " + bad)
+
+    def test_the_teacher_is_told_to_keep_it_gentle(self):
+        """উস্তাদের নির্দেশনায় সতর্কতাটি লেখা আছে তো?"""
+        guide = " ".join((st["does"] or "") + " " + (st["note"] or "")
+                         for st in FALAQ["steps"])
+        self.assertIn("ভয়", guide, "ভয় না দেখানোর কথাটাই নেই")
+        self.assertIn("যাদু", guide, "গিঁটের ব্যাখ্যা নিয়ে সতর্কতা নেই")
+
+
+class TheFalaqLessonLands(TestCase):
+    """🔧 মাইগ্রেশন ০০৪৮ — দারসটি ঠিক টপিকে বসে।"""
+
+    def setUp(self):
+        from core.models import (Course, Lesson, Lecture, LectureTopic,
+                                 LessonSection)
+        self.Lesson = Lesson
+        self.c = Course.objects.create(name="Easy Noorani Qaida", teacher=None)
+        lec = Lecture.objects.create(course=self.c, no=1, title="Q")
+        sec = LessonSection.objects.create(course=self.c,
+                                           name="Memorized Surah", order=1)
+        self.nas = LectureTopic.objects.create(
+            lecture=lec, section=sec, text="An-Nas-الناس", order=0)
+        self.t = LectureTopic.objects.create(
+            lecture=lec, section=sec, text="Al-Falaq-الفلق", order=1)
+
+    def _apps(self):
+        from core.models import (Lesson, LessonStep, StepSlide, Lecture,
+                                 LectureTopic)
+
+        class A:
+            def get_model(self, app, name):
+                return {"Lesson": Lesson, "LessonStep": LessonStep,
+                        "StepSlide": StepSlide, "Lecture": Lecture,
+                        "LectureTopic": LectureTopic}[name]
+        return A()
+
+    def run_it(self, which="core.migrations.0048_falaq_lesson"):
+        import importlib
+        importlib.import_module(which).fill(self._apps(), None)
+
+    def test_it_lands_on_the_falaq_topic(self):
+        self.run_it()
+        les = self.Lesson.objects.filter(topic=self.t).first()
+        self.assertIsNotNone(les, "আল-ফালাক বসেনি")
+        self.assertEqual(les.title_ar, "الفلق")
+
+    def test_it_does_not_land_on_the_nas_topic(self):
+        """⚠️ পাশের টপিকে ভুল করে বসে যায়নি তো?"""
+        self.run_it()
+        self.assertFalse(self.Lesson.objects.filter(topic=self.nas).exists())
+
+    def test_the_directors_naming_is_kept(self):
+        self.run_it()
+        self.assertEqual(
+            self.Lesson.objects.filter(topic=self.t).first().title,
+            "Al-Falaq-الفلق")
+
+    def test_the_toggle_gets_the_practice_sheet(self):
+        self.run_it()
+        self.t.refresh_from_db()
+        self.assertIn("What we learned today", self.t.content or "")
+        self.assertIn("ٱلْفَلَقِ", self.t.content or "")
+
+    def test_a_topic_with_a_script_is_skipped(self):
+        """⚠️ পরিচালকের লেখা স্ক্রিপ্টের উপরে কখনো বসবে না।"""
+        mine = self.Lesson.objects.create(course=self.c, title="আমার নিজের",
+                                          kind="memorization", topic=self.t)
+        self.run_it()
+        mine.refresh_from_db()
+        self.assertEqual(mine.title, "আমার নিজের")
+        self.assertEqual(mine.steps.count(), 0)
+
+    def test_the_directors_toggle_text_is_kept(self):
+        self.t.content = "<p>আমার নিজের হাতে লেখা</p>"
+        self.t.save()
+        self.run_it()
+        self.t.refresh_from_db()
+        self.assertEqual(self.t.content, "<p>আমার নিজের হাতে লেখা</p>")
+
+    def test_running_it_twice_makes_no_duplicates(self):
+        self.run_it()
+        n = self.Lesson.objects.count()
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.count(), n, "দুবার বসেছে")
+
+    def test_nothing_happens_when_there_is_no_such_topic(self):
+        from core.models import LectureTopic
+        LectureTopic.objects.all().delete()
+        self.run_it()
+        self.assertEqual(self.Lesson.objects.count(), 0)
+
+    def test_the_filler_migration_also_covers_it(self):
+        """⚠️ ভবিষ্যতে ডাটাবেজ সরালে ০০৪৬-ও যেন ফালাক বসাতে পারে।"""
+        self.run_it("core.migrations.0046_seed_any_missing_lesson")
+        self.assertTrue(self.Lesson.objects.filter(topic=self.t).exists(),
+                        "০০৪৬ আল-ফালাক বসায়নি")
+
+
+class TheFalaqPiecesReadInVerseOrder(TestCase):
+    """⚠️ অনুশীলনের পট্টিতে টুকরোগুলো আয়াতের ক্রমেই বসতে হবে।
+
+    টুকরোগুলো স্লাইডের ক্রমে জমা হয়। তাই আয়াতের দ্বিতীয় টুকরোটি যদি
+    আগের কোনো ধাপের পর্দায় আগেই দেখানো হয়, সেটি পট্টিতে প্রথম টুকরোর
+    আগে বসে যায় — আর ডান-থেকে-বাঁয়ে পড়া শিশু আয়াতটি উল্টো ক্রমে পড়ে।
+
+    গিঁটের ধাপে (আয়াত ৪-এর আগে) একবার ঠিক এটাই হয়েছিল। সেই ধাপের পর্দা
+    থেকে আরবিটা তুলে নেওয়া হয়েছে — এই পরীক্ষাটি ভুলটা ফিরে আসতে দেবে না।
+    """
+
+    def setUp(self):
+        from core.models import Course, Lesson, LessonStep, StepSlide
+        from core.sample_lessons import create_sample
+        self.c = Course.objects.create(name="হিফজ", teacher=None)
+        self.lesson, _ = create_sample(Lesson, LessonStep, StepSlide,
+                                       self.c, "falaq")
+
+    def groups(self):
+        from core.stage_summary import _collect, _group
+        arabics, joined = _collect(self.lesson)[:2]
+        return _group(arabics, joined)
+
+    def test_every_verse_keeps_its_pieces_in_order(self):
+        groups = self.groups()
+        self.assertTrue(groups, "কোনো আয়াতই পাওয়া গেল না")
+        for g in groups:
+            spots = [g["whole"].index(p) for p in g["pieces"]]
+            self.assertEqual(spots, sorted(spots),
+                             "টুকরো উল্টো ক্রমে: %s — %s"
+                             % (g["whole"], " · ".join(g["pieces"])))
+
+    def test_the_pieces_really_are_there_to_order(self):
+        """⚠️ পাহারাটা যেন ফাঁকা না হয় — টুকরো সত্যিই আছে তো?"""
+        n = sum(len(g["pieces"]) for g in self.groups())
+        self.assertGreaterEqual(n, 8, "টুকরোই প্রায় নেই, পরীক্ষাটি অর্থহীন")
+
+    def test_the_knot_step_shows_no_arabic(self):
+        """গিঁটের ধাপের পর্দায় আরবি ফিরে এলে ক্রমটা আবার ভাঙত।"""
+        knot = [st for st in FALAQ["steps"]
+                if "knot" in st["section"].lower()]
+        self.assertTrue(knot, "গিঁটের ধাপটি নেই")
+        self.assertEqual(knot[0]["slide"].get("arabic", ""), "",
+                         "গিঁটের পর্দায় আরবি ফিরে এসেছে")

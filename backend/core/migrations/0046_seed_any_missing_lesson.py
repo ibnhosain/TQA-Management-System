@@ -26,6 +26,9 @@ NAS_MARKS = ("الناس", "an-nas", "an nas", "annas",
              "আন-নাস", "আন নাস", "আননাস")
 KAWTHAR_MARKS = ("الكوثر", "kawthar", "kawsar", "kausar", "kauthar",
                  "kaosar", "কাউসার", "কাওসার", "কাউছার", "কাওছার")
+FALAQ_MARKS = ("الفلق", "al-falaq", "al falaq", "alfalaq",
+               "falaq", "falak", "আল-ফালাক", "আল ফালাক",
+               "ফালাক", "ফালাক্ব")
 
 
 def _topic_by_name(LectureTopic, Lesson, marks):
@@ -81,7 +84,9 @@ def fill(apps, schema_editor):
                 place(key, t)
 
     # ── মুখস্থ সূরাগুলো, নাম ধরে ──
-    for key, marks in (("kawthar", KAWTHAR_MARKS), ("nas", NAS_MARKS)):
+    for key, marks in (("kawthar", KAWTHAR_MARKS),
+                       ("nas", NAS_MARKS),
+                       ("falaq", FALAQ_MARKS)):
         if not missing(key):
             continue
         t = _topic_by_name(LectureTopic, Lesson, marks)
