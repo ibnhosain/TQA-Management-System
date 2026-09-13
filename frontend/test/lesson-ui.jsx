@@ -1390,6 +1390,65 @@ export async function run() {
       throw new Error("ছবিটাই পৌঁছাচ্ছে না");
   });
 
+
+
+
+  /* ═══════════ খোলা মডাল যেন নতুন করে না বসে ═══════════
+
+     ⚠️ যে বাগটি সারানো হয়েছে: "বিস্তারিত" পর্দাটি প্যারেন্ট কম্পোনেন্টের
+     ভেতরে কম্পোনেন্ট হিসেবে ঘোষিত ছিল। প্যারেন্ট রি-রেন্ডার হলেই সেটি
+     নতুন ফাংশন হয়ে যেত, তাই React পুরনো DOM সরিয়ে নতুন করে বসাত
+     (রিমাউন্ট)। পরিচালক বিস্তারিত পড়তে পড়তে তথ্য এলে বা বকেয়া মওকুফ
+     করলে স্ক্রল উপরে ফিরে যেত।
+
+     এখানে সেটাই পরখ করা হয়: মডালের একটি DOM নোডে চিহ্ন বসিয়ে প্যারেন্ট
+     রি-রেন্ডার করানো হয়, তারপর দেখা হয় চিহ্নটি টিকে আছে কিনা। রিমাউন্ট
+     হলে নোডটাই নতুন হতো, চিহ্ন থাকত না। */
+  await checkA("খোলা মডাল প্যারেন্ট রি-রেন্ডারেও টিকে থাকে", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const view = (cs) => (
+      <M.AllStudentsView db={{}} setDb={nop} user={director}
+                         courses={cs} refresh={nop} />
+    );
+    const settleAll = async () => {
+      for (let k = 0; k < 8; k++) await act(async () => { await sleep(0); });
+    };
+    try {
+      await act(async () => { root.render(view(courses)); });
+      await settleAll();
+
+      const btn = [...host.querySelectorAll("button")].find((b) =>
+        (b.textContent || "").includes("বিস্তারিত"));
+      if (!btn) throw new Error("“বিস্তারিত” বোতামই নেই");
+      await act(async () => { btn.click(); });
+      await settleAll();
+
+      const titled = () =>
+        [...host.querySelectorAll("*")].find(
+          (e) => (e.textContent || "").trim().startsWith("বিস্তারিত —") &&
+                 e.children.length === 0);
+      const before = titled();
+      if (!before) throw new Error("মডালটি খোলেনি");
+      before.__tqaMark = "আগের নোড";
+
+      // প্যারেন্টকে রি-রেন্ডার করানো — নতুন courses তালিকা দিয়ে
+      await act(async () => { root.render(view([...courses])); });
+      await settleAll();
+
+      const after = titled();
+      if (!after) throw new Error("রি-রেন্ডারের পর মডালটি হারিয়ে গেছে");
+      if (after.__tqaMark !== "আগের নোড")
+        throw new Error(
+          "মডালটি নতুন করে বসেছে — পড়তে থাকা জায়গা থেকে স্ক্রল " +
+          "উপরে ফিরে যাবে");
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+
   console.log(`\n  ${ran} রকম দৃশ্য চালানো হলো (এফেক্ট ও ক্লিকসহ)`);
   if (failures.length) {
     console.log(`\n❌ ব্যর্থ ${failures.length}টি:`);

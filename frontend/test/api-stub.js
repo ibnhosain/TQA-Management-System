@@ -148,6 +148,38 @@ export const api = {
   ]),
   courseStudents: async () => [{ id: 9, name: "S", student_id: "SH-1" }],
   uploadLessonMedia: async () => ({ url: "x" }),
+
+  /* ── শিক্ষার্থীর সম্পূর্ণ তালিকার পর্দার জন্য ──
+     ⚠️ অন্তত একজন শিক্ষার্থী দরকার, নইলে "বিস্তারিত" বোতামই আঁকা হয়
+     না আর মডালটি খোলাই যায় না। */
+  allStudents: async () => [
+    {
+      id: 9, name: "সাফওয়ান", username: "safwan", student_id: "SH-1",
+      role: "student", phone: "01700000000", email: "", is_trial: false,
+      dues: ["জানুয়ারি"], courseIds: [1], guardian: "অভিভাবক",
+    },
+  ],
+  myFees: async () => [
+    { id: 1, student: 9, status: "verified", month_label: "ফেব্রুয়ারি" },
+  ],
+  duesWithWaived: async () => [
+    { id: 2, user: 9, waived: true, month_label: "জানুয়ারি",
+      waived_reason: "পরীক্ষামূলক" },
+  ],
+  waiveDue: async () => ({}),
+  backfillStudentIds: async () => ({ made: 0 }),
+  saveCourse: async (d) => ({ id: 1, ...d }),
+  saveUser: async (d) => ({ id: 9, ...d }),
+  deleteUser: async () => ({}),
+  courses: async () => [
+    { id: 1, name: "Easy Noorani Qaida", teacher: 5,
+      studentIds: [9], student_ids: [9] },
+  ],
+  allTeachers: async () => [],
+  allUsers: async () => [
+    { id: 5, name: "উস্তাদ", role: "teacher", username: "t" },
+    { id: 9, name: "সাফওয়ান", role: "student", username: "safwan" },
+  ],
 };
 
 export const login = async () => ({});

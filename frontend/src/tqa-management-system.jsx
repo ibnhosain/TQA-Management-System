@@ -9884,7 +9884,18 @@ function ManageView({ db, setDb, user, refresh }) {
   };
 
   /* এক ব্যবহারকারীর বিস্তারিত রিপোর্ট — পরিচালক সব দেখেন */
-  const UserReport = ({ u }) => {
+  /* ⚠️ এটি কম্পোনেন্ট নয়, সাধারণ ফাংশন — আর নামটাও ছোট হাতের সেই
+     কারণেই। প্যারেন্টের ভেতরে ঘোষিত কম্পোনেন্ট প্রতিবার নতুন ফাংশন
+     হয়ে যায়, তাই React পুরনোটিকে সরিয়ে নতুন করে বসায় (রিমাউন্ট)।
+     পর্দাটি খোলা থাকা অবস্থায় প্যারেন্ট রি-রেন্ডার হলেই — তথ্য এলে,
+     বকেয়া মওকুফ করলে — মডালটি নতুন করে বসত, আর পড়তে থাকা জায়গা
+     থেকে স্ক্রল উপরে ফিরে যেত।
+
+     ফাংশন হিসেবে ডাকলে ফেরত আসা Modal-টিই সরাসরি প্যারেন্টের সন্তান,
+     তাই React স্বাভাবিকভাবে মিলিয়ে নেয় — রিমাউন্ট হয় না।
+     ⚠️ ভেতরে কোনো হুক রাখা যাবে না; শর্তসাপেক্ষে ডাকা হয় বলে সেটি
+     React-এর নিয়ম ভাঙত। */
+  const userReport = ({ u }) => {
     const uid2 = String(u.id);
     const att = rAttendance.filter((a) => String(a.user) === uid2);
     const present = att.filter((a) => (a.present ?? a.minutes >= 20)).length,
@@ -10267,7 +10278,7 @@ function ManageView({ db, setDb, user, refresh }) {
           সব নোটিফিকেশন মুছুন
         </Btn>
       </div>
-      {report && <UserReport u={report} />}
+      {report && userReport({ u: report })}
       {show && (
         <Modal
           title={
@@ -13357,7 +13368,18 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
       }
     });
   /* এক স্টুডেন্টের পূর্ণ চিত্র */
-  const Detail = ({ s }) => {
+  /* ⚠️ এটি কম্পোনেন্ট নয়, সাধারণ ফাংশন — আর নামটাও ছোট হাতের সেই
+     কারণেই। প্যারেন্টের ভেতরে ঘোষিত কম্পোনেন্ট প্রতিবার নতুন ফাংশন
+     হয়ে যায়, তাই React পুরনোটিকে সরিয়ে নতুন করে বসায় (রিমাউন্ট)।
+     পর্দাটি খোলা থাকা অবস্থায় প্যারেন্ট রি-রেন্ডার হলেই — তথ্য এলে,
+     বকেয়া মওকুফ করলে — মডালটি নতুন করে বসত, আর পড়তে থাকা জায়গা
+     থেকে স্ক্রল উপরে ফিরে যেত।
+
+     ফাংশন হিসেবে ডাকলে ফেরত আসা Modal-টিই সরাসরি প্যারেন্টের সন্তান,
+     তাই React স্বাভাবিকভাবে মিলিয়ে নেয় — রিমাউন্ট হয় না।
+     ⚠️ ভেতরে কোনো হুক রাখা যাবে না; শর্তসাপেক্ষে ডাকা হয় বলে সেটি
+     React-এর নিয়ম ভাঙত। */
+  const studentDetail = ({ s }) => {
     const cs = courseList.filter((c) => (c.studentIds || []).includes(s.id));
     const routines = (db.routine || []).filter((r) =>
       r.studentIds && r.studentIds.length
@@ -13370,8 +13392,8 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
        (cron/monthly/)। নতুন ভর্তি হওয়া শিক্ষার্থীর জন্য সেটা চলার আগে
        কোনো বকেয়াই থাকে না — ফলে এক টাকাও না দিয়েই "পরিশোধিত" দেখাত।
        এখন আসল পেমেন্টের রেকর্ড দেখে বলা হয়।
-       ⚠️ তালিকাটা প্যারেন্টে আনা হয় — Detail প্রতিবার নতুন করে তৈরি হয়
-       বলে এখানে useEffect রাখলে বারবার রিমাউন্ট হয়ে অকারণে কল হতো। */
+       ⚠️ তালিকাটা প্যারেন্টে আনা হয়, এখানে নয় — এটি সাধারণ ফাংশন,
+       কম্পোনেন্ট নয়, তাই এর ভেতরে হুক রাখা চলে না। */
     const myPays =
       payments === null
         ? null
@@ -13738,7 +13760,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             : []),
         ])}
       />
-      {detail && <Detail s={detail} />}
+      {detail && studentDetail({ s: detail })}
       {edit && (
         <Modal
           title={
@@ -24891,6 +24913,8 @@ export {
   ProgressPanel,
   ProgressSummary,
   AgeVersionModal,
+  ManageView,
+  AllStudentsView,
   TeacherMode,
   TeachFromClass,
   statusTag,
