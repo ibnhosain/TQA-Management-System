@@ -1,0 +1,19 @@
+# ⚠️ অ্যাপের নিজের ব্যাকআপ ফাইল — কখনো commit নয়।
+#
+# `/api/export/` থেকে নামানো ফাইলের নাম হয় tqa-backup-YYYY-MM-DD.json
+# (দেখুন backend/core/views.py-এর export ভিউ)। ব্রাউজার এগুলো সাধারণত
+# Downloads-এ রাখে, কিন্তু রিপোর ভেতরে নামালে চুপচাপ commit হয়ে যায় —
+# ২০২৬-০৮-০১-এ ঠিক এটাই হয়েছিল (কমিট 90fc46b), আর তাতে ব্যবহারকারীর
+# খোলা পাসওয়ার্ড, ফোন, ইমেইল ও ভর্তি-আবেদনের তথ্য public রিপোতে চলে যায়।
+#
+# ব্যাকআপ রাখুন রিপোর বাইরে — যেমন Academy/tqa-backup-*.json।
+tqa-backup-*.json
+backup.json
+_before.json
+
+# ডেটাবেজ
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
