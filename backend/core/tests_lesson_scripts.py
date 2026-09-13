@@ -2685,47 +2685,180 @@ class TheFalaqLessonLands(TestCase):
                         "০০৪৬ আল-ফালাক বসায়নি")
 
 
-class TheFalaqPiecesReadInVerseOrder(TestCase):
+class ThePiecesReadInVerseOrder(TestCase):
     """⚠️ অনুশীলনের পট্টিতে টুকরোগুলো আয়াতের ক্রমেই বসতে হবে।
 
-    টুকরোগুলো স্লাইডের ক্রমে জমা হয়। তাই আয়াতের দ্বিতীয় টুকরোটি যদি
+    টুকরোগুলো জমা হয় **স্লাইডের ক্রমে**। তাই আয়াতের দ্বিতীয় টুকরোটি যদি
     আগের কোনো ধাপের পর্দায় আগেই দেখানো হয়, সেটি পট্টিতে প্রথম টুকরোর
     আগে বসে যায় — আর ডান-থেকে-বাঁয়ে পড়া শিশু আয়াতটি উল্টো ক্রমে পড়ে।
 
-    গিঁটের ধাপে (আয়াত ৪-এর আগে) একবার ঠিক এটাই হয়েছিল। সেই ধাপের পর্দা
-    থেকে আরবিটা তুলে নেওয়া হয়েছে — এই পরীক্ষাটি ভুলটা ফিরে আসতে দেবে না।
+    দুবার ঠিক এটাই হয়েছিল, দুই দারসেই আয়াত ৪-এ:
+      • ফালাক — গিঁটের ধাপে (আয়াত শেখানোর আগে)
+      • আন-নাস — ফিসফিসানির ধাপে (আয়াত শেখানোর আগে)
+    দুটিতেই ওই পর্দা থেকে আরবি তুলে নেওয়া হয়েছে। শিশু টুকরোটি পায়
+    তার নিজের ধাপে, ঠিক জায়গায়।
+
+    ⚠️ ভূমিকার ধাপে আয়াতের টুকরো দেখাবেন না — এই পরীক্ষাটি ধরে ফেলবে।
     """
 
-    def setUp(self):
+    MEMORIZED = ("ikhlas", "kawthar", "nas", "falaq")
+
+    def groups(self, key):
         from core.models import Course, Lesson, LessonStep, StepSlide
         from core.sample_lessons import create_sample
-        self.c = Course.objects.create(name="হিফজ", teacher=None)
-        self.lesson, _ = create_sample(Lesson, LessonStep, StepSlide,
-                                       self.c, "falaq")
-
-    def groups(self):
         from core.stage_summary import _collect, _group
-        arabics, joined = _collect(self.lesson)[:2]
+        c = Course.objects.create(name="হিফজ " + key, teacher=None)
+        lesson, _ = create_sample(Lesson, LessonStep, StepSlide, c, key)
+        arabics, joined = _collect(lesson)[:2]
         return _group(arabics, joined)
 
     def test_every_verse_keeps_its_pieces_in_order(self):
-        groups = self.groups()
-        self.assertTrue(groups, "কোনো আয়াতই পাওয়া গেল না")
-        for g in groups:
-            spots = [g["whole"].index(p) for p in g["pieces"]]
-            self.assertEqual(spots, sorted(spots),
-                             "টুকরো উল্টো ক্রমে: %s — %s"
-                             % (g["whole"], " · ".join(g["pieces"])))
+        for key in self.MEMORIZED:
+            groups = self.groups(key)
+            self.assertTrue(groups, "%s — কোনো আয়াতই পাওয়া গেল না" % key)
+            for g in groups:
+                spots = [g["whole"].index(p) for p in g["pieces"]]
+                self.assertEqual(spots, sorted(spots),
+                                 "%s — টুকরো উল্টো ক্রমে: %s — %s"
+                                 % (key, g["whole"], " · ".join(g["pieces"])))
 
     def test_the_pieces_really_are_there_to_order(self):
         """⚠️ পাহারাটা যেন ফাঁকা না হয় — টুকরো সত্যিই আছে তো?"""
-        n = sum(len(g["pieces"]) for g in self.groups())
-        self.assertGreaterEqual(n, 8, "টুকরোই প্রায় নেই, পরীক্ষাটি অর্থহীন")
+        for key in self.MEMORIZED:
+            n = sum(len(g["pieces"]) for g in self.groups(key))
+            self.assertGreaterEqual(n, 5, "%s — টুকরোই প্রায় নেই, "
+                                          "পরীক্ষাটি অর্থহীন" % key)
 
-    def test_the_knot_step_shows_no_arabic(self):
-        """গিঁটের ধাপের পর্দায় আরবি ফিরে এলে ক্রমটা আবার ভাঙত।"""
-        knot = [st for st in FALAQ["steps"]
-                if "knot" in st["section"].lower()]
-        self.assertTrue(knot, "গিঁটের ধাপটি নেই")
-        self.assertEqual(knot[0]["slide"].get("arabic", ""), "",
-                         "গিঁটের পর্দায় আরবি ফিরে এসেছে")
+    def test_the_intro_steps_show_no_verse_piece(self):
+        """যে দুটি ধাপে ভুলটা হয়েছিল, সেখানে আরবি ফিরে আসেনি তো?"""
+        for L, mark in ((FALAQ, "knot"), (NAS, "sneaky whisper")):
+            step = [st for st in L["steps"] if mark in st["section"].lower()]
+            self.assertTrue(step, "ধাপটি নেই: " + mark)
+            self.assertEqual(step[0]["slide"].get("arabic", ""), "",
+                             "“%s” ধাপের পর্দায় আরবি ফিরে এসেছে" % mark)
+
+
+class TheNasPieceOrderRepair(TestCase):
+    """🔧 মাইগ্রেশন ০০৪৯ — চালু ডেটাবেজে আন-নাসের উল্টো ক্রম সারানো।
+
+    ⚠️ স্ক্রিপ্ট শুধরালেই চালু সাইট সারে না — ০০৪৭ একবার চলে গেছে। তাই
+    এখানে পুরনো অবস্থাটা হাতে ফিরিয়ে এনে দেখা হয়, মাইগ্রেশনটি সত্যিই
+    সারায় কিনা।
+    """
+
+    PIECE = "ٱلْوَسْوَاسِ ٱلْخَنَّاسِ"
+
+    def setUp(self):
+        from core.models import (Course, Lesson, LessonStep, StepSlide,
+                                 Lecture, LectureTopic, LessonSection)
+        from core.sample_lessons import create_sample
+        from core.stage_summary import summary_html
+        self.Lesson, self.StepSlide = Lesson, StepSlide
+        self.c = Course.objects.create(name="হিফজ", teacher=None)
+        lec = Lecture.objects.create(course=self.c, no=1, title="Q")
+        sec = LessonSection.objects.create(course=self.c,
+                                           name="Memorized Surah", order=1)
+        self.t = LectureTopic.objects.create(
+            lecture=lec, section=sec, text="An-Nas-الناس", order=0)
+        self.lesson, _ = create_sample(Lesson, LessonStep, StepSlide,
+                                       self.c, "nas", topic=self.t)
+        # ── পুরনো অবস্থা ফিরিয়ে আনি: ভূমিকার পর্দায় টুকরোটি বসিয়ে দিই ──
+        self.slide = self.StepSlide.objects.get(
+            step__lesson=self.lesson, kind="activity",
+            step__section__contains="sneaky whisper")
+        self.slide.arabic = self.PIECE
+        self.slide.arabic_locked = True
+        self.slide.save()
+        self.t.content = summary_html(self.lesson)
+        self.t.save()
+
+    def run_it(self):
+        import importlib
+        from core.models import Lesson, LessonStep, StepSlide, LectureTopic
+
+        class A:
+            def get_model(self, app, name):
+                return {"Lesson": Lesson, "LessonStep": LessonStep,
+                        "StepSlide": StepSlide,
+                        "LectureTopic": LectureTopic}[name]
+        importlib.import_module(
+            "core.migrations.0049_nas_piece_order").fix(A(), None)
+
+    def order(self):
+        """আয়াত ৪-এর টুকরোগুলো যে ক্রমে পট্টিতে বসবে।"""
+        from core.stage_summary import _collect, _group
+        arabics, joined = _collect(self.lesson)[:2]
+        for g in _group(arabics, joined):
+            if self.PIECE in g["whole"]:
+                return [g["whole"].index(p) for p in g["pieces"]]
+        return []
+
+    def test_the_order_really_was_broken_first(self):
+        """⚠️ পাহারাটা যেন ফাঁকা না হয় — সারানোর আগে ভুলটা ছিল তো?"""
+        spots = self.order()
+        self.assertNotEqual(spots, sorted(spots),
+                            "পুরনো ভুলটাই ফিরিয়ে আনা যায়নি")
+
+    def test_the_repair_puts_the_pieces_back_in_order(self):
+        self.run_it()
+        spots = self.order()
+        self.assertEqual(spots, sorted(spots), "টুকরো এখনো উল্টো ক্রমে")
+
+    def test_the_intro_slide_is_emptied_and_unlocked(self):
+        self.run_it()
+        self.slide.refresh_from_db()
+        self.assertEqual(self.slide.arabic, "")
+        self.assertFalse(self.slide.arabic_locked,
+                         "খালি ঘর তালাবন্ধ রেখে দেওয়া হয়েছে")
+
+    def test_the_verse_step_keeps_its_arabic(self):
+        """⚠️ ধাপ ১৫-এর পর্দায় একই টুকরো আছে — সেটি ঠিক জায়গায়, থাকবে।"""
+        self.run_it()
+        kept = self.StepSlide.objects.filter(
+            step__lesson=self.lesson, kind="verse", arabic=self.PIECE)
+        self.assertTrue(kept.exists(), "আসল টুকরোর পর্দাটিও মুছে গেছে")
+
+    def test_no_step_is_deleted(self):
+        """⚠️ ধাপ মোছা হয় না — শিক্ষার্থীর অগ্রগতি অক্ষত থাকে।"""
+        before = self.lesson.steps.count()
+        self.run_it()
+        self.assertEqual(self.lesson.steps.count(), before)
+
+    def test_the_toggle_gets_the_corrected_sheet(self):
+        old = self.t.content
+        self.run_it()
+        self.t.refresh_from_db()
+        self.assertNotEqual(self.t.content, old, "টগলের কাগজ বদলায়নি")
+        self.assertIn("What we learned today", self.t.content)
+
+    def test_the_directors_toggle_text_is_kept(self):
+        """⚠️ পরিচালকের নিজের লেখা কখনো মুছবে না।"""
+        self.t.content = "<p>আমার নিজের হাতে লেখা</p>"
+        self.t.save()
+        self.run_it()
+        self.t.refresh_from_db()
+        self.assertEqual(self.t.content, "<p>আমার নিজের হাতে লেখা</p>")
+        # তবু পর্দার ভুলটা সারবেই
+        self.slide.refresh_from_db()
+        self.assertEqual(self.slide.arabic, "")
+
+    def test_a_slide_the_director_rewrote_is_left_alone(self):
+        """পর্দায় আমাদের লেখাটি আর না থাকলে হাত দেওয়া হয় না।"""
+        self.slide.arabic = "ٱلنَّاسِ"
+        self.slide.save()
+        self.run_it()
+        self.slide.refresh_from_db()
+        self.assertEqual(self.slide.arabic, "ٱلنَّاسِ")
+
+    def test_running_it_twice_is_safe(self):
+        self.run_it()
+        self.t.refresh_from_db()
+        once = self.t.content
+        self.run_it()
+        self.t.refresh_from_db()
+        self.assertEqual(self.t.content, once)
+
+    def test_nothing_happens_without_the_lesson(self):
+        self.Lesson.objects.all().delete()
+        self.run_it()          # কোনো ভুল যেন না ঘটে
+        self.assertEqual(self.Lesson.objects.count(), 0)
