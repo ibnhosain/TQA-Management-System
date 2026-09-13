@@ -588,6 +588,45 @@ class LectureSerializer(serializers.ModelSerializer):
         return instance
 
 
+def visible_students(obj, context):
+    """এই ক্লাস/রুটিনের যে শিক্ষার্থীদের নাম চাওয়া ব্যক্তিটি দেখতে পাবেন।
+
+    🔒 পরিচালকের নিয়ম — হিসাব কেবল **কোন শিক্ষার্থী কোন উস্তাদের কাছে
+    পড়ে**, কোর্স ধরে নয়। এক কোর্সে দুজন উস্তাদ পড়ালেও একজন আরেকজনের
+    শিক্ষার্থীর নাম দেখবেন না।
+
+    ⚠️ আগে ছাঁকনি একেবারেই ছিল না — সবাই সব নাম পেত। নিজের একজন
+    শিক্ষার্থী আছে বলে কোনো রুটিন দেখতে পেলে, সেই রুটিনের সব নামই চলে
+    আসত, অন্য উস্তাদের শিক্ষার্থীদেরসহ।
+
+    কে কী দেখেন —
+      • পরিচালক/এডমিন — সবার নাম
+      • যিনি নিজে এই ক্লাসটি নিচ্ছেন — সবার নাম। ⚠️ এটা বাদ দেওয়া যাবে
+        না; নিজের ক্লাসে কে আছে তা না জানলে তিনি পড়াবেন কীভাবে?
+      • অন্য উস্তাদ (নিজের ছাত্র আছে বলে দেখতে পাচ্ছেন) — কেবল নিজের
+      • শিক্ষার্থী — কেবল নিজের নাম, সহপাঠীর নয়
+
+    ⚠️ .filter() ব্যবহার করা হয়নি — সেটি prefetch_related("students")-এর
+    ক্যাশ এড়িয়ে প্রতি সারিতে নতুন কোয়েরি করত (N+1)। .all() ইটারেট করে
+    পাইথনেই ছেঁকে নেওয়া হয়; teacher_id সারিটির নিজের ঘর, তাই বাড়তি
+    কোয়েরি নেই।
+    """
+    everyone = list(obj.students.all())
+    req = (context or {}).get("request")
+    u = getattr(req, "user", None)
+    role = getattr(u, "role", None)
+    if u is None or role in (None, "director", "admin"):
+        return everyone
+    if role == "teacher":
+        # নিজের ক্লাস হলে সবাই, নইলে কেবল নিজের শিক্ষার্থীরা
+        if getattr(obj, "teacher_id", None) == u.id:
+            return everyone
+        return [s for s in everyone if s.teacher_id == u.id]
+    if role == "student":
+        return [s for s in everyone if s.id == u.id]
+    return []
+
+
 class RoutineSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source="teacher.name_bn", read_only=True)
     course_name = serializers.CharField(source="course.name", read_only=True)
@@ -599,15 +638,34 @@ class RoutineSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def get_student_names(self, obj):
-        # .values_list() prefetch_related-এর ক্যাশ এড়িয়ে প্রতিবার নতুন কোয়েরি করত (N+1)।
-        # .all() ইটারেট করলে queryset-এ prefetch করা students-ই ব্যবহার হয় — বাড়তি কোয়েরি নেই।
-        return [s.name_bn for s in obj.students.all()]
+        # 🔒 কে কোন নাম দেখবেন তা visible_students() ঠিক করে
+        return [s.name_bn for s in visible_students(obj, self.context)]
+
+    def to_representation(self, obj):
+        """🔒 আইডির তালিকাও নামের মতোই ছাঁকা।
+
+        ⚠️ নাম লুকিয়েও আইডি রয়ে গেলে ফাঁকটা বন্ধ হয় না। পর্দায় নাম আর
+        আইডি ক্রম ধরে জোড়া লাগানো হয় (studentNames[i] ↔ studentIds[i]);
+        নাম কম আর আইডি পুরো গেলে এক শিক্ষার্থীর পাশে আরেকজনের নাম বসে
+        যেত। আর নাম না পেলে পর্দা nameOf(sid) দিয়ে স্থানীয় তথ্য থেকে
+        নামটা খুঁজে নিত — অর্থাৎ লুকানো নামই ফিরে আসত।
+
+        ⚠️ কেবল দেখানোর সময় ছাঁকা হয়। লেখার পথ (to_internal_value)
+        অক্ষত, তাই পরিচালক আগের মতোই শিক্ষার্থী যোগ-বিয়োগ করতে পারেন।
+        """
+        data = super().to_representation(obj)
+        data["students"] = [x.id for x in visible_students(obj, self.context)]
+        return data
 
     def get_student_schedules(self, obj):
-        # .all() ইটারেট করলে queryset-এ prefetch করা student_schedules-ই ব্যবহার হয় (N+1 এড়ায়)
+        # 🔒 ⚠️ সময়সূচিতেও শিক্ষার্থীর আইডি থাকে — নামের মতোই ছাঁকতে হয়,
+        # নইলে নাম লুকিয়েও আইডি দিয়ে বোঝা যেত কারা আছে।
+        # .all() ইটারেট — prefetch করা student_schedules ব্যবহার হয় (N+1 এড়ায়)
+        allowed = {s.id for s in visible_students(obj, self.context)}
         return [
             {"student": s.student_id, "days": s.days, "time": s.time.strftime("%H:%M") if s.time else None}
             for s in obj.student_schedules.all()
+            if s.student_id in allowed
         ]
 
 
@@ -637,8 +695,24 @@ class ClassSessionSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def get_student_names(self, obj):
-        # .values_list()-এর বদলে .all() ইটারেট — prefetch_related-এর ক্যাশ ব্যবহার হয় (N+1 নেই)
-        return [s.name_bn for s in obj.students.all()]
+        # 🔒 কে কোন নাম দেখবেন তা visible_students() ঠিক করে
+        return [s.name_bn for s in visible_students(obj, self.context)]
+
+    def to_representation(self, obj):
+        """🔒 আইডির তালিকাও নামের মতোই ছাঁকা।
+
+        ⚠️ নাম লুকিয়েও আইডি রয়ে গেলে ফাঁকটা বন্ধ হয় না। পর্দায় নাম আর
+        আইডি ক্রম ধরে জোড়া লাগানো হয় (studentNames[i] ↔ studentIds[i]);
+        নাম কম আর আইডি পুরো গেলে এক শিক্ষার্থীর পাশে আরেকজনের নাম বসে
+        যেত। আর নাম না পেলে পর্দা nameOf(sid) দিয়ে স্থানীয় তথ্য থেকে
+        নামটা খুঁজে নিত — অর্থাৎ লুকানো নামই ফিরে আসত।
+
+        ⚠️ কেবল দেখানোর সময় ছাঁকা হয়। লেখার পথ (to_internal_value)
+        অক্ষত, তাই পরিচালক আগের মতোই শিক্ষার্থী যোগ-বিয়োগ করতে পারেন।
+        """
+        data = super().to_representation(obj)
+        data["students"] = [x.id for x in visible_students(obj, self.context)]
+        return data
 
     def get_rejoin_active(self, obj):
         """শিক্ষার্থীর কাছে ২য় (রিজয়েন) লিংক খোলা হয়েছে কিনা।
