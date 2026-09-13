@@ -1227,6 +1227,156 @@ export async function run() {
     { expect: [ZSL.heading] },
   );
 
+
+  /* ═══════════ বাইরে থেকে আনা স্লাইড ═══════════
+     পরিচালক ক্যানভা/পাওয়ারপয়েন্টে বানিয়ে PDF করে আনেন, বা ছবি দেন।
+     প্রতিটি পাতা এক-একটি স্লাইড হয়ে বসে।
+
+     ⚠️ check() সিঙ্ক্রোনাস — async দিলে ব্যর্থতা চুপচাপ হারিয়ে যায়,
+     পরীক্ষা "পাস" দেখায় অথচ কিছুই যাচাই হয় না। তাই আলাদা হুক। */
+  const checkA = async (name, fn) => {
+    ran++;
+    try {
+      await fn();
+    } catch (e) {
+      failures.push(`${name} → ${e.message}`);
+    }
+  };
+
+  /* একবার এঁকে DOM ফেরত দেওয়া — পর্দায় সত্যিই কী বসল তা দেখতে */
+  const drawOnce = async (node) => {
+    const host = document.createElement("div");
+    host.style.setProperty("--w", "960px");
+    host.style.setProperty("--h", "540px");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(node);
+    });
+    for (let k = 0; k < 4; k++) await act(async () => { await sleep(0); });
+    const html = host.innerHTML;
+    const imgs = [...host.querySelectorAll("img")].map((im) => ({
+      src: im.getAttribute("src"),
+      width: im.style.width,
+      objectFit: im.style.objectFit,
+    }));
+    const textOf = host.textContent || "";
+    await act(async () => root.unmount());
+    host.remove();
+    return { html, imgs, textOf };
+  };
+
+  const fake = (type, name) => ({ type, name: name || "x" });
+
+  await checkA("ছবিগুলো যে ক্রমে দেওয়া, সে ক্রমেই থাকে", async () => {
+    const got = await M.filesToSlideImages([
+      fake("image/png", "a.png"),
+      fake("image/jpeg", "b.jpg"),
+      fake("image/webp", "c.webp"),
+    ]);
+    const names = got.map((f) => f.name).join(",");
+    if (names !== "a.png,b.jpg,c.webp")
+      throw new Error("ক্রম বদলে গেছে: " + names);
+  });
+
+  await checkA("⚠️ ছবি বা PDF ছাড়া কিছুই ঢোকে না", async () => {
+    const got = await M.filesToSlideImages([
+      fake("application/zip", "x.zip"),
+      fake("text/html", "x.html"),
+      fake("application/vnd.ms-powerpoint", "x.ppt"),
+      fake("image/png", "ok.png"),
+    ]);
+    if (got.length !== 1 || got[0].name !== "ok.png")
+      throw new Error("অন্য ফাইলও ঢুকেছে: " + got.map((f) => f.name));
+  });
+
+  await checkA("⚠️ একবারে অনেক বেশি এলে থেমে যায়", async () => {
+    const many = Array.from({ length: M.IMPORT_MAX + 25 }, (_, i) =>
+      fake("image/png", `p${i}.png`),
+    );
+    const got = await M.filesToSlideImages(many);
+    if (got.length !== M.IMPORT_MAX)
+      throw new Error(`${got.length}টি এসেছে, সীমা ${M.IMPORT_MAX}`);
+  });
+
+  await checkA("কিছু না দিলে কিছুই হয় না", async () => {
+    const got = await M.filesToSlideImages([]);
+    if (got.length !== 0) throw new Error("খালি তালিকা থেকেও কিছু এসেছে");
+  });
+
+  check("ফাইল বাছার ঘরটি PDF ও ছবি দুটোই নেয়", () => {
+    for (const t of ["application/pdf", "image/png", "image/jpeg"])
+      if (!M.IMPORT_TYPES.includes(t)) throw new Error("বাদ পড়েছে: " + t);
+  });
+
+  /* ── ছবি-শুধু স্লাইড পুরো পর্দা জুড়ে ── */
+
+  check("ছবি ছাড়া আর কিছু না থাকলেই পুরো পর্দা", () => {
+    if (!M.imageOnly({ image: "u.png" })) throw new Error("ধরা পড়েনি");
+    if (!M.imageOnly({ image: "u.png", kind: "visual" }))
+      throw new Error("kind থাকলেও পুরো পর্দাই হওয়ার কথা");
+  });
+
+  check("⚠️ ছবির সাথে লেখা থাকলে আগের ব্যবহারই বহাল", () => {
+    // নইলে পুরনো স্লাইডের শিরোনাম-আয়াত হারিয়ে যেত
+    const bad = [
+      { image: "u.png", heading: "Say it" },
+      { image: "u.png", arabic: "قُلْ" },
+      { image: "u.png", translit: "qul" },
+      { image: "u.png", text: "🎤" },
+    ];
+    for (const sl of bad)
+      if (M.imageOnly(sl))
+        throw new Error("লেখাসহ ছবিও পুরো পর্দা ধরে নিয়েছে");
+  });
+
+  check("ছবি না থাকলে কখনো নয়", () => {
+    if (M.imageOnly({ heading: "Hi" })) throw new Error("ছবি ছাড়াই ধরেছে");
+    if (M.imageOnly(null)) throw new Error("null-এও ধরেছে");
+    if (M.imageOnly({ image: "" })) throw new Error("খালি ঠিকানায় ধরেছে");
+  });
+
+  await checkA("আনা স্লাইড পর্দায় পুরোটা জুড়ে বসে", async () => {
+    const r = await drawOnce(
+      <M.FloatBody slide={{ kind: "visual", image: "https://x/s1.png" }} />,
+    );
+    if (!r.imgs.length) throw new Error("ছবিটাই আঁকা হয়নি");
+    const im = r.imgs[0];
+    if (im.src !== "https://x/s1.png") throw new Error("ভুল ছবি: " + im.src);
+    if (im.objectFit !== "contain")
+      throw new Error("অনুপাত রক্ষা হচ্ছে না — স্লাইড কেটে যাবে");
+    if (im.width !== "100%") throw new Error("পুরো পর্দা জুড়ে বসেনি");
+  });
+
+  await checkA("⚠️ ছবির সাথে লেখা থাকলে লেখাও দেখা যায়", async () => {
+    const r = await drawOnce(
+      <M.FloatBody
+        slide={{ kind: "verse", image: "https://x/a.png",
+                 heading: "Say it", text: "🎤 Together" }}
+      />,
+    );
+    if (!r.textOf.includes("Say it") || !r.textOf.includes("Together"))
+      throw new Error("ছবির পাশে লেখা হারিয়ে গেছে");
+    if (!r.imgs.length) throw new Error("ছবিটাও থাকার কথা");
+    if (r.imgs[0].objectFit === "contain" && r.imgs[0].width === "100%")
+      throw new Error("লেখাসহ স্লাইডও পুরো পর্দা ধরে নিয়েছে");
+  });
+
+  await checkA("⚠️ আনা স্লাইডেও উস্তাদের স্ক্রিপ্ট পৌঁছায় না", async () => {
+    // onlySlide() দেয়ালটি ছবি যোগ হওয়ার পরও অটুট আছে তো?
+    const sent = M.onlySlide({
+      kind: "visual",
+      image: "https://x/s1.png",
+      says: "উস্তাদ যা বলবেন",
+      does: "গোপন নির্দেশনা",
+      note: "গোপন নোট",
+    });
+    if (sent.says || sent.does || sent.note)
+      throw new Error("উস্তাদের ঘর পর্দায় চলে যাচ্ছে");
+    if (sent.image !== "https://x/s1.png")
+      throw new Error("ছবিটাই পৌঁছাচ্ছে না");
+  });
+
   console.log(`\n  ${ran} রকম দৃশ্য চালানো হলো (এফেক্ট ও ক্লিকসহ)`);
   if (failures.length) {
     console.log(`\n❌ ব্যর্থ ${failures.length}টি:`);

@@ -17543,8 +17543,14 @@ function SlidePreview({ slide, small }) {
               src={sl.image}
               alt=""
               style={{
+                /* ছবি-শুধু স্লাইড হলে নমুনাতেও পুরোটা জুড়ে — পরিচালক
+                   যেন হুবহু দেখতে পান শিক্ষার্থী কী দেখবে */
+                width: imageOnly(sl) ? "100%" : undefined,
                 maxWidth: "100%",
-                maxHeight: small ? 110 : 200,
+                maxHeight: imageOnly(sl)
+                  ? (small ? 150 : 260)
+                  : (small ? 110 : 200),
+                objectFit: "contain",
                 borderRadius: 10,
                 margin: "0 auto",
               }}
@@ -18016,6 +18022,12 @@ const HEAD_FIELDS = [
 /* একটি দারস খোলা — উপরে দারসের নিজের তথ্য, নিচে ধাপগুলো */
 function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
   const [lesson, setLesson] = useState(null);
+  /* ⚠️ বাইরের স্লাইড আনার হুক দুটি এখানেই — একদম উপরে। নিচে, কাজটির
+     পাশে রাখতে গিয়ে শর্তসাপেক্ষ return-এর পরে পড়ে গিয়েছিল, আর তাতে
+     "Rendered more hooks than during the previous render" বলে পুরো
+     সম্পাদকই ভেঙে পড়ত। হুক সবসময় শর্তহীন জায়গায়। */
+  const importRef = useRef(null);
+  const [importing, setImporting] = useState("");
   // উপরের ঘরগুলোর খসড়া — পরিচালক কিছু বদলানোর আগ পর্যন্ত null
   const [draft, setDraft] = useState(null);
   // দারস পরিকল্পনার হেডিং ও টপিক — কোন টপিকের স্ক্রিপ্ট তা বেছে দিতে
@@ -18178,6 +18190,52 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
       onChanged && onChanged();
     } catch (e) {
       notice("ধাপ যোগ করা যায়নি — " + (e?.data?.error || e?.message || ""));
+    }
+  };
+
+  /* ── বাইরে থেকে বানানো স্লাইড আনা ──
+     PDF-এর প্রতিটি পাতা, বা বেছে দেওয়া প্রতিটি ছবি — এক-একটি ধাপ
+     হয়ে বসে। ⚠️ একটিতে আটকে গেলেও আগেরগুলো থেকে যায়, তাই কত বসল
+     তা গুনে জানানো হয় — নইলে পরিচালক বুঝতেন না কোথা থেকে ধরবেন। */
+  const importSlides = async (fileList) => {
+    const files = [...(fileList || [])];
+    if (!files.length) return;
+    let done = 0;
+    try {
+      setImporting("ফাইল পড়া হচ্ছে…");
+      const imgs = await filesToSlideImages(files, (i, n) =>
+        setImporting(`পাতা ${bn(String(i))}/${bn(String(n))} তৈরি হচ্ছে…`),
+      );
+      if (!imgs.length) {
+        notice("চালানোর মতো কিছু পাওয়া যায়নি — PDF বা ছবি দিন।");
+        return;
+      }
+      for (let k = 0; k < imgs.length; k++) {
+        setImporting(
+          `স্লাইড ${bn(String(k + 1))}/${bn(String(imgs.length))} উঠছে…`,
+        );
+        const got = await api.uploadLessonMedia(imgs[k]);
+        await api.addLessonStep({
+          lesson: lesson.id,
+          section: `আনা স্লাইড ${bn(String(k + 1))}`,
+          slide: { ...EMPTY_SLIDE, kind: "visual", image: got.url },
+        });
+        done++;
+      }
+      notice(`✅ ${bn(String(done))}টি স্লাইড যোগ হয়েছে`);
+    } catch (e) {
+      const why = e?.data?.error || e?.message || "";
+      notice(
+        done
+          ? `${bn(String(done))}টি বসেছে, তারপর আটকে গেছে — ${why}`
+          : "আনা যায়নি — " + why,
+      );
+    } finally {
+      setImporting("");
+      if (done) {
+        await load(true);
+        onChanged && onChanged();
+      }
     }
   };
 
@@ -18456,16 +18514,41 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
           📋 পড়ানোর ধাপ ({bn(steps.length)})
         </div>
         {canEdit && (
-          <Btn sm kind="gold" onClick={addStep}>
-            + নতুন ধাপ
-          </Btn>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {/* ⚠️ ফাইলের ঘরটি লুকানো — সাজানো বোতামই চাপা হয় */}
+            <input
+              ref={importRef}
+              type="file"
+              multiple
+              accept={IMPORT_TYPES}
+              style={{ display: "none" }}
+              onChange={(e) => {
+                importSlides(e.target.files);
+                e.target.value = ""; // একই ফাইল আবার দিলেও যেন চলে
+              }}
+            />
+            <Btn
+              sm
+              kind="soft"
+              disabled={!!importing}
+              onClick={() => importRef.current && importRef.current.click()}
+              title="ক্যানভা/পাওয়ারপয়েন্টে বানিয়ে PDF করে নিন — প্রতিটি পাতা একটি স্লাইড হবে"
+            >
+              {importing || "📥 বাইরের স্লাইড আনুন"}
+            </Btn>
+            <Btn sm kind="gold" onClick={addStep}>
+              + নতুন ধাপ
+            </Btn>
+          </div>
         )}
       </div>
 
       <div style={{ display: "grid", gap: 10 }}>
         {steps.length === 0 && (
           <div style={{ ...S.card, color: C.muted, fontSize: 14 }}>
-            এই দারসে এখনো কোনো ধাপ নেই। “+ নতুন ধাপ” দিয়ে শুরু করুন।
+            এই দারসে এখনো কোনো ধাপ নেই। “+ নতুন ধাপ” দিয়ে শুরু করুন —
+            অথবা নিজের বানানো স্লাইড থাকলে “📥 বাইরের স্লাইড আনুন” দিয়ে
+            একটি PDF দিন, প্রতিটি পাতা এক-একটি স্লাইড হয়ে বসে যাবে।
           </div>
         )}
         {steps.map((st, i) => (
@@ -20057,6 +20140,106 @@ function FitBox({ children, zoom = 1 }) {
 
 /* fixed=true হলে মাপগুলো পর্দা-নির্ভর (vw/vh) না হয়ে স্থির — FitBox-এর
    ভেতরে বসলে এটাই লাগে */
+/* ─── বাইরে থেকে বানানো স্লাইড আনা ──────────────────────────────────
+
+   পরিচালক বা উস্তাদ ক্যানভা, পাওয়ারপয়েন্ট, গুগল স্লাইড — যেখানেই
+   স্লাইড বানান, সব জায়গাতেই "Save as PDF" আছে। তাই PDF-ই সবচেয়ে
+   নির্ভরযোগ্য পথ: একটাই ফাইল, পুরো সেট, আর আরবি অক্ষত থাকে কারণ
+   ফন্ট PDF-এর ভেতরেই বসানো থাকে।
+
+   ছবিও চলে (PNG/JPG/WebP/GIF) — একসাথে অনেকগুলো বেছে দিলে প্রতিটি
+   এক-একটি স্লাইড হয়।
+
+   ⚠️ PDF-এর পাতাগুলো ছবিতে বদলানো হয় পরিচালকের নিজের ব্রাউজারে,
+   আনার সময়েই — সার্ভারে নয়। কারণ দুটি:
+     • সার্ভারে PDF ভাঙতে ভারী কনভার্টার লাগে, আর তাতে আরবি ভাঙে
+     • ক্লাস চলাকালে সার্ভারের উপর বাড়তি চাপ ফেলা যাবে না (আগে
+       একবার বাড়তি ডাকের কারণেই অ্যাপ অচল হয়েছিল)
+   বদলে ফেলার পর পর্দার কাজটা নিছক একটি ছবি দেখানো — যা আগে থেকেই
+   নির্ভুলভাবে চলে। */
+
+// পাতাগুলো এই চওড়ায় আঁকা হয় — উস্তাদ জুম করলেও যেন ঝাপসা না লাগে
+const IMPORT_W = 1920;
+// একবারে এতগুলোর বেশি এলে থামানো — নইলে ব্রাউজার ও কোটা দুটোই ভোগে
+const IMPORT_MAX = 60;
+
+const IMPORT_TYPES =
+  "application/pdf,image/png,image/jpeg,image/webp,image/gif";
+
+/* PDF-এর প্রতিটি পাতা → একটি PNG ফাইল।
+   ⚠️ pdfjs শুধু দরকারের সময়ই নামানো হয় (dynamic import), যাতে যারা
+   কখনো স্লাইড আনেন না তাদের পাতা ভারী না হয়। */
+async function pdfToImages(file, onStep) {
+  const pdfjs = await import("pdfjs-dist");
+  // কর্মীটি একই প্যাকেজ থেকেই — CDN-এর উপর নির্ভর করলে অফলাইনে ভাঙত
+  const worker = await import("pdfjs-dist/build/pdf.worker.mjs?url");
+  pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+
+  const buf = await file.arrayBuffer();
+  const doc = await pdfjs.getDocument({ data: buf }).promise;
+  const out = [];
+  const n = Math.min(doc.numPages, IMPORT_MAX);
+
+  for (let i = 1; i <= n; i++) {
+    onStep && onStep(i, n);
+    const page = await doc.getPage(i);
+    const base = page.getViewport({ scale: 1 });
+    const viewport = page.getViewport({ scale: IMPORT_W / base.width });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    const ctx = canvas.getContext("2d");
+    // ⚠️ সাদা ভিত্তি — নইলে স্বচ্ছ পাতা কালো পর্দায় পড়া যেত না
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    const blob = await new Promise((ok) =>
+      canvas.toBlob(ok, "image/png"),
+    );
+    if (blob)
+      out.push(
+        new File([blob], `slide-${String(i).padStart(2, "0")}.png`, {
+          type: "image/png",
+        }),
+      );
+    canvas.width = canvas.height = 0; // স্মৃতি ছেড়ে দেওয়া
+  }
+  try {
+    await doc.destroy();
+  } catch {
+    /* বন্ধ করতে না পারলেও ছবিগুলো তো পাওয়া গেছে */
+  }
+  return out;
+}
+
+/* বেছে দেওয়া ফাইলগুলো → পর্দায় দেখানোর মতো ছবির তালিকা।
+   PDF ভেঙে পাতা, ছবি যেমন আছে তেমন। ক্রম যেভাবে বেছেছেন সেভাবেই। */
+async function filesToSlideImages(files, onStep) {
+  const out = [];
+  for (const f of files) {
+    if ((f.type || "").toLowerCase() === "application/pdf") {
+      const pages = await pdfToImages(f, onStep);
+      out.push(...pages);
+    } else if ((f.type || "").toLowerCase().startsWith("image/")) {
+      out.push(f);
+    }
+    if (out.length >= IMPORT_MAX) break;
+  }
+  return out.slice(0, IMPORT_MAX);
+}
+
+/* ⚠️ বাইরে থেকে আনা স্লাইড — ছবিটাই গোটা স্লাইড।
+
+   পরিচালক বা উস্তাদ ক্যানভা/পাওয়ারপয়েন্টে নিজের মতো স্লাইড বানিয়ে
+   আনতে পারেন। তখন ছবির উপরে আমাদের শিরোনাম-আয়াত বসানোর কিছু নেই —
+   ছবিটাই পুরো পর্দা জুড়ে বসবে, যেমনটা তিনি বানিয়েছেন।
+
+   ছবির সাথে লেখাও থাকলে আগের ব্যবহারটাই বহাল — ছবি মাঝখানে ছোট করে,
+   উপরে শিরোনাম, নিচে লেখা। তাই পুরনো কোনো স্লাইড বদলে যায় না। */
+const imageOnly = (sl) =>
+  !!(sl && sl.image) &&
+  !sl.heading && !sl.arabic && !sl.translit && !sl.text;
+
 function StageSlide({ slide, fixed }) {
   const sl = slide || null;
   if (!sl)
@@ -20065,6 +20248,34 @@ function StageSlide({ slide, fixed }) {
         ⬛
       </div>
     );
+  /* ⚠️ objectFit:"contain" — ছবিটা পুরোটাই দেখা যাবে, অনুপাত ঠিক
+     থাকবে, কিছুই কাটা পড়বে না। ভেতরে বসার পর FitBox গোটাটাকে
+     উইন্ডোর মাপে মানিয়ে নেয়, তাই ছোট-বড় সব পর্দাতেই পুরো স্লাইড। */
+  if (imageOnly(sl))
+    return (
+      <div
+        style={{
+          width: fixed ? FIT_W : "100%",
+          height: fixed ? FIT_H : "auto",
+          display: "grid",
+          placeItems: "center",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        <img
+          src={sl.image}
+          alt=""
+          style={{
+            width: "100%",
+            height: fixed ? FIT_H : "auto",
+            maxHeight: fixed ? FIT_H : "70vh",
+            objectFit: "contain",
+          }}
+        />
+      </div>
+    );
+
   return (
     <div
       style={{
@@ -24636,6 +24847,10 @@ export {
   RichText,
   FitBox,
   fitScale,
+  imageOnly,
+  filesToSlideImages,
+  IMPORT_TYPES,
+  IMPORT_MAX,
   zoomed,
   ZOOM_MIN,
   ZOOM_MAX,

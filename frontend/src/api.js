@@ -495,6 +495,14 @@ export const api = {
   // নকল — একই বিষয়ের আলাদা বয়সের সংস্করণ বানানোর সহজ পথ
   duplicateLesson: (id, d) =>
     request(`/lessons/${id}/duplicate/`, { method: "POST", body: d || {} }),
+  /* বাইরে থেকে বানানো স্লাইডের ছবি জমা রাখা।
+     ⚠️ পথটি পরিচালক-only, আর সার্ভার ধরন ও আকার দুটোই যাচাই করে —
+     যেকোনো ফাইল তুলতে দিলে সেটা অপব্যবহারের দরজা হতো। */
+  uploadLessonMedia: (file) => {
+    const f = new FormData();
+    f.append("file", file);
+    return request("/lesson-media/", { method: "POST", body: f, isForm: true });
+  },
   addLessonStep: (d) => request("/lesson-steps/", { method: "POST", body: d }),
   editLessonStep: (id, d) =>
     request(`/lesson-steps/${id}/`, { method: "PATCH", body: d }),
