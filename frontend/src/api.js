@@ -378,7 +378,10 @@ export const api = {
     request("/notifications/broadcast/", { method: "POST", body: { text } }),
   // কোর্সের সিলেবাস টেবিল — পরিচালকের নিজের হাতে লেখা (পড়া: সবাই, লেখা: পরিচালক)
   // কোর্সের শিক্ষার্থী তালিকা — লেকচার প্ল্যানে "কার জন্য টিক" বাছাই করতে
-  // দারসের টগলে বসানোর ছবি/PDF আপলোড — ঠিকানা ফেরত আসে (কেবল পরিচালক)
+  /* দারসের টগলে বসানোর, আর বাইরে থেকে আনা স্লাইডের ছবি/PDF —
+     ঠিকানা ফেরত আসে। ⚠️ পথটি পরিচালক-only, আর সার্ভার ধরন ও
+     আকার দুটোই যাচাই করে; যেকোনো ফাইল তুলতে দিলে সেটা
+     অপব্যবহারের দরজা হতো। */
   uploadLessonMedia: (file) => {
     const fd = new FormData();
     fd.append("file", file);
@@ -495,14 +498,6 @@ export const api = {
   // নকল — একই বিষয়ের আলাদা বয়সের সংস্করণ বানানোর সহজ পথ
   duplicateLesson: (id, d) =>
     request(`/lessons/${id}/duplicate/`, { method: "POST", body: d || {} }),
-  /* বাইরে থেকে বানানো স্লাইডের ছবি জমা রাখা।
-     ⚠️ পথটি পরিচালক-only, আর সার্ভার ধরন ও আকার দুটোই যাচাই করে —
-     যেকোনো ফাইল তুলতে দিলে সেটা অপব্যবহারের দরজা হতো। */
-  uploadLessonMedia: (file) => {
-    const f = new FormData();
-    f.append("file", file);
-    return request("/lesson-media/", { method: "POST", body: f, isForm: true });
-  },
   addLessonStep: (d) => request("/lesson-steps/", { method: "POST", body: d }),
   editLessonStep: (id, d) =>
     request(`/lesson-steps/${id}/`, { method: "PATCH", body: d }),

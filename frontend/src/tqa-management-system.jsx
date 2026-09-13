@@ -18203,13 +18203,23 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
     let done = 0;
     try {
       setImporting("ফাইল পড়া হচ্ছে…");
-      const imgs = await filesToSlideImages(files, (i, n) =>
-        setImporting(`পাতা ${bn(String(i))}/${bn(String(n))} তৈরি হচ্ছে…`),
+      const { images: imgs, dropped } = await filesToSlideImages(
+        files,
+        (i, n) =>
+          setImporting(`পাতা ${bn(String(i))}/${bn(String(n))} তৈরি হচ্ছে…`),
       );
       if (!imgs.length) {
         notice("চালানোর মতো কিছু পাওয়া যায়নি — PDF বা ছবি দিন।");
         return;
       }
+      /* ⚠️ নীরবে কাটা যাবে না — বাদ পড়লে আগেই জানানো হয়, নইলে
+         পরিচালক ক্লাসের মাঝপথে টের পেতেন। */
+      if (dropped)
+        notice(
+          `একবারে সর্বোচ্চ ${bn(String(IMPORT_MAX))}টি স্লাইড নেওয়া যায়। ` +
+            `প্রথম ${bn(String(IMPORT_MAX))}টি নেওয়া হচ্ছে, ` +
+            `বাকি ${bn(String(dropped))}টি বাদ — সেগুলো আলাদা করে আনুন।`,
+        );
       for (let k = 0; k < imgs.length; k++) {
         setImporting(
           `স্লাইড ${bn(String(k + 1))}/${bn(String(imgs.length))} উঠছে…`,
@@ -20179,6 +20189,7 @@ async function pdfToImages(file, onStep) {
   const doc = await pdfjs.getDocument({ data: buf }).promise;
   const out = [];
   const n = Math.min(doc.numPages, IMPORT_MAX);
+  const total = doc.numPages;         // সীমার বাইরেরগুলোও গোনা থাকে
 
   for (let i = 1; i <= n; i++) {
     onStep && onStep(i, n);
@@ -20209,23 +20220,31 @@ async function pdfToImages(file, onStep) {
   } catch {
     /* বন্ধ করতে না পারলেও ছবিগুলো তো পাওয়া গেছে */
   }
-  return out;
+  return { pages: out, total };
 }
 
 /* বেছে দেওয়া ফাইলগুলো → পর্দায় দেখানোর মতো ছবির তালিকা।
-   PDF ভেঙে পাতা, ছবি যেমন আছে তেমন। ক্রম যেভাবে বেছেছেন সেভাবেই। */
+   PDF ভেঙে পাতা, ছবি যেমন আছে তেমন। ক্রম যেভাবে বেছেছেন সেভাবেই।
+
+   ⚠️ সীমার বেশি এলে কতগুলো বাদ পড়ল তাও ফেরত যায়। আগে নীরবে কেটে
+   দেওয়া হতো — ৭০ পাতার সেট দিলে ১০ পাতা হারিয়ে যেত অথচ পরিচালক
+   জানতেই পারতেন না, আর ক্লাসের মাঝপথে টের পেতেন। */
 async function filesToSlideImages(files, onStep) {
   const out = [];
+  let seen = 0;                       // কতগুলো পাওয়া গিয়েছিল, সীমার আগে
   for (const f of files) {
-    if ((f.type || "").toLowerCase() === "application/pdf") {
-      const pages = await pdfToImages(f, onStep);
+    const type = (f.type || "").toLowerCase();
+    if (type === "application/pdf") {
+      const { pages, total } = await pdfToImages(f, onStep);
+      seen += total;
       out.push(...pages);
-    } else if ((f.type || "").toLowerCase().startsWith("image/")) {
+    } else if (type.startsWith("image/")) {
+      seen += 1;
       out.push(f);
     }
-    if (out.length >= IMPORT_MAX) break;
   }
-  return out.slice(0, IMPORT_MAX);
+  return { images: out.slice(0, IMPORT_MAX),
+           dropped: Math.max(0, seen - IMPORT_MAX) };
 }
 
 /* ⚠️ বাইরে থেকে আনা স্লাইড — ছবিটাই গোটা স্লাইড।

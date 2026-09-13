@@ -2862,3 +2862,91 @@ class TheNasPieceOrderRepair(TestCase):
         self.Lesson.objects.all().delete()
         self.run_it()          # কোনো ভুল যেন না ঘটে
         self.assertEqual(self.Lesson.objects.count(), 0)
+
+
+class ANewStepLandsAtTheEnd(TestCase):
+    """🔒 নতুন ধাপ দারসের শেষে বসে — মাঝখানে নয়।
+
+    কাজটি করে LessonStepSerializer.create() — শেষ ধাপের order দেখে তার
+    পরেরটি বসায়। এতদিন এর কোনো পরীক্ষা ছিল না, কেবল একটি মন্তব্য।
+
+    ⚠️ পরীক্ষাগুলো লেখা হয়েছে একটি ভুল সন্দেহ থেকে। সরাসরি
+    LessonStep.objects.create() দিয়ে দেখা গিয়েছিল নতুন ধাপ ২ নম্বরে
+    বসে — কারণ order ০ থাকে আর সাজানোর নিয়ম ["order", "id"]। কিন্তু
+    অ্যাপ কখনো ওই পথে যায় না, সবসময় সিরিয়ালাইজারের মধ্য দিয়ে যায়,
+    আর সেখানে order ঠিকই বসে। অর্থাৎ বাগ ছিল না।
+
+    তবু পরীক্ষাগুলো রাখা হলো — সিরিয়ালাইজারের ওই অংশটি কেউ সরালে বা
+    ভাঙলে ধাপ নীরবে দারসের মাঝখানে ঢুকে পড়ত, আর বাইরে থেকে আনা
+    স্লাইডের পুরো সেটটাই এলোমেলো হয়ে যেত।
+    """
+
+    def setUp(self):
+        from rest_framework.test import APIClient
+        from core.models import Course, Lesson, LessonStep, StepSlide, User
+        from core.sample_lessons import create_sample
+        self.LessonStep = LessonStep
+        self.boss = User.objects.create(username="পরিচালক", role="director")
+        self.c = Course.objects.create(name="পরীক্ষা", teacher=None)
+        self.les, _ = create_sample(Lesson, LessonStep, StepSlide,
+                                    self.c, "qaida")
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.boss)
+
+    def add(self, section, **extra):
+        body = {"lesson": self.les.id, "section": section}
+        body.update(extra)
+        return self.client.post("/api/lesson-steps/", body, format="json")
+
+    def positions(self):
+        return [s.section for s in self.les.steps.all()]
+
+    def test_it_lands_last(self):
+        n = self.les.steps.count()
+        r = self.add("নতুন ধাপ")
+        self.assertEqual(r.status_code, 201, r.data)
+        names = self.positions()
+        self.assertEqual(names[-1], "নতুন ধাপ",
+                         "শেষে বসেনি — বসেছে %d নম্বরে"
+                         % (names.index("নতুন ধাপ") + 1))
+        self.assertEqual(len(names), n + 1)
+
+    def test_many_stay_in_the_order_they_were_added(self):
+        """⚠️ বাইরে থেকে আনা স্লাইডগুলো যেন ক্রম হারিয়ে না ফেলে।"""
+        for k in range(1, 6):
+            self.assertEqual(self.add("আনা স্লাইড %d" % k).status_code, 201)
+        tail = self.positions()[-5:]
+        self.assertEqual(
+            tail, ["আনা স্লাইড %d" % k for k in range(1, 6)],
+            "আনা স্লাইডের ক্রম বদলে গেছে: %s" % tail)
+
+    def test_the_first_step_of_an_empty_lesson_is_zero(self):
+        from core.models import Lesson
+        empty = Lesson.objects.create(course=self.c, title="খালি",
+                                      kind="memorization")
+        r = self.client.post("/api/lesson-steps/",
+                             {"lesson": empty.id, "section": "প্রথম"},
+                             format="json")
+        self.assertEqual(r.status_code, 201, r.data)
+        self.assertEqual(empty.steps.first().order, 0)
+
+    def test_an_explicit_order_is_still_obeyed(self):
+        """⚠️ স্পষ্ট order পাঠালে সেটাই মানতে হবে — নইলে reorder ভাঙত।"""
+        r = self.add("হাতে বসানো", order=3)
+        self.assertEqual(r.status_code, 201, r.data)
+        self.assertEqual(
+            self.LessonStep.objects.get(id=r.data["id"]).order, 3)
+
+    def test_reordering_still_works(self):
+        """⚠️ পুরনো কাজটি ভাঙেনি তো?"""
+        ids = [s.id for s in self.les.steps.all()]
+        flipped = list(reversed(ids))
+        r = self.client.post("/api/lesson-steps/reorder/",
+                             {"ids": flipped}, format="json")
+        self.assertIn(r.status_code, (200, 204), r.data)
+        self.assertEqual([s.id for s in self.les.steps.all()], flipped)
+
+    def test_the_seeded_steps_keep_their_own_order(self):
+        """বসানো দারসের ধাপগুলো আগের মতোই ০,১,২… থাকবে।"""
+        self.assertEqual([s.order for s in self.les.steps.all()[:5]],
+                         [0, 1, 2, 3, 4])

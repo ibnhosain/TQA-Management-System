@@ -1269,7 +1269,7 @@ export async function run() {
   const fake = (type, name) => ({ type, name: name || "x" });
 
   await checkA("ছবিগুলো যে ক্রমে দেওয়া, সে ক্রমেই থাকে", async () => {
-    const got = await M.filesToSlideImages([
+    const { images: got } = await M.filesToSlideImages([
       fake("image/png", "a.png"),
       fake("image/jpeg", "b.jpg"),
       fake("image/webp", "c.webp"),
@@ -1280,7 +1280,7 @@ export async function run() {
   });
 
   await checkA("⚠️ ছবি বা PDF ছাড়া কিছুই ঢোকে না", async () => {
-    const got = await M.filesToSlideImages([
+    const { images: got } = await M.filesToSlideImages([
       fake("application/zip", "x.zip"),
       fake("text/html", "x.html"),
       fake("application/vnd.ms-powerpoint", "x.ppt"),
@@ -1294,14 +1294,27 @@ export async function run() {
     const many = Array.from({ length: M.IMPORT_MAX + 25 }, (_, i) =>
       fake("image/png", `p${i}.png`),
     );
-    const got = await M.filesToSlideImages(many);
+    const { images: got, dropped } = await M.filesToSlideImages(many);
     if (got.length !== M.IMPORT_MAX)
       throw new Error(`${got.length}টি এসেছে, সীমা ${M.IMPORT_MAX}`);
+    // ⚠️ কতগুলো বাদ পড়ল তা জানানো চাই — নইলে নীরবে হারিয়ে যেত
+    if (dropped !== 25)
+      throw new Error(`বাদ পড়ার সংখ্যা ভুল: ${dropped}, হওয়ার কথা ২৫`);
+  });
+
+  await checkA("⚠️ সীমার ভেতরে থাকলে কিছুই বাদ যায় না", async () => {
+    const { images, dropped } = await M.filesToSlideImages([
+      fake("image/png", "a.png"),
+      fake("image/png", "b.png"),
+    ]);
+    if (images.length !== 2 || dropped !== 0)
+      throw new Error(`অকারণে বাদ দিয়েছে: ${dropped}`);
   });
 
   await checkA("কিছু না দিলে কিছুই হয় না", async () => {
-    const got = await M.filesToSlideImages([]);
+    const { images: got, dropped } = await M.filesToSlideImages([]);
     if (got.length !== 0) throw new Error("খালি তালিকা থেকেও কিছু এসেছে");
+    if (dropped !== 0) throw new Error("খালি তালিকায় বাদ পড়ার খবর");
   });
 
   check("ফাইল বাছার ঘরটি PDF ও ছবি দুটোই নেয়", () => {
