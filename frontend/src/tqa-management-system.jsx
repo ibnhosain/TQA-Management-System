@@ -4083,6 +4083,13 @@ function InstantClassView({ courses, user }) {
   const [previewZone, setPreviewZone] = useState("");
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState(null); // সদ্য তৈরি হওয়া ক্লাস — নিচে নোটিফাই বাটন দেখাতে
+  const [customZones, setCustomZones] = useState(getCustomZones);
+  useEffect(() => {
+    const sync = () => setCustomZones(getCustomZones());
+    window.addEventListener("tqa_zones_changed", sync);
+    return () => window.removeEventListener("tqa_zones_changed", sync);
+  }, []);
+  const allZones = [...COMMON_ZONES, ...customZones];
 
   const preview = previewZone ? toZoneFullDateTime(f.date, f.time, previewZone) : null;
 
@@ -4260,7 +4267,7 @@ function InstantClassView({ courses, user }) {
           onChange={(e) => setPreviewZone(e.target.value)}
         >
           <option value="">— বাছাই করুন —</option>
-          {COMMON_ZONES.map((z) => (
+          {allZones.map((z) => (
             <option key={z.zone} value={z.zone}>
               {z.label}
             </option>
@@ -4268,7 +4275,7 @@ function InstantClassView({ courses, user }) {
         </select>
         {preview && (
           <div style={{ marginTop: 6, fontSize: 12.5, color: C.muted }}>
-            {COMMON_ZONES.find((z) => z.zone === previewZone)?.label}-এর সময় অনুযায়ী:{" "}
+            {allZones.find((z) => z.zone === previewZone)?.label}-এর সময় অনুযায়ী:{" "}
             <b>{fmtDate(preview.date)} · {preview.time}</b>
           </div>
         )}
@@ -9624,6 +9631,82 @@ function BackupCard() {
   );
 }
 
+function TimezoneManagerCard() {
+  const [custom, setCustom] = useState(getCustomZones);
+  const [label, setLabel] = useState("");
+  const [zone, setZone] = useState("");
+  const [err, setErr] = useState("");
+
+  const add = () => {
+    if (!label.trim() || !zone.trim()) { setErr("নাম ও টাইমজোন আইডি দিন।"); return; }
+    try { Intl.DateTimeFormat("en", { timeZone: zone.trim() }); }
+    catch { setErr("ভুল টাইমজোন আইডি — সঠিক উদাহরণ: Europe/Rome, America/Toronto"); return; }
+    if ([...COMMON_ZONES, ...custom].some((z) => z.zone === zone.trim())) {
+      setErr("এই টাইমজোন তালিকায় আগেই আছে।"); return;
+    }
+    const updated = [...custom, { label: label.trim(), zone: zone.trim() }];
+    setCustom(updated);
+    saveCustomZones(updated);
+    setLabel(""); setZone(""); setErr("");
+  };
+
+  const remove = (z) => {
+    const updated = custom.filter((c) => c.zone !== z);
+    setCustom(updated);
+    saveCustomZones(updated);
+  };
+
+  return (
+    <div style={{ ...S.card, marginBottom: 14 }}>
+      <div style={{ fontWeight: 800, marginBottom: 4 }}>🌍 টাইমজোন পরিচালনা</div>
+      <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
+        ক্লাস শিডিউল ফর্মে নতুন দেশের সময় দেখাতে এখানে যোগ করুন।
+        টাইমজোন আইডি খুঁজুন:{" "}
+        <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones" target="_blank" rel="noreferrer" style={{ color: C.blue }}>
+          Wikipedia tz list
+        </a>{" "}
+        — "TZ identifier" কলামের মান ব্যবহার করুন (যেমন: <code>Europe/Rome</code>)।
+      </div>
+      {custom.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 6 }}>
+            আপনার যোগ করা টাইমজোন:
+          </div>
+          {custom.map((z) => (
+            <div key={z.zone} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5, background: C.cream, borderRadius: 8, padding: "6px 10px" }}>
+              <span style={{ flex: 1, fontSize: 13 }}>{z.label}</span>
+              <code style={{ fontSize: 11, color: C.muted, background: "none" }}>{z.zone}</code>
+              <Btn sm kind="danger" onClick={() => remove(z.zone)}>মুছুন</Btn>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, alignItems: "end" }}>
+        <div>
+          <label style={S.label}>নাম (যেমন: 🇮🇹 ইতালি)</label>
+          <input
+            style={S.input}
+            value={label}
+            onChange={(e) => { setLabel(e.target.value); setErr(""); }}
+            placeholder="🇮🇹 ইতালি (Rome)"
+          />
+        </div>
+        <div>
+          <label style={S.label}>IANA টাইমজোন আইডি</label>
+          <input
+            style={S.input}
+            value={zone}
+            onChange={(e) => { setZone(e.target.value); setErr(""); }}
+            placeholder="Europe/Rome"
+          />
+        </div>
+        <Btn kind="soft" onClick={add} style={{ whiteSpace: "nowrap" }}>+ যোগ করুন</Btn>
+      </div>
+      {err && <div style={{ marginTop: 6, fontSize: 12.5, color: C.red }}>{err}</div>}
+    </div>
+  );
+}
+
 /* ═══════════════ ম্যানেজ সেটিংস — কেবল পরিচালক (পূর্ণ নিয়ন্ত্রণ, কিছুই আড়াল নয়) ═══════════════ */
 function ManageView({ db, setDb, user, refresh }) {
   const [show, setShow] = useState(false);
@@ -10249,6 +10332,7 @@ function ManageView({ db, setDb, user, refresh }) {
       </div>
       <BroadcastCard user={user} />
       <BackupCard />
+      <TimezoneManagerCard />
       <div style={{ ...S.card, border: `1.5px solid #f3c9b8` }}>
         <div style={{ fontWeight: 800, marginBottom: 4, color: C.red }}>
           ⚠️ ডেঞ্জার জোন
@@ -11758,7 +11842,19 @@ const COMMON_ZONES = [
   { label: "🇫🇮 ফিনল্যান্ড (Helsinki)", zone: "Europe/Helsinki" },
   { label: "🇮🇳 ভারত (Kolkata)", zone: "Asia/Kolkata" },
   { label: "🇵🇰 পাকিস্তান (Karachi)", zone: "Asia/Karachi" },
+  { label: "🇫🇮 ফিনল্যান্ড (Helsinki)", zone: "Europe/Helsinki" },
 ];
+
+const CUSTOM_ZONES_KEY = "tqa_custom_zones";
+const getCustomZones = () => {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_ZONES_KEY) || "[]"); }
+  catch { return []; }
+};
+const saveCustomZones = (zones) => {
+  try { localStorage.setItem(CUSTOM_ZONES_KEY, JSON.stringify(zones)); }
+  catch {}
+  window.dispatchEvent(new Event("tqa_zones_changed"));
+};
 
 /* ছোট বাটন — স্টুডেন্টের নামের পাশে বসে, ক্লিক করলে মন্তব্য লেখার পপআপ (Modal)
    খোলে (ইংরেজিতে লিখলে স্টুডেন্ট পোর্টালে সরাসরি সেভাবেই দেখাবে — আলাদা কোনো
