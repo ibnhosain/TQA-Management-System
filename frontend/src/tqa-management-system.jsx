@@ -11755,6 +11755,7 @@ const COMMON_ZONES = [
   { label: "🇸🇬 সিঙ্গাপুর", zone: "Asia/Singapore" },
   { label: "🇩🇪 জার্মানি (Berlin)", zone: "Europe/Berlin" },
   { label: "🇫🇷 ফ্রান্স (Paris)", zone: "Europe/Paris" },
+  { label: "🇫🇮 ফিনল্যান্ড (Helsinki)", zone: "Europe/Helsinki" },
   { label: "🇮🇳 ভারত (Kolkata)", zone: "Asia/Kolkata" },
   { label: "🇵🇰 পাকিস্তান (Karachi)", zone: "Asia/Karachi" },
 ];
