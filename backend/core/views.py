@@ -108,7 +108,11 @@ class AcademicBookViewSet(viewsets.ModelViewSet):
     permission_classes = [ReadAllWriteDirector]
 
     def get_queryset(self):
-        return AcademicBook.objects.all()
+        qs = AcademicBook.objects.all()
+        # শিক্ষক নির্দেশিকার মতো বই কেবল পরিচালক, এডমিন ও উস্তাদের জন্য
+        if getattr(self.request.user, "role", "") not in ("director", "admin", "teacher"):
+            qs = qs.filter(staff_only=False)
+        return qs
 
     def create(self, request, *args, **kwargs):
         import os, traceback as tb

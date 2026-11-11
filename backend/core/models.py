@@ -88,6 +88,9 @@ class User(AbstractUser):
 class AcademicBook(models.Model):
     name = models.CharField(max_length=200)
     file = models.CharField(max_length=500, blank=True)  # Cloudinary URL বা local path
+    # True হলে বইটি (যেমন শিক্ষক নির্দেশিকা) কেবল পরিচালক, এডমিন ও উস্তাদ দেখেন —
+    # শিক্ষার্থী, অভিভাবক বা ট্রায়ালের তালিকায় আসে না
+    staff_only = models.BooleanField("কেবল শিক্ষক ও পরিচালকের জন্য", default=False)
     created_at = models.DateField(auto_now_add=True)
 
     def __str__(self):
