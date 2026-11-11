@@ -41,6 +41,7 @@ router.register("wa-messages", views.WaMessageViewSet)
 router.register("library-books", views.LibraryBookViewSet)
 router.register("lesson-sections", views.LessonSectionViewSet, basename="lesson-sections")
 router.register("push-subscriptions", views.PushSubscriptionViewSet, basename="push-subscriptions")
+router.register("amal-items", views.DailyAmalItemViewSet, basename="amal-items")
 
 def _version(request):
     """সার্ভারে কোন মাইগ্রেশন পর্যন্ত চলেছে — নির্ণয়ের জন্য।
@@ -80,6 +81,10 @@ urlpatterns = [
     # Web Push পাবলিক কী — ফ্রন্টএন্ড PushManager.subscribe()-এ ব্যবহার করে
     # দারসের টগলে বসানোর ছবি/PDF আপলোড (কেবল পরিচালক)
     path("lesson-media/", views.LessonMediaView.as_view()),
+    # পাওয়ারপয়েন্ট (.pptx) → PNG স্লাইড রূপান্তর (কেবল পরিচালক)
+    path("convert-pptx/", views.PptxConvertView.as_view()),
     path("push/vapid-public-key/", lambda r: JsonResponse({"key": push.public_key_b64()})),
+    path("amal/day/", views.DailyAmalDayView.as_view()),
+    path("amal/week/", views.DailyAmalWeekView.as_view()),
     path("", include(router.urls)),
 ]

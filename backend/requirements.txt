@@ -25,3 +25,6 @@ cloudinary>=1.36
 
 # Web Push নোটিফিকেশন — ব্রাউজার/ট্যাব বন্ধ থাকলেও অ্যালার্ট পাঠাতে (PWA)
 pywebpush>=2.0
+
+# PowerPoint (.pptx) স্লাইড → PNG রূপান্তর
+python-pptx>=1.0

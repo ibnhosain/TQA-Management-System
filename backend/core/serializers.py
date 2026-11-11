@@ -9,7 +9,7 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      Notification, PushSubscription, WaMessage, LibraryBook,
                      CourseSyllabusSheet, LessonSection, TrialReport,
                      TrialScoreItem, Lesson, LessonStep, StepSlide,
-                     LessonProgress)
+                     LessonProgress, DailyAmalItem, DailyAmalEntry)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -23,7 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "role", "name", "name_bn", "sub", "sub_title",
-                  "phone", "country", "guardian", "email", "monthly_fee",
+                  "phone", "country", "guardian", "guardian_phone", "email", "monthly_fee", "fee_currency",
                   "monthly_salary", "class_days", "can_fix_cross", "due_months",
                   "student_id", "teacher", "teacher_name",
                   # ট্রায়াল অতিথির নিজের পোর্টালে মেয়াদ ও কোর্স দেখাতে লাগে।
@@ -415,7 +415,7 @@ class LectureTopicSerializer(serializers.ModelSerializer):
     class Meta:
         model = LectureTopic
         fields = ["id", "syllabus_item", "text", "content", "order",
-                  "section", "covered", "marked_at"]
+                  "section", "covered", "marked_at", "today_plan"]
 
     def _row(self, obj):
         """যে শিক্ষার্থীর জন্য দেখা হচ্ছে তার নিজের রেকর্ড (থাকলে)।"""
@@ -462,6 +462,9 @@ class LessonSectionSerializer(serializers.ModelSerializer):
     def get_topics(self, obj):
         # prefetch করা topics থেকেই — প্রতি হেডিংয়ে আলাদা কোয়েরি হয় না
         rows = sorted(obj.topics.all(), key=lambda t: (t.order, t.id))
+        # today_only=True হলে কেবল আজকের পাঠে চিহ্নিত টপিক (উস্তাদের পোর্টালে)
+        if self.context.get("today_only"):
+            rows = [t for t in rows if t.today_plan]
         return LectureTopicSerializer(rows, many=True, context=self.context).data
 
 
@@ -930,3 +933,15 @@ class LibraryBookSerializer(serializers.ModelSerializer):
     class Meta:
         model = LibraryBook
         fields = ["id", "cls", "title", "author", "link", "file_type", "created_at"]
+
+
+class DailyAmalItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DailyAmalItem
+        fields = ["id", "name", "kind", "order", "is_active"]
+
+
+class DailyAmalEntrySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DailyAmalEntry
+        fields = ["id", "student", "item", "date", "value"]

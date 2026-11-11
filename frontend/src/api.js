@@ -229,13 +229,14 @@ export const api = {
   classPresence: (id) => request(`/classes/${id}/presence/`),                   // কে এখন মিটিংয়ে (দুজন-জয়েন গেটিং)
   markAttendance: (id, student_id, present = true) => request(`/classes/${id}/mark_attendance/`, { method: "POST", body: { student_id, present } }), // পরিচালকের ম্যানুয়াল হাজিরা
   postponeClass: (id) => request(`/classes/${id}/postpone/`, { method: "POST" }), // ⛔ স্থগিত
+  completePostponed: (id) => request(`/classes/${id}/complete_postponed/`, { method: "POST" }), // ✅ স্থগিত ক্লাস সম্পন্ন
   setClassJoinMode: (id, mode) => request(`/classes/${id}/set_join_mode/`, { method: "POST", body: { mode } }), // auto/join/rejoin — জয়েন/রিজয়েন লিংক ম্যানুয়ালি জোর করা (পরিচালক/এডমিন)
   finishClass: (id) => request(`/classes/${id}/finish/`, { method: "POST" }), // ক্লাস সত্যিই শেষ — মিনিট বসে, হাজিরা পাকা হয়, ক্লাস "সম্পন্ন" হয়
   openRejoin: (id) => request(`/classes/${id}/open_rejoin/`, { method: "POST" }), // উস্তাদ রিজয়েন চাপলে — শিক্ষার্থীর কাছেও ২য় লিংক খোলে
   deleteClass: (id) => request(`/classes/${id}/`, { method: "DELETE" }),
 
   // হাজিরা রিপোর্ট (মাসভিত্তিক) — উস্তাদ নিজের, শিক্ষার্থী নিজের, পরিচালক সবার + এডিট/মোছা
-  attendanceReport: (month) => request(`/attendance/?month=${encodeURIComponent(month)}`),
+  attendanceReport: (month) => request(month ? `/attendance/?month=${encodeURIComponent(month)}` : "/attendance/"),
   updateAttendance: (id, d) => request(`/attendance/${id}/`, { method: "PATCH", body: d }),
   deleteAttendance: (id) => request(`/attendance/${id}/`, { method: "DELETE" }),
 
@@ -387,16 +388,27 @@ export const api = {
     fd.append("file", file);
     return request("/lesson-media/", { method: "POST", body: fd, isForm: true });
   },
+  convertPptx: (file) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return request("/convert-pptx/", { method: "POST", body: fd, isForm: true });
+  },
   // ── দারস পরিকল্পনার হেডিং ও তার নিচের টপিক ──
   // studentId দিলে ওই শিক্ষার্থীর নিজের কভার-টিক নিয়ে আসে
   // trial=true দিলে ট্রায়াল অতিথিদের জন্য পরিচালকের সাজানো আলাদা পরিকল্পনা।
-  // না দিলে আগের মতোই নিয়মিত পরিকল্পনা — দুটো কখনো মেশে না।
-  lessonSections: (courseId, studentId, trial) =>
+  // todayOnly=true দিলে কেবল আজকের পাঠে চিহ্নিত টপিক (উস্তাদের পোর্টাল)।
+  lessonSections: (courseId, studentId, trial, todayOnly) =>
     request(
       `/lesson-sections/?course=${courseId}` +
         (studentId ? `&student=${studentId}` : "") +
-        (trial ? "&is_trial=1" : ""),
+        (trial ? "&is_trial=1" : "") +
+        (todayOnly ? "&today_only=1" : ""),
     ),
+  toggleTodayPlan: (topicId) =>
+    request("/lesson-sections/toggle_today_plan/", {
+      method: "POST",
+      body: { topic_id: topicId },
+    }),
   ensureSections: (course, trial) =>
     request("/lesson-sections/ensure/", {
       method: "POST",
@@ -525,6 +537,22 @@ export const api = {
   saveUser: (d, id) => request(id ? `/users/${id}/` : "/users/", { method: id ? "PATCH" : "POST", body: d }),
   deleteUser: (id) => request(`/users/${id}/`, { method: "DELETE" }),
   toggleFixCross: (id) => request(`/users/${id}/toggle_fix_cross/`, { method: "POST" }),
+
+  // ভাই-বোন পোর্টাল সুইচ
+  myFamily: () => request("/users/my-family/"),
+  switchSibling: (id) => request(`/users/${id}/switch-sibling/`, { method: "POST", body: {} }),
+
+  // দৈনিক আমল
+  amalItems: () => request("/amal-items/"),
+  saveAmalItem: (d, id) => request(id ? `/amal-items/${id}/` : "/amal-items/", { method: id ? "PATCH" : "POST", body: d }),
+  deleteAmalItem: (id) => request(`/amal-items/${id}/`, { method: "DELETE" }),
+  amalDay: (studentId, date) =>
+    request(`/amal/day/?student=${studentId}&date=${date}`),
+  amalDayMe: (date) => request(`/amal/day/?date=${date}`),
+  saveAmalDay: (studentId, date, entries) =>
+    request("/amal/day/", { method: "POST", body: { student_id: studentId, date, entries } }),
+  amalWeek: (studentId) =>
+    studentId ? request(`/amal/week/?student=${studentId}`) : request("/amal/week/"),
 };
 
 /** পরিচালকের সম্পূর্ণ ডেটা ব্যাকআপ — JSON ডাউনলোড */

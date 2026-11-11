@@ -43,14 +43,18 @@ def cron_reminders(request):
 
 @require_GET
 def cron_daily(request):
-    """রুটিন থেকে সামনের ৭ দিনের ক্লাস তৈরি + ৬০ দিনের বেশি পুরনো ক্লাস-শিডিউল মোছা
-    (হাজিরার তথ্য কখনো মোছে না — dennormalized স্ন্যাপশট থেকে যায়, প্রতিদিন একবার)"""
-    from .tasks import generate_routine_sessions, cleanup_old_classes
+    """রুটিন থেকে সামনের ৭ দিনের ক্লাস তৈরি + তারিখ-পেরানো upcoming ক্লাস স্থগিত
+    + ৬০ দিনের বেশি পুরনো ক্লাস-শিডিউল মোছা (হাজিরার তথ্য কখনো মোছে না, প্রতিদিন একবার)"""
+    from .tasks import generate_routine_sessions, cleanup_old_classes, auto_postpone_missed_classes
 
-    def _both():
-        return {"created": generate_routine_sessions(), "deleted_old_classes": cleanup_old_classes()}
+    def _all():
+        return {
+            "created": generate_routine_sessions(),
+            "auto_postponed": auto_postpone_missed_classes(),
+            "deleted_old_classes": cleanup_old_classes(),
+        }
 
-    return _run(request, _both, "daily")
+    return _run(request, _all, "daily")
 
 
 @require_GET

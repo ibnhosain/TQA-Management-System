@@ -257,6 +257,21 @@ def _js_to_py(js_days):
     return {(d - 1) % 7 for d in js_days}
 
 
+# ─────────────────── রুটিনের অসম্পন্ন ক্লাস অটো-স্থগিত (তারিখ পেরিয়ে গেলে) ───────────────────
+def auto_postpone_missed_classes():
+    """রুটিন থেকে তৈরি যে ক্লাসগুলোর তারিখ পেরিয়ে গেছে কিন্তু এখনো 'upcoming' —
+    সেগুলো স্বয়ংক্রিয়ভাবে 'postponed' চিহ্নিত করা (প্রতিদিন daily cron-এ চলে)।
+    শুধু routine-connected ক্লাস, ম্যানুয়ালি তৈরি standalone ক্লাস নয়।"""
+    from .models import ClassSession
+    today = timezone.localtime().date()
+    count = ClassSession.objects.filter(
+        status="upcoming",
+        date__lt=today,
+        routine__isnull=False,
+    ).update(status="postponed")
+    return count
+
+
 # ─────────────────── পুরনো ক্লাস-শিডিউল ৬০ দিন পর মোছা (হাজিরা কখনো মোছা হয় না) ───────────────────
 @shared_task
 def cleanup_old_classes():

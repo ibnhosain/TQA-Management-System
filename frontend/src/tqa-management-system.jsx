@@ -132,7 +132,7 @@ body{font-family:'Hind Siliguri',sans-serif;margin:0;padding:28px;background:#f4
 <div class="k">${kind}</div>
 <div class="b">
 <div class="r"><span>Receipt No.</span><b>TQA-${no}</b></div>
-<div class="r"><span>${kind.includes("বেতন") ? "Teacher" : "Name"}</span><b>${person.name || ""}</b></div>
+<div class="r"><span>${(kind.includes("বেতন") || kind === "Salary Voucher") ? "Teacher" : "Name"}</span><b>${person.name || ""}</b></div>
 <div class="r"><span>Month / Description</span><b>${p.month || "—"}</b></div>
 <div class="r"><span>Payment Date</span><b>${p.date || ""}</b></div>
 <div class="r"><span>Method</span><b>${p.method || "—"}</b></div>
@@ -391,7 +391,8 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
   // স্টুডেন্টের ফি রিসিট আর পোর্টালে "সেন্ড" করা হয় না — স্টুডেন্ট পোর্টালে শুধু
   // পেমেন্ট হিস্টরি (কোন মাস পরিশোধ, কোনটা বাকি) দেখানো হবে, আলাদা রিসিট ফাইল না।
   // পরিচালক/এডমিন এখন শুধু ডাউনলোড করে নিজে WhatsApp-এ পাঠাবেন।
-  const canSend = !!person.id && !p.noSend && kind !== "ফি পরিশোধ রিসিট";
+  const isFeeReceipt = kind === "ফি পরিশোধ রিসিট" || kind === "Fee Payment Receipt";
+  const canSend = !!person.id && !p.noSend && !isFeeReceipt;
   // PNG হিসেবে সেইভ — HTML ফাইলের বদলে, যাতে WhatsApp-এ সরাসরি ছবি হিসেবে সহজে পাঠানো যায়
   // (html2canvas শুধু এই মুহূর্তেই ডাউনলোড হয় — dynamic import, তাই মূল বান্ডেলের সাইজ বাড়ে না)
   const doDownload = async () => {
@@ -427,14 +428,15 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
   // ছবিটা সয়ংক্রিয়ভাবে সংযুক্ত করা যায় না — ডাউনলোড হওয়া ছবিটা একবার নিজে
   // সংযুক্ত করে দিতে হবে)
   const isReceiptKind =
-    kind === "ফি পরিশোধ রিসিট" || kind === "বেতন পরিশোধ ভাউচার";
+    isFeeReceipt || kind === "বেতন পরিশোধ ভাউচার" || kind === "Salary Voucher";
   const canWhatsApp = isReceiptKind && !!person.phone;
   const canEmail = isReceiptKind && !!person.email;
   const confirmMessage = () => {
     const hadith =
       "بارك الله لك في أهلك ومالك، إنما جزاء السلف الوفاء والحمد\n" +
       '"May Allah bless your family and your wealth. Indeed, the reward for fulfilling an obligation is faithfulness and gratitude." — Hadith';
-    return kind === "বেতন পরিশোধ ভাউচার"
+    const isSalary = kind === "বেতন পরিশোধ ভাউচার" || kind === "Salary Voucher";
+    return isSalary
       ? `Assalamu Alaikum Warahmatullahi Wabarakatuh,\n\nDear ${person.name || "Ustadh/Ustadha"},\n\nThis is to confirm that your salary payment for "${p.month || "—"}" has been completed. Please find the voucher attached below.\n\n${hadith}\n\nJazakAllahu Khairan for your dedication and service.\n— Tarbiyatul Quran Academy`
       : `Assalamu Alaikum Warahmatullahi Wabarakatuh,\n\nDear Guardian,\n\nWe are pleased to confirm that ${person.name || "your child"}'s fee payment for "${p.month || "—"}" has been received and verified. Please find the receipt attached below.\n\n${hadith}\n\nJazakAllahu Khairan for your continued trust and support.\n— Tarbiyatul Quran Academy`;
   };
@@ -449,7 +451,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
   const doEmail = () => {
     doDownload();
     const subject =
-      kind === "বেতন পরিশোধ ভাউচার"
+      (kind === "বেতন পরিশোধ ভাউচার" || kind === "Salary Voucher")
         ? `Salary Voucher — ${p.month || ""}`
         : `Fee Payment Receipt — ${p.month || ""}`;
     window.open(
@@ -559,7 +561,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
           <div style={{ padding: "20px 26px" }}>
             {row("Receipt No.", `TQA-${no}`)}
             {row(
-              kind.includes("বেতন") ? "Teacher" : "Name",
+              (kind.includes("বেতন") || kind === "Salary Voucher") ? "Teacher" : "Name",
               person.name || "",
             )}
             {row("Month / Description", p.month || "—")}
@@ -1682,6 +1684,8 @@ function Login({ onLogin }) {
       icon: "👑",
       desc: "সার্বিক তত্ত্বাবধান — ফি, বেতন, রিপোর্ট ও সকল ক্ষমতা",
       tint: "rgba(124,58,237,.10)",
+      cardTitle: "Director",
+      cardDesc: "Full control — fees, salaries, reports and all settings",
     },
     {
       key: "admin",
@@ -1725,11 +1729,8 @@ function Login({ onLogin }) {
     }
   })();
   const [role, setRole] = useState(initRole);
-  // স্টুডেন্ট বেছে নিলে ফর্ম ইংরেজিতে দেখাবে — বেশিরভাগ শিক্ষার্থী বাংলা বোঝে না
-  const T = (bnText, enText) => (role === "student" ? enText : bnText);
-  // হেডার (একাডেমির নাম) — role বাছাইয়ের আগে (ওয়েবসাইটের role-card স্ক্রিনের
-  // মতো) ও student-এর জন্য ইংরেজি; director/admin/teacher বেছে নেওয়ার পরই বাংলা
-  const TH = (bnText, enText) => (role && role !== "student" ? bnText : enText);
+  const T = (_bnText, enText) => enText;
+  const TH = (_bnText, enText) => enText;
   const [u, setU] = useState("");
   const [p, setP] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -1792,7 +1793,7 @@ function Login({ onLogin }) {
         .tqaRoleCard:hover .tqaRoleArrow{color:${C.emerald};transform:translateX(3px)}
       `}</style>
       <div style={{ width: "100%", maxWidth: 480 }}>
-        <InstallBanner lang={role === "student" ? "en" : "bn"} />
+        <InstallBanner lang="en" />
         <div
           style={{
             background: "rgba(255,255,255,.97)",
@@ -2054,10 +2055,7 @@ function Login({ onLogin }) {
                       color: C.text,
                     }}
                   >
-                    {T(
-                      `${ROLES.find((r) => r.key === role).label} লগইন`,
-                      "Student Login",
-                    )}
+                    {(ROLES.find((r) => r.key === role).cardTitle || ROLES.find((r) => r.key === role).label) + " Login"}
                   </div>
                   <div style={{ fontSize: 11.5, color: C.muted }}>
                     {T("আপনার আইডি ও পাসওয়ার্ড দিন", "Enter your ID and password")}
@@ -2193,7 +2191,7 @@ async function enablePushNotifications(silent = false) {
 /* ═══════════════ ক্লাস ও জুম জয়েন (ফিচার ২ ও ৪) ═══════════════ */
 /* ইন-ক্লাস প্যানেল — দুজন-জয়েন গেটিং, জয়েন করা মাত্রই হাজিরা নিশ্চিত */
 function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const [presence, setPresence] = useState(null);
   const [inMeeting, setInMeeting] = useState(true);
   const [showContinuePrompt, setShowContinuePrompt] = useState(false);
@@ -2861,7 +2859,7 @@ function ClassesView({
   onAutoJoinConsumed,
 }) {
   // শিক্ষার্থী বাংলা বোঝে না বলে তাদের জন্য ইংরেজি; উস্তাদ/এডমিন/পরিচালকের জন্য বাংলাই থাকছে
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const [show, setShow] = usePersistedState("cls_show", false);
   const blankSched = () => ({
     courseId: courses[0]?.id,
@@ -3681,7 +3679,7 @@ function ClassesView({
               মুছুন
             </Btn>
           )}
-          {k.date > todayISO() && k.status === "upcoming" && isAdm(user) && (
+          {k.status === "upcoming" && isAdm(user) && (
             <Btn sm kind="danger" onClick={() => postponeOne(k)}>
               ⛔ স্থগিত করুন
             </Btn>
@@ -4339,10 +4337,11 @@ function InstantClassView({ courses, user }) {
 /* ═══════════════ স্থগিত ক্লাস — director/admin সব দেখেন, teacher/student শুধু
    নিজের কোর্স অনুযায়ী (backend আগেই role অনুযায়ী ফিল্টার করে) ═══════════════ */
 function PostponedClassesView({ user }) {
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [month, setMonth] = useState("");
+  const [completing, setCompleting] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -4371,6 +4370,26 @@ function PostponedClassesView({ user }) {
         notice("মুছতে ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
       }
     });
+  };
+
+  const complete = (k) => {
+    askConfirm(
+      T(
+        "ক্লাসটি সম্পন্ন চিহ্নিত করবেন? সকল শিক্ষার্থীর হাজিরা যোগ হবে এবং মাসিক ক্লাস গণনায় উঠবে।",
+        "Mark this class as completed? Attendance will be recorded for all students.",
+      ),
+      async () => {
+        setCompleting(k.id);
+        try {
+          await api.completePostponed(k.id);
+          await load();
+          notice(T("✔ ক্লাস সম্পন্ন হিসেবে চিহ্নিত হয়েছে।", "✔ Class marked as completed."));
+        } catch (e) {
+          notice(T("ব্যর্থ — ", "Failed — ") + (e?.data?.error || e?.message || "যাচাই করুন"));
+        }
+        setCompleting(null);
+      },
+    );
   };
 
   // ছাত্র অনুযায়ী মাসভিত্তিক এক্সেল এক্সপোর্ট — কেবল পরিচালক (এডমিনও না, অন্য কেউ না)
@@ -4404,8 +4423,8 @@ function PostponedClassesView({ user }) {
     <Section
       title={T("⛔ স্থগিত ক্লাস", "⛔ Postponed Classes")}
       sub={T(
-        "অসুস্থতা বা অন্য কারণে স্থগিত হওয়া ক্লাসের তালিকা",
-        "List of classes postponed due to illness or other reasons",
+        "অসুস্থতা বা অন্য কারণে স্থগিত হওয়া ক্লাসের তালিকা — সম্পন্ন না হওয়া পর্যন্ত এখানে থাকবে",
+        "Classes postponed due to illness or other reasons — shown here until completed",
       )}
       action={
         isDir(user) && (
@@ -4425,32 +4444,84 @@ function PostponedClassesView({ user }) {
     >
       {loading ? (
         <Loader text={T("লোড হচ্ছে", "Loading")} />
+      ) : sorted.length === 0 ? (
+        <div style={{ textAlign: "center", color: C.muted, padding: "24px 0", fontSize: 14 }}>
+          {T("কোনো স্থগিত ক্লাস নেই", "No postponed classes")}
+        </div>
       ) : (
-        <Table
-          head={[
-            T("শিক্ষার্থী", "Student"),
-            T("কোর্স", "Course"),
-            T("উস্তাদ", "Teacher"),
-            T("তারিখ", "Date"),
-            T("সময়", "Time"),
-            ...(isDir(user) ? [""] : []),
-          ]}
-          rows={sorted.map((k) => [
-            (k.student_names && k.student_names.join(", ")) || "—",
-            k.course_name || "—",
-            k.teacher_name || "—",
-            fmtDate(k.date),
-            (k.time || "").slice(0, 5),
-            ...(isDir(user)
-              ? [
-                  <Btn key="d" sm kind="danger" onClick={() => remove(k)}>
-                    🗑️ মুছুন
-                  </Btn>,
-                ]
-              : []),
-          ])}
-          empty={T("কোনো স্থগিত ক্লাস নেই", "No postponed classes")}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {sorted.map((k) => {
+            const zoom1 = k.zoom_link || k.zoom || "";
+            const zoom2 = k.zoom_link_2 || k.zoom2 || "";
+            const hasZoom2 = zoom2 && zoom2 !== zoom1;
+            return (
+              <div
+                key={k.id}
+                style={{
+                  border: `1.5px solid ${C.line}`,
+                  borderLeft: `4px solid ${C.red}`,
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  background: C.redBg,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 10,
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                }}
+              >
+                {/* বাম: ক্লাসের তথ্য */}
+                <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
+                    {k.course_name || "—"}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: C.muted }}>
+                    📅 {fmtDate(k.date)} · 🕐 {(k.time || "").slice(0, 5)}
+                    {k.teacher_name ? ` · 👳 ${k.teacher_name}` : ""}
+                  </div>
+                  {isAdm(user) && (k.student_names || []).length > 0 && (
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>
+                      👥 {(k.student_names || []).join(", ")}
+                    </div>
+                  )}
+                </div>
+                {/* ডান: বাটন */}
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                  {zoom1 && (
+                    <a href={zoom1} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                      <Btn sm kind="primary">
+                        🔗 {T("জয়েন করুন", "Join Class")}
+                      </Btn>
+                    </a>
+                  )}
+                  {hasZoom2 && (
+                    <a href={zoom2} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                      <Btn sm kind="soft">
+                        🔁 {T("রিজয়েন", "Rejoin")}
+                      </Btn>
+                    </a>
+                  )}
+                  {isAdm(user) && (
+                    <Btn
+                      sm
+                      kind="ghost"
+                      onClick={() => complete(k)}
+                      disabled={completing === k.id}
+                      style={{ opacity: completing === k.id ? 0.6 : 1 }}
+                    >
+                      ✅ {T("সম্পন্ন করুন", "Mark Complete")}
+                    </Btn>
+                  )}
+                  {isDir(user) && (
+                    <Btn sm kind="danger" onClick={() => remove(k)}>
+                      🗑️ {T("মুছুন", "Delete")}
+                    </Btn>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </Section>
   );
@@ -5120,7 +5191,7 @@ function LecturePlan({ db, courses, user, refresh }) {
      টগল-টপিক। টপিক কভার হয়ে গেলেও নিজের হেডিংয়েই থাকে, কেবল রঙ বদলায়।
      ক্রম পরিচালকের নির্ধারিত — তারিখ বা কভারের অবস্থা দেখে সরে না।
      কভারের টিক প্রতি শিক্ষার্থীর আলাদা, আগের মতোই। */
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const [sel, setSel] = useState(courses[0]?.id);
   /* কোন পরিকল্পনাটি দেখা/সাজানো হচ্ছে — নিয়মিত, নাকি ট্রায়াল অতিথিদের জন্য
      পরিচালকের আলাদা করে সাজানো ছোট পরিকল্পনা। ট্যাবটা কেবল পরিচালকের কাছে;
@@ -5140,6 +5211,9 @@ function LecturePlan({ db, courses, user, refresh }) {
 
   const [edit, setEdit] = useState(null); // {sectionId, blocks:[…]} — টপিক সম্পাদনা
   const [saving, setSaving] = useState(false);
+  // পরিচালক কোন টপিকগুলো আজকে পড়াবেন তা টিক করার মোড
+  const [todayPlanMode, setTodayPlanMode] = useState(false);
+  const [todayPlanSaving, setTodayPlanSaving] = useState(null); // টগল হচ্ছে এমন topic.id
 
   const hasGrant =
     user.role === "teacher" &&
@@ -5151,7 +5225,7 @@ function LecturePlan({ db, courses, user, refresh }) {
   const load = async () => {
     if (!sel) return setLoading(false);
     try {
-      let rows = await api.lessonSections(sel, forStudent?.id, trialTab);
+      let rows = await api.lessonSections(sel, forStudent?.id, trialTab, user.role === "teacher");
       // কোর্সে এখনো হেডিং না থাকলে সাতটি ডিফল্ট বানিয়ে নিই (কেবল পরিচালক)।
       // নিয়মিত ও ট্রায়াল — দুটোর হিসাব আলাদা, তাই একটির হেডিং থাকলেও
       // অন্যটির ডিফল্টগুলো ঠিকই তৈরি হবে।
@@ -5213,6 +5287,19 @@ function LecturePlan({ db, courses, user, refresh }) {
         "টপিক মার্ক করতে ব্যর্থ — " +
           (e?.data?.error || e?.data?.detail || e?.message || "আবার চেষ্টা করুন"),
       );
+    }
+  };
+
+  // ── আজকের পাঠ টগল (কেবল পরিচালক/এডমিন) ──
+  const toggleTodayPlan = async (tp) => {
+    setTodayPlanSaving(tp.id);
+    try {
+      await api.toggleTodayPlan(tp.id);
+      await load();
+    } catch (e) {
+      notice("আজকের পাঠ আপডেট করা যায়নি — " + (e?.data?.error || e?.message || ""));
+    } finally {
+      setTodayPlanSaving(null);
     }
   };
 
@@ -5351,7 +5438,35 @@ function LecturePlan({ db, courses, user, refresh }) {
             >
               🌱 ট্রায়াল দারস পরিকল্পনা
             </Btn>
+            {!trialTab && (
+              <Btn
+                sm
+                kind={todayPlanMode ? "gold" : "soft"}
+                onClick={() => setTodayPlanMode((v) => !v)}
+                title="আজকের ক্লাসে কোন টপিকগুলো পড়ানো হবে তা চিহ্নিত করুন — উস্তাদের পোর্টালে শুধু এই টপিকগুলোই দেখাবে।"
+              >
+                📋 {todayPlanMode ? "আজকের পাঠ সেট হচ্ছে…" : "আজকের পাঠ সেট করুন"}
+              </Btn>
+            )}
           </div>
+          {todayPlanMode && !trialTab && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "10px 14px",
+                borderRadius: 10,
+                background: C.amberBg,
+                border: `1px solid ${C.goldL}`,
+                fontSize: 12.5,
+                lineHeight: 1.6,
+                color: C.text,
+              }}
+            >
+              <b style={{ color: C.gold }}>📋 আজকের পাঠ সেট মোড চালু।</b>{" "}
+              প্রতিটি টপিকে <b style={{ color: C.gold }}>📌</b> বোতাম চেপে আজকের ক্লাসে কী পড়ানো হবে চিহ্নিত করুন।
+              চিহ্নিত টপিকগুলোই কেবল উস্তাদের পোর্টালে দেখাবে — শিক্ষার্থীরা সব দেখবেন।
+            </div>
+          )}
           {trialTab && (
             <div
               style={{
@@ -5385,6 +5500,28 @@ function LecturePlan({ db, courses, user, refresh }) {
           </Btn>
         ))}
       </div>
+
+      {/* উস্তাদের জন্য আজকের পাঠের ব্যানার */}
+      {user.role === "teacher" && (
+        <div
+          style={{
+            padding: "9px 14px",
+            background: C.amberBg,
+            borderRadius: 10,
+            border: `1px solid ${C.goldL}`,
+            marginBottom: 10,
+            fontSize: 12.5,
+            color: C.text,
+          }}
+        >
+          📋 <b style={{ color: C.gold }}>আজকের ক্লাসের টপিক</b> — পরিচালক আজকের জন্য যে টপিকগুলো নির্ধারণ করেছেন সেগুলো দেখাচ্ছে।
+          {allTopics.length === 0 && (
+            <span style={{ color: C.muted, marginLeft: 6 }}>
+              (এখনো কোনো টপিক নির্ধারিত হয়নি)
+            </span>
+          )}
+        </div>
+      )}
 
       <div
         style={{
@@ -5597,6 +5734,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                 (sec.topics || []).map((tp) => {
                   const isDone = tp.covered === "covered";
                   const isMissed = tp.covered === "missed";
+                  const isToday = tp.today_plan;
                   return (
                     <div key={tp.id}>
                       <div
@@ -5610,10 +5748,10 @@ function LecturePlan({ db, courses, user, refresh }) {
                           padding: "9px 12px",
                           borderRadius: openTopics[tp.id] ? "10px 10px 0 0" : 10,
                           flexWrap: "wrap",
-                          // কভার হলে সবুজ, বাদ পড়লে লাল, বাকি থাকলে সাদা
-                          background: isDone ? C.greenBg : isMissed ? C.redBg : "#fff",
+                          // todayPlanMode চালু থাকলে আজকের পাঠ হলে সোনালি, কভার হলে সবুজ, বাদ পড়লে লাল, বাকি থাকলে সাদা
+                          background: todayPlanMode && isToday ? C.amberBg : isDone ? C.greenBg : isMissed ? C.redBg : "#fff",
                           border: `1.5px solid ${
-                            isDone ? C.green : isMissed ? C.red : C.line
+                            todayPlanMode && isToday ? C.gold : isDone ? C.green : isMissed ? C.red : C.line
                           }`,
                         }}
                       >
@@ -5655,6 +5793,22 @@ function LecturePlan({ db, courses, user, refresh }) {
                             onClick={(e) => e.stopPropagation()}
                             style={{ display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "flex-end" }}
                           >
+                            {/* আজকের পাঠ টগল — কেবল পরিচালক/এডমিন, todayPlanMode চালু থাকলে */}
+                            {isAdmin && todayPlanMode && !trialTab && (
+                              <Btn
+                                sm
+                                style={{
+                                  background: tp.today_plan ? C.gold : "#fff",
+                                  color: tp.today_plan ? "#fff" : C.gold,
+                                  border: `1.5px solid ${C.gold}`,
+                                  opacity: todayPlanSaving === tp.id ? 0.5 : 1,
+                                }}
+                                disabled={todayPlanSaving === tp.id}
+                                onClick={() => toggleTodayPlan(tp)}
+                              >
+                                {tp.today_plan ? "📌 আজকে" : "📌"}
+                              </Btn>
+                            )}
                             <Btn
                               sm
                               style={{
@@ -5824,7 +5978,7 @@ function LecturePlan({ db, courses, user, refresh }) {
 }
 
 function AttendanceView({ user }) {
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const isDirector = user.role === "director" || user.role === "admin";
   const [month, setMonth] = useState(() => {
     const d = new Date();
@@ -6523,7 +6677,7 @@ function EvalWork({ item, onClose, onMark }) {
 
 /* ═══════════════ অ্যাসাইনমেন্ট (ফিচার ৫) — ফরম বা ছবি, মূল্যায়নসহ ═══════════════ */
 function AssignmentsView({ db, setDb, courses, user }) {
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const [show, setShow] = usePersistedState("asg_show", false);
   const [doSub, setDoSub] = useState(null);
   const [evalFor, setEvalFor] = useState(null);
@@ -6901,7 +7055,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
 
 /* ═══════════════ পরীক্ষা (ফিচার ৬) — ফরম (MCQ/লিখিত) বা ছবি, মূল্যায়নসহ ═══════════════ */
 function ExamsView({ db, setDb, courses, user }) {
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const [show, setShow] = usePersistedState("exam_show", false);
   const [marksFor, setMarksFor] = useState(null);
   const [doSub, setDoSub] = useState(null);
@@ -7351,7 +7505,7 @@ function ExamsView({ db, setDb, courses, user }) {
 
 /* ═══════════════ স্টুডেন্ট প্রোফাইল ও অগ্রগতি রিপোর্ট (ফিচার ৭) ═══════════════ */
 function ProgressView({ db, setDb, courses, user }) {
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const [allStudents, setAllStudents] = useState(
     user.role === "student"
       ? [user]
@@ -7425,6 +7579,7 @@ function ProgressView({ db, setDb, courses, user }) {
           id: p.id,
           studentId: p.student || p.studentId,
           amount: +p.amount,
+          currency: p.currency || "BDT",
           month: p.month_label || p.month,
           date: p.paid_at || p.date,
           method: p.method + (p.trx_id ? ` (Trx: ${p.trx_id})` : ""),
@@ -7454,6 +7609,7 @@ function ProgressView({ db, setDb, courses, user }) {
             name: s.name || s.name_bn,
             sub: s.sub || s.sub_title,
             fee: s.monthly_fee || s.fee,
+            fee_currency: s.fee_currency || "BDT",
             phone: s.phone,
             email: s.email,
             role: "student",
@@ -7477,7 +7633,7 @@ function ProgressView({ db, setDb, courses, user }) {
     ? sessions.flatMap((k) =>
         (k.attendance || [])
           .filter((a) => String(a.user) === selId)
-          .map((a) => ({ minutes: a.minutes || 0 })),
+          .map((a) => ({ minutes: a.minutes || 0, present: a.present })),
       )
     : db.attendance.filter((a) => String(a.userId) === selId);
   const present = att.filter((a) => (a.present ?? a.minutes >= 20)).length;
@@ -7534,10 +7690,19 @@ function ProgressView({ db, setDb, courses, user }) {
     setPf({ method: "বিকাশ", trx: "" });
   };
   const verifyPay = async (pid) => {
+    const paySnap = myFees.find((p) => String(p.id) === String(pid));
     try {
       await api.verifyFee(pid);
       await loadData();
       notice("✔ পেমেন্ট ভেরিফাই হয়েছে।");
+      if (paySnap && st) {
+        const currencySymbol = (st.fee_currency || paySnap.currency || "BDT") === "USD" ? "$" : "৳";
+        printReceipt(
+          { ...paySnap, status: "verified", currency: currencySymbol },
+          { name: st.name, id: st.id, phone: st.phone, email: st.email },
+          "Fee Payment Receipt",
+        );
+      }
     } catch (e) {
       notice(
         "ভেরিফাই করতে ব্যর্থ — " +
@@ -7608,13 +7773,13 @@ function ProgressView({ db, setDb, courses, user }) {
         <Stat
           icon="💰"
           label={T("পরিশোধিত ফি", "Fees Paid")}
-          value={`৳${bn(paid.toLocaleString("en"))}`}
+          value={`${(st?.fee_currency || "BDT") === "USD" ? "$" : "৳"}${bn(paid.toLocaleString("en"))}`}
           accent={C.gold}
         />
         <Stat
           icon="⏳"
           label={T("বকেয়া", "Due")}
-          value={`৳${bn(due.toLocaleString("en"))}`}
+          value={`${(st?.fee_currency || "BDT") === "USD" ? "$" : "৳"}${bn(due.toLocaleString("en"))}`}
           accent={C.red}
           note={dueMonths.join(", ") || T("নেই", "None")}
         />
@@ -7688,7 +7853,7 @@ function ProgressView({ db, setDb, courses, user }) {
             )}
             rows={myFees.map((p) => [
               p.month,
-              `৳${bn((+p.amount).toLocaleString("en"))}`,
+              `${(p.currency || st?.fee_currency || "BDT") === "USD" ? "$" : "৳"}${bn((+p.amount).toLocaleString("en"))}`,
               fmtDate(p.date),
               p.method,
               p.status === "pending" ? (
@@ -7727,11 +7892,11 @@ function ProgressView({ db, setDb, courses, user }) {
               >
                 {T(
                   <>
-                    পরিমাণ: <b>৳{bn((st.fee || 0).toLocaleString("en"))}</b> ·
+                    পরিমাণ: <b>{(st?.fee_currency || "BDT") === "USD" ? "$" : "৳"}{bn((st.fee || 0).toLocaleString("en"))}</b> ·
                     পরিশোধের পর এডমিন যাচাই করলে নিশ্চিত হবে।
                   </>,
                   <>
-                    Amount: <b>৳{(st.fee || 0).toLocaleString("en")}</b> · Once
+                    Amount: <b>{(st?.fee_currency || "BDT") === "USD" ? "$" : "৳"}{(st.fee || 0).toLocaleString("en")}</b> · Once
                     paid, it will be confirmed after admin verification.
                   </>,
                 )}
@@ -8429,7 +8594,7 @@ function BooksView({ db, user }) {
 
 /* ═══════════════ নোটিশ বোর্ড (অতিরিক্ত প্রফেশনাল ফিচার) ═══════════════ */
 function NoticesView({ db, setDb, user }) {
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const [show, setShow] = usePersistedState("notice_show", false);
   const [f, setF] = usePersistedState("notice_f", { title: "", body: "" });
   const [notices, setNotices] = useState(db.notices || []);
@@ -9718,6 +9883,7 @@ function ManageView({ db, setDb, user, refresh }) {
     user: "",
     pass: genPass(),
     fee: DEFAULT_FEE,
+    feeCurrency: "BDT",
     salary: 10000,
     sub: "",
     courseId: COURSES[0]?.id || "",
@@ -9745,6 +9911,7 @@ function ManageView({ db, setDb, user, refresh }) {
           user: u.username,
           pass: u.plain_password || u.password || "••••",
           fee: u.monthly_fee,
+          fee_currency: u.fee_currency || "BDT",
           salary: u.monthly_salary,
           guardian: u.guardian,
           country: u.country,
@@ -9821,6 +9988,7 @@ function ManageView({ db, setDb, user, refresh }) {
       user: u.user || "",
       pass: u.pass && u.pass !== "••••" ? u.pass : "", // খালি = অপরিবর্তিত
       fee: u.fee || DEFAULT_FEE,
+      feeCurrency: u.fee_currency || "BDT",
       salary: u.salary || 10000,
       sub: u.sub || "",
       courseId: COURSES[0]?.id || "",
@@ -9834,6 +10002,7 @@ function ManageView({ db, setDb, user, refresh }) {
       role: "student",
       name: "",
       user: "",
+      feeCurrency: "BDT",
       pass: genPass(),
       fee: DEFAULT_FEE,
       salary: 10000,
@@ -9857,7 +10026,7 @@ function ManageView({ db, setDb, user, refresh }) {
             : f.role === "teacher"
               ? "উস্তাদ/উস্তাদা"
               : "একাডেমিক এডমিন"),
-        ...(f.role === "student" ? { monthly_fee: +f.fee } : {}),
+        ...(f.role === "student" ? { monthly_fee: +f.fee, fee_currency: f.feeCurrency || "BDT" } : {}),
         ...(f.role === "teacher" ? { monthly_salary: +f.salary } : {}),
         // পাসওয়ার্ড খালি রাখলে অপরিবর্তিত; নতুন দিলে বদলে যায়
         ...(f.pass && f.pass !== "••••" ? { password: f.pass } : {}),
@@ -10209,6 +10378,7 @@ function ManageView({ db, setDb, user, refresh }) {
               user: "",
               pass: genPass(),
               fee: DEFAULT_FEE,
+              feeCurrency: "BDT",
               salary: 10000,
               sub: "",
               courseId: COURSES[0]?.id || "",
@@ -10406,36 +10576,84 @@ function ManageView({ db, setDb, user, refresh }) {
             </div>
           </div>
           {f.role === "student" && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 10,
-                marginTop: 10,
-              }}
-            >
-              <div>
-                <label style={S.label}>মাসিক ফি (৳)</label>
-                <input
-                  type="number"
-                  style={S.input}
-                  value={f.fee}
-                  onChange={(e) => setF({ ...f, fee: e.target.value })}
-                />
+            <div style={{ marginTop: 10 }}>
+              <label style={S.label}>মাসিক ফি — কারেন্সি ও পরিমাণ</label>
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                {[
+                  { val: "BDT", label: "৳ টাকা" },
+                  { val: "USD", label: "$ ডলার" },
+                ].map((c) => (
+                  <button
+                    key={c.val}
+                    type="button"
+                    onClick={() => {
+                      const defaultFee = c.val === "USD" ? 35 : DEFAULT_FEE;
+                      setF({ ...f, feeCurrency: c.val, fee: f.feeCurrency === c.val ? f.fee : defaultFee });
+                    }}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 10,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      border: `2px solid ${f.feeCurrency === c.val ? C.emerald : C.line}`,
+                      background: f.feeCurrency === c.val ? C.greenBg : "#fff",
+                      color: f.feeCurrency === c.val ? C.emerald : C.text,
+                    }}
+                  >
+                    {c.label}
+                  </button>
+                ))}
               </div>
-              <div>
-                <label style={S.label}>কোর্স</label>
-                <select
-                  style={S.input}
-                  value={f.courseId}
-                  onChange={(e) => setF({ ...f, courseId: e.target.value })}
-                >
-                  {COURSES.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
+              {f.feeCurrency === "USD" && (
+                <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+                  {[35, 45, 55, 65, 70].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setF({ ...f, fee: amt })}
+                      style={{
+                        padding: "5px 12px",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        fontWeight: 700,
+                        fontSize: 12,
+                        border: `1.5px solid ${+f.fee === amt ? C.gold : C.line}`,
+                        background: +f.fee === amt ? C.amberBg : "#fff",
+                        color: +f.fee === amt ? C.gold : C.muted,
+                      }}
+                    >
+                      ${amt}
+                    </button>
                   ))}
-                </select>
+                </div>
+              )}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <label style={S.label}>{f.feeCurrency === "USD" ? "পরিমাণ ($)" : "পরিমাণ (৳)"}</label>
+                  <input
+                    type="number"
+                    style={S.input}
+                    value={f.fee}
+                    onChange={(e) => setF({ ...f, fee: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label style={S.label}>কোর্স</label>
+                  <select
+                    style={S.input}
+                    value={f.courseId}
+                    onChange={(e) => setF({ ...f, courseId: e.target.value })}
+                  >
+                    {COURSES.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           )}
@@ -10473,7 +10691,7 @@ function ManageView({ db, setDb, user, refresh }) {
 
 /* ═══════════════ লাইভ ক্লাস ফুল-পেজ পপআপ (স্টুডেন্ট) — আয়াতসহ ═══════════════ */
 function LiveClassPopup({ k, course, user, onJoin, onLater }) {
-  const T = (bnText, enText) => (user?.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const lec = course.lectures?.[k.lectureNo - 1];
   // শিক্ষার্থীর পপআপে জয়েন বাটন সবসময় থাকে (১ম লিংক)। রিজয়েন বাটন আসে কেবল
   // উস্তাদ নিজের রিজয়েন বাটনে ক্লিক করার পর — তার আগে অপেক্ষার বার্তা দেখায়,
@@ -10680,6 +10898,7 @@ function StudentPaymentsView({ db, setDb, user }) {
           id: p.id,
           studentId: p.student,
           amount: p.amount,
+          currency: p.currency || "BDT",
           month: p.month_label,
           date: p.paid_at,
           method: p.method + (p.trx_id ? ` (Trx: ${p.trx_id})` : ""),
@@ -10705,6 +10924,7 @@ function StudentPaymentsView({ db, setDb, user }) {
     .filter((p) => p.status !== "pending")
     .reduce((s, p) => s + p.amount, 0);
   const userFee = user.monthly_fee || user.fee || 0;
+  const userCurrSymbol = (user.fee_currency || "BDT") === "USD" ? "$" : "৳";
   const pickShot = (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -10781,12 +11001,12 @@ function StudentPaymentsView({ db, setDb, user }) {
         <Stat
           icon="✅"
           label="Total Paid (Verified)"
-          value={`৳${totalPaid.toLocaleString("en")}`}
+          value={`${userCurrSymbol}${totalPaid.toLocaleString("en")}`}
         />
         <Stat
           icon="⏳"
           label="Due"
-          value={`৳${(dues.length * userFee).toLocaleString("en")}`}
+          value={`${userCurrSymbol}${(dues.length * userFee).toLocaleString("en")}`}
           /* ⚠️ বকেয়ার রেকর্ড না থাকলেই "no dues" বলা যায় না — বকেয়া তৈরি
              হয় মাসিক cron চললে। কেউ কখনো কিছু না দিয়ে থাকলে সেটাই বলি,
              নইলে "Alhamdulillah, no dues" দেখে ভুল বোঝার সুযোগ থাকত। */
@@ -10830,7 +11050,7 @@ function StudentPaymentsView({ db, setDb, user }) {
                   minWidth: 140,
                 }}
               >
-                {m} — ৳{userFee.toLocaleString("en")}
+                {m} — {userCurrSymbol}{userFee.toLocaleString("en")}
               </span>
               <Btn sm kind="gold" onClick={() => setPayMonth(m)}>
                 ⚡ Pay Now
@@ -10848,7 +11068,7 @@ function StudentPaymentsView({ db, setDb, user }) {
           head={["Month", "Amount", "Date", "Method", "Status"]}
           rows={paid.map((p) => [
             p.month,
-            `৳${p.amount.toLocaleString("en")}`,
+            `${(p.currency || "BDT") === "USD" ? "$" : "৳"}${(+p.amount).toLocaleString("en")}`,
             fmtDate(p.date),
             p.method,
             p.status === "pending" ? (
@@ -11298,6 +11518,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
           studentId: p.student,
           studentName: p.student_name,
           amount: p.amount,
+          currency: p.currency || "BDT",
           month: p.month_label,
           date: p.paid_at,
           method: p.method + (p.trx_id ? ` (Trx: ${p.trx_id})` : ""),
@@ -11313,6 +11534,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
           role: "student",
           name: s.name || s.name_bn,
           fee: s.monthly_fee,
+          fee_currency: s.fee_currency || "BDT",
           guardian: s.guardian,
           phone: s.phone,
           email: s.email,
@@ -11332,10 +11554,20 @@ function DirectorPaymentsView({ db, setDb, user }) {
   const pending = fees.filter((p) => p.status === "pending");
   const verified = fees.filter((p) => p.status !== "pending");
   const verify = async (pid) => {
+    const paySnap = fees.find((p) => String(p.id) === String(pid));
     try {
       await api.verifyFee(pid);
       await loadData();
       notice("✔ পেমেন্ট ভেরিফাই হয়েছে।");
+      if (paySnap) {
+        const st = studentById(paySnap.studentId);
+        const currSymbol = (st?.fee_currency || paySnap.currency || "BDT") === "USD" ? "$" : "৳";
+        printReceipt(
+          { ...paySnap, status: "verified", currency: currSymbol },
+          { name: paySnap.studentName || st?.name || "", id: paySnap.studentId, phone: st?.phone, email: st?.email },
+          "Fee Payment Receipt",
+        );
+      }
     } catch (e) {
       // আগে ব্যর্থ হলেও স্ক্রিনে "ভেরিফাইড" দেখানো হতো, সার্ভারে আসলে হতো না —
       // এখন স্পষ্ট এরর দেখাচ্ছে, স্ক্রিনে ভুয়া স্ট্যাটাস বসাচ্ছে না
@@ -11572,7 +11804,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
             >
               <div style={{ flex: 1, minWidth: 200 }}>
                 <b style={{ fontSize: 14 }}>{p.studentName || s.name}</b> —{" "}
-                {p.month} · ৳{bn(p.amount.toLocaleString("en"))}
+                {p.month} · {(p.currency || s?.fee_currency || "BDT") === "USD" ? "$" : "৳"}{bn((+p.amount).toLocaleString("en"))}
                 <div style={{ fontSize: 12, color: C.muted }}>
                   {p.method} · {fmtDate(p.date)}
                 </div>
@@ -11657,7 +11889,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
             <div style={{ flex: 1, minWidth: 200 }}>
               <b style={{ fontSize: 14 }}>{s.name}</b>
               <div style={{ fontSize: 12, color: C.muted }}>
-                বকেয়া: {(s.dueMonths || []).join(", ")} — ৳
+                বকেয়া: {(s.dueMonths || []).join(", ")} — {(s.fee_currency || "BDT") === "USD" ? "$" : "৳"}
                 {bn(
                   ((s.dueMonths || []).length * (s.fee || 0)).toLocaleString(
                     "en",
@@ -11943,7 +12175,7 @@ function RemarkBox({ studentId, studentName }) {
 }
 
 function RoutineView({ db, setDb, courses, user }) {
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const canEdit = isAdm(user);
   const [show, setShow] = usePersistedState("rt_show", false);
   const blankR = () => ({
@@ -12625,7 +12857,7 @@ const LEAVE_TYPE_EN = {
   অন্যান্য: "Other",
 };
 function LeaveView({ db, setDb, user }) {
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const [show, setShow] = usePersistedState("leave_show", false);
   const [f, setF] = usePersistedState("leave_f", {
     type: "অসুস্থতা",
@@ -12999,7 +13231,7 @@ function LeaveView({ db, setDb, user }) {
 
 /* ═══════════════ ভাউচার/রিসিট — পাঠানো রিসিট প্রাপকের পোর্টালে ═══════════════ */
 function MyReceiptsView({ db, user }) {
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const [receipts, setReceipts] = useState(
     (db.sentReceipts || []).filter(
       (x) => String(x.toUserId) === String(user.id),
@@ -15229,7 +15461,7 @@ function SyllabusView({ db, setDb, courses, user }) {
      তথ্য মোছা হয়নি: কোনো কোর্সের টেবিল প্রথমবার খুললে ব্যাকএন্ড সেই কোর্সের
      আগের সিলেবাস থেকেই টেবিলটা সাজিয়ে দেয় (views.py → _sheet_from_syllabus),
      তাই সব লেখা যেমন ছিল তেমনই থাকে, শুধু এখন এডিট করা যায়। */
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   const canEdit = isDir(user);
   const [courseList, setCourseList] = useState(courses);
   const [allBooks, setAllBooks] = useState(db.academicBooks || []);
@@ -15824,7 +16056,7 @@ function SyllabusView({ db, setDb, courses, user }) {
 }
 
 function AcademicBooksView({ db, setDb, user, courses }) {
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   // ডাটাবেজে বইয়ের আসল নাম (বাংলা) অপরিবর্তিত থাকে — পরিচালক/এডমিন/উস্তাদ সবসময়
   // আসল নামই দেখেন; শুধু স্টুডেন্টের পোর্টালে দেখানোর জন্য এই ম্যাপিং দিয়ে ইংরেজি
   // নাম দেখানো হয় (তালিকায় না থাকা নতুন বই হলে আসল নামই দেখাবে, কিছু বাদ পড়বে না)
@@ -16448,7 +16680,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
 
 /* ═══════════════ ওভারভিউ ড্যাশবোর্ড ═══════════════ */
 function Overview({ db, courses, user, goTo }) {
-  const T = (bnText, enText) => (user.role === "student" ? enText : bnText);
+  const T = (_bnText, enText) => enText;
   // আগে এখানে stale mock db.classes/db.feePayments/db.forms/db.admissions/
   // db.ratings/db.assignments/db.notices ব্যবহার হতো — লগইনের পরের প্রথম
   // পেজ (ড্যাশবোর্ড) হওয়ায় প্রভাব সবচেয়ে বেশি ছিল; এখন সরাসরি API থেকে লোড হয়
@@ -17844,14 +18076,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
       </div>
 
       {open && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              window.innerWidth > 980 ? "1fr 1fr" : "1fr",
-            gap: 0,
-          }}
-        >
+        <div>
           {/* ───── বাঁ পাশ — কেবল উস্তাদ দেখবেন ───── */}
           <div style={{ padding: 16, display: "grid", gap: 10 }}>
             <div
@@ -17949,139 +18174,6 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
             </div>
           </div>
 
-          {/* ───── ডান পাশ — শিক্ষার্থীর পর্দা ───── */}
-          <div
-            style={{
-              padding: 16,
-              display: "grid",
-              gap: 10,
-              background: C.cream,
-              borderLeft:
-                window.innerWidth > 980 ? `1px solid ${C.line}` : "none",
-              borderTop:
-                window.innerWidth > 980 ? "none" : `1px solid ${C.line}`,
-              alignContent: "start",
-            }}
-          >
-            <div
-              style={{
-                fontWeight: 800,
-                color: C.emeraldD,
-                fontSize: 13.5,
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              🖥️ শিক্ষার্থী যা দেখবেন
-              <span style={{ fontWeight: 500, color: C.muted, fontSize: 11.5 }}>
-                — কেবল এটুকুই
-              </span>
-            </div>
-
-            <div>
-              <Lbl>স্লাইডের ধরন</Lbl>
-              <select
-                style={S.input}
-                disabled={!canEdit}
-                value={sl.kind}
-                onChange={(e) => setSlide("kind", e.target.value)}
-              >
-                {SLIDE_KINDS.map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Lbl>শিরোনাম</Lbl>
-              <input
-                style={S.input}
-                disabled={!canEdit}
-                value={sl.heading || ""}
-                onChange={(e) => setSlide("heading", e.target.value)}
-              />
-            </div>
-
-            <div>
-              <Lbl>
-                আরবি{" "}
-                {sl.arabic_locked ? (
-                  <span style={{ color: C.green }}>🔒 যাচাই করা ও সুরক্ষিত</span>
-                ) : (
-                  <span style={{ color: C.red }}>🔓 তালা খোলা</span>
-                )}
-              </Lbl>
-              <textarea
-                dir="rtl"
-                rows={2}
-                readOnly={sl.arabic_locked || !canEdit}
-                style={{
-                  ...S.input,
-                  fontFamily: QURAN_FONT,
-                  fontSize: 20,
-                  lineHeight: 2,
-                  resize: "vertical",
-                  background: sl.arabic_locked ? "#eef3ef" : "#fff",
-                }}
-                value={sl.arabic || ""}
-                onChange={(e) => setSlide("arabic", e.target.value)}
-              />
-              {canEdit && (
-                <div style={{ marginTop: 5 }}>
-                  {sl.arabic_locked ? (
-                    <Btn sm kind="soft" onClick={unlock}>
-                      🔓 তালা খুলুন
-                    </Btn>
-                  ) : (
-                    <Btn
-                      sm
-                      kind="ghost"
-                      onClick={() => setSlide("arabic_locked", true)}
-                    >
-                      🔒 যাচাই করেছি, তালা দিন
-                    </Btn>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <Lbl>উচ্চারণ (ইংরেজি হরফে)</Lbl>
-              <input
-                style={S.input}
-                disabled={!canEdit}
-                value={sl.translit || ""}
-                onChange={(e) => setSlide("translit", e.target.value)}
-              />
-            </div>
-            <div>
-              <Lbl>পর্দার লেখা</Lbl>
-              <textarea
-                rows={2}
-                style={{ ...S.input, resize: "vertical" }}
-                disabled={!canEdit}
-                value={sl.text || ""}
-                onChange={(e) => setSlide("text", e.target.value)}
-              />
-            </div>
-            <div>
-              <Lbl>ছবির ঠিকানা (ঐচ্ছিক)</Lbl>
-              <input
-                style={S.input}
-                disabled={!canEdit}
-                placeholder="https://…"
-                value={sl.image || ""}
-                onChange={(e) => setSlide("image", e.target.value)}
-              />
-            </div>
-
-            <div>
-              <Lbl>👁️ পর্দায় এভাবে দেখাবে</Lbl>
-              <SlidePreview slide={sl} small />
-            </div>
-          </div>
         </div>
       )}
 
@@ -18312,37 +18404,63 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
     if (!files.length) return;
     let done = 0;
     try {
-      setImporting("ফাইল পড়া হচ্ছে…");
-      const { images: imgs, dropped } = await filesToSlideImages(
-        files,
-        (i, n) =>
-          setImporting(`পাতা ${bn(String(i))}/${bn(String(n))} তৈরি হচ্ছে…`),
+      const pptxFiles = files.filter((f) =>
+        f.name.toLowerCase().endsWith(".pptx"),
       );
-      if (!imgs.length) {
-        notice("চালানোর মতো কিছু পাওয়া যায়নি — PDF বা ছবি দিন।");
-        return;
+      const otherFiles = files.filter(
+        (f) => !f.name.toLowerCase().endsWith(".pptx"),
+      );
+
+      // পাওয়ারপয়েন্ট ফাইল — ব্যাকএন্ড রেন্ডার করে URL দেয়
+      for (const pf of pptxFiles) {
+        setImporting(`${pf.name} রূপান্তর হচ্ছে…`);
+        const { urls: slideUrls } = await api.convertPptx(pf);
+        for (let k = 0; k < slideUrls.length; k++) {
+          setImporting(
+            `পিপি স্লাইড ${bn(String(k + 1))}/${bn(String(slideUrls.length))} যোগ হচ্ছে…`,
+          );
+          await api.addLessonStep({
+            lesson: lesson.id,
+            section: `পিপি স্লাইড ${bn(String(k + 1))}`,
+            slide: { ...EMPTY_SLIDE, kind: "visual", image: slideUrls[k] },
+          });
+          done++;
+        }
       }
-      /* ⚠️ নীরবে কাটা যাবে না — বাদ পড়লে আগেই জানানো হয়, নইলে
-         পরিচালক ক্লাসের মাঝপথে টের পেতেন। */
-      if (dropped)
-        notice(
-          `একবারে সর্বোচ্চ ${bn(String(IMPORT_MAX))}টি স্লাইড নেওয়া যায়। ` +
-            `প্রথম ${bn(String(IMPORT_MAX))}টি নেওয়া হচ্ছে, ` +
-            `বাকি ${bn(String(dropped))}টি বাদ — সেগুলো আলাদা করে আনুন।`,
+
+      // PDF ও ছবি — ব্রাউজারে রেন্ডার হয়, তারপর আপলোড
+      if (otherFiles.length) {
+        setImporting("ফাইল পড়া হচ্ছে…");
+        const { images: imgs, dropped } = await filesToSlideImages(
+          otherFiles,
+          (i, n) =>
+            setImporting(`পাতা ${bn(String(i))}/${bn(String(n))} তৈরি হচ্ছে…`),
         );
-      for (let k = 0; k < imgs.length; k++) {
-        setImporting(
-          `স্লাইড ${bn(String(k + 1))}/${bn(String(imgs.length))} উঠছে…`,
-        );
-        const got = await api.uploadLessonMedia(imgs[k]);
-        await api.addLessonStep({
-          lesson: lesson.id,
-          section: `আনা স্লাইড ${bn(String(k + 1))}`,
-          slide: { ...EMPTY_SLIDE, kind: "visual", image: got.url },
-        });
-        done++;
+        /* ⚠️ নীরবে কাটা যাবে না — বাদ পড়লে আগেই জানানো হয়, নইলে
+           পরিচালক ক্লাসের মাঝপথে টের পেতেন। */
+        if (dropped)
+          notice(
+            `একবারে সর্বোচ্চ ${bn(String(IMPORT_MAX))}টি স্লাইড নেওয়া যায়। ` +
+              `প্রথম ${bn(String(IMPORT_MAX))}টি নেওয়া হচ্ছে, ` +
+              `বাকি ${bn(String(dropped))}টি বাদ — সেগুলো আলাদা করে আনুন।`,
+          );
+        for (let k = 0; k < imgs.length; k++) {
+          setImporting(
+            `স্লাইড ${bn(String(k + 1))}/${bn(String(imgs.length))} উঠছে…`,
+          );
+          const got = await api.uploadLessonMedia(imgs[k]);
+          await api.addLessonStep({
+            lesson: lesson.id,
+            section: `আনা স্লাইড ${bn(String(k + 1))}`,
+            slide: { ...EMPTY_SLIDE, kind: "visual", image: got.url },
+          });
+          done++;
+        }
       }
-      notice(`✅ ${bn(String(done))}টি স্লাইড যোগ হয়েছে`);
+
+      if (!done)
+        notice("চালানোর মতো কিছু পাওয়া যায়নি — PDF, ছবি বা PPTX দিন।");
+      else notice(`✅ ${bn(String(done))}টি স্লাইড যোগ হয়েছে`);
     } catch (e) {
       const why = e?.data?.error || e?.message || "";
       notice(
@@ -18652,12 +18770,9 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
               kind="soft"
               disabled={!!importing}
               onClick={() => importRef.current && importRef.current.click()}
-              title="ক্যানভা/পাওয়ারপয়েন্টে বানিয়ে PDF করে নিন — প্রতিটি পাতা একটি স্লাইড হবে"
+              title="PDF, ছবি বা PowerPoint (.pptx) ফাইল দিন — প্রতিটি পাতা/স্লাইড একটি করে স্লাইড হবে। সেরা ফলাফলের জন্য PowerPoint থেকে PDF করে আনুন।"
             >
               {importing || "📥 বাইরের স্লাইড আনুন"}
-            </Btn>
-            <Btn sm kind="gold" onClick={addStep}>
-              + নতুন ধাপ
             </Btn>
           </div>
         )}
@@ -18666,9 +18781,8 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
       <div style={{ display: "grid", gap: 10 }}>
         {steps.length === 0 && (
           <div style={{ ...S.card, color: C.muted, fontSize: 14 }}>
-            এই দারসে এখনো কোনো ধাপ নেই। “+ নতুন ধাপ” দিয়ে শুরু করুন —
-            অথবা নিজের বানানো স্লাইড থাকলে “📥 বাইরের স্লাইড আনুন” দিয়ে
-            একটি PDF দিন, প্রতিটি পাতা এক-একটি স্লাইড হয়ে বসে যাবে।
+            এই দারসে এখনো কোনো ধাপ নেই। “📥 বাইরের স্লাইড আনুন” দিয়ে
+            একটি PDF বা PowerPoint (.pptx) দিন — প্রতিটি পাতা এক-একটি স্লাইড হয়ে বসে যাবে।
           </div>
         )}
         {steps.map((st, i) => (
@@ -18685,13 +18799,6 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
         ))}
       </div>
 
-      {canEdit && steps.length > 0 && (
-        <div style={{ marginTop: 12, textAlign: "center" }}>
-          <Btn sm kind="gold" onClick={addStep}>
-            + নতুন ধাপ
-          </Btn>
-        </div>
-      )}
     </>
   );
 }
@@ -20284,7 +20391,7 @@ const IMPORT_W = 1920;
 const IMPORT_MAX = 60;
 
 const IMPORT_TYPES =
-  "application/pdf,image/png,image/jpeg,image/webp,image/gif";
+  "application/pdf,image/png,image/jpeg,image/webp,image/gif,.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
 /* PDF-এর প্রতিটি পাতা → একটি PNG ফাইল।
    ⚠️ pdfjs শুধু দরকারের সময়ই নামানো হয় (dynamic import), যাতে যারা
@@ -23193,6 +23300,558 @@ function TrialPortal({ user }) {
   );
 }
 
+/* ═══════════════ ফ্যামিলি সুইচার (ভাই-বোন পোর্টাল সুইচ) ═══════════════ */
+function FamilySwitcherBar({ user }) {
+  const [family, setFamily] = useState(null);
+  const [busy, setBusy] = useState(null);
+  const [err, setErr] = useState("");
+  const isStudent = user?.role === "student";
+  useEffect(() => {
+    if (!isStudent) return;
+    api.myFamily().then(setFamily).catch(() => {});
+  }, [isStudent, user?.id]);
+  if (!isStudent || !family?.siblings?.length) return null;
+  async function go(sib) {
+    setErr("");
+    setBusy(sib.id);
+    try {
+      const { access, refresh } = await api.switchSibling(sib.id);
+      localStorage.setItem("tqa_access", access);
+      localStorage.setItem("tqa_refresh", refresh);
+      window.location.replace("/");
+    } catch (e) {
+      setErr(e?.data?.detail || "সুইচ করতে ব্যর্থ");
+      setBusy(null);
+    }
+  }
+  return (
+    <div style={{
+      background: "var(--clr-surface,#f0f4f1)", borderRadius: 10,
+      padding: "8px 14px", marginBottom: 16, display: "flex",
+      flexWrap: "wrap", alignItems: "center", gap: "8px 14px",
+      border: "1px solid var(--clr-border,#d0ddd5)",
+    }}>
+      <span style={{ fontSize: 13, color: "var(--clr-muted,#6b7c73)" }}>
+        এখন: <strong>{family.current?.name}</strong>
+      </span>
+      <span style={{ fontSize: 13, color: "var(--clr-muted,#6b7c73)" }}>অন্য সন্তান →</span>
+      {family.siblings.map(s => (
+        <button key={s.id} disabled={busy !== null}
+          onClick={() => go(s)}
+          style={{
+            background: "var(--clr-primary,#1a5c3a)", color: "#fff",
+            border: "none", borderRadius: 20, padding: "4px 14px",
+            fontSize: 13, cursor: busy !== null ? "default" : "pointer", opacity: busy === s.id ? .6 : 1,
+          }}>
+          {busy === s.id ? "যাচ্ছে…" : s.name}
+        </button>
+      ))}
+      {err && <span style={{ color: "crimson", fontSize: 13 }}>{err}</span>}
+    </div>
+  );
+}
+
+/* ═══════════════ শিক্ষক তালিকা ═══════════════ */
+function AllTeachersView({ user, courses }) {
+  const isDir = user?.role === "director";
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [sel, setSel] = useState(null);    // detail modal
+  const [edit, setEdit] = useState(null);  // edit form
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const notice = (t) => { setMsg(t); setTimeout(() => setMsg(""), 4000); };
+
+  const load = async () => {
+    setLoading(true);
+    try { setTeachers(await api.allTeachers()); } catch { }
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  const filtered = teachers.filter(t =>
+    !search || t.name_bn?.toLowerCase().includes(search.toLowerCase()) ||
+    t.username?.toLowerCase().includes(search.toLowerCase()) ||
+    t.phone?.includes(search)
+  );
+
+  const blankEdit = () => ({
+    id: null, name: "", user: "", pass: "", phone: "",
+    email: "", sub: "", salary: "", phone_iso: "+880",
+  });
+  const toEdit = (t) => ({
+    id: t.id, name: t.name_bn || "", user: t.username || "",
+    pass: t.plain_password ? "••••" : "", phone: t.phone || "",
+    email: t.email || "", sub: t.sub_title || "",
+    salary: t.monthly_salary || "", phone_iso: "",
+  });
+
+  const saveEdit = async () => {
+    if (!edit.name || !edit.user) return notice("নাম ও আইডি দিন।");
+    setSaving(true);
+    try {
+      const payload = {
+        username: edit.user, name_bn: edit.name, role: "teacher",
+        phone: edit.phone, email: edit.email, sub_title: edit.sub,
+        monthly_salary: +edit.salary || 0,
+        ...(edit.pass && edit.pass !== "••••" ? { password: edit.pass } : {}),
+      };
+      await api.saveUser(payload, edit.id || undefined);
+      await load();
+      setEdit(null);
+      notice("✔ সংরক্ষিত হয়েছে।");
+    } catch (e) {
+      notice(e?.data?.detail || e?.data?.username?.[0] || "সংরক্ষণ ব্যর্থ");
+    } finally { setSaving(false); }
+  };
+
+  const delTeacher = async (id) => {
+    if (!window.confirm("এই শিক্ষকের অ্যাকাউন্ট মুছে ফেলবেন?")) return;
+    try { await api.deleteUser(id); await load(); setSel(null); notice("মুছে ফেলা হয়েছে।"); }
+    catch (e) { notice(e?.data?.detail || "মুছতে ব্যর্থ"); }
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <h2 style={{ margin: 0 }}>শিক্ষক তালিকা</h2>
+        {isDir && (
+          <Btn sm onClick={() => setEdit(blankEdit())}>+ নতুন শিক্ষক</Btn>
+        )}
+      </div>
+      {msg && <div style={{ background: "#e6f4ea", padding: "8px 12px", borderRadius: 8, marginBottom: 12, color: "#1a5c3a" }}>{msg}</div>}
+      <input value={search} onChange={e => setSearch(e.target.value)}
+        placeholder="নাম বা আইডি দিয়ে খুঁজুন…"
+        style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #ccc", marginBottom: 14, fontSize: 14 }} />
+      {loading ? <p>লোড হচ্ছে…</p> : filtered.length === 0 ? <p>কোনো শিক্ষক পাওয়া যায়নি।</p> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {filtered.map(t => (
+            <div key={t.id} onClick={() => setSel(t)}
+              style={{ background: "var(--clr-surface,#f8faf9)", border: "1px solid #dde8e2",
+                borderRadius: 10, padding: "12px 16px", cursor: "pointer",
+                display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 15 }}>{t.name_bn}</div>
+                <div style={{ fontSize: 13, color: "#6b7c73", marginTop: 2 }}>
+                  {[t.sub_title, t.phone].filter(Boolean).join(" · ") || t.username}
+                </div>
+              </div>
+              <span style={{ fontSize: 20 }}>›</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ডিটেইল মোডাল */}
+      {sel && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={() => setSel(null)}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 14, padding: 24, width: "min(95vw,460px)", maxHeight: "85vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <h3 style={{ margin: 0 }}>{sel.name_bn}</h3>
+              <button onClick={() => setSel(null)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+            <table style={{ width: "100%", fontSize: 14, borderCollapse: "collapse" }}>
+              {[
+                ["আইডি", sel.username],
+                ["বিষয়", sel.sub_title],
+                ["ফোন", sel.phone],
+                ["ইমেইল", sel.email],
+                ["বেতন", sel.monthly_salary ? `৳${sel.monthly_salary}` : "—"],
+                isDir && sel.plain_password ? ["পাসওয়ার্ড", sel.plain_password] : null,
+              ].filter(Boolean).map(([k, v]) => (
+                <tr key={k} style={{ borderBottom: "1px solid #eee" }}>
+                  <td style={{ padding: "7px 0", color: "#6b7c73", width: "40%" }}>{k}</td>
+                  <td style={{ padding: "7px 0", fontWeight: 500 }}>{v || "—"}</td>
+                </tr>
+              ))}
+            </table>
+            {isDir && (
+              <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+                <Btn sm onClick={() => { setEdit(toEdit(sel)); setSel(null); }}>সম্পাদনা</Btn>
+                <Btn sm kind="danger" onClick={() => delTeacher(sel.id)}>মুছুন</Btn>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* এডিট ফর্ম */}
+      {edit && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={() => setEdit(null)}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 14, padding: 24, width: "min(95vw,480px)", maxHeight: "85vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <h3 style={{ margin: 0 }}>{edit.id ? "শিক্ষক সম্পাদনা" : "নতুন শিক্ষক"}</h3>
+              <button onClick={() => setEdit(null)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer" }}>✕</button>
+            </div>
+            {[
+              ["নাম", "name", "text", "বাংলায় পুরো নাম"],
+              ["লগইন আইডি", "user", "text", "username"],
+              ["পাসওয়ার্ড", "pass", "text", "খালি রাখলে বদলাবে না"],
+              ["ফোন", "phone", "text", "+880XXXXXXXXX"],
+              ["ইমেইল", "email", "email", ""],
+              ["বিষয়/পরিচিতি", "sub", "text", "যেমন: কুরআন ও তাজবীদ"],
+              ["মাসিক বেতন (৳)", "salary", "number", "0"],
+            ].map(([lbl, key, type, ph]) => (
+              <div key={key} style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 13, display: "block", marginBottom: 4 }}>{lbl}</label>
+                <input type={type} value={edit[key]} placeholder={ph}
+                  onChange={e => setEdit(prev => ({ ...prev, [key]: e.target.value }))}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: 7, border: "1px solid #ccc", fontSize: 14 }} />
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <Btn onClick={saveEdit} disabled={saving}>{saving ? "সংরক্ষণ হচ্ছে…" : "সংরক্ষণ করুন"}</Btn>
+              <Btn kind="soft" onClick={() => setEdit(null)}>বাতিল</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════ লগইন পাঠান ═══════════════ */
+function LoginSendView({ user }) {
+  const isDir = user?.role === "director";
+  const [tab, setTab] = useState("teachers"); // "teachers" | "students"
+  const [teachers, setTeachers] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState(new Set());
+  const [sending, setSending] = useState(null);
+
+  useEffect(() => {
+    if (!isDir) return;
+    setLoading(true);
+    Promise.all([api.allTeachers(), api.allStudents()])
+      .then(([t, s]) => { setTeachers(t); setStudents(s); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [isDir]);
+
+  const list = tab === "teachers" ? teachers : students;
+  const eligible = list.filter(u => u.username && u.plain_password && (tab === "teachers" ? u.phone : (u.phone || u.guardian_phone)));
+
+  const allSel = eligible.length > 0 && eligible.every(u => selected.has(u.id));
+  const toggleAll = () => {
+    if (allSel) setSelected(new Set());
+    else setSelected(new Set(eligible.map(u => u.id)));
+  };
+
+  const msgFor = (u) => {
+    const name = u.name_bn || u.username;
+    return tab === "teachers"
+      ? `আস-সালামু আলাইকুম ${name} ভাই/আপু,\n\nতারবিয়াতুল কুরআন একাডেমিতে আপনার লগইন তথ্য:\nআইডি: ${u.username}\nপাসওয়ার্ড: ${u.plain_password}\n\nপোর্টাল: ${window.location.origin}`
+      : `আস-সালামু আলাইকুম ${u.guardian || name} ভাই/আপু,\n\n${name}-এর পোর্টালের লগইন তথ্য:\nআইডি: ${u.username}\nপাসওয়ার্ড: ${u.plain_password}\n\nপোর্টাল: ${window.location.origin}`;
+  };
+
+  const sendOne = (u) => {
+    const phone = tab === "teachers" ? u.phone : (u.guardian_phone || u.phone);
+    if (!phone) return;
+    const num = phone.replace(/\D/g, "");
+    const text = encodeURIComponent(msgFor(u));
+    setSending(u.id);
+    window.open(`https://wa.me/${num}?text=${text}`, "_blank");
+    setTimeout(() => setSending(null), 1500);
+  };
+
+  const sendAll = () => {
+    const toSend = eligible.filter(u => selected.has(u.id));
+    let i = 0;
+    function next() {
+      if (i >= toSend.length) return;
+      const u = toSend[i++];
+      const phone = tab === "teachers" ? u.phone : (u.guardian_phone || u.phone);
+      if (!phone) { next(); return; }
+      const num = phone.replace(/\D/g, "");
+      const text = encodeURIComponent(msgFor(u));
+      window.open(`https://wa.me/${num}?text=${text}`, "_blank");
+      setTimeout(next, 1500);
+    }
+    next();
+  };
+
+  if (!isDir) return <p>কেবল পরিচালক ব্যবহার করতে পারবেন।</p>;
+
+  return (
+    <div>
+      <h2 style={{ marginTop: 0, marginBottom: 16 }}>লগইন তথ্য পাঠান</h2>
+      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+        {["teachers", "students"].map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            style={{ padding: "7px 20px", borderRadius: 20, border: "none", cursor: "pointer",
+              background: tab === t ? "var(--clr-primary,#1a5c3a)" : "#e8f0eb",
+              color: tab === t ? "#fff" : "#2d5438", fontWeight: tab === t ? 600 : 400 }}>
+            {t === "teachers" ? "শিক্ষক" : "শিক্ষার্থী"}
+          </button>
+        ))}
+      </div>
+      {loading ? <p>লোড হচ্ছে…</p> : eligible.length === 0 ? (
+        <p style={{ color: "#6b7c73" }}>পাঠানোর উপযুক্ত কাউকে পাওয়া যায়নি (ফোন বা পাসওয়ার্ড নেই)।</p>
+      ) : (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14 }}>
+              <input type="checkbox" checked={allSel} onChange={toggleAll} />
+              সবাই নির্বাচন করুন
+            </label>
+            <Btn sm onClick={sendAll} disabled={selected.size === 0}>
+              📤 নির্বাচিত সবাইকে পাঠান ({selected.size})
+            </Btn>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {eligible.map(u => (
+              <div key={u.id} style={{ background: "var(--clr-surface,#f8faf9)", border: "1px solid #dde8e2",
+                borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                <input type="checkbox" checked={selected.has(u.id)}
+                  onChange={() => setSelected(prev => {
+                    const s = new Set(prev);
+                    s.has(u.id) ? s.delete(u.id) : s.add(u.id);
+                    return s;
+                  })} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{u.name_bn || u.username}</div>
+                  <div style={{ fontSize: 12, color: "#6b7c73" }}>
+                    আইডি: {u.username} · পাস: {u.plain_password}
+                    {tab === "students" && u.guardian && ` · অভিভাবক: ${u.guardian}`}
+                  </div>
+                </div>
+                <button onClick={() => sendOne(u)} disabled={sending === u.id}
+                  style={{ background: "#25d366", color: "#fff", border: "none",
+                    borderRadius: 8, padding: "6px 12px", fontSize: 13, cursor: "pointer",
+                    opacity: sending === u.id ? .6 : 1 }}>
+                  {sending === u.id ? "খুলছে…" : "📲 WhatsApp"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════ দৈনিক আমল ═══════════════ */
+const AMAL_SCORE = { jamaat: 1, alone: 1, qaza: 0.5, missed: 0, done: 1, not_done: 0 };
+const PRAYER_OPTIONS = [
+  { v: "jamaat", label: "জামাত" },
+  { v: "alone", label: "একা" },
+  { v: "qaza", label: "কাজা" },
+  { v: "missed", label: "হয়নি" },
+];
+
+function AmalView({ user }) {
+  const isStaff = user?.role !== "student";
+  const [items, setItems] = useState([]);
+  const [weekData, setWeekData] = useState([]);
+  const [selDate, setSelDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [values, setValues] = useState({});   // {item_id: value}
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [adminItems, setAdminItems] = useState(false); // এডমিন আইটেম ম্যানেজ
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemKind, setNewItemKind] = useState("check");
+
+  const notice = (t) => { setMsg(t); setTimeout(() => setMsg(""), 3000); };
+
+  const today = new Date().toISOString().slice(0, 10);
+  const editable = !isStaff && selDate >= new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10) && selDate <= today;
+
+  const loadDay = async (date) => {
+    setLoading(true);
+    try {
+      const res = await api.amalDayMe(date);
+      setItems(res.items || []);
+      const vals = {};
+      (res.items || []).forEach(it => { vals[it.id] = it.value; });
+      setValues(vals);
+    } catch { }
+    setLoading(false);
+  };
+
+  const loadWeek = async () => {
+    try { setWeekData(await api.amalWeek()); } catch { }
+  };
+
+  useEffect(() => { loadDay(selDate); }, [selDate]);
+  useEffect(() => { loadWeek(); }, []);
+
+  const totalMax = items.length || 1;
+  const score = items.reduce((s, it) => s + (AMAL_SCORE[values[it.id]] ?? 0), 0);
+  const pct = Math.round(100 * score / totalMax);
+
+  const save = async () => {
+    if (!editable) return;
+    setSaving(true);
+    try {
+      await api.saveAmalDay(null, selDate, values);
+      await loadWeek();
+      notice("✔ সংরক্ষিত হয়েছে");
+    } catch { notice("সংরক্ষণ ব্যর্থ"); }
+    setSaving(false);
+  };
+
+  // এডমিন: আইটেম যোগ
+  const addItem = async () => {
+    if (!newItemName.trim()) return;
+    try {
+      await api.saveAmalItem({ name: newItemName.trim(), kind: newItemKind, order: items.length + 1 });
+      setNewItemName(""); await loadDay(selDate); notice("✔ যোগ হয়েছে");
+    } catch { notice("যোগ ব্যর্থ"); }
+  };
+
+  const delItem = async (id) => {
+    if (!window.confirm("এই আইটেমটি মুছবেন?")) return;
+    try { await api.deleteAmalItem(id); await loadDay(selDate); } catch { notice("মুছতে ব্যর্থ"); }
+  };
+
+  // ৭-দিনের ডেট লেবেল
+  const BN_DAYS = ["রবি", "সোম", "মঙ্গল", "বুধ", "বৃহ", "শুক্র", "শনি"];
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(Date.now() - (6 - i) * 86400000);
+    return d.toISOString().slice(0, 10);
+  });
+
+  return (
+    <div style={{ maxWidth: 520, margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <h2 style={{ margin: 0 }}>দৈনিক আমল</h2>
+        {(user?.role === "director" || user?.role === "admin") && (
+          <Btn sm kind="soft" onClick={() => setAdminItems(!adminItems)}>⚙ আইটেম</Btn>
+        )}
+      </div>
+      {msg && <div style={{ background: "#e6f4ea", padding: "8px 12px", borderRadius: 8, marginBottom: 12, color: "#1a5c3a" }}>{msg}</div>}
+
+      {/* গোলাকার প্রগ্রেস রিং */}
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+        <div style={{ position: "relative", width: 110, height: 110 }}>
+          <svg width="110" height="110" style={{ transform: "rotate(-90deg)" }}>
+            <circle cx="55" cy="55" r="45" fill="none" stroke="#e8f0eb" strokeWidth="10" />
+            <circle cx="55" cy="55" r="45" fill="none" stroke="#1a5c3a" strokeWidth="10"
+              strokeDasharray={`${Math.PI * 2 * 45}`}
+              strokeDashoffset={`${Math.PI * 2 * 45 * (1 - pct / 100)}`}
+              style={{ transition: "stroke-dashoffset .5s" }} />
+          </svg>
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 22, fontWeight: 700, color: "#1a5c3a" }}>{pct}%</span>
+            <span style={{ fontSize: 11, color: "#6b7c73" }}>{score.toFixed(1)}/{totalMax}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ৭-দিনের স্ট্রিপ */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 18, overflowX: "auto", paddingBottom: 4 }}>
+        {weekDays.map(d => {
+          const wd = weekData.find(w => w.date === d);
+          const p = wd?.pct ?? 0;
+          return (
+            <div key={d} onClick={() => setSelDate(d)}
+              style={{ flex: "0 0 44px", textAlign: "center", cursor: "pointer",
+                borderRadius: 10, padding: "6px 4px",
+                background: selDate === d ? "#1a5c3a" : "#f0f4f1",
+                color: selDate === d ? "#fff" : "#2d5438",
+                border: selDate === d ? "none" : "1px solid #d0ddd5" }}>
+              <div style={{ fontSize: 11 }}>{BN_DAYS[new Date(d + "T12:00:00").getDay()]}</div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{p}%</div>
+              <div style={{ height: 4, borderRadius: 2, margin: "2px 4px 0",
+                background: selDate === d ? "rgba(255,255,255,.5)" : "#c8ddd0" }}>
+                <div style={{ width: `${p}%`, height: "100%", background: selDate === d ? "#fff" : "#1a5c3a", borderRadius: 2 }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* তারিখ নির্বাচন */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <label style={{ fontSize: 13, color: "#6b7c73" }}>তারিখ:</label>
+        <input type="date" value={selDate} max={today}
+          onChange={e => setSelDate(e.target.value)}
+          style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid #ccc", fontSize: 14 }} />
+        {!editable && <span style={{ fontSize: 12, color: "#c0392b" }}>দেখা হচ্ছে (সংরক্ষণ বন্ধ)</span>}
+      </div>
+
+      {loading ? <p>লোড হচ্ছে…</p> : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {items.map(it => (
+            <div key={it.id} style={{ background: "var(--clr-surface,#f8faf9)", border: "1px solid #dde8e2",
+              borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: it.kind === "prayer" ? 10 : 0 }}>
+                <span style={{ fontWeight: 600, fontSize: 15 }}>{it.name}</span>
+                {(user?.role === "director" || user?.role === "admin") && adminItems && (
+                  <button onClick={() => delItem(it.id)}
+                    style={{ background: "none", border: "none", color: "crimson", cursor: "pointer", fontSize: 18 }}>✕</button>
+                )}
+              </div>
+              {it.kind === "prayer" ? (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {PRAYER_OPTIONS.map(opt => (
+                    <button key={opt.v} onClick={() => editable && setValues(p => ({ ...p, [it.id]: opt.v }))}
+                      disabled={!editable}
+                      style={{
+                        padding: "5px 14px", borderRadius: 20, border: "2px solid",
+                        borderColor: values[it.id] === opt.v ? "#1a5c3a" : "#d0ddd5",
+                        background: values[it.id] === opt.v ? "#1a5c3a" : "#fff",
+                        color: values[it.id] === opt.v ? "#fff" : "#2d5438",
+                        cursor: editable ? "pointer" : "default", fontSize: 13,
+                      }}>
+                      {opt.label}
+                      {opt.v === "jamaat" && " ★"}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <button onClick={() => editable && setValues(p => ({ ...p, [it.id]: p[it.id] === "done" ? "not_done" : "done" }))}
+                  disabled={!editable}
+                  style={{
+                    width: "100%", padding: "8px", borderRadius: 8, border: "2px solid",
+                    borderColor: values[it.id] === "done" ? "#1a5c3a" : "#d0ddd5",
+                    background: values[it.id] === "done" ? "#e6f4ea" : "#fff",
+                    color: values[it.id] === "done" ? "#1a5c3a" : "#6b7c73",
+                    cursor: editable ? "pointer" : "default", fontSize: 14, fontWeight: 600,
+                  }}>
+                  {values[it.id] === "done" ? "✔ হয়েছে" : "হয়নি"}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {editable && (
+        <Btn style={{ width: "100%", marginTop: 16 }} onClick={save} disabled={saving}>
+          {saving ? "সংরক্ষণ হচ্ছে…" : "সংরক্ষণ করুন"}
+        </Btn>
+      )}
+
+      {/* এডমিন: নতুন আইটেম যোগ */}
+      {adminItems && (user?.role === "director" || user?.role === "admin") && (
+        <div style={{ marginTop: 20, padding: 16, background: "#f0f4f1", borderRadius: 10 }}>
+          <h4 style={{ margin: "0 0 12px" }}>নতুন আইটেম যোগ করুন</h4>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <input value={newItemName} onChange={e => setNewItemName(e.target.value)}
+              placeholder="আইটেমের নাম"
+              style={{ flex: 1, minWidth: 160, padding: "7px 10px", borderRadius: 7, border: "1px solid #ccc", fontSize: 14 }} />
+            <select value={newItemKind} onChange={e => setNewItemKind(e.target.value)}
+              style={{ padding: "7px 10px", borderRadius: 7, border: "1px solid #ccc", fontSize: 14 }}>
+              <option value="check">চেকবক্স</option>
+              <option value="prayer">নামাজ</option>
+            </select>
+            <Btn sm onClick={addItem}>যোগ করুন</Btn>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ═══════════════ অ্যাপ শেল ═══════════════ */
 const NAV = [
   {
@@ -23300,46 +23959,72 @@ const NAV = [
     id: "studentpayments",
     icon: "💵",
     label: "স্টুডেন্ট পেমেন্ট",
+    labelEn: "Student Payments",
     roles: ["director"],
   },
   {
     id: "waoutbox",
     icon: "📤",
     label: "WhatsApp মেসেজ",
+    labelEn: "WhatsApp Messages",
     roles: ["director", "admin"],
   },
   {
     id: "teacherreport",
     icon: "🌟",
     label: "টিচার রিপোর্ট ও পেমেন্ট",
+    labelEn: "Teacher Report & Payment",
     roles: ["director", "admin", "teacher"],
   },
-  { id: "coursemgr", icon: "📖", label: "কোর্স", roles: ["director"] },
+  { id: "coursemgr", icon: "📖", label: "কোর্স", labelEn: "Courses", roles: ["director"] },
   {
     id: "allstudents",
     icon: "👥",
     label: "সকল স্টুডেন্ট",
+    labelEn: "All Students",
     roles: ["director", "admin"],
+  },
+  {
+    id: "allteachers",
+    icon: "👨‍🏫",
+    label: "শিক্ষক তালিকা",
+    labelEn: "Teachers",
+    roles: ["director", "admin"],
+  },
+  {
+    id: "loginsend",
+    icon: "📲",
+    label: "লগইন পাঠান",
+    labelEn: "Send Login Info",
+    roles: ["director"],
+  },
+  {
+    id: "amal",
+    icon: "🌙",
+    label: "দৈনিক আমল",
+    labelEn: "Daily Amal",
+    roles: ["director", "admin", "student"],
   },
   {
     id: "admissions",
     icon: "🎓",
     label: "ভর্তি আবেদন",
+    labelEn: "Admission Applications",
     roles: ["director", "admin"],
   },
   {
-    // 🎓 আইকনটা "ভর্তি আবেদন" আগেই নিয়ে রেখেছে, তাই ট্রায়ালের জন্য আলাদা —
-    // মেনুতে দুটো একরকম দেখালে চোখে ধাঁধা লাগত
     id: "trials",
     icon: "🌱",
     label: "ট্রায়াল",
+    labelEn: "Trial",
     roles: ["director", "admin"],
   },
-  { id: "accounts", icon: "🏦", label: "হিসাব-নিকাশ", roles: ["director"] },
+  { id: "accounts", icon: "🏦", label: "হিসাব-নিকাশ", labelEn: "Accounts", roles: ["director"] },
   {
     id: "forms",
     icon: "📨",
     label: "ফর্ম সাবমিশন",
+    labelEn: "Form Submissions",
     roles: ["director", "admin"],
   },
   {
@@ -23372,7 +24057,7 @@ const NAV = [
     labelEn: "Notice Board",
     roles: ["director", "admin", "teacher", "student"],
   },
-  { id: "manage", icon: "⚙️", label: "ম্যানেজ সেটিংস", roles: ["director"] },
+  { id: "manage", icon: "⚙️", label: "ম্যানেজ সেটিংস", labelEn: "Settings", roles: ["director"] },
 ];
 
 /* ═══════════════ নতুন সংস্করণ এসেছে কিনা জানানো ═══════════════
@@ -23449,7 +24134,7 @@ const SEEN_NOTIF_KEY = "tqa_seen_notif_id";
 const NOTIF_TOAST_MS = 10000; // কত সময় পর নিজে থেকে সরে যাবে
 
 function NewNotifToast({ user, notifs }) {
-  const en = user?.role === "student";
+  const en = true;
   const [items, setItems] = useState([]);
   // একবার ছুঁয়ে/মাউস রাখলে (অর্থাৎ পড়তে শুরু করলে) সময় গোনা একেবারেই
   // থেমে যায় — তারপর কেবল ✕ চাপলেই সরে। পড়ার মাঝপথে সরে যাওয়ার ভয় নেই।
@@ -23574,7 +24259,7 @@ function NewNotifToast({ user, notifs }) {
    ফাঁদে পড়ার ভয় নেই — বাটনটা নিছক একটা লিংক, সবসময় কাজ করে, আর চাপলেই
    পপআপ সরে যায়। ক্লাসের সময় পেরিয়ে গেলে এমনিতেও আর আসে না। */
 function RejoinBlockPopup({ k, user, onRejoin, onLater }) {
-  const en = user?.role === "student";
+  const en = true;
   return (
     <BlockingPopup
       icon="🔁"
@@ -23652,7 +24337,7 @@ function RejoinBlockPopup({ k, user, onRejoin, onLater }) {
    তবে উপেক্ষা করা যায় না — "পরে" শুধু এইবারের জন্য, অ্যাপ আবার খুললেই
    পপআপটা আবার আসবে, যতক্ষণ না সত্যিই ইনস্টল করা হয়। */
 function InstallPopup({ user }) {
-  const en = user?.role === "student";
+  const en = true;
   const [ready, setReady] = useState(!!window.__tqaInstallEvent);
   const [hidden, setHidden] = useState(
     () => {
@@ -24000,10 +24685,8 @@ function UpdateBanner({ lang }) {
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const T = (bnText, enText) => (user?.role === "student" ? enText : bnText);
-  // ট্রায়াল অতিথিরাও শিক্ষার্থীদের মতোই ইংরেজি পোর্টাল দেখেন
-  CURRENT_LANG =
-    user?.role === "student" || user?.role === "trial" ? "en" : "bn"; // fmtDate সব জায়গায় এই ভাষা মেনে চলে
+  const T = (_bnText, enText) => enText;
+  CURRENT_LANG = "en";
   const [restoring, setRestoring] = useState(hasToken());
   const [db, setDb] = useState(seedDB);
   // কোন পেজে ছিলেন তা মনে রাখি — মোবাইলে ব্যাকগ্রাউন্ডে গেলে ব্রাউজার পেজটা
@@ -24272,7 +24955,7 @@ export default function App() {
   }, []);
   const overlays = (
     <>
-      <UpdateBanner lang={user?.role === "student" ? "en" : "bn"} />
+      <UpdateBanner lang="en" />
       {/* জরুরি পপআপগুলো — পুরো পর্দা ঢেকে দেয়, বাটন না চাপলে সরে না।
           একসাথে একাধিক এলে zIndex অনুযায়ী উপরেরটাই আগে দেখায়:
           নোটিফিকেশন (৩০৫) → নতুন করে ইনস্টল (৩০০) → ইনস্টল (২৯৫)।
@@ -24280,7 +24963,7 @@ export default function App() {
           apiNotifs ঘোষণার আগে, তাই এখানে বসালে অ্যাপ চালু হওয়ার সাথে সাথেই
           ক্র্যাশ করত। সেটা নিচে, লগইন করা অবস্থার অংশে বসানো আছে (আর
           লগইন ছাড়া নোটিফিকেশনের প্রশ্নই আসে না)। */}
-      <ReinstallNotice lang={user?.role === "student" ? "en" : "bn"} />
+      <ReinstallNotice lang="en" />
       <InstallPopup user={user} />
       {confirmReq && (
         <div
@@ -24867,7 +25550,7 @@ export default function App() {
               </span>{" "}
               {user.role === "student"
                 ? n.studentLabelEn || n.labelEn || n.label
-                : n.label}
+                : n.labelEn || n.label}
             </button>
           ))}
           <div
@@ -24901,6 +25584,7 @@ export default function App() {
 
         {/* কনটেন্ট */}
         <main style={{ flex: 1, padding: "20px 18px", minWidth: 0 }}>
+          {user.role === "student" && <FamilySwitcherBar user={user} />}
           {view === "overview" &&
             (user.role === "trial" ? (
               <TrialPortal user={user} />
@@ -24943,6 +25627,15 @@ export default function App() {
           )}
           {view === "allstudents" && isAdm(user) && (
             <AllStudentsView {...props} />
+          )}
+          {view === "allteachers" && isAdm(user) && (
+            <AllTeachersView user={user} courses={courses} />
+          )}
+          {view === "loginsend" && isDir(user) && (
+            <LoginSendView user={user} />
+          )}
+          {view === "amal" && (user.role === "student" || isAdm(user)) && (
+            <AmalView user={user} />
           )}
           {view === "admissions" && isAdm(user) && (
             <AdmissionsView {...props} />

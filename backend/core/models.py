@@ -41,12 +41,18 @@ class User(AbstractUser):
                                 related_name="my_students",
                                 verbose_name="কার কাছে পড়ে")
     monthly_fee = models.PositiveIntegerField(default=0)      # স্টুডেন্ট হলে
+    fee_currency = models.CharField(
+        max_length=3, default="BDT",
+        choices=[("BDT", "৳ টাকা"), ("USD", "$ ডলার")],
+    )
     monthly_salary = models.PositiveIntegerField(default=0)   # টিচার হলে
     # স্টুডেন্ট সপ্তাহে কোন কোন বার পড়বে — [0..6] JS getDay() ক্রম (০=রবিবার); ফি ও রুটিনে ব্যবহৃত
     class_days = models.JSONField(default=list, blank=True)
     # পরিচালকের জন্য পাসওয়ার্ডের দেখা-যায় কপি (কেবল director সিরিয়ালাইজারে ফেরত যায়)
     plain_password = models.CharField(max_length=128, blank=True, default="")
     can_fix_cross = models.BooleanField(default=False)  # পরিচালকের দেওয়া লাল-ক্রস ঠিক করার অনুমতি
+    # অভিভাবকের ফোন নম্বর (কান্ট্রি কোডসহ) — একই নম্বর দিয়ে ভাই-বোন সংযুক্ত হয়
+    guardian_phone = models.CharField("অভিভাবকের WhatsApp নম্বর", max_length=20, blank=True, default="")
 
     # ─────────── ট্রায়াল (সাময়িক অতিথি) — কেবল role="trial" হলে প্রযোজ্য ───────────
     # অন্য সব ভূমিকায় ঘরগুলো খালি পড়ে থাকে, কোনো প্রভাব নেই।
@@ -231,6 +237,9 @@ class LectureTopic(models.Model):
     covered = models.CharField(max_length=8, choices=Covered.choices, default=Covered.PENDING)
     marked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     marked_at = models.DateTimeField(null=True, blank=True)
+    # পরিচালক আজকের ক্লাসে যে টপিকগুলো পড়াবেন বলে ঠিক করেন —
+    # True হলে শুধু এই টপিকই উস্তাদের পোর্টালে দেখায়, শিক্ষার্থী সব দেখে।
+    today_plan = models.BooleanField("আজকের পাঠে আছে", default=False)
 
     class Meta:
         ordering = ["order", "id"]
@@ -463,6 +472,7 @@ class FeePayment(models.Model):
 
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="fee_payments")
     amount = models.PositiveIntegerField()
+    currency = models.CharField(max_length=3, default="BDT")  # BDT বা USD
     month_label = models.CharField(max_length=40)  # "জুন ২০২৬"
     method = models.CharField(max_length=10, choices=METHODS)
     trx_id = models.CharField(max_length=60, blank=True)
@@ -884,3 +894,40 @@ class LibraryBook(models.Model):
 
     def __str__(self):
         return f"{self.cls} — {self.title}"
+
+
+# ─────────────────────────── দৈনিক আমল ───────────────────────────
+class DailyAmalItem(models.Model):
+    """দৈনিক আমলের একেকটি আইটেম — নামাজ বা চেকবক্স ধরনের"""
+    KIND_PRAYER = "prayer"
+    KIND_CHECK = "check"
+    KINDS = [(KIND_PRAYER, "নামাজ"), (KIND_CHECK, "চেকবক্স")]
+
+    name = models.CharField("নাম", max_length=80)
+    kind = models.CharField(max_length=8, choices=KINDS, default=KIND_CHECK)
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.name
+
+
+class DailyAmalEntry(models.Model):
+    """একটি শিক্ষার্থীর একটি নির্দিষ্ট তারিখে একটি আমলের রেকর্ড।
+    নামাজ: jamaat/alone/qaza/missed; চেকবক্স: done/not_done"""
+    student = models.ForeignKey(User, on_delete=models.CASCADE,
+                                related_name="amal_entries")
+    item = models.ForeignKey(DailyAmalItem, on_delete=models.CASCADE,
+                             related_name="entries")
+    date = models.DateField()
+    value = models.CharField(max_length=12, default="not_done")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["student", "item", "date"], name="unique_student_item_date_amal")]
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"{self.student.name_bn} — {self.item.name} — {self.date}: {self.value}"

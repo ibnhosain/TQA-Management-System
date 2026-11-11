@@ -19,7 +19,8 @@ from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureT
                      ExamResult, FeePayment, DueMonth, TeacherPayment, SentReceipt,
                      Admission, LeaveRequest, Rating, StudentRemark, Notice, Notification,
                      PushSubscription, WaMessage, LibraryBook,
-                     CourseSyllabusSheet, TopicCoverage, LessonSection)
+                     CourseSyllabusSheet, TopicCoverage, LessonSection,
+                     DailyAmalItem, DailyAmalEntry)
 from .safe_html import clean_html
 from .serializers import *
 from .permissions import (IsDirector, IsAdminLevel, IsTeacherOrAdminLevel,
@@ -83,7 +84,41 @@ class UserViewSet(viewsets.ModelViewSet):
         # prefetch_related("due_months") → UserSerializer.get_due_months প্রতি উস্তাদে
         # আলাদা কোয়েরি না করে prefetch cache ব্যবহার করে (N+1 এড়ায়)
         qs = User.objects.filter(role="teacher").prefetch_related("due_months")
-        return Response(UserSerializer(qs, many=True).data)
+        # পরিচালক plain_password-সহ দেখতে পাবেন (লগইন পাঠানোর জন্য)
+        ser = UserAdminSerializer if request.user.role == "director" else UserSerializer
+        return Response(ser(qs, many=True).data)
+
+    @action(detail=False, url_path="my-family", permission_classes=[IsAuthenticated])
+    def my_family(self, request):
+        """শিক্ষার্থীর ভাই-বোন (একই guardian_phone) — ফ্যামিলি সুইচারের জন্য"""
+        if request.user.role != "student":
+            return Response({"current": None, "siblings": []})
+        phone = (request.user.guardian_phone or "").strip()
+        if not phone:
+            return Response({"current": {"name": request.user.name_bn}, "siblings": []})
+        siblings = User.objects.filter(
+            role="student", guardian_phone=phone
+        ).exclude(pk=request.user.pk)
+        return Response({
+            "current": {"name": request.user.name_bn},
+            "siblings": [{"id": s.id, "name": s.name_bn} for s in siblings],
+        })
+
+    @action(detail=True, methods=["post"], url_path="switch-sibling", permission_classes=[IsAuthenticated])
+    def switch_sibling(self, request, pk=None):
+        """অভিভাবকের অন্য সন্তানের পোর্টালে যাওয়ার জন্য নতুন JWT"""
+        if request.user.role != "student":
+            raise PermissionDenied("কেবল শিক্ষার্থীরাই ব্যবহার করতে পারবেন")
+        target = self.get_object()
+        if target.role != "student":
+            raise PermissionDenied("লক্ষ্য ব্যবহারকারী শিক্ষার্থী নন")
+        my_phone = (request.user.guardian_phone or "").strip()
+        their_phone = (target.guardian_phone or "").strip()
+        if not my_phone or my_phone != their_phone:
+            raise PermissionDenied("এই শিক্ষার্থী আপনার পরিবারভুক্ত নন")
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(target)
+        return Response({"access": str(refresh.access_token), "refresh": str(refresh)})
 
     @action(detail=False, methods=["post"], permission_classes=[IsDirector])
     def backfill_student_ids(self, request):
@@ -403,6 +438,145 @@ class LessonMediaView(APIView):
                          "name": f.name}, status=201)
 
 
+def _pptx_to_images(upload_file, request):
+    """পাওয়ারপয়েন্ট ফাইল থেকে প্রতিটি স্লাইড PNG-এ রূপান্তর করে Cloudinary-তে আপলোড করে।
+    python-pptx + Pillow — ব্যাকগ্রাউন্ড, ছবি ও লেখা ধরে ধরে রেন্ডার করা হয়।
+    লেখার ফন্ট সিস্টেম-নির্ভর, তাই সেরা ফলাফলের জন্য PDF করে আনুন।"""
+    import io, os
+    from pptx import Presentation
+    from pptx.enum.dml import PP_FILL  # noqa: F401 — type-check এ লাগে
+    from PIL import Image, ImageDraw, ImageFont
+
+    TARGET_W, TARGET_H = 1920, 1080
+
+    def _get_font(size):
+        for path in [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+            "C:/Windows/Fonts/calibri.ttf",
+            "C:/Windows/Fonts/arial.ttf",
+        ]:
+            try:
+                return ImageFont.truetype(path, max(10, size))
+            except Exception:
+                pass
+        try:
+            return ImageFont.load_default(size=max(10, size))
+        except TypeError:
+            return ImageFont.load_default()
+
+    def _rgb_tuple(rgb_obj):
+        v = int(rgb_obj)
+        return ((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF)
+
+    def _render(slide, sw, sh):
+        bg = (255, 255, 255)
+        try:
+            fill = slide.background.fill
+            if fill.type is not None and str(fill.type) == "SOLID (1)":
+                bg = _rgb_tuple(fill.fore_color.rgb)
+        except Exception:
+            pass
+
+        img = Image.new("RGB", (TARGET_W, TARGET_H), bg)
+        drw = ImageDraw.Draw(img)
+        sx, sy = TARGET_W / sw, TARGET_H / sh
+
+        for shape in slide.shapes:
+            try:
+                left = int((shape.left or 0) * sx)
+                top  = int((shape.top  or 0) * sy)
+                w    = max(1, int((shape.width  or 0) * sx))
+                h    = max(1, int((shape.height or 0) * sy))
+
+                # ছবি (shape_type 13 = PICTURE)
+                if shape.shape_type == 13:
+                    try:
+                        pic = Image.open(io.BytesIO(shape.image.blob)).convert("RGBA")
+                        pic = pic.resize((w, h), Image.LANCZOS)
+                        img.paste(pic, (left, top), pic)
+                    except Exception:
+                        pass
+
+                # লেখার বাক্স
+                elif shape.has_text_frame:
+                    y = top + 4
+                    for para in shape.text_frame.paragraphs:
+                        line = para.text
+                        if not line.strip():
+                            y += 16; continue
+                        fsize, color = 22, (30, 30, 30)
+                        try:
+                            run = para.runs[0] if para.runs else None
+                            if run and run.font.size:
+                                fsize = max(12, int(run.font.size.pt * sy * 0.9))
+                            if run:
+                                color = _rgb_tuple(run.font.color.rgb)
+                        except Exception:
+                            pass
+                        font = _get_font(fsize)
+                        drw.text((left + 8, y), line, fill=color, font=font)
+                        y += fsize + 6
+            except Exception:
+                continue
+
+        buf = io.BytesIO()
+        img.save(buf, "PNG", optimize=True)
+        return buf.getvalue()
+
+    data = upload_file.read()
+    prs = Presentation(io.BytesIO(data))
+    sw, sh = prs.slide_width, prs.slide_height
+    cloud = os.environ.get("CLOUDINARY_URL", "")
+    urls = []
+
+    for idx, slide in enumerate(prs.slides):
+        png = _render(slide, sw, sh)
+        if cloud:
+            import cloudinary.uploader
+            res = cloudinary.uploader.upload(
+                io.BytesIO(png),
+                folder="tqa-lessons",
+                resource_type="image",
+                format="png",
+                unique_filename=True,
+            )
+            urls.append(res["secure_url"])
+        else:
+            from django.core.files.storage import default_storage
+            from django.core.files.base import ContentFile
+            saved = default_storage.save(f"lessons/pptx_{idx + 1}.png", ContentFile(png))
+            urls.append(request.build_absolute_uri(f"/media/{saved}"))
+
+    return urls
+
+
+class PptxConvertView(APIView):
+    """POST /api/convert-pptx/ — .pptx ফাইল প্রতিটি স্লাইড PNG ছবিতে রূপান্তর করে
+    Cloudinary-তে আপলোড করে URL-এর তালিকা ফেরত দেয় (কেবল পরিচালক)।"""
+    permission_classes = [IsDirector]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        import traceback as tb
+        f = request.FILES.get("file")
+        if not f:
+            return Response({"error": "ফাইল দিন"}, status=400)
+        if not (f.name or "").lower().endswith(".pptx"):
+            return Response({"error": "শুধু .pptx ফাইল গ্রহণযোগ্য"}, status=400)
+        if f.size > 50 * 1024 * 1024:
+            return Response({"error": "ফাইলটি ৫০ MB-এর বেশি"}, status=400)
+        try:
+            urls = _pptx_to_images(f, request)
+        except ImportError:
+            return Response({"error": "সার্ভারে python-pptx নেই — admin জানান"}, status=500)
+        except Exception as e:
+            tb.print_exc()
+            return Response({"error": f"রূপান্তর ব্যর্থ: {e}"}, status=500)
+        return Response({"urls": urls, "count": len(urls)}, status=201)
+
+
 # পরিচালকের দেওয়া ক্রমেই নতুন কোর্সে হেডিংগুলো বসে
 DEFAULT_SECTIONS = [
     "Memorized Surah", "Memorized Hadith", "Qirat", "Dua", "Masala",
@@ -467,7 +641,18 @@ class LessonSectionViewSet(viewsets.ModelViewSet):
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
         ctx["student_id"] = self._student_id()
+        ctx["today_only"] = self.request.query_params.get("today_only") == "1"
         return ctx
+
+    @action(detail=False, methods=["post"], permission_classes=[IsAdminLevel])
+    def toggle_today_plan(self, request):
+        """একটি টপিকের 'আজকের পাঠ' টিক টগল করা — True↔False (কেবল এডমিন/পরিচালক)।"""
+        topic = _by_pk(LectureTopic, request.data.get("topic_id"))
+        if not topic:
+            return Response({"detail": "টপিকটি পাওয়া যায়নি"}, status=404)
+        topic.today_plan = not topic.today_plan
+        topic.save(update_fields=["today_plan"])
+        return Response({"id": topic.id, "today_plan": topic.today_plan})
 
     @action(detail=False, methods=["post"], permission_classes=[IsDirector])
     def ensure(self, request):
@@ -1139,6 +1324,34 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         return Response({"status": "postponed"})
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdminLevel])
+    def complete_postponed(self, request, pk=None):
+        """স্থগিত ক্লাস সম্পন্ন চিহ্নিত করা — সব enrolled শিক্ষার্থীর হাজিরা যোগ হবে।
+        marked_present=True দিয়ে Attendance তৈরি হয়, তাই মাসিক ক্লাস গণনায় ওঠে।"""
+        s = self.get_object()
+        if s.status != "postponed":
+            return Response({"error": "শুধু স্থগিত ক্লাসই এভাবে সম্পন্ন করা যাবে।"}, status=400)
+        s.status = "done"
+        s.save(update_fields=["status"])
+        teacher_name = s.teacher.name_bn if s.teacher_id and s.teacher else ""
+        for student in s.students.all():
+            Attendance.objects.get_or_create(
+                session=s,
+                user=student,
+                defaults={
+                    "course_name": s.course.name if s.course_id else "",
+                    "teacher_name": teacher_name,
+                    "teacher_id": s.teacher_id,
+                    "class_date": s.date,
+                    "marked_present": True,
+                },
+            )
+        notify(
+            f"✅ {s.course.name if s.course_id else 'ক্লাস'}টি ({s.date}) সম্পন্ন চিহ্নিত হয়েছে।",
+            list(s.students.all()) + ([s.teacher] if s.teacher_id else []) + list(admins()),
+        )
+        return Response({"status": "done"})
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAdminLevel])
     def set_join_mode(self, request, pk=None):
         # স্বয়ংক্রিয় জয়েন/রিজয়েন-নির্ধারণ (দুজনের হাজিরার ওপর ভিত্তি করে) কোনো
         # কারণে ঠিকমতো না এলে, পরিচালক/এডমিন এখান থেকে জয়েন বা রিজয়েন — যেকোনো
@@ -1389,7 +1602,11 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_create(self, serializer):  # স্টুডেন্টের "এখনই পেমেন্ট" → pending
-        pay = serializer.save(student=self.request.user, status="pending")
+        student = self.request.user
+        pay = serializer.save(
+            student=student, status="pending",
+            currency=student.fee_currency or "BDT",
+        )
         DueMonth.objects.filter(user=pay.student, month_label=pay.month_label).delete()
         notify(f"{pay.student.name_bn} — {pay.month_label} মাসের ফি পরিশোধ করেছে, "
                f"পরিচালকের ভেরিফাই বাকি।", admins())
@@ -1442,6 +1659,7 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
         pay = FeePayment.objects.create(
             student=student, amount=amount, month_label=month_label,
             method=method, status="verified",
+            currency=student.fee_currency or "BDT",
         )
         DueMonth.objects.filter(user=student, month_label=month_label).delete()
         return Response(FeePaymentSerializer(pay).data, status=201)
@@ -2837,6 +3055,127 @@ class LibraryBookViewSet(viewsets.ModelViewSet):
     queryset = LibraryBook.objects.all()
     serializer_class = LibraryBookSerializer
     permission_classes = [ReadAllWriteAdmin]  # সবাই দেখতে পারে, যোগ/মুছা এডমিন+
+
+
+# ─────────────────────────── দৈনিক আমল ───────────────────────────
+class DailyAmalItemViewSet(viewsets.ModelViewSet):
+    """আমলের আইটেম তালিকা — পরিচালক যোগ/বদল/মুছতে পারেন"""
+    serializer_class = DailyAmalItemSerializer
+    permission_classes = [ReadAllWriteAdmin]
+
+    def get_queryset(self):
+        return DailyAmalItem.objects.all()
+
+
+class DailyAmalDayView(APIView):
+    """একটি তারিখের আমল রেকর্ড দেখা ও সংরক্ষণ করা"""
+    permission_classes = [IsAuthenticated]
+
+    def _get_student(self, request):
+        student_id = request.query_params.get("student") or request.data.get("student_id")
+        if request.user.role in ("director", "admin", "teacher"):
+            if not student_id:
+                return None, Response({"error": "student আইডি দিন"}, status=400)
+            try:
+                return User.objects.get(id=student_id, role="student"), None
+            except User.DoesNotExist:
+                return None, Response({"error": "শিক্ষার্থী পাওয়া যায়নি"}, status=404)
+        return request.user, None
+
+    def get(self, request):
+        student, err = self._get_student(request)
+        if err:
+            return err
+        date_str = request.query_params.get("date") or timezone.localtime().date().isoformat()
+        items = DailyAmalItem.objects.filter(is_active=True)
+        entries = {e.item_id: e.value for e in
+                   DailyAmalEntry.objects.filter(student=student, date=date_str)}
+        result = []
+        for item in items:
+            default = "missed" if item.kind == DailyAmalItem.KIND_PRAYER else "not_done"
+            result.append({
+                "id": item.id, "name": item.name, "kind": item.kind,
+                "order": item.order, "value": entries.get(item.id, default),
+            })
+        return Response({"items": result, "date": date_str, "student_id": student.id})
+
+    def post(self, request):
+        student, err = self._get_student(request)
+        if err:
+            return err
+        date_str = request.data.get("date")
+        if not date_str:
+            return Response({"error": "date দিন"}, status=400)
+        # শিক্ষার্থী কেবল আজ বা গত ৭ দিন সংরক্ষণ করতে পারবেন
+        if request.user.role == "student":
+            from datetime import date as dt, timedelta
+            today = timezone.localtime().date()
+            try:
+                entry_date = dt.fromisoformat(date_str)
+            except ValueError:
+                return Response({"error": "তারিখ বৈধ নয়"}, status=400)
+            if entry_date > today or entry_date < today - timedelta(days=7):
+                return Response({"error": "কেবল আজ ও গত ৭ দিনের আমল সংরক্ষণ করা যাবে"}, status=400)
+        entries = request.data.get("entries", {})  # {item_id: value}
+        for item_id, value in entries.items():
+            try:
+                item = DailyAmalItem.objects.get(id=item_id)
+            except DailyAmalItem.DoesNotExist:
+                continue
+            DailyAmalEntry.objects.update_or_create(
+                student=student, item=item, date=date_str,
+                defaults={"value": value},
+            )
+        return Response({"ok": True})
+
+
+class DailyAmalWeekView(APIView):
+    """গত ৭ দিনের আমলের সংক্ষিপ্ত রেকর্ড — সাপ্তাহিক স্ট্রিপের জন্য"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        student_id = request.query_params.get("student")
+        if request.user.role in ("director", "admin", "teacher"):
+            if not student_id:
+                return Response({"error": "student আইডি দিন"}, status=400)
+            try:
+                student = User.objects.get(id=student_id, role="student")
+            except User.DoesNotExist:
+                return Response({"error": "শিক্ষার্থী পাওয়া যায়নি"}, status=404)
+        else:
+            student = request.user
+
+        from datetime import date as dt, timedelta
+        today = timezone.localtime().date()
+        days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+
+        items = list(DailyAmalItem.objects.filter(is_active=True))
+        entries = DailyAmalEntry.objects.filter(
+            student=student, date__in=days
+        ).values("date", "item_id", "value")
+
+        # {date_str: {item_id: value}}
+        by_date = {}
+        for e in entries:
+            d = str(e["date"])
+            by_date.setdefault(d, {})[e["item_id"]] = e["value"]
+
+        SCORE = {"jamaat": 1, "alone": 1, "qaza": 0.5, "missed": 0, "done": 1, "not_done": 0}
+        max_score = sum(1 for it in items) if items else 1
+
+        result = []
+        for d in days:
+            day_entries = by_date.get(str(d), {})
+            score = sum(SCORE.get(day_entries.get(it.id,
+                "missed" if it.kind == DailyAmalItem.KIND_PRAYER else "not_done"), 0)
+                for it in items)
+            result.append({
+                "date": str(d),
+                "score": round(score, 2),
+                "max": max_score,
+                "pct": round(100 * score / max_score) if max_score else 0,
+            })
+        return Response(result)
 
 
 # ─────────────────────────── ডেটা এক্সপোর্ট (পরিচালক মাত্র) ───────────────────────────
