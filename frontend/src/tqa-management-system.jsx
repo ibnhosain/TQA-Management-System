@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 // ভাসমান পর্দাটি উস্তাদের উইন্ডোর ভেতর থেকেই আঁকা হয় — তাই portal
 import { createPortal } from "react-dom";
 import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
-// নামাজ শিক্ষা আলাদা অংশে — 3D লাইব্রেরি কেবল এই মেনু খুললেই লোড হয়
-const SalahLearn = lazy(() => import("./salah3d/SalahLearn.jsx"));
+
 
 /* ═══════════════════════════════════════════════════════════
    তারবিয়াতুল কুরআন একাডেমি — ম্যানেজমেন্ট সিস্টেম (TQA-MS)
@@ -25528,6 +25527,8 @@ export default function App() {
             <button
               key={n.id}
               onClick={() => {
+                // নামাজ শিক্ষা অ্যাপের ভেতরে নয় — আলাদা লুকানো পেজে খোলে (লগইন ছাড়া চলে না)
+                if (n.id === "salah") { window.location.assign("/salah-learn"); return; }
                 setView(n.id);
                 setMenu(false);
               }}
@@ -25655,9 +25656,7 @@ export default function App() {
           {view === "accounts" && isDir(user) && <AccountsView {...props} />}
           {view === "forms" && isAdm(user) && <FormsView {...props} />}
           {view === "books" && <AcademicBooksView {...props} />}
-          {view === "salah" && ["director", "admin", "teacher", "student"].includes(user.role) && (
-            <Suspense fallback={<div style={{ padding: 20 }}>লোড হচ্ছে…</div>}><SalahLearn /></Suspense>
-          )}
+
           {view === "myreceipts" && <MyReceiptsView {...props} />}
           {view === "leaves" && <LeaveView {...props} />}
           {view === "notices" && <NoticesView {...props} />}

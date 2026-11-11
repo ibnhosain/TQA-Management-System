@@ -1,6 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { lazy, Suspense } from 'react'
 import App from './App.jsx'
+// নামাজ শিক্ষা: আলাদা পেজ /salah-learn — অ্যাপের মেনু থেকে আসে, কোথাও খোলা লিংক নেই; লগইন ছাড়া চলে না
+const SalahPage = lazy(() => import('./salah3d/SalahPage.jsx'))
+const isSalah = window.location.pathname.replace(/\/+$/, '') === '/salah-learn'
 
 // সার্ভিস ওয়ার্কার — PWA ইনস্টলযোগ্য করতে (Add to Home Screen/ডেস্কটপে ইনস্টল)
 // এটা কোনো পারমিশন চায় না, শুধু রেজিস্টার করে রাখে; নোটিফিকেশনের অনুমতি আলাদাভাবে
@@ -24,6 +28,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    {isSalah ? <Suspense fallback={null}><SalahPage /></Suspense> : <App />}
   </StrictMode>,
 )

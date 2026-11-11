@@ -9,7 +9,7 @@ import { fetchBinary } from "../api";
 import { STEPS } from "./steps";
 import { makeScene, setProps } from "./scene";
 
-const GROUPS = [["wudu", "অজু"], ["boy", "নামাজ — ছেলে"], ["girl", "নামাজ — মেয়ে"]];
+const GROUPS = [["wudu", "Wudu", "অজু"], ["boy", "Salah — Boys", "নামাজ — ছেলে"], ["girl", "Salah — Girls", "নামাজ — মেয়ে"]];
 const VIEWS = { front: [0.35, 0.25, 1], side: [-1, 0.2, 0.1], back: [-0.35, 0.3, -1] };
 const block = (e) => e.preventDefault();
 
@@ -18,7 +18,7 @@ export default function SalahLearn() {
   const eng = useRef(null);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const [status, setStatus] = useState("লোড হচ্ছে…");
+  const [status, setStatus] = useState("Loading…");
   const st = STEPS[idx];
 
   // 3D ইঞ্জিন একবারই তৈরি
@@ -71,7 +71,7 @@ export default function SalahLearn() {
       const e = eng.current;
       const kind = st.group === "girl" ? "girl" : "boy";
       try {
-        setStatus("লোড হচ্ছে…");
+        setStatus("Loading…");
         const g = await model(kind);
         if (!alive) return;
         for (const k of Object.keys(e.models)) e.scene.remove((await e.models[k]).scene);
@@ -91,7 +91,7 @@ export default function SalahLearn() {
         if (!e.viewed) { view("front"); e.viewed = true; } else { e.ctl.target.copy(e.center); }
         setStatus("");
       } catch (err) {
-        setStatus("মডেল আনা যায়নি — ইন্টারনেট দেখে আবার চেষ্টা করুন। (" + err.message + ")");
+        setStatus("Could not load the model — please check the internet and try again. (" + err.message + ")");
       }
     })();
     return () => { alive = false; };
@@ -108,17 +108,18 @@ export default function SalahLearn() {
   return (
     <div onCopy={block} onCut={block} onContextMenu={block} onDragStart={block}
       style={{ userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}>
-      <h2 style={{ margin: "0 0 4px" }}>🕌 নামাজ শিক্ষা</h2>
-      <p style={{ margin: "0 0 14px", color: "#5B6B62" }}>হানাফি নিয়মে অজু ও নামাজ — প্রতিটি ধাপ শিশু নিজে করে দেখায়। আঙুল দিয়ে ঘুরিয়ে চারদিক থেকে দেখুন।</p>
+      <h2 style={{ margin: "0 0 2px" }}>🕌 Learn Salah <span style={{ fontSize: 15, color: "#5B6B62", fontWeight: 500 }}>· নামাজ শিক্ষা</span></h2>
+      <p style={{ margin: "0 0 2px", color: "#1F2A24", fontSize: 16 }}>Wudu and salah the Hanafi way — the child does every step. Turn the model with your finger to see it from all sides.</p>
+      <p style={{ margin: "0 0 14px", color: "#5B6B62", fontSize: 13 }}>হানাফি নিয়মে অজু ও নামাজ — প্রতিটি ধাপ শিশু নিজে করে দেখায়। আঙুল দিয়ে ঘুরিয়ে চারদিক থেকে দেখুন।</p>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-        {GROUPS.map(([g, label]) => (
-          <button key={g} style={st.group === g ? on : btn} onClick={() => go(STEPS.findIndex((s) => s.group === g))}>{label}</button>
+        {GROUPS.map(([g, label, bn]) => (
+          <button key={g} style={st.group === g ? on : btn} onClick={() => go(STEPS.findIndex((s) => s.group === g))}>{label} <small style={{ opacity: 0.75, fontSize: 11 }}>{bn}</small></button>
         ))}
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
         {groupSteps.map((s, n) => (
           <button key={s.key} style={{ ...(s.i === idx ? on : btn), fontSize: 13, padding: "5px 11px" }} onClick={() => go(s.i)}>
-            {n + 1}. {s.bn.title.split(" · ").pop()}
+            {n + 1}. {s.en.title.split(" · ").pop()}
           </button>
         ))}
       </div>
@@ -126,22 +127,22 @@ export default function SalahLearn() {
         <div ref={box} style={{ width: "100%", height: "min(62vh, 560px)", touchAction: "none" }} />
         {status && <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "#123F28", background: "rgba(251,248,241,.7)" }}>{status}</div>}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", padding: 10, borderTop: "1px solid #E5EEE8", background: "#fff" }}>
-          <button style={playing ? btn : on} onClick={() => setPlaying((p) => !p)}>{playing ? "⏸ থামান" : "▶ চালান"}</button>
-          <button style={btn} onClick={() => view("front")}>সামনে</button>
-          <button style={btn} onClick={() => view("side")}>পাশ</button>
-          <button style={btn} onClick={() => view("back")}>পেছন</button>
+          <button style={playing ? btn : on} onClick={() => setPlaying((p) => !p)}>{playing ? "⏸ Pause" : "▶ Play"}</button>
+          <button style={btn} onClick={() => view("front")}>Front</button>
+          <button style={btn} onClick={() => view("side")}>Side</button>
+          <button style={btn} onClick={() => view("back")}>Back</button>
         </div>
       </div>
       <div style={{ marginTop: 12, background: "#fff", border: "1px solid #DCE9E0", borderLeft: "5px solid #C9962A", borderRadius: 14, padding: "14px 16px" }}>
-        <h3 style={{ margin: "0 0 6px", color: "#123F28" }}>{st.bn.title}</h3>
-        <p style={{ margin: 0, lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: st.bn.text }} />
-        {st.bn.rule && <span style={{ display: "inline-block", marginTop: 8, fontSize: 13, background: "#FFF6E0", color: "#7A5A12", borderRadius: 8, padding: "3px 10px" }}>{st.bn.rule}</span>}
-        <p style={{ margin: "8px 0 0", color: "#5B6B62", fontSize: 14 }} dangerouslySetInnerHTML={{ __html: st.en.title + " — " + st.en.text }} />
+        <h3 style={{ margin: "0 0 6px", color: "#123F28", fontSize: 21 }}>{st.en.title}</h3>
+        <p style={{ margin: 0, lineHeight: 1.7, fontSize: 17 }} dangerouslySetInnerHTML={{ __html: st.en.text }} />
+        {st.en.rule && <span style={{ display: "inline-block", marginTop: 8, fontSize: 13, background: "#FFF6E0", color: "#7A5A12", borderRadius: 8, padding: "3px 10px" }}>{st.en.rule}</span>}
+        <p style={{ margin: "10px 0 0", color: "#5B6B62", fontSize: 13, lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: st.bn.title + " — " + st.bn.text + (st.bn.rule ? " (" + st.bn.rule + ")" : "") }} />
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-        <button style={{ ...btn, flex: 1 }} onClick={() => go(idx - 1)}>‹ আগে</button>
+        <button style={{ ...btn, flex: 1 }} onClick={() => go(idx - 1)}>‹ Previous</button>
         <span style={{ alignSelf: "center", color: "#5B6B62" }}>{idx + 1} / {STEPS.length}</span>
-        <button style={{ ...on, flex: 1 }} onClick={() => go(idx + 1)}>পরে ›</button>
+        <button style={{ ...on, flex: 1 }} onClick={() => go(idx + 1)}>Next ›</button>
       </div>
     </div>
   );
