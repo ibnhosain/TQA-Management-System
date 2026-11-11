@@ -3214,3 +3214,25 @@ def export_all_data(request):
     resp = HttpResponse(content, content_type="application/json; charset=utf-8")
     resp["Content-Disposition"] = f'attachment; filename="{filename}"'
     return resp
+
+
+class Salah3DModelView(APIView):
+    """GET /api/salah3d/<boy|girl>/ — নামাজ শিক্ষার 3D মডেল (.glb)।
+    কেবল লগইন করা পরিচালক, এডমিন, উস্তাদ ও শিক্ষার্থী পান — ট্রায়াল বা লগইন ছাড়া কেউ নয়।
+    ফাইলগুলো core/salah3d/-এ, স্ট্যাটিক/মিডিয়া ঠিকানায় রাখা হয়নি যাতে খোলা লিংক না থাকে।"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, kind):
+        import os
+        from django.http import FileResponse
+        if getattr(request.user, "role", "") not in ("director", "admin", "teacher", "student"):
+            return Response({"error": "অনুমতি নেই"}, status=403)
+        if kind not in ("boy", "girl"):
+            return Response({"error": "পাওয়া যায়নি"}, status=404)
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "salah3d", f"{kind}.glb")
+        if not os.path.exists(path):
+            return Response({"error": "মডেল এখনো রাখা হয়নি"}, status=404)
+        res = FileResponse(open(path, "rb"), content_type="model/gltf-binary")
+        res["Cache-Control"] = "private, max-age=86400"
+        res["Content-Disposition"] = "inline"
+        return res

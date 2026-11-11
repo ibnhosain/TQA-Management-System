@@ -583,3 +583,18 @@ export async function downloadBackup() {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 60000);
 }
+
+/* লগইন-সুরক্ষিত বাইনারি ফাইল (যেমন নামাজ শিক্ষার 3D মডেল) — টোকেনসহ আনে, মেয়াদ গেলে একবার রিফ্রেশ করে।
+   ফাইলের কোনো খোলা ঠিকানা নেই: লগইন ছাড়া সার্ভার ফাইল দেয় না। */
+export async function fetchBinary(path) {
+  const go = () => fetchWithTimeout(`${BASE}${path}`, { headers: access ? { Authorization: `Bearer ${access}` } : {} }, 120000);
+  let res = await go();
+  if (res.status === 401 && refresh) {
+    const r = await fetchWithTimeout(`${BASE}/auth/refresh`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refresh }),
+    });
+    if (r.ok) { saveTokens((await r.json()).access, refresh); res = await go(); }
+  }
+  if (!res.ok) throw new Error(res.status === 403 ? "অনুমতি নেই" : "ফাইল আনা যায়নি");
+  return res.arrayBuffer();
+}
