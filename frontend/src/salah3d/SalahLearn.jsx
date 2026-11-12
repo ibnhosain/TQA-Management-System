@@ -7,8 +7,10 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { fetchBinary } from "../api";
 import { STEPS } from "./steps";
+import { ASSET_VERSION } from "./version";
 import { makeScene, setProps } from "./scene";
 import Turn360 from "./Turn360.jsx";
+import FocusBadge from "./FocusBadge.jsx";
 
 const GROUPS = [["wudu", "Wudu", "অজু"], ["boy", "Salah — Boys", "নামাজ — ছেলে"], ["girl", "Salah — Girls", "নামাজ — মেয়ে"]];
 const VIEWS = { front: [0.35, 0.25, 1], side: [-1, 0.2, 0.1], back: [-0.35, 0.3, -1] };
@@ -59,7 +61,7 @@ export default function SalahLearn() {
     const e = eng.current;
     if (!e.models[kind]) {
       e.models[kind] = (async () => {
-        const buf = await fetchBinary(`/salah3d/${kind}/`);
+        const buf = await fetchBinary(`/salah3d/${kind}/?v=${ASSET_VERSION}`);
         const gltf = await new GLTFLoader().parseAsync(buf, "");
         gltf.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
         return gltf;
@@ -83,7 +85,7 @@ export default function SalahLearn() {
         setProps(e.props, st.key);
         const wuduNow = st.key.startsWith("wudu");      // অজুতে টুপি খোলা, পুরো চুল দেখা যায়
         g.scene.traverse((o) => {
-          if (o.name.startsWith("kufi") || o.name.startsWith("hair_cap")) o.visible = !wuduNow;
+          if (o.name.startsWith("kufi") || o.name.startsWith("kurta_sleeves") || o.name.startsWith("hair_cap")) o.visible = !wuduNow;
           if (o.name.startsWith("hair_full")) o.visible = wuduNow;
         });
         if (e.mixer?.getRoot() !== g.scene) e.mixer = new THREE.AnimationMixer(g.scene);
@@ -134,6 +136,7 @@ export default function SalahLearn() {
             <Turn360 stepKey={st.key} playing={playing} view={photoView} onStatus={setPhotoStatus} />
           </div>
         )}
+        <FocusBadge stepKey={st.key} label={st.en.title} />
         {mode === "photo" && photoStatus && <div style={{ position: "absolute", inset: 0, bottom: 56, display: "grid", placeItems: "center", color: "#123F28", background: "rgba(251,248,241,.7)" }}>{photoStatus}</div>}
         {mode === "move" && status && <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "#123F28", background: "rgba(251,248,241,.7)" }}>{status}</div>}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", padding: 10, borderTop: "1px solid #E5EEE8", background: "#fff" }}>

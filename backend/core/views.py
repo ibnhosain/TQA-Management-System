@@ -3243,6 +3243,8 @@ class Salah3DTurnView(APIView):
     Same protection as the 3D models: logged-in director, admin, teacher or student only."""
     permission_classes = [IsAuthenticated]
 
+    folder = "turn"
+
     def get(self, request, key):
         import os, re
         from django.http import FileResponse
@@ -3250,9 +3252,15 @@ class Salah3DTurnView(APIView):
             return Response({"error": "অনুমতি নেই"}, status=403)
         if not re.fullmatch(r"[a-z0-9-]{3,40}", key or ""):
             return Response({"error": "পাওয়া যায়নি"}, status=404)
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "salah3d", "turn", f"{key}.jpg")
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "salah3d", self.folder, f"{key}.jpg")
         if not os.path.exists(path):
             return Response({"error": "পাওয়া যায়নি"}, status=404)
         res = FileResponse(open(path, "rb"), content_type="image/jpeg")
         res["Cache-Control"] = "private, max-age=86400"
         return res
+
+
+
+class Salah3DFocusView(Salah3DTurnView):
+    """GET /api/salah3d/focus/<step>/ — the close-up of the body part the step is about (gold circle)."""
+    folder = "focus"

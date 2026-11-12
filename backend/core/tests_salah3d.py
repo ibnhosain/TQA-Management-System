@@ -46,3 +46,11 @@ class Salah3DTurnTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r["Content-Type"], "image/jpeg")
         self.assertEqual(self.c.get("/api/salah3d/turn/..%2Fsettings/").status_code, 404)
+
+
+class Salah3DFocusTests(TestCase):
+    def test_focus_protected(self):
+        c = APIClient()
+        self.assertEqual(c.get("/api/salah3d/focus/boy-10-ruku/").status_code, 401)
+        c.force_authenticate(User.objects.create_user(username="ft", password="x12345678", role="trial"))
+        self.assertEqual(c.get("/api/salah3d/focus/boy-10-ruku/").status_code, 403)

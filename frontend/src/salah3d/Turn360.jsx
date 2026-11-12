@@ -2,6 +2,7 @@
    ছবি আসে সার্ভার থেকে টোকেন দিয়ে (খোলা লিংক নেই)। দিক: ফ্রেম ৩ = সামনে, ৯ = বাম পাশ, ১৫ = পেছন, ২১ = ডান পাশ। */
 import { useEffect, useRef, useState } from "react";
 import { fetchBinary } from "../api";
+import { ASSET_VERSION } from "./version";
 
 const N = 24, COLS = 6, FW = 400, FH = 467;
 export const FRAME_OF = { front: 3, side: 21, back: 15 };
@@ -29,7 +30,7 @@ export default function Turn360({ stepKey, playing, view, onStatus }) {
     setReady(false); onStatus?.("Loading…");
     (async () => {
       try {
-        if (!cache[stepKey]) cache[stepKey] = fetchBinary(`/salah3d/turn/${stepKey}/`).then((b) => URL.createObjectURL(new Blob([b], { type: "image/jpeg" })));
+        if (!cache[stepKey]) cache[stepKey] = fetchBinary(`/salah3d/turn/${stepKey}/?v=${ASSET_VERSION}`).then((b) => URL.createObjectURL(new Blob([b], { type: "image/jpeg" })));
         const url = await cache[stepKey];
         const im = new Image();
         im.onload = () => { if (!alive) return; img.current = im; setReady(true); onStatus?.(""); draw(); };

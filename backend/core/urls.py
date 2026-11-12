@@ -86,7 +86,8 @@ urlpatterns = [
     path("push/vapid-public-key/", lambda r: JsonResponse({"key": push.public_key_b64()})),
     path("amal/day/", views.DailyAmalDayView.as_view()),
     path("amal/week/", views.DailyAmalWeekView.as_view()),
-    path("salah3d/turn/<str:key>/", views.Salah3DTurnView.as_view()),  # নামাজ শিক্ষা — ৩৬০° ছবি (লগইন-সুরক্ষিত)
+    path("salah3d/turn/<str:key>/", views.Salah3DTurnView.as_view()),
+    path("salah3d/focus/<str:key>/", views.Salah3DFocusView.as_view()),  # নামাজ শিক্ষা — অঙ্গের কাছের ছবি (লগইন-সুরক্ষিত)  # নামাজ শিক্ষা — ৩৬০° ছবি (লগইন-সুরক্ষিত)
     path("salah3d/<str:kind>/", views.Salah3DModelView.as_view()),  # নামাজ শিক্ষা — লগইন-সুরক্ষিত 3D মডেল
     path("", include(router.urls)),
 ]
