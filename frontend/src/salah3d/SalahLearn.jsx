@@ -8,6 +8,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { fetchBinary } from "../api";
 import { STEPS } from "./steps";
 import { makeScene, setProps } from "./scene";
+import Turn360 from "./Turn360.jsx";
 
 const GROUPS = [["wudu", "Wudu", "অজু"], ["boy", "Salah — Boys", "নামাজ — ছেলে"], ["girl", "Salah — Girls", "নামাজ — মেয়ে"]];
 const VIEWS = { front: [0.35, 0.25, 1], side: [-1, 0.2, 0.1], back: [-0.35, 0.3, -1] };
@@ -19,6 +20,9 @@ export default function SalahLearn() {
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [status, setStatus] = useState("Loading…");
+  const [mode, setMode] = useState("photo");          // photo = 360° pictures, move = the moving 3D child
+  const [photoView, setPhotoView] = useState(null);
+  const [photoStatus, setPhotoStatus] = useState("");
   const st = STEPS[idx];
 
   // 3D ইঞ্জিন একবারই তৈরি
@@ -109,8 +113,8 @@ export default function SalahLearn() {
     <div onCopy={block} onCut={block} onContextMenu={block} onDragStart={block}
       style={{ userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}>
       <h2 style={{ margin: "0 0 2px" }}>🕌 Learn Salah <span style={{ fontSize: 15, color: "#5B6B62", fontWeight: 500 }}>· নামাজ শিক্ষা</span></h2>
-      <p style={{ margin: "0 0 2px", color: "#1F2A24", fontSize: 16 }}>Wudu and salah the Hanafi way — the child does every step. Turn the model with your finger to see it from all sides.</p>
-      <p style={{ margin: "0 0 14px", color: "#5B6B62", fontSize: 13 }}>হানাফি নিয়মে অজু ও নামাজ — প্রতিটি ধাপ শিশু নিজে করে দেখায়। আঙুল দিয়ে ঘুরিয়ে চারদিক থেকে দেখুন।</p>
+      <p style={{ margin: "0 0 2px", color: "#1F2A24", fontSize: 16 }}>Wudu and salah the Hanafi way. Drag the picture with your finger to turn the child all the way round, or press 🎬 Moving to see each step being done.</p>
+      <p style={{ margin: "0 0 14px", color: "#5B6B62", fontSize: 13 }}>হানাফি নিয়মে অজু ও নামাজ — আঙুল দিয়ে টেনে ছবি চারদিকে ঘোরান, আর 🎬 চাপলে প্রতিটি ধাপ চলতে দেখবেন।</p>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
         {GROUPS.map(([g, label, bn]) => (
           <button key={g} style={st.group === g ? on : btn} onClick={() => go(STEPS.findIndex((s) => s.group === g))}>{label} <small style={{ opacity: 0.75, fontSize: 11 }}>{bn}</small></button>
@@ -124,13 +128,21 @@ export default function SalahLearn() {
         ))}
       </div>
       <div style={{ position: "relative", background: "#FBF8F1", border: "1px solid #DCE9E0", borderRadius: 16, overflow: "hidden" }}>
-        <div ref={box} style={{ width: "100%", height: "min(62vh, 560px)", touchAction: "none" }} />
-        {status && <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "#123F28", background: "rgba(251,248,241,.7)" }}>{status}</div>}
+        <div ref={box} style={{ width: "100%", height: "min(62vh, 560px)", touchAction: "none", display: mode === "move" ? "block" : "none" }} />
+        {mode === "photo" && (
+          <div style={{ width: "100%", height: "min(62vh, 560px)" }}>
+            <Turn360 stepKey={st.key} playing={playing} view={photoView} onStatus={setPhotoStatus} />
+          </div>
+        )}
+        {mode === "photo" && photoStatus && <div style={{ position: "absolute", inset: 0, bottom: 56, display: "grid", placeItems: "center", color: "#123F28", background: "rgba(251,248,241,.7)" }}>{photoStatus}</div>}
+        {mode === "move" && status && <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "#123F28", background: "rgba(251,248,241,.7)" }}>{status}</div>}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", padding: 10, borderTop: "1px solid #E5EEE8", background: "#fff" }}>
+          <button style={mode === "photo" ? on : btn} onClick={() => setMode("photo")}>📷 360° Photo</button>
+          <button style={mode === "move" ? on : btn} onClick={() => setMode("move")}>🎬 Moving</button>
           <button style={playing ? btn : on} onClick={() => setPlaying((p) => !p)}>{playing ? "⏸ Pause" : "▶ Play"}</button>
-          <button style={btn} onClick={() => view("front")}>Front</button>
-          <button style={btn} onClick={() => view("side")}>Side</button>
-          <button style={btn} onClick={() => view("back")}>Back</button>
+          {["front", "side", "back"].map((d) => (
+            <button key={d} style={btn} onClick={() => (mode === "photo" ? setPhotoView({ dir: d, t: Date.now() }) : view(d))}>{d[0].toUpperCase() + d.slice(1)}</button>
+          ))}
         </div>
       </div>
       <div style={{ marginTop: 12, background: "#fff", border: "1px solid #DCE9E0", borderLeft: "5px solid #C9962A", borderRadius: 14, padding: "14px 16px" }}>

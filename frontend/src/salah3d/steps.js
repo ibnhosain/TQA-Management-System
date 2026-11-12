@@ -57,6 +57,20 @@ export const STEPS = [
   }
  },
  {
+  "key": "wudu-04-finger",
+  "group": "wudu",
+  "en": {
+   "title": "Wudu 4 · No miswak? The finger",
+   "text": "No miswak? I rub my teeth with the wet <b>index finger of my right hand</b>, from the right side to the left.",
+   "rule": "Sunnah"
+  },
+  "bn": {
+   "title": "অজু ৪ · মিসওয়াক না থাকলে আঙুল",
+   "text": "মিসওয়াক না থাকলে <b>ডান হাতের শাহাদত আঙুল</b> ভিজিয়ে ডান দিক থেকে বাম দিকে দাঁত মাজি।",
+   "rule": "সুন্নত"
+  }
+ },
+ {
   "key": "wudu-05-mouth",
   "group": "wudu",
   "en": {

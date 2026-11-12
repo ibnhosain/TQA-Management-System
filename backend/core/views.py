@@ -3236,3 +3236,23 @@ class Salah3DModelView(APIView):
         res["Cache-Control"] = "private, max-age=86400"
         res["Content-Disposition"] = "inline"
         return res
+
+
+class Salah3DTurnView(APIView):
+    """GET /api/salah3d/turn/<step>/ — one step's 360° pictures (24 views in one image) for নামাজ শিক্ষা.
+    Same protection as the 3D models: logged-in director, admin, teacher or student only."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, key):
+        import os, re
+        from django.http import FileResponse
+        if getattr(request.user, "role", "") not in ("director", "admin", "teacher", "student"):
+            return Response({"error": "অনুমতি নেই"}, status=403)
+        if not re.fullmatch(r"[a-z0-9-]{3,40}", key or ""):
+            return Response({"error": "পাওয়া যায়নি"}, status=404)
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "salah3d", "turn", f"{key}.jpg")
+        if not os.path.exists(path):
+            return Response({"error": "পাওয়া যায়নি"}, status=404)
+        res = FileResponse(open(path, "rb"), content_type="image/jpeg")
+        res["Cache-Control"] = "private, max-age=86400"
+        return res

@@ -29,3 +29,20 @@ class Salah3DModelTests(TestCase):
     def test_unknown_kind(self):
         self.c.force_authenticate(self._user("student"))
         self.assertEqual(self.c.get("/api/salah3d/../settings/").status_code, 404)
+
+
+class Salah3DTurnTests(TestCase):
+    def setUp(self):
+        self.c = APIClient()
+
+    def test_turn_protected(self):
+        self.assertEqual(self.c.get("/api/salah3d/turn/boy-10-ruku/").status_code, 401)
+        self.c.force_authenticate(User.objects.create_user(username="tt", password="x12345678", role="trial"))
+        self.assertEqual(self.c.get("/api/salah3d/turn/boy-10-ruku/").status_code, 403)
+
+    def test_turn_student(self):
+        self.c.force_authenticate(User.objects.create_user(username="ts", password="x12345678", role="student"))
+        r = self.c.get("/api/salah3d/turn/boy-10-ruku/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Content-Type"], "image/jpeg")
+        self.assertEqual(self.c.get("/api/salah3d/turn/..%2Fsettings/").status_code, 404)
