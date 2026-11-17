@@ -176,7 +176,7 @@ export default function DeckPlayer({ buffer, title, onClose, finish, part }) {
 
   const notesH = notes ? Math.min(220, size.h * 0.28) : 0;
   const barH = 52;
-  const scale = deck ? Math.min(size.w / deck.W, (size.h - barH - notesH) / deck.H) : 1;
+  const scale = deck ? Math.min((size.w - 156) / deck.W, (size.h - barH - notesH) / deck.H) : 1;   // দুই পাশে তীরের জায়গা
 
   // which items are hidden/animating at this step
   const state = useMemo(() => {
@@ -205,7 +205,14 @@ export default function DeckPlayer({ buffer, title, onClose, finish, part }) {
         {finish && <button style={btn} onClick={() => setDone(true)}>✓ Topics</button>}
         <button style={btn} onClick={onClose}>✕</button>
       </div>
-      <div onClick={next} style={{ flex: 1, display: "grid", placeItems: "center", overflow: "hidden", cursor: "pointer" }}>
+      <div onClick={next} style={{ flex: 1, display: "grid", placeItems: "center", overflow: "hidden", cursor: "pointer", position: "relative" }}>
+        {/* iPad/ফোনে আঙুল দিয়ে চালানোর বড় তীর — বামে আগের, ডানে পরের */}
+        {deck && [["‹", prev, { left: 10 }], ["›", next, { right: 10 }]].map(([t, fn, side]) => (
+          <button key={t} aria-label={t === "‹" ? "Previous" : "Next"} onClick={(e) => { e.stopPropagation(); fn(); }}
+            style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", ...side, zIndex: 3, width: 64, height: 64, borderRadius: "50%",
+              border: "2px solid rgba(255,255,255,.55)", background: "rgba(26,92,58,.78)", color: "#fff", fontSize: 40, lineHeight: "56px",
+              cursor: "pointer", boxShadow: "0 4px 14px rgba(0,0,0,.35)", touchAction: "manipulation" }}>{t}</button>
+        ))}
         {err && <div style={{ color: "#fff", padding: 20 }}>Could not open this file: {err}</div>}
         {!deck && !err && <div style={{ color: "#fff" }}>Opening…</div>}
         {slide && (
