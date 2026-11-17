@@ -8,6 +8,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from . import views
 from . import deck_views
+from . import app_settings_views
 from .auth import FlexTokenObtainPairView
 from . import cron
 from . import push
@@ -72,6 +73,8 @@ urlpatterns = [
     path("auth/refresh", TokenRefreshView.as_view()),
     # Render free tier ঘুম ভাঙানো — cron-job.org প্রতি ১৪ মিনিটে পিং করে
     path("ping/", lambda r: JsonResponse({"ok": True, "service": "TQA-MS"})),
+    path("app-settings/", app_settings_views.AppSettingsView.as_view()),            # পরিচালকের Settings — চালু/বন্ধ
+    path("app-settings/lectures/", app_settings_views.LectureReleaseView.as_view()), # কোর্সপ্রতি অনুমোদিত লেকচার
     # ⚠️ নির্ণয়ের পথ — সার্ভারে কোন মাইগ্রেশন পর্যন্ত চলেছে
     path("version/", _version),
     # Cron endpoints (cron-job.org থেকে ডাকা হয় — Celery ছাড়া scheduled কাজ)

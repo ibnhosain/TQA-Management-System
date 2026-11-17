@@ -135,7 +135,7 @@ function rangeOf(deck, part) {
   return [from, nxt ? nxt.start : deck.slides.length];
 }
 
-export default function DeckPlayer({ buffer, title, onClose, finish, part }) {
+export default function DeckPlayer({ buffer, title, onClose, finish, part, autoFinish = true }) {
   const [done, setDone] = useState(false);   // শেষ স্লাইডের পর — কভার-টিকের প্যানেল নিজে থেকে আসে
   const [deck, setDeck] = useState(null);
   const [err, setErr] = useState("");
@@ -160,7 +160,7 @@ export default function DeckPlayer({ buffer, title, onClose, finish, part }) {
   const [from, to] = deck ? rangeOf(deck, part) : [0, 0];
   const slide = deck?.slides[n];
   const clicks = slide?.steps.clicks.length || 0;
-  const next = () => { if (!deck) return; if (step < clicks) setStep(step + 1); else if (n < to - 1) { setN(n + 1); setStep(0); } else if (finish) setDone(true); };
+  const next = () => { if (!deck) return; if (step < clicks) setStep(step + 1); else if (n < to - 1) { setN(n + 1); setStep(0); } else if (finish && autoFinish) setDone(true); };
   const prev = () => { if (!deck) return; if (step > 0) setStep(step - 1); else if (n > from) { const p = deck.slides[n - 1]; setN(n - 1); setStep(p.steps.clicks.length); } };
 
   useEffect(() => {

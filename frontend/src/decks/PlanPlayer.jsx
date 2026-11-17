@@ -1,7 +1,7 @@
 /* Lesson Plan-এ টপিকে ক্লিক → সেদিনের লেকচারের স্লাইড। উস্তাদ/এডমিন/পরিচালক পান উস্তাদের স্লাইড (শেষে টপিক-টিক),
    শিক্ষার্থী পায় তার পড়া ও প্র্যাকটিসের স্লাইড। কোনো সফটওয়্যার লাগে না — অ্যাপের ভেতরেই চলে। */
 import { useEffect, useState } from "react";
-import { deckApi, fetchBinary } from "../api";
+import { deckApi, fetchBinary, settingsApi } from "../api";
 import DeckPlayer from "./DeckPlayer.jsx";
 import CoverPanel from "./CoverPanel.jsx";
 
@@ -14,7 +14,9 @@ export default function PlanPlayer({ course, no, part, topicId, student, onClose
       try {
         const d = await deckApi.find(course, no);
         const buffer = await fetchBinary(`/decks/${d.id}/`);
-        if (live) setPlay({ deck: d, buffer });
+        let auto = true;
+        try { auto = (await settingsApi.get()).flags.auto_cover_panel !== false; } catch { /* ডিফল্ট চালু */ }
+        if (live) setPlay({ deck: d, buffer, auto });
       } catch (e) { if (live) setErr(e?.data?.error || e?.message || "Could not open the slides"); }
     })();
     return () => { live = false; };
@@ -30,7 +32,7 @@ export default function PlanPlayer({ course, no, part, topicId, student, onClose
       </div>
     );
   return (
-    <DeckPlayer buffer={play.buffer} part={part} title={`Lecture ${no}${part?.label ? " · " + part.label : ""}${student ? " · My Practice" : ""}`} onClose={close}
+    <DeckPlayer buffer={play.buffer} part={part} autoFinish={play.auto} title={`Lecture ${no}${part?.label ? " · " + part.label : ""}${student ? " · My Practice" : ""}`} onClose={close}
       finish={student ? undefined : (back) => <CoverPanel deck={play.deck} preselect={topicId} onBack={back} onDone={close} />} />
   );
 }

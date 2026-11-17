@@ -84,7 +84,7 @@ class LectureDeckAccessNotesCoverTests(TestCase):
         mk = lambda n, r, **k: User.objects.create_user(username=n, password="x12345678", role=r, name_bn=n, **k)
         d, t1, t2 = mk("dir", "director"), mk("t1", "teacher"), mk("t2", "teacher")
         s1, s2 = mk("s1", "student", teacher=t1), mk("s2", "student", teacher=t2)
-        mine, other = Course.objects.create(name="Easy Noorani Qaida", teacher=t1), Course.objects.create(name="Other")
+        mine, other = Course.objects.create(name="Easy Noorani Qaida", teacher=t1, lectures_released=99), Course.objects.create(name="Other", lectures_released=99)
         mine.students.add(s1, s2)
         a = LectureDeck.objects.create(course=mine, no=1, data=b"PK1", note="Note one", topics="Topic A\nTopic B")
         b = LectureDeck.objects.create(course=other, no=1, data=b"PK2")
@@ -149,7 +149,7 @@ class LectureDeckFindTests(TestCase):
         from .models import Course, LectureDeck
         mk = lambda n, r, **k: User.objects.create_user(username=n, password="x12345678", role=r, name_bn=n, **k)
         t, s, x = mk("t", "teacher"), mk("s", "student"), mk("x", "student")
-        c = Course.objects.create(name="Easy Noorani Qaida", teacher=t)
+        c = Course.objects.create(name="Easy Noorani Qaida", teacher=t, lectures_released=99)
         c.students.add(s)
         td = LectureDeck.objects.create(course=c, no=3, data=b"PKT")
         sd = LectureDeck.objects.create(course=c, no=3, data=b"PKS", audience="student")
@@ -197,3 +197,43 @@ class TeacherSeesOnlyOwnStudentsTests(TestCase):
         self.assertTrue(all(t["covered"] != "covered" for s in rows for t in s["topics"]))
         for s in (a1, a2):
             self.assertEqual(api.post("/api/lectures/mark_topic/", {"topic_id": tp.id, "covered": "covered", "student_id": s.id}, format="json").status_code, 200)
+
+
+class LectureApprovalSettingsTests(TestCase):
+    """অনুমোদিত লেকচারের বাইরে উস্তাদ/শিক্ষার্থী কিছু পান না; বোতাম বন্ধ করলে সব খোলা; শুধু পরিচালক বোতাম বদলান।"""
+    def test_release(self):
+        from .models import Course, Lecture, LectureTopic, LessonSection, LectureDeck
+        mk = lambda n, r, **k: User.objects.create_user(username=n, password="x12345678", role=r, name_bn=n, **k)
+        d, a, t = mk("d", "director"), mk("a", "admin"), mk("t", "teacher")
+        s = mk("s", "student", teacher=t)
+        c = Course.objects.create(name="Easy Noorani Qaida", teacher=t, lectures_released=1)
+        c.students.add(s)
+        lec = Lecture.objects.create(course=c, no=1, title="h")
+        for n in (1, 2):
+            LectureTopic.objects.create(lecture=lec, section=LessonSection.objects.create(course=c, name=f"Lecture {n}", order=n), text=f"t{n}")
+            LectureDeck.objects.create(course=c, no=n, data=b"PK")
+            LectureDeck.objects.create(course=c, no=n, data=b"PK", audience="student")
+        api = APIClient()
+        names = lambda: [x["name"] for x in api.get(f"/api/lesson-sections/?course={c.id}").json()]
+        api.force_authenticate(t)
+        self.assertEqual(names(), ["Lecture 1"])
+        self.assertEqual(api.get(f"/api/decks/find/?course={c.id}&no=2").status_code, 403)
+        api.force_authenticate(s)
+        self.assertEqual(names(), ["Lecture 1"])
+        self.assertEqual(api.get(f"/api/decks/find/?course={c.id}&no=1").status_code, 200)
+        api.force_authenticate(a)
+        self.assertEqual(sorted(names()), ["Lecture 1", "Lecture 2"])
+        self.assertEqual(api.post("/api/app-settings/", {"key": "lecture_approval", "enabled": False}, format="json").status_code, 403)
+        self.assertEqual(api.post("/api/app-settings/lectures/", {"course": c.id, "released": 2}, format="json").status_code, 200)
+        api.force_authenticate(t)
+        self.assertEqual(sorted(names()), ["Lecture 1", "Lecture 2"])
+        api.force_authenticate(d)
+        api.post("/api/app-settings/lectures/", {"course": c.id, "released": 0}, format="json")
+        api.post("/api/app-settings/", {"key": "lecture_approval", "enabled": False}, format="json")
+        api.force_authenticate(t)
+        self.assertEqual(sorted(names()), ["Lecture 1", "Lecture 2"])
+        api.force_authenticate(d)
+        api.post("/api/app-settings/", {"key": "student_slides", "enabled": False}, format="json")
+        api.force_authenticate(s)
+        self.assertEqual(api.get(f"/api/decks/find/?course={c.id}&no=1").status_code, 403)
+        self.assertEqual(api.get("/api/app-settings/").json()["flags"]["student_slides"], False)

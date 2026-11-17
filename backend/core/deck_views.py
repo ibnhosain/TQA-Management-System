@@ -16,6 +16,8 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .app_flags import flag
+from .app_settings_views import is_released
 from .models import Course, DeckTaught, LectureDeck, LectureTopic, LessonSection, TopicCoverage, User
 
 ADMINS = ("director", "admin")
@@ -108,6 +110,10 @@ class LectureDeckViewSet(viewsets.ViewSet):
         d = LectureDeck.objects.defer("data").filter(pk=pk).select_related("course").first()
         if not d or not (_can_see(request.user, d.course_id) or self._student_ok(request.user, d)):
             return Response({"error": "Permission denied"}, status=403)
+        if not is_released(request.user, d.course, d.no):
+            return Response({"error": f"Lecture {d.no} is not open yet"}, status=403)
+        if request.user.role == "student" and not flag("student_slides"):
+            return Response({"error": "Practice slides are turned off"}, status=403)
         d = LectureDeck.objects.get(pk=pk)
         res = HttpResponse(bytes(d.data), content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation")
         res["Cache-Control"] = "private, no-store"
@@ -147,11 +153,15 @@ class LectureDeckViewSet(viewsets.ViewSet):
         if u.role == "student":
             if not Course.objects.filter(pk=course_id, students=u).exists():
                 return Response({"error": "Permission denied"}, status=403)
+            if not flag("student_slides"):
+                return Response({"error": "Practice slides are turned off"}, status=403)
             aud = "student"
         elif _can_see(u, course_id):
             aud = "teacher"
         else:
             return Response({"error": "Permission denied"}, status=403)
+        if not is_released(u, Course.objects.get(pk=course_id), no):
+            return Response({"error": f"Lecture {no} is not open yet"}, status=403)
         d = LectureDeck.objects.defer("data").filter(course_id=course_id, no=no, audience=aud).first()
         if not d:
             return Response({"error": f"No slides yet for Lecture {no}"}, status=404)
@@ -209,7 +219,7 @@ class LectureDeckViewSet(viewsets.ViewSet):
     def notes(self, request):
         """শিক্ষার্থীর Homework: যে লেকচারগুলো তাকে পড়ানো হয়েছে, তার নোট (নতুনটা আগে)।"""
         u = request.user
-        if u.role != "student":
+        if u.role != "student" or not flag("homework_notes"):
             return Response([])
         rows = (DeckTaught.objects.filter(student=u).select_related("deck", "deck__course")
                 .defer("deck__data").order_by("-deck__no", "-taught_at"))

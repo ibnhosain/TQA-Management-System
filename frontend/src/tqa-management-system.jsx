@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
 // লেকচারের স্লাইড — Lesson Plan-এ টপিকে ক্লিক করলে চলে (আলাদা মেনু নেই; মালিকের নির্দেশ ২০২৬-১১-১৭)
 const PlanPlayer = lazy(() => import("./decks/PlanPlayer.jsx"));
+const SettingsView = lazy(() => import("./decks/SettingsView.jsx"));   // পরিচালকের Settings — চালু/বন্ধ, লেকচার অনুমোদন
 const HomeworkNotes = lazy(() => import("./decks/HomeworkNotes.jsx"));  // শিক্ষার্থীর Homework — স্লাইডের নোট
 
 
@@ -23862,6 +23863,14 @@ const NAV = [
     roles: ["director", "admin", "teacher", "student"],
   },
   {
+    // পরিচালকের Settings: চালু/বন্ধ বোতাম (শুধু পরিচালক) আর লেকচার অনুমোদন (পরিচালক ও এডমিন)
+    id: "settings",
+    icon: "⚙️",
+    label: "Settings",
+    labelEn: "Settings",
+    roles: ["director", "admin"],
+  },
+  {
     id: "syllabus",
     icon: "📜",
     label: "Syllabus",
@@ -25569,6 +25578,9 @@ export default function App() {
           {view === "postponed" && <PostponedClassesView user={user} />}
           {view === "routine" && <RoutineView {...props} />}
           {view === "lectures" && <LecturePlan {...props} />}
+          {view === "settings" && (user.role === "director" || user.role === "admin") && (
+            <Suspense fallback={<div style={{ padding: 20 }}>Loading…</div>}><SettingsView user={user} /></Suspense>
+          )}
           {view === "syllabus" && <SyllabusView {...props} />}
           {view === "attendance" && <AttendanceView {...props} />}
           {view === "assignments" && <AssignmentsView {...props} />}

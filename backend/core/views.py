@@ -618,13 +618,13 @@ class LessonSectionViewSet(viewsets.ModelViewSet):
             # ⚠️ ভর্তি হওয়া শিক্ষার্থী সবসময় নিয়মিত পরিকল্পনাই দেখেন। ?is_trial=1
             # চেয়েও পাবেন না — ট্রায়ালের পরিকল্পনা অতিথিদের জন্য সাজানো
             # (একাডেমির প্রথম পরিচয়), নিয়মিত পাঠ্যসূচি নয়।
-            return qs.filter(is_trial=False, course__students=u).distinct()
+            return _hide_unreleased(qs.filter(is_trial=False, course__students=u).distinct(), u)
         if list_only:
             qs = qs.filter(is_trial=want_trial)
         if u.role == "teacher":
-            return qs.filter(
+            return _hide_unreleased(qs.filter(
                 Q(course__teacher=u) | Q(course__students__teacher=u)
-            ).distinct()
+            ).distinct(), u)
         return qs
 
     def _student_id(self):
@@ -1017,6 +1017,14 @@ def _q_course_teacher_or_own_lesson(u):
     """ধাপ → দারস → কোর্স — উস্তাদ নিজের কোর্সের ধাপগুলোই দেখেন।"""
     return (Q(lesson__course__teacher=u)
             | Q(lesson__course__students__teacher=u))
+
+
+def _hide_unreleased(qs, u):
+    """🔒 লেকচার অনুমোদন চালু থাকলে উস্তাদ/শিক্ষার্থী অনুমোদন-না-পাওয়া "Lecture N" হেডিং দেখেন না।"""
+    from .app_settings_views import is_released, lecture_no
+    hide = [sid for sid, name, course in ((x.id, x.name, x.course) for x in qs.select_related("course"))
+            if not is_released(u, course, lecture_no(name))]
+    return qs.exclude(pk__in=hide) if hide else qs
 
 
 def _is_own_student(u, student, course=None):

@@ -1,6 +1,6 @@
 /* শিক্ষার্থীর Homework — প্রতিদিনের স্লাইড থেকে নোট (যে লেকচার তাকে পড়ানো হয়েছে, নতুনটা আগে)। */
 import { useEffect, useState } from "react";
-import { deckApi } from "../api";
+import { deckApi, settingsApi } from "../api";
 
 const AR = /[؀-ۿ]/;
 
@@ -8,6 +8,8 @@ export default function HomeworkNotes() {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const [open, setOpen] = useState(null);
+  const [off, setOff] = useState(false);
+  useEffect(() => { settingsApi.get().then((r) => setOff(r?.flags?.homework_notes === false)).catch(() => {}); }, []);
   useEffect(() => {
     deckApi.notes().then((r) => { setRows(r || []); if (r?.length) setOpen(r[0].id); })
       .catch((e) => setErr(e?.message || "Could not load"));
@@ -31,7 +33,8 @@ export default function HomeworkNotes() {
       <div style={{ color: "#5B6B62", marginBottom: 14 }}>Notes from your daily lecture slides.</div>
       {err && <div style={{ color: "#b00020" }}>{err}</div>}
       {!rows && !err && <div>Loading…</div>}
-      {rows && rows.length === 0 && <div style={{ color: "#5B6B62" }}>No notes yet. They will appear here after your class.</div>}
+      {off && <div style={{ color: "#5B6B62" }}>Homework notes are turned off for now.</div>}
+      {!off && rows && rows.length === 0 && <div style={{ color: "#5B6B62" }}>No notes yet. They will appear here after your class.</div>}
       <div style={{ display: "grid", gap: 10 }}>
         {(rows || []).map((r) => (
           <div key={r.id} style={{ background: "#fff", border: "1px solid #DCE9E0", borderRadius: 14, overflow: "hidden" }}>

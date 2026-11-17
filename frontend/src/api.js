@@ -615,3 +615,11 @@ export const deckApi = {
   notes: () => request("/decks/notes/"),
   find: (course, no) => request(`/decks/find/?course=${course}&no=${no}`),   // Lesson Plan-এ টপিকে ক্লিক
 };
+
+/* পরিচালকের Settings — চালু/বন্ধ বোতাম আর কোর্সপ্রতি অনুমোদিত লেকচার */
+export const settingsApi = {
+  get: () => request("/app-settings/"),
+  set: (key, enabled) => request("/app-settings/", { method: "POST", body: { key, enabled } }),
+  lectures: () => request("/app-settings/lectures/"),
+  release: (course, released) => request("/app-settings/lectures/", { method: "POST", body: { course, released } }),
+};

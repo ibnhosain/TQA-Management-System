@@ -112,9 +112,23 @@ class Course(models.Model):
     books = models.ManyToManyField(AcademicBook, blank=True)  # সংখ্যায় কোনো সীমা নেই
     color = models.CharField(max_length=9, default="#1a5c3a")
     is_active = models.BooleanField(default=True)
+    # কয়টা লেকচার খোলা (পরিচালক/এডমিন অনুমোদন দেন) — "লেকচার অনুমোদন" চালু থাকলে উস্তাদ ও শিক্ষার্থী
+    # শুধু Lecture 1…এই সংখ্যা পর্যন্ত Lesson Plan ও স্লাইড পান; পরিচালক/এডমিন সব দেখেন।
+    lectures_released = models.PositiveIntegerField("অনুমোদিত লেকচার", default=0)
 
     def __str__(self):
         return self.name
+
+
+class AppSetting(models.Model):
+    """পরিচালকের Settings পাতার চালু/বন্ধ বোতাম। কী-গুলোর তালিকা ও ডিফল্ট: core/app_flags.py"""
+    key = models.CharField(max_length=60, unique=True)
+    enabled = models.BooleanField(default=True)
+    updated_by = models.ForeignKey("User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.key} = {self.enabled}"
 
 
 # ─────────────────── সিলেবাস (কোর্স→বই→লেসন→পৃষ্ঠা→লাইন→মন্তব্য) ───────────────────
