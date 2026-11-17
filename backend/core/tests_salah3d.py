@@ -54,3 +54,24 @@ class Salah3DFocusTests(TestCase):
         self.assertEqual(c.get("/api/salah3d/focus/boy-10-ruku/").status_code, 401)
         c.force_authenticate(User.objects.create_user(username="ft", password="x12345678", role="trial"))
         self.assertEqual(c.get("/api/salah3d/focus/boy-10-ruku/").status_code, 403)
+
+
+class LectureDeckTests(TestCase):
+    def test_upload_play_delete(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from .models import Course
+        c = APIClient()
+        course = Course.objects.create(name="Easy Noorani Qaida")
+        pptx = SimpleUploadedFile("l1.pptx", b"PK\x03\x04fake", content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation")
+        self.assertEqual(c.post("/api/decks/", {"course": course.id, "no": 1, "file": pptx}).status_code, 401)
+        c.force_authenticate(User.objects.create_user(username="t1", password="x12345678", role="teacher"))
+        self.assertEqual(c.post("/api/decks/", {"course": course.id, "no": 1, "file": pptx}).status_code, 403)
+        c.force_authenticate(User.objects.create_user(username="d1", password="x12345678", role="director"))
+        pptx.seek(0)
+        r = c.post("/api/decks/", {"course": course.id, "no": 1, "title": "Day 1", "file": pptx})
+        self.assertEqual(r.status_code, 201)
+        did = r.json()["id"]
+        self.assertEqual(c.get(f"/api/decks/{did}/").content, b"PK\x03\x04fake")
+        c.force_authenticate(User.objects.create_user(username="s1", password="x12345678", role="student"))
+        self.assertEqual(c.get(f"/api/decks/{did}/").status_code, 403)
+        self.assertEqual(c.get(f"/api/decks/?course={course.id}").json(), [])

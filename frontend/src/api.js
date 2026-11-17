@@ -388,6 +388,14 @@ export const api = {
     fd.append("file", file);
     return request("/lesson-media/", { method: "POST", body: fd, isForm: true });
   },
+  // ── লেকচারের স্লাইড (.pptx) — অ্যাপের ভেতরেই চলে ──
+  decks: (courseId) => request(`/decks/?course=${courseId}`),
+  uploadDeck: (courseId, no, title, file) => {
+    const fd = new FormData();
+    fd.append("course", courseId); fd.append("no", no); fd.append("title", title || ""); fd.append("file", file);
+    return request("/decks/", { method: "POST", body: fd, isForm: true, timeoutMs: 180000 });
+  },
+  deleteDeck: (id) => request(`/decks/${id}/`, { method: "DELETE" }),
   convertPptx: (file) => {
     const fd = new FormData();
     fd.append("file", file);

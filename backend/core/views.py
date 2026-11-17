@@ -3264,3 +3264,68 @@ class Salah3DTurnView(APIView):
 class Salah3DFocusView(Salah3DTurnView):
     """GET /api/salah3d/focus/<step>/ — the close-up of the body part the step is about (gold circle)."""
     folder = "focus"
+
+
+class LectureDeckViewSet(viewsets.ViewSet):
+    """লেকচারের স্লাইড (.pptx)। তালিকা ও ফাইল: পরিচালক, এডমিন, উস্তাদ।
+    আপলোড/বদল/মুছে ফেলা: শুধু পরিচালক। একই কোর্স ও লেকচার নম্বরে নতুন ফাইল দিলে আগেরটা বদলে যায়।"""
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    STAFF = ("director", "admin", "teacher")
+
+    def _row(self, d):
+        return {"id": d.id, "course": d.course_id, "no": d.no, "title": d.title, "filename": d.filename,
+                "size": d.size, "uploaded_at": d.uploaded_at}
+
+    def list(self, request):
+        from .models import LectureDeck
+        if request.user.role not in self.STAFF:
+            return Response([])
+        qs = LectureDeck.objects.defer("data")
+        c = request.query_params.get("course")
+        if c:
+            qs = qs.filter(course_id=c)
+        return Response([self._row(d) for d in qs])
+
+    def create(self, request):
+        from .models import LectureDeck, Course
+        if request.user.role != "director":
+            return Response({"error": "শুধু পরিচালক আপলোড করতে পারেন"}, status=403)
+        f = request.FILES.get("file")
+        if not f or not (f.name or "").lower().endswith(".pptx"):
+            return Response({"error": "একটি .pptx ফাইল দিন"}, status=400)
+        if f.size > 40 * 1024 * 1024:
+            return Response({"error": "ফাইলটি ৪০ MB-এর বেশি"}, status=400)
+        blob = f.read()
+        if blob[:2] != b"PK":
+            return Response({"error": "ফাইলটি সঠিক .pptx নয়"}, status=400)
+        try:
+            course = Course.objects.get(id=request.data.get("course"))
+            no = int(request.data.get("no") or 1)
+        except Exception:
+            return Response({"error": "কোর্স ও লেকচার নম্বর দিন"}, status=400)
+        title = (request.data.get("title") or "").strip()[:200]
+        d, _ = LectureDeck.objects.update_or_create(
+            course=course, no=no,
+            defaults={"title": title, "filename": f.name[:255], "size": len(blob), "data": blob, "uploaded_by": request.user})
+        return Response(self._row(d), status=201)
+
+    def retrieve(self, request, pk=None):
+        from django.http import HttpResponse
+        from .models import LectureDeck
+        if request.user.role not in self.STAFF:
+            return Response({"error": "অনুমতি নেই"}, status=403)
+        try:
+            d = LectureDeck.objects.get(pk=pk)
+        except LectureDeck.DoesNotExist:
+            return Response({"error": "পাওয়া যায়নি"}, status=404)
+        res = HttpResponse(bytes(d.data), content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation")
+        res["Cache-Control"] = "private, no-store"
+        return res
+
+    def destroy(self, request, pk=None):
+        from .models import LectureDeck
+        if request.user.role != "director":
+            return Response({"error": "শুধু পরিচালক মুছতে পারেন"}, status=403)
+        LectureDeck.objects.filter(pk=pk).delete()
+        return Response(status=204)

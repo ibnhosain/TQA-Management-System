@@ -1,7 +1,9 @@
-﻿import React, { useState, useEffect, useMemo, useRef } from "react";
+﻿import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
 // ভাসমান পর্দাটি উস্তাদের উইন্ডোর ভেতর থেকেই আঁকা হয় — তাই portal
 import { createPortal } from "react-dom";
 import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
+// লেকচারের স্লাইড — আলাদা অংশে, কেবল মেনু খুললে লোড হয়
+const DecksView = lazy(() => import("./decks/DecksView.jsx"));
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -28,7 +30,7 @@ const C = {
   amberBg: "#fdf6e7",
 };
 
-const bn = (n) => String(n).replace(/\d/g, (d) => "০১২৩৪৫৬৭৮৯"[d]);
+const bn = (n) => String(n);
 // toISOString() সবসময় UTC তারিখ দেয়, ব্যবহারকারীর লোকাল তারিখ নয় — মধ্যরাত থেকে
 // ভোর ৬টার মধ্যে (বাংলাদেশ সময়, UTC+৬) এটা "আজ"-কে ভুলভাবে "গতকাল" ধরে ফেলত, ফলে
 // ভোরের ক্লাস (যেমন ফজরের পর কুরআন ক্লাস) "আজকের ক্লাস"-এ দেখাত না — যদিও ব্যাকএন্ডে
@@ -39,7 +41,7 @@ const todayISO = () => {
 };
 // লগইন করা ব্যবহারকারীর ভাষা — App-এর রেন্ডারের শুরুতেই সেট হয় (student → "en")।
 // fmtDate ৫০+ জায়গায় ব্যবহৃত; প্রতিটি call site বদলানোর বদলে এখানেই একবার ঠিক করা হলো।
-let CURRENT_LANG = "bn";
+let CURRENT_LANG = "en";
 const MONTHS_BN_FULL = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -23878,10 +23880,11 @@ const NAV = [
     // দারস স্ক্রিপ্ট — লেকচার প্ল্যানের পাশেই, কারণ দুটো একসাথে কাজে লাগে।
     // শিক্ষার্থী ও ট্রায়াল অতিথি এখনো নয় — ক্লাসের পর নিজে দেখার ব্যবস্থা
     // ধাপ ৫-এ আসবে, তখনও কেবল পর্দাটুকু, উস্তাদের স্ক্রিপ্ট নয়।
+    // মালিকের নির্দেশ (২০২৬-১১-১৭): পুরনো দারস স্ক্রিপ্ট বাদ — শুধু .pptx আপলোড ও অ্যাপের ভেতরে চালানো
     id: "lessons",
-    icon: "📗",
-    label: "Lesson Script",
-    labelEn: "Lesson Script",
+    icon: "🎞️",
+    label: "Lecture Slides",
+    labelEn: "Lecture Slides",
     roles: ["director", "admin", "teacher"],
   },
   {
@@ -25586,7 +25589,7 @@ export default function App() {
           {view === "routine" && <RoutineView {...props} />}
           {view === "lectures" && <LecturePlan {...props} />}
           {view === "lessons" && user.role !== "student" && user.role !== "trial" && (
-            <LessonsView user={user} courses={courses} />
+            <Suspense fallback={<div style={{ padding: 20 }}>Loading…</div>}><DecksView user={user} courses={courses} /></Suspense>
           )}
           {view === "syllabus" && <SyllabusView {...props} />}
           {view === "attendance" && <AttendanceView {...props} />}

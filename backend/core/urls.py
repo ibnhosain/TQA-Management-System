@@ -42,6 +42,7 @@ router.register("library-books", views.LibraryBookViewSet)
 router.register("lesson-sections", views.LessonSectionViewSet, basename="lesson-sections")
 router.register("push-subscriptions", views.PushSubscriptionViewSet, basename="push-subscriptions")
 router.register("amal-items", views.DailyAmalItemViewSet, basename="amal-items")
+router.register("decks", views.LectureDeckViewSet, basename="decks")  # লেকচারের .pptx স্লাইড
 
 def _version(request):
     """সার্ভারে কোন মাইগ্রেশন পর্যন্ত চলেছে — নির্ণয়ের জন্য।

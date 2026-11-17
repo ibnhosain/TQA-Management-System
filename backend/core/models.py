@@ -931,3 +931,22 @@ class DailyAmalEntry(models.Model):
 
     def __str__(self):
         return f"{self.student.name_bn} — {self.item.name} — {self.date}: {self.value}"
+
+
+class LectureDeck(models.Model):
+    """লেকচারের স্লাইড — পরিচালক .pptx ফাইল আপলোড করেন, অ্যাপের ভেতরেই চলে (কোনো সফটওয়্যার লাগে না)।
+    ফাইলটি ডেটাবেজেই রাখা হয়, যাতে সার্ভার রিস্টার্টে হারায় না আর লগইন ছাড়া কেউ পায় না।"""
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="decks")
+    no = models.PositiveIntegerField("লেকচার নম্বর", default=1)
+    title = models.CharField(max_length=200, blank=True, default="")
+    filename = models.CharField(max_length=255, blank=True, default="")
+    size = models.PositiveIntegerField(default=0)
+    data = models.BinaryField()
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    uploaded_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["course", "no", "id"]
+
+    def __str__(self):
+        return f"{self.course.name} — Lecture {self.no}"
