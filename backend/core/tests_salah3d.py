@@ -108,13 +108,36 @@ class LectureDeckAccessNotesCoverTests(TestCase):
         c.force_authenticate(s2)
         self.assertEqual(c.get("/api/decks/notes/").json(), [])
         # Lecture Plan-এর টপিক থাকলে সেখানেই কভার বসে
-        lec = Lecture.objects.create(course=mine, no=1, title="Daras 1")
-        sec = LessonSection.objects.create(course=mine, name="Qaida")
+        lec = Lecture.objects.create(course=mine, no=1, title="holder")
+        sec = LessonSection.objects.create(course=mine, name="Lecture 1")
+        LectureTopic.objects.create(lecture=lec, section=LessonSection.objects.create(course=mine, name="Lecture 12"), text="Not today")
         tp = LectureTopic.objects.create(lecture=lec, section=sec, text="Alif to Jeem")
         c.force_authenticate(d)
         self.assertEqual(c.get(f"/api/decks/{b.id}/").content, b"PK2")
         g = c.get(f"/api/decks/{a.id}/cover/").json()
-        self.assertEqual((g["plan_topics"][0]["id"], g["deck_topics"], len(g["students"])), (tp.id, [], 2))
+        self.assertEqual(([t["id"] for t in g["plan_topics"]], g["deck_topics"], len(g["students"])), ([tp.id], [], 2))
         c.post(f"/api/decks/{a.id}/cover/", {"student_ids": [s2.id], "topic_ids": [tp.id]}, format="json")
         self.assertEqual(TopicCoverage.objects.get(topic=tp, student=s2).covered, "covered")
         self.assertEqual(c.patch(f"/api/decks/{a.id}/", {"note": "New"}, format="json").json()["note"], "New")
+
+
+class EasyQaidaPlanSeedTests(TestCase):
+    def test_seed_replaces_regular_plan_keeps_trial(self):
+        import importlib
+        from django.apps import apps
+        from .models import Course, Lecture, LectureTopic, LessonSection, SyllabusItem, CourseSyllabusSheet
+        c = Course.objects.create(name="Easy Noorani Qaida")
+        lec = Lecture.objects.create(course=c, no=1, title="holder")
+        old = LessonSection.objects.create(course=c, name="Old heading")
+        LectureTopic.objects.create(lecture=lec, section=old, text="old")
+        tr = LessonSection.objects.create(course=c, name="Trial", is_trial=True)
+        LectureTopic.objects.create(lecture=lec, section=tr, text="trial topic")
+        SyllabusItem.objects.create(course=c, lesson="old item")
+        importlib.import_module("core.migrations.0060_easy_qaida_course_plan").forwards(apps, None)
+        self.assertFalse(LessonSection.objects.filter(pk=old.pk).exists())
+        self.assertTrue(LectureTopic.objects.filter(text="trial topic").exists())
+        self.assertEqual(SyllabusItem.objects.filter(course=c).count(), 0)
+        secs = LessonSection.objects.filter(course=c, is_trial=False)
+        self.assertEqual(secs.count(), 67)
+        self.assertEqual(LectureTopic.objects.filter(section__name="Lecture 1").count(), 5)
+        self.assertEqual(len(CourseSyllabusSheet.objects.get(course=c).rows), 67)

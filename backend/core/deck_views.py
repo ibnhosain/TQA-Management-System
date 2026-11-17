@@ -16,7 +16,7 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Course, DeckTaught, Lecture, LectureDeck, LectureTopic, TopicCoverage, User
+from .models import Course, DeckTaught, LectureDeck, LectureTopic, LessonSection, TopicCoverage, User
 
 ADMINS = ("director", "admin")
 
@@ -44,11 +44,11 @@ def _students_for(u, course):
 
 
 def _plan_topics(deck):
-    lec = Lecture.objects.filter(course=deck.course, no=deck.no).first()
-    if not lec:
-        return []
-    return [t for t in lec.topics.select_related("section").all()
-            if not (t.section_id and t.section and t.section.is_trial)]
+    """Lecture Plan-এ "Lecture N" নামের হেডিংয়ের টপিক (প্রতিটি লেকচার একটি হেডিং; Lecture মডেল এখন শুধু লুকানো ধারক)।"""
+    import re
+    pat = re.compile(rf"^\s*Lecture\s*{deck.no}\b", re.I)
+    secs = [s for s in LessonSection.objects.filter(course=deck.course, is_trial=False) if pat.match(s.name)]
+    return list(LectureTopic.objects.filter(section__in=secs).select_related("section", "lecture").order_by("section__order", "order", "id"))
 
 
 class LectureDeckViewSet(viewsets.ViewSet):

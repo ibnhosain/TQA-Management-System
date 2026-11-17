@@ -1,0 +1,3025 @@
+{
+ "books": [
+  "Easy Noorani Qaida — Step One",
+  "Memorized Surah — My First Surahs",
+  "Islamic Duas, Manners and Values",
+  "My Salah Duas",
+  "My First Arabic Writing Book"
+ ],
+ "short": [
+  "Easy Noorani Qaida",
+  "My First Surahs",
+  "Duas & Manners",
+  "My Salah Duas",
+  "Arabic Writing"
+ ],
+ "lectures": [
+  {
+   "no": 1,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 1 — The 29 letters; first row: Alif, Ba, Ta, Tha, Jeem",
+     "items": [
+      "How we learn every page: Look, Listen, Say, Practise",
+      "My Class Manners",
+      "Duas Before Learning (first 3)",
+      "Lesson 1 · The 29 letters — see them all",
+      "First row: Alif, Ba, Ta, Tha, Jeem",
+      "Game: Close your eyes!"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Before We Recite + Surah 1 Al-Fatihah: verse 1",
+     "items": [
+      "Before We Recite: Ta'awwudh and Bismillah",
+      "About Surah Al-Fatihah",
+      "Verse 1 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 1 · Eating and Drinking — Bismillah before eating",
+     "items": [
+      "Dua: Before eating and drinking",
+      "A True Story: “Young Boy, Say Bismillah!”",
+      "I do this when I eat (first 3)"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 1 · Allahu Akbar — Takbir",
+     "items": [
+      "Learn it in little pieces",
+      "When and how (boys: to the ears; girls: to the shoulders)",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Little Writer: My Writing Steps, Get Ready, long lines",
+     "items": [
+      "My Writing Steps",
+      "Get Ready to Write: sit like a writer, hold the pencil",
+      "Warm-Up: long lines"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 2,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 1 — Row 2: Haa, Kha, Dal, Dhal, Ra",
+     "items": [
+      "Duas Before Learning: Open my heart (4th dua)",
+      "Revise row 1",
+      "New: Haa, Kha, Dal, Dhal, Ra"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 1 Al-Fatihah: verse 2",
+     "items": [
+      "Revise verses 1–1",
+      "Verse 2 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 1 · Eating and Drinking — Duas: if I forget, after eating",
+     "items": [
+      "Dua: If I forget to say Bismillah",
+      "Dua: After eating"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 2 · Thana (first half)",
+     "items": [
+      "Learn it in little pieces: first half"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Warm-Up: tall lines, little boats, deep cups",
+     "items": [
+      "Tall lines (like Alif)",
+      "Little boats (like Ba)",
+      "Deep cups (like Noon)"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 3,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 1 — Next row: Zay, Seen, Sheen, Sad, Dad",
+     "items": [
+      "Revise the rows before",
+      "New: Zay, Seen, Sheen, Sad, Dad"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 1 Al-Fatihah: verse 3",
+     "items": [
+      "Revise verses 1–2",
+      "Verse 3 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 1 · Eating and Drinking — Dua for the one who fed me + drinking",
+     "items": [
+      "Dua: Thanking the one who fed me",
+      "I do this when I eat (the rest)",
+      "I do this when I drink"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 2 · Thana (second half)",
+     "items": [
+      "Learn it in little pieces: second half",
+      "The whole dua",
+      "Missing Word Game",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Warm-Up: small circles, waves, dots",
+     "items": [
+      "Small circles (like Meem and Waw)",
+      "Waves",
+      "Dots: 1, 2, 3"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 4,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 1 — Next row: Toa, Zoa, Ain, Ghain, Fa",
+     "items": [
+      "Revise the rows before",
+      "New: Toa, Zoa, Ain, Ghain, Fa"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 1 Al-Fatihah: verse 4",
+     "items": [
+      "Revise verses 1–3",
+      "Verse 4 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 1 · Eating and Drinking — Did you know? + My Good Deeds",
+     "items": [
+      "Did you know?",
+      "My Good Deeds",
+      "Lesson 1 review"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 3 · Ta'awwudh",
+     "items": [
+      "Learn it in little pieces",
+      "The whole dua",
+      "Missing Word Game",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 1 · Alif ا",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 5,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 1 — Next row: Qaf, Kaf, Lam, Meem, Noon",
+     "items": [
+      "Revise the rows before",
+      "New: Qaf, Kaf, Lam, Meem, Noon"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 1 Al-Fatihah: verse 5",
+     "items": [
+      "Revise verses 1–4",
+      "Verse 5 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 2 · Assalamu Alaikum — Greeting with Peace — Duas: When I meet a Muslim; When someone greets me",
+     "items": [
+      "Dua: When I meet a Muslim",
+      "Dua: When someone greets me"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 4 · Bismillah",
+     "items": [
+      "Learn it in little pieces",
+      "The whole dua",
+      "Missing Word Game",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 2 · Ba ب",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 6,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 1 — Next row: Waw, Ha, Hamzah, Ya",
+     "items": [
+      "Revise the rows before",
+      "New: Waw, Ha, Hamzah, Ya"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 1 Al-Fatihah: verse 6",
+     "items": [
+      "Revise verses 1–5",
+      "Verse 6 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 2 · Assalamu Alaikum — Greeting with Peace — I do this",
+     "items": [
+      "I do this"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 5 · Surah Al-Fatihah in salah",
+     "items": [
+      "Revise Al-Fatihah (from My First Surahs)",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 3 · Ta ت",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 7,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 1 — The 7 Mota Huroof (heavy letters)",
+     "items": [
+      "The 7 heavy letters",
+      "Say all 29 letters in order"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 1 Al-Fatihah: verse 7",
+     "items": [
+      "Revise verses 1–6",
+      "Verse 7 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 2 · Assalamu Alaikum — Greeting with Peace — A True Story: The First Salam",
+     "items": [
+      "A True Story: The First Salam",
+      "Did you know?",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 6 · Amin",
+     "items": [
+      "Learn it in little pieces",
+      "The whole dua",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 4 · Tha ث",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 8,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 1 — Let's practise",
+     "items": [
+      "Let's practise (book page)",
+      "All 29 letters: point and say"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 1 Al-Fatihah: the whole Surah + meaning",
+     "items": [
+      "The whole Surah",
+      "What does it mean?",
+      "When do we read it?",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 3 · Sleeping and Waking Up — Duas: Before sleeping; When I wake up",
+     "items": [
+      "Dua: Before sleeping",
+      "Dua: When I wake up"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 7 · Surah Al-Ikhlas after Al-Fatihah",
+     "items": [
+      "Revise Al-Ikhlas",
+      "Missing Word Game",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 5 · Jeem ج",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 9,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 2 — Letter heads",
+     "items": [
+      "Letters Join Hands",
+      "Letter heads"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 2 Al-Kawthar: verse 1",
+     "items": [
+      "Revise the surahs before",
+      "About Surah Al-Kawthar (Little Talk)",
+      "Verse 1 in little pieces"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 3 · Sleeping and Waking Up — I do this at bedtime; I do this when I wake up",
+     "items": [
+      "I do this at bedtime",
+      "I do this when I wake up"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 8 · Tasbih of Ruku'",
+     "items": [
+      "Learn it in little pieces",
+      "The whole dua",
+      "Missing Word Game",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 6 · Haa ح",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 10,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 2 — These 7 letters never hold the next hand",
+     "items": [
+      "The 7 letters that never join to the next letter"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 2 Al-Kawthar: verse 2",
+     "items": [
+      "Revise verses 1–1",
+      "Verse 2 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 3 · Sleeping and Waking Up — A True Story: A Gift Better Than a Helper",
+     "items": [
+      "A True Story: A Gift Better Than a Helper",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 9 · Rising from Ruku'",
+     "items": [
+      "Learn it in little pieces",
+      "The whole dua",
+      "Missing Word Game",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 7 · Kha خ",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 11,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 2 — With Waw (first half)",
+     "items": [
+      "With Waw — 22 letters: letters 1–11"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 2 Al-Kawthar: verse 3",
+     "items": [
+      "Revise verses 1–2",
+      "Verse 3 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 4 · Using the Toilet — Duas: Before going in (said outside); When I come out",
+     "items": [
+      "Dua: Before going in (said outside)",
+      "Dua: When I come out"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 10 · Tasbih of Sajdah",
+     "items": [
+      "Learn it in little pieces",
+      "The whole dua",
+      "Missing Word Game",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 8 · Dal د",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 12,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 2 — With Waw (second half)",
+     "items": [
+      "With Waw — 22 letters: letters 12–22"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 2 Al-Kawthar: the whole Surah + meaning",
+     "items": [
+      "The whole Surah",
+      "What does it mean?",
+      "When do we read it?",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 4 · Using the Toilet — I do this",
+     "items": [
+      "I do this"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 11 · Between the Two Sajdahs",
+     "items": [
+      "Learn it in little pieces",
+      "The whole dua",
+      "Missing Word Game",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 9 · Dhal ذ",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 13,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 2 — With Ya (first half)",
+     "items": [
+      "With Ya — 22 letters: letters 1–11"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 3 Al-Ikhlas: verse 1",
+     "items": [
+      "Revise the surahs before",
+      "About Surah Al-Ikhlas (Little Talk)",
+      "Verse 1 in little pieces"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 4 · Using the Toilet — A True Story: Anas and the Little Pot of Water",
+     "items": [
+      "A True Story: Anas and the Little Pot of Water",
+      "Did you know?",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 12 · Tashahhud (part 1)",
+     "items": [
+      "Learn it in little pieces: part 1"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 10 · Ra ر",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 14,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 2 — With Ya (second half)",
+     "items": [
+      "With Ya — 22 letters: letters 12–22"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 3 Al-Ikhlas: verse 2",
+     "items": [
+      "Revise verses 1–1",
+      "Verse 2 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 5 · Clean and Pure — Wudu and Sneezing — Duas: Before wudu; After wudu",
+     "items": [
+      "Dua: Before wudu",
+      "Dua: After wudu"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 12 · Tashahhud (part 2)",
+     "items": [
+      "Learn it in little pieces: part 2"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 11 · Zay ز",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 15,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 2 — A whole Surah in joined letters!",
+     "items": [
+      "A whole Surah in joined letters",
+      "Lesson 2 review"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 3 Al-Ikhlas: verse 3",
+     "items": [
+      "Revise verses 1–2",
+      "Verse 3 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 5 · Clean and Pure — Wudu and Sneezing — Duas: And then; When I sneeze",
+     "items": [
+      "Dua: And then",
+      "Dua: When I sneeze"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 12 · Tashahhud (part 3)",
+     "items": [
+      "Learn it in little pieces: part 3",
+      "The whole dua",
+      "Missing Word Game",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 12 · Seen س",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 16,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Where Do Sounds Come From? — The 5 big areas",
+     "items": [
+      "The 5 big areas of sound"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 3 Al-Ikhlas: verse 4",
+     "items": [
+      "Revise verses 1–3",
+      "Verse 4 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 5 · Clean and Pure — Wudu and Sneezing — Duas: When I hear someone sneeze and say Alhamdulillah; The one who sneezed replies",
+     "items": [
+      "Dua: When I hear someone sneeze and say Alhamdulillah",
+      "Dua: The one who sneezed replies"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 13 · Durud (part 1)",
+     "items": [
+      "Learn it in little pieces: part 1"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 13 · Sheen ش",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 17,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Where Do Sounds Come From? — All 17 places",
+     "items": [
+      "All 17 places (see and touch)"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 3 Al-Ikhlas: the whole Surah + meaning",
+     "items": [
+      "The whole Surah",
+      "What does it mean?",
+      "When do we read it?",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 5 · Clean and Pure — Wudu and Sneezing — I do this",
+     "items": [
+      "I do this"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 13 · Durud (part 2)",
+     "items": [
+      "Learn it in little pieces: part 2"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 14 · Sad ص",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 18,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 3 — Alif with a Harakah is Hamzah",
+     "items": [
+      "Short sounds: Fathah, Kasrah, Dammah",
+      "Alif with a Harakah is Hamzah"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 4 Al-Asr: verse 1",
+     "items": [
+      "Revise the surahs before",
+      "About Surah Al-Asr (Little Talk)",
+      "Verse 1 in little pieces"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 5 · Clean and Pure — Wudu and Sneezing — A True Story: The People Who Loved to Be Clean",
+     "items": [
+      "A True Story: The People Who Loved to Be Clean",
+      "Did you know?",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 13 · Durud (part 3)",
+     "items": [
+      "Learn it in little pieces: part 3",
+      "The whole dua",
+      "Missing Word Game",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 15 · Dad ض",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 19,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 3 — Read it in 3 little steps",
+     "items": [
+      "Read it in 3 little steps"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 4 Al-Asr: verse 2",
+     "items": [
+      "Revise verses 1–1",
+      "Verse 2 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 6 · Getting Dressed — Duas: When I put on clothes; When I take off clothes",
+     "items": [
+      "Dua: When I put on clothes",
+      "Dua: When I take off clothes"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 14 · Du'a Ma'thurah (part 1)",
+     "items": [
+      "Learn it in little pieces: part 1"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 16 · Toa ط",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 20,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 3 — Let's practise (part 1)",
+     "items": [
+      "Let's practise: first lines"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 4 Al-Asr: verse 3",
+     "items": [
+      "Revise verses 1–2",
+      "Verse 3 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 6 · Getting Dressed — I do this",
+     "items": [
+      "I do this"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 14 · Du'a Ma'thurah (part 2)",
+     "items": [
+      "Learn it in little pieces: part 2",
+      "The whole dua",
+      "Missing Word Game",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 17 · Zoa ظ",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 21,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 3 — Let's practise (part 2)",
+     "items": [
+      "Let's practise: middle lines"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 4 Al-Asr: the whole Surah + meaning",
+     "items": [
+      "The whole Surah",
+      "What does it mean?",
+      "When do we read it?",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 6 · Getting Dressed — A True Story: The Prophet ﷺ Loved the Right Side",
+     "items": [
+      "A True Story: The Prophet ﷺ Loved the Right Side",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua 15 · Salam — Ending the Salah",
+     "items": [
+      "Learn it in little pieces",
+      "The whole dua",
+      "Missing Word Game",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 18 · Ain ع",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 22,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 3 — Let's practise (part 3)",
+     "items": [
+      "Let's practise: last lines",
+      "Lesson 3 review"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 5 An-Nasr: verse 1",
+     "items": [
+      "Revise the surahs before",
+      "About Surah An-Nasr (Little Talk)",
+      "Verse 1 in little pieces"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 7 · Going Out, Coming Home and Travelling — Duas: When I leave home; When I come home",
+     "items": [
+      "Dua: When I leave home",
+      "Dua: When I come home"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — After Salah: Astaghfirullah + Allahumma Antas-Salam",
+     "items": [
+      "Astaghfirullah — 3 times",
+      "Allahumma Antas-Salam — once"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 19 · Ghain غ",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 23,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 4 — Places 1–3: the throat",
+     "items": [
+      "Say It from the Right Place",
+      "Place 1 — deepest part of the throat",
+      "Place 2 — middle of the throat",
+      "Place 3 — top of the throat"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 5 An-Nasr: verse 2",
+     "items": [
+      "Revise verses 1–1",
+      "Verse 2 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 7 · Going Out, Coming Home and Travelling — Duas: When I sit in a car, bus or plane; When I get on a boat",
+     "items": [
+      "Dua: When I sit in a car, bus or plane",
+      "Dua: When I get on a boat"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — After Salah: Tasbih, Tahmid, Takbir",
+     "items": [
+      "Tasbih — 33 times",
+      "Tahmid — 33 times",
+      "Takbir — 34 times"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 20 · Fa ف",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 24,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 4 — Places 4–5: back of the tongue",
+     "items": [
+      "Place 4",
+      "Place 5"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 5 An-Nasr: verse 3",
+     "items": [
+      "Revise verses 1–2",
+      "Verse 3 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 7 · Going Out, Coming Home and Travelling — I do this",
+     "items": [
+      "I do this"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua Qunut (lines 1–2)",
+     "items": [
+      "Dua Qunut — lines 1–2"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 21 · Qaf ق",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 25,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 4 — Places 6–7",
+     "items": [
+      "Place 6 — middle of the tongue",
+      "Place 7 — side edge of the tongue"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 5 An-Nasr: the whole Surah + meaning",
+     "items": [
+      "The whole Surah",
+      "What does it mean?",
+      "When do we read it?",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 7 · Going Out, Coming Home and Travelling — A True Story: The Ark of Prophet Nuh",
+     "items": [
+      "A True Story: The Ark of Prophet Nuh",
+      "Did you know?",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua Qunut (lines 3–4)",
+     "items": [
+      "Dua Qunut — lines 3–4"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 22 · Kaf ك",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 26,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 4 — Places 8–10: tip of the tongue",
+     "items": [
+      "Place 8",
+      "Place 9",
+      "Place 10"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 6 Al-Falaq: verse 1",
+     "items": [
+      "Revise the surahs before",
+      "About Surah Al-Falaq (Little Talk)",
+      "Verse 1 in little pieces"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 8 · My Mother and Father — Duas: Dua for my parents; Forgive me and my parents",
+     "items": [
+      "Dua: Dua for my parents",
+      "Dua: Forgive me and my parents"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua Qunut (lines 5–6)",
+     "items": [
+      "Dua Qunut — lines 5–6"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 23 · Lam ل",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 27,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 4 — Places 11–13",
+     "items": [
+      "Place 11",
+      "Place 12",
+      "Place 13"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 6 Al-Falaq: verse 2",
+     "items": [
+      "Revise verses 1–1",
+      "Verse 2 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 8 · My Mother and Father — I do this",
+     "items": [
+      "I do this"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Dua Qunut (the whole dua)",
+     "items": [
+      "The whole dua",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 24 · Meem م",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 28,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 4 — Places 14–15: lips",
+     "items": [
+      "Place 14 — lower lip and upper teeth",
+      "Place 15 — the two lips"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 6 Al-Falaq: verse 3",
+     "items": [
+      "Revise verses 1–2",
+      "Verse 3 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 8 · My Mother and Father — A True Story: “Your Mother, Your Mother, Your Mother”",
+     "items": [
+      "A True Story: “Your Mother, Your Mother, Your Mother”",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — My Salah Map + My Dua Chart",
+     "items": [
+      "My Salah Map: all the duas in order",
+      "My Dua Chart",
+      "My Certificate"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 25 · Noon ن",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 29,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 4 — Say the pairs",
+     "items": [
+      "Say the pairs"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 6 Al-Falaq: verse 4",
+     "items": [
+      "Revise verses 1–3",
+      "Verse 4 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 8 · My Mother and Father — A True Story: A Father and Son Build the Ka'bah",
+     "items": [
+      "A True Story: A Father and Son Build the Ka'bah",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 26 · Waw و",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 30,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 4 — Quick quiz",
+     "items": [
+      "Quick quiz",
+      "Lesson 4 review"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 6 Al-Falaq: verse 5",
+     "items": [
+      "Revise verses 1–4",
+      "Verse 5 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 9 · Allah Loves Me — Thank You, Allah! — Duas: I am happy with Allah, Islam and the Prophet ﷺ; Help me to remember and thank You",
+     "items": [
+      "Dua: I am happy with Allah, Islam and the Prophet ﷺ",
+      "Dua: Help me to remember and thank You"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 27 · Ha ه",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 31,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 5 — The 3 Madd letters",
+     "items": [
+      "Long Sounds and Soft Sounds",
+      "The 3 Madd letters"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 6 Al-Falaq: the whole Surah + meaning",
+     "items": [
+      "The whole Surah",
+      "What does it mean?",
+      "When do we read it?",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 9 · Allah Loves Me — Thank You, Allah! — I do this",
+     "items": [
+      "I do this"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 28 · Hamzah ء",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 32,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 5 — Long “aa” with Alif",
+     "items": [
+      "Long “aa” with Alif"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 7 An-Nas: verse 1",
+     "items": [
+      "Revise the surahs before",
+      "About Surah An-Nas (Little Talk)",
+      "Verse 1 in little pieces"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 9 · Allah Loves Me — Thank You, Allah! — A True Story: “Should I Not Be a Thankful Servant?”",
+     "items": [
+      "A True Story: “Should I Not Be a Thankful Servant?”",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letter 29 · Ya ي",
+     "items": [
+      "Look and say",
+      "Sky and finger writing",
+      "Pencil writing",
+      "Memory writing"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 33,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 5 — Long “oo” with Waw",
+     "items": [
+      "Long “oo” with Waw"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 7 An-Nas: verse 2",
+     "items": [
+      "Revise verses 1–1",
+      "Verse 2 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 9 · Allah Loves Me — Thank You, Allah! — A True Story: Prophet Sulayman and the Little Ant",
+     "items": [
+      "A True Story: Prophet Sulayman and the Little Ant",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Letters with Dots",
+     "items": [
+      "15 letters have dots",
+      "14 letters have no dots"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 34,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 5 — Long “ee” with Ya",
+     "items": [
+      "Long “ee” with Ya"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 7 An-Nas: verse 3",
+     "items": [
+      "Revise verses 1–2",
+      "Verse 3 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 10 · In the Masjid — Duas: When I go into the masjid; When I come out of the masjid",
+     "items": [
+      "Dua: When I go into the masjid",
+      "Dua: When I come out of the masjid"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — How many dots? + Add the dots!",
+     "items": [
+      "How many dots?",
+      "Add the dots!"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 35,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 5 — Soft sounds (Leen)",
+     "items": [
+      "Soft sounds — Leen"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 7 An-Nas: verse 4",
+     "items": [
+      "Revise verses 1–3",
+      "Verse 4 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 10 · In the Masjid — I do this",
+     "items": [
+      "I do this"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Fill in the Missing Letters",
+     "items": [
+      "Fill in the Missing Letters (both pages)"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 36,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 5 — Reading practice",
+     "items": [
+      "Reading practice"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 7 An-Nas: verse 5",
+     "items": [
+      "Revise verses 1–4",
+      "Verse 5 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 10 · In the Masjid — A True Story: The Prophet ﷺ Carried the Bricks",
+     "items": [
+      "A True Story: The Prophet ﷺ Carried the Bricks",
+      "Did you know?",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Find the Same Letter + write all from memory",
+     "items": [
+      "Find the Same Letter",
+      "Write all the letters from memory"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 37,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 5 — Quick quiz",
+     "items": [
+      "Quick quiz",
+      "Lesson 5 review"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 7 An-Nas: verse 6",
+     "items": [
+      "Revise verses 1–5",
+      "Verse 6 in little pieces",
+      "Missing Word Game"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 11 · My Class and My Things — Dua: Increase my knowledge",
+     "items": [
+      "Dua: Increase my knowledge"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — My First Arabic Words: Numbers 1 to 10",
+     "items": [
+      "Numbers 1 to 10"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 38,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 6 — Hamzah + a resting letter",
+     "items": [
+      "The Resting Sign — Jazm",
+      "Hamzah + a resting letter"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Surah 7 An-Nas: the whole Surah + meaning",
+     "items": [
+      "The whole Surah",
+      "What does it mean?",
+      "When do we read it?",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 11 · My Class and My Things — I do this in class; I do this with my things",
+     "items": [
+      "I do this in class",
+      "I do this with my things"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Colours",
+     "items": [
+      "Colours"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 39,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 6 — Longer words",
+     "items": [
+      "Longer words"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — My Revision Plan",
+     "items": [
+      "My Revision Plan",
+      "All 7 surahs"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 11 · My Class and My Things — A True Story: The Boy Who Asked for Knowledge",
+     "items": [
+      "A True Story: The Boy Who Asked for Knowledge",
+      "Did you know?",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — My Body",
+     "items": [
+      "My Body"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 40,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 6 — The silent letter",
+     "items": [
+      "The silent letter"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Quick quiz + My Surah Chart",
+     "items": [
+      "Quick quiz",
+      "My Surah Chart",
+      "My Certificate"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 12 · Kind Words and a Soft Voice — Dua: When we finish sitting together",
+     "items": [
+      "Dua: When we finish sitting together"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Fruits",
+     "items": [
+      "Fruits"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 41,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 6 — Bounce in words",
+     "items": [
+      "Bounce in words (Qalqalah)"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 12 · Kind Words and a Soft Voice — I do this",
+     "items": [
+      "I do this"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Food",
+     "items": [
+      "Food"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 42,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 6 — Quick quiz",
+     "items": [
+      "Quick quiz",
+      "Lesson 6 review"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 12 · Kind Words and a Soft Voice — A True Story: Luqman's Advice to His Son",
+     "items": [
+      "A True Story: Luqman's Advice to His Son",
+      "Did you know?",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — The Days of the Week",
+     "items": [
+      "The Days of the Week"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 43,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 7 — The silent letter again",
+     "items": [
+      "The Double Sign — Tashdeed",
+      "The silent letter again"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 13 · Friends, Guests and Gifts — Duas: When someone gives me a gift or helps me; For a good family and good company",
+     "items": [
+      "Dua: When someone gives me a gift or helps me",
+      "Dua: For a good family and good company"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — I Can Write! — My Chart",
+     "items": [
+      "I Can Write! — My Chart",
+      "My Certificate"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 44,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 7 — Humming words",
+     "items": [
+      "Humming words (Ghunnah)"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 13 · Friends, Guests and Gifts — With my friends I do this; With guests I do this",
+     "items": [
+      "With my friends I do this",
+      "With guests I do this"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 45,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 7 — Pur: full and heavy",
+     "items": [
+      "Pur — full and heavy"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 13 · Friends, Guests and Gifts — With gifts I do this",
+     "items": [
+      "With gifts I do this"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 46,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 7 — Barik: light and thin",
+     "items": [
+      "Barik — light and thin"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 13 · Friends, Guests and Gifts — A True Story: Prophet Ibrahim's Guests",
+     "items": [
+      "A True Story: Prophet Ibrahim's Guests",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 47,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Lesson 7 — Quick quiz",
+     "items": [
+      "Quick quiz",
+      "Lesson 7 review"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 13 · Friends, Guests and Gifts — A True Story: The Family Who Put Out the Lamp",
+     "items": [
+      "A True Story: The Family Who Put Out the Lamp"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 48,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Big Review (part 1)",
+     "items": [
+      "Big Review: Lessons 1–4"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 13 · Friends, Guests and Gifts — A True Story: One Cup of Milk for Everyone",
+     "items": [
+      "A True Story: One Cup of Milk for Everyone",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 49,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Big Review (part 2)",
+     "items": [
+      "Big Review: Lessons 5–7"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 14 · Kind to Everyone — the Sick, the Needy and Animals — Duas: To cheer them up; To ask Allah to heal them",
+     "items": [
+      "Dua: To cheer them up",
+      "Dua: To ask Allah to heal them"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 50,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — My Progress and My Certificate",
+     "items": [
+      "My Progress",
+      "My Certificate"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 14 · Kind to Everyone — the Sick, the Needy and Animals — I do this",
+     "items": [
+      "I do this"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 51,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 14 · Kind to Everyone — the Sick, the Needy and Animals — A True Story: The Prophet ﷺ Visits a Sick Boy",
+     "items": [
+      "A True Story: The Prophet ﷺ Visits a Sick Boy",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 52,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 14 · Kind to Everyone — the Sick, the Needy and Animals — A True Story: A Drink of Water for a Thirsty Dog",
+     "items": [
+      "A True Story: A Drink of Water for a Thirsty Dog"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 53,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 14 · Kind to Everyone — the Sick, the Needy and Animals — A True Story: The Branch on the Road",
+     "items": [
+      "A True Story: The Branch on the Road",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 54,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 15 · Good Habits — Right Side, No Wasting, Patience — Duas: When something happens that I don't like; To be strong and not lazy",
+     "items": [
+      "Dua: When something happens that I don't like",
+      "Dua: To be strong and not lazy"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 55,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 15 · Good Habits — Right Side, No Wasting, Patience — Starting with the right; No wasting",
+     "items": [
+      "Starting with the right",
+      "No wasting"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 56,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 15 · Good Habits — Right Side, No Wasting, Patience — Being humble and patient",
+     "items": [
+      "Being humble and patient"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 57,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 15 · Good Habits — Right Side, No Wasting, Patience — A True Story: The Prophet ﷺ Helped at Home",
+     "items": [
+      "A True Story: The Prophet ﷺ Helped at Home",
+      "Did you know?",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 58,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 16 · Little Words for Every Moment — Duas: When it rains; When I hear sad news",
+     "items": [
+      "Dua: When it rains",
+      "Dua: When I hear sad news"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 59,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 16 · Little Words for Every Moment — Duas: When I am afraid; When I am in trouble",
+     "items": [
+      "Dua: When I am afraid",
+      "Dua: When I am in trouble"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 60,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 16 · Little Words for Every Moment — Duas: Asking for forgiveness and mercy; Keep my heart firm",
+     "items": [
+      "Dua: Asking for forgiveness and mercy",
+      "Dua: Keep my heart firm"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 61,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 16 · Little Words for Every Moment — Dua: Two light words, heavy on the scale",
+     "items": [
+      "Dua: Two light words, heavy on the scale"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 62,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 16 · Little Words for Every Moment — A True Story: Prophet Yunus Inside the Whale",
+     "items": [
+      "A True Story: Prophet Yunus Inside the Whale",
+      "Did you know?"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 63,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 16 · Little Words for Every Moment — A True Story: Prophet Ibrahim and the Fire",
+     "items": [
+      "A True Story: Prophet Ibrahim and the Fire",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 64,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 17 · My Little Hadith Collection — The 5 pillars of Islam",
+     "items": [
+      "The 5 pillars of Islam",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 65,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 18 · My First Masa'il — Easy Rules of Islam — The 4 Fard parts of Wudu; How I make Wudu — step by step",
+     "items": [
+      "The 4 Fard parts of Wudu",
+      "How I make Wudu — step by step"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 66,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 18 · My First Masa'il — Easy Rules of Islam — What breaks my Wudu?; The 3 Fard parts of Ghusl (bath)",
+     "items": [
+      "What breaks my Wudu?",
+      "The 3 Fard parts of Ghusl (bath)"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 67,
+   "topics": [
+    {
+     "book": "Easy Noorani Qaida",
+     "text": "Easy Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My First Surahs",
+     "text": "My First Surahs — Revision: recite 2 surahs from the chart",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 18 · My First Masa'il — Easy Rules of Islam — Tayammum — when there is no water; Toilet rules — what I must not do",
+     "items": [
+      "Tayammum — when there is no water",
+      "Toilet rules — what I must not do",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "My Salah Duas",
+     "text": "My Salah Duas — Revision: say the salah duas in order",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 letters from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  }
+ ]
+}
