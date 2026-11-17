@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+﻿import React, { useState, useEffect, useMemo, useRef } from "react";
 // ভাসমান পর্দাটি উস্তাদের উইন্ডোর ভেতর থেকেই আঁকা হয় — তাই portal
 import { createPortal } from "react-dom";
 import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
@@ -41,8 +41,8 @@ const todayISO = () => {
 // fmtDate ৫০+ জায়গায় ব্যবহৃত; প্রতিটি call site বদলানোর বদলে এখানেই একবার ঠিক করা হলো।
 let CURRENT_LANG = "bn";
 const MONTHS_BN_FULL = [
-  "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
-  "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 const MONTHS_EN_FULL = [
   "January", "February", "March", "April", "May", "June",
@@ -62,10 +62,10 @@ const fmtDateEn = (iso) => {
 };
 // পেমেন্ট মাধ্যম রিসিটে সবসময় ইংরেজিতে দেখাতে — না মিললে মূল লেখাটাই ফেরত
 const METHOD_EN = {
-  "বিকাশ": "bKash",
-  "নগদ": "Nagad",
-  "ব্যাংক ট্রান্সফার": "Bank Transfer",
-  "নগদ গ্রহণ (অফিস)": "Cash (Office)",
+  "bKash": "bKash",
+  "Nagad": "Nagad",
+  "Bank transfer": "Bank Transfer",
+  "Cash received (office)": "Cash (Office)",
 };
 const methodEn = (m) => METHOD_EN[m] || m;
 // CSV এক্সপোর্টের একটা সেল নিরাপদে তৈরি করে — শুধু quote-escape (CSV ফরম্যাটের
@@ -83,8 +83,8 @@ const addDays = (n) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 const MONTHS_BN = [
-  "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
-  "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 const monthLabelBn = (ym) => {  // "2026-07" → "জুলাই ২০২৬"
   const [y, m] = String(ym).split("-").map(Number);
@@ -133,7 +133,7 @@ body{font-family:'Hind Siliguri',sans-serif;margin:0;padding:28px;background:#f4
 <div class="k">${kind}</div>
 <div class="b">
 <div class="r"><span>Receipt No.</span><b>TQA-${no}</b></div>
-<div class="r"><span>${(kind.includes("বেতন") || kind === "Salary Voucher") ? "Teacher" : "Name"}</span><b>${person.name || ""}</b></div>
+<div class="r"><span>${(kind.includes("Salary") || kind === "Salary Voucher") ? "Teacher" : "Name"}</span><b>${person.name || ""}</b></div>
 <div class="r"><span>Month / Description</span><b>${p.month || "—"}</b></div>
 <div class="r"><span>Payment Date</span><b>${p.date || ""}</b></div>
 <div class="r"><span>Method</span><b>${p.method || "—"}</b></div>
@@ -148,11 +148,11 @@ body{font-family:'Hind Siliguri',sans-serif;margin:0;padding:28px;background:#f4
 
 /* 📜 কোর্স সিলেবাস — প্রিন্টযোগ্য ডকুমেন্ট (PDF-এর মতো পাশাপাশি ৫ কলাম, যে কেউ প্রিন্ট/PDF করতে পারবে) */
 const SYL_CATS_PRINT = [
-  { key: "memorized_surah", label: "মুখস্থ সূরা" },
-  { key: "memorized_hadith", label: "মুখস্থ হাদিস" },
-  { key: "qirat", label: "কিরাত" },
-  { key: "dua_masala", label: "দুআ/মাসআলা" },
-  { key: "moral_story", label: "নৈতিক শিক্ষা/হাদিসের গল্প" },
+  { key: "memorized_surah", label: "Memorised Surah" },
+  { key: "memorized_hadith", label: "Memorised Hadith" },
+  { key: "qirat", label: "Qiraat" },
+  { key: "dua_masala", label: "Du'a / Masa'il" },
+  { key: "moral_story", label: "Moral Story / Hadith Story" },
 ];
 /* পরিচালকের নিজের হাতে লেখা সিলেবাস টেবিলের প্রিন্ট/PDF — চেহারা আগের
    syllabusHTML-এর হুবহু একই (একাডেমি হেডার, সোনালি ব্যানার, মেটা, টেবিল),
@@ -177,11 +177,11 @@ const sheetHTML = (courseName, books, headers, rows, en) => {
         )
         .join("")
     : `<tr><td class="em" colspan="${cols}">—</td></tr>`;
-  // ⚠️ পুরো কাগজটাই এক ভাষায় থাকা চাই। আগে কেবল "কোর্স:" ও বইয়ের
+  // ⚠️ পুরো কাগজটাই এক ভাষায় থাকা চাই। আগে কেবল "Course:" ও বইয়ের
   // শিরোনামটুকু ইংরেজি হতো, আর ব্যানার-শিরোনাম-ফুটার বাংলাই থেকে যেত —
   // ফলে শিক্ষার্থী প্রিন্ট করলে অর্ধেক বাংলা অর্ধেক ইংরেজি একটা কাগজ বেরোত।
-  const ttl = en ? "Course Syllabus" : "কোর্স সিলেবাস";
-  const acad = en ? "Tarbiyatul Quran Academy" : "তারবিয়াতুল কুরআন একাডেমী";
+  const ttl = en ? "Course Syllabus" : "Course Syllabus";
+  const acad = en ? "Tarbiyatul Quran Academy" : "Tarbiyatul Quran Academy";
   return `<!DOCTYPE html><html lang="${en ? "en" : "bn"}"><head><meta charset="utf-8"><title>${ttl} — ${esc(courseName)}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700;800&display=swap');
@@ -207,10 +207,10 @@ td.em{text-align:center;color:#9ca3af}
 <div class="h"><div class="ar">تربية القرآن</div><h1>${acad}</h1>
 <div class="s">tarbiyatulquran.org · WhatsApp: +880 140 249 9027</div></div>
 <div class="k">${ttl}</div>
-<div class="cn">${en ? "Course:" : "কোর্স:"} ${esc(courseName)}</div>${
+<div class="cn">${en ? "Course:" : "Course:"} ${esc(courseName)}</div>${
     (books || []).length
       ? `<div class="bw"><div class="bt">${
-          en ? "Books selected for this course" : "কোর্সের জন্য নির্বাচিত বইসমূহ"
+          en ? "Books selected for this course" : "Books selected for this course"
         }</div><ol class="bl">${books
           .map((b, i) => `<li><span class="n">${i + 1}.</span> ${esc(b)}</li>`)
           .join("")}</ol></div>`
@@ -233,12 +233,12 @@ const syllabusHTML = (courseName, booksLine, itemsByCat) => {
       ? items
           .map((it) => {
             const bk =
-              it.book && it.book !== "অন্যান্য"
+              it.book && it.book !== "Other"
                 ? `<span class="bk">${esc(it.book)} — </span>`
                 : "";
             const pl =
-              (it.pages ? ` · পৃষ্ঠা: ${esc(it.pages)}` : "") +
-              (it.lines ? ` · লাইন: ${esc(it.lines)}` : "");
+              (it.pages ? ` · Pages: ${esc(it.pages)}` : "") +
+              (it.lines ? ` · Lines: ${esc(it.lines)}` : "");
             const note = it.note
               ? `<div class="nt">💬 ${esc(it.note)}</div>`
               : "";
@@ -248,7 +248,7 @@ const syllabusHTML = (courseName, booksLine, itemsByCat) => {
       : `<li class="em">—</li>`;
     return `<td><div class="ch">${cat.label}</div><ol>${lis}</ol></td>`;
   };
-  return `<!DOCTYPE html><html lang="bn"><head><meta charset="utf-8"><title>কোর্স সিলেবাস — ${esc(courseName)}</title>
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Course Syllabus — ${esc(courseName)}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700;800&display=swap');
 *{box-sizing:border-box}
@@ -271,13 +271,13 @@ li.em{list-style:none;margin-left:-16px;text-align:center;color:#9ca3af}
 @media print{.pr{display:none}body{background:#fff;padding:0}.v{border:none;border-radius:0;max-width:100%}}
 </style></head><body>
 <div class="v">
-<div class="h"><div class="ar">تربية القرآن</div><h1>তারবিয়াতুল কুরআন একাডেমী</h1><div class="s">tarbiyatulquran.org · WhatsApp: +880 140 249 9027</div></div>
-<div class="k">কোর্স সিলেবাস</div>
-<div class="meta"><div><b>কোর্স:</b> ${esc(courseName)}</div>${booksLine ? `<div><b>বই:</b> ${esc(booksLine)}</div>` : ""}<div><b>তারিখ:</b> ${fmtDate(todayISO())}</div></div>
+<div class="h"><div class="ar">تربية القرآن</div><h1>Tarbiyatul Quran Academy</h1><div class="s">tarbiyatulquran.org · WhatsApp: +880 140 249 9027</div></div>
+<div class="k">Course Syllabus</div>
+<div class="meta"><div><b>Course:</b> ${esc(courseName)}</div>${booksLine ? `<div><b>Books:</b> ${esc(booksLine)}</div>` : ""}<div><b>Date:</b> ${fmtDate(todayISO())}</div></div>
 <table><tr>${SYL_CATS_PRINT.map(col).join("")}</tr></table>
-<div class="f">এটি কম্পিউটারে তৈরি কোর্স সিলেবাস — তারবিয়াতুল কুরআন একাডেমী</div>
+<div class="f">Computer-generated course syllabus — Tarbiyatul Quran Academy</div>
 </div>
-<button class="pr" onclick="window.print()">🖨️ প্রিন্ট / PDF সেভ করুন</button>
+<button class="pr" onclick="window.print()">🖨️ Print / Save as PDF</button>
 </body></html>`;
 };
 
@@ -304,7 +304,7 @@ const openPrintDoc = (html, filename) => {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   } catch (e) {
-    notice("প্রিন্ট খুলতে সমস্যা হয়েছে।");
+    notice("Could not open print document.");
   }
 };
 
@@ -340,7 +340,7 @@ const notice = (msg) => {
    মুহূর্তেই তাজা হয়ে যায়।
    ⚠️ ক্লাস চলাকালীন প্রেজেন্স-পোলে (LiveClassPanel) এটা ব্যবহার করা যাবে না —
    জুমে থাকার সময় পোর্টালের ট্যাবটাই লুকানো থাকে, ওখানে থামিয়ে দিলে
-   "উস্তাদ ঢুকেছেন" কখনোই ধরা পড়ত না। */
+   "Teacher has joined" কখনোই ধরা পড়ত না। */
 const visiblePoll = (fn, ms) => {
   const tick = () => {
     if (!document.hidden) fn();
@@ -392,7 +392,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
   // স্টুডেন্টের ফি রিসিট আর পোর্টালে "সেন্ড" করা হয় না — স্টুডেন্ট পোর্টালে শুধু
   // পেমেন্ট হিস্টরি (কোন মাস পরিশোধ, কোনটা বাকি) দেখানো হবে, আলাদা রিসিট ফাইল না।
   // পরিচালক/এডমিন এখন শুধু ডাউনলোড করে নিজে WhatsApp-এ পাঠাবেন।
-  const isFeeReceipt = kind === "ফি পরিশোধ রিসিট" || kind === "Fee Payment Receipt";
+  const isFeeReceipt = kind === "Fee Payment Receipt" || kind === "Fee Payment Receipt";
   const canSend = !!person.id && !p.noSend && !isFeeReceipt;
   // PNG হিসেবে সেইভ — HTML ফাইলের বদলে, যাতে WhatsApp-এ সরাসরি ছবি হিসেবে সহজে পাঠানো যায়
   // (html2canvas শুধু এই মুহূর্তেই ডাউনলোড হয় — dynamic import, তাই মূল বান্ডেলের সাইজ বাড়ে না)
@@ -407,7 +407,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
       });
       canvas.toBlob((blob) => {
         if (!blob) {
-          notice("রিসিট ছবি তৈরি করতে ব্যর্থ হয়েছে।");
+          notice("Failed to generate receipt image.");
           return;
         }
         const a = document.createElement("a");
@@ -419,7 +419,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
         setTimeout(() => URL.revokeObjectURL(a.href), 4000);
       }, "image/png");
     } catch {
-      notice("রিসিট ছবি তৈরি করতে ব্যর্থ হয়েছে — আবার চেষ্টা করুন।");
+      notice("Failed to generate receipt image — please try again.");
     }
     setAsk(false);
   };
@@ -429,14 +429,14 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
   // ছবিটা সয়ংক্রিয়ভাবে সংযুক্ত করা যায় না — ডাউনলোড হওয়া ছবিটা একবার নিজে
   // সংযুক্ত করে দিতে হবে)
   const isReceiptKind =
-    isFeeReceipt || kind === "বেতন পরিশোধ ভাউচার" || kind === "Salary Voucher";
+    isFeeReceipt || kind === "Salary Payment Voucher" || kind === "Salary Voucher";
   const canWhatsApp = isReceiptKind && !!person.phone;
   const canEmail = isReceiptKind && !!person.email;
   const confirmMessage = () => {
     const hadith =
       "بارك الله لك في أهلك ومالك، إنما جزاء السلف الوفاء والحمد\n" +
       '"May Allah bless your family and your wealth. Indeed, the reward for fulfilling an obligation is faithfulness and gratitude." — Hadith';
-    const isSalary = kind === "বেতন পরিশোধ ভাউচার" || kind === "Salary Voucher";
+    const isSalary = kind === "Salary Payment Voucher" || kind === "Salary Voucher";
     return isSalary
       ? `Assalamu Alaikum Warahmatullahi Wabarakatuh,\n\nDear ${person.name || "Ustadh/Ustadha"},\n\nThis is to confirm that your salary payment for "${p.month || "—"}" has been completed. Please find the voucher attached below.\n\n${hadith}\n\nJazakAllahu Khairan for your dedication and service.\n— Tarbiyatul Quran Academy`
       : `Assalamu Alaikum Warahmatullahi Wabarakatuh,\n\nDear Guardian,\n\nWe are pleased to confirm that ${person.name || "your child"}'s fee payment for "${p.month || "—"}" has been received and verified. Please find the receipt attached below.\n\n${hadith}\n\nJazakAllahu Khairan for your continued trust and support.\n— Tarbiyatul Quran Academy`;
@@ -452,7 +452,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
   const doEmail = () => {
     doDownload();
     const subject =
-      (kind === "বেতন পরিশোধ ভাউচার" || kind === "Salary Voucher")
+      (kind === "Salary Payment Voucher" || kind === "Salary Voucher")
         ? `Salary Voucher — ${p.month || ""}`
         : `Fee Payment Receipt — ${p.month || ""}`;
     window.open(
@@ -472,8 +472,8 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
       });
     } catch (e) {
       notice(
-        "রিসিট পাঠাতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not send receipt —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
       return;
     }
@@ -562,7 +562,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
           <div style={{ padding: "20px 26px" }}>
             {row("Receipt No.", `TQA-${no}`)}
             {row(
-              (kind.includes("বেতন") || kind === "Salary Voucher") ? "Teacher" : "Name",
+              (kind.includes("Salary") || kind === "Salary Voucher") ? "Teacher" : "Name",
               person.name || "",
             )}
             {row("Month / Description", p.month || "—")}
@@ -638,7 +638,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
             style={{ flex: 1.2, justifyContent: "center" }}
             onClick={() => (canSend ? setAsk(true) : doDownload())}
           >
-            {canSend ? "⬇️ ডাউনলোড / সেন্ড" : "⬇️ ডাউনলোড (PNG)"}
+            {canSend ? "⬇️ Download / Send" : "⬇️ Download (PNG)"}
           </Btn>
           {canWhatsApp && (
             <Btn
@@ -646,7 +646,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
               style={{ flex: 1.2, justifyContent: "center" }}
               onClick={doWhatsApp}
             >
-              📲 WhatsApp-এ পাঠান
+              📲 Send via WhatsApp
             </Btn>
           )}
           {canEmail && (
@@ -655,7 +655,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
               style={{ flex: 1.2, justifyContent: "center" }}
               onClick={doEmail}
             >
-              📧 ইমেইলে পাঠান
+              📧 Send via Email
             </Btn>
           )}
           <Btn
@@ -704,29 +704,29 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
           >
             <div style={{ fontSize: 34 }}>🧾</div>
             <div style={{ fontWeight: 800, fontSize: 16, margin: "6px 0 4px" }}>
-              কী করতে চান?
+              What would you like to do?
             </div>
             <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 16 }}>
-              ডাউনলোড করবেন, নাকি{" "}
-              {person.name ? <b>{person.name}</b> : "প্রাপকের"}-এর পোর্টালে
+              Download, or send to{" "}
+              {person.name ? <b>{person.name}</b> : "the recipient's"}-এর পোর্টালে
               পাঠাবেন?
             </div>
             <div style={{ display: "grid", gap: 8 }}>
               <Btn style={{ justifyContent: "center" }} onClick={doDownload}>
-                ⬇️ ডাউনলোড — ছবি (PNG) হিসেবে সেভ হবে
+                ⬇️ Download — saves as PNG image
               </Btn>
               <Btn
                 kind="gold"
                 style={{ justifyContent: "center", opacity: canSend ? 1 : 0.5 }}
                 onClick={doSend}
               >
-                📨 সেন্ড — তার পোর্টালের "ভাউচার/রিসিট"-এ যোগ হবে
+                📨 Send to their "Vouchers/Receipts" portal
               </Btn>
               {!canSend && (
                 <div style={{ fontSize: 11.5, color: C.red }}>
                   {p.noSend
-                    ? "এই রিসিটটি ইতিমধ্যে পোর্টালে আছে"
-                    : "নিবন্ধিত ব্যবহারকারী নয় — কেবল ডাউনলোড করা যাবে"}
+                    ? "This receipt is already in the portal"
+                    : "Not a registered user — download only"}
                 </div>
               )}
               <Btn
@@ -735,7 +735,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
                 style={{ justifyContent: "center" }}
                 onClick={() => setAsk(false)}
               >
-                বাতিল
+                Cancel
               </Btn>
             </div>
           </div>
@@ -768,7 +768,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
               সেন্ড হয়েছে!
             </div>
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>
-              রিসিটটি <b>{person.name}</b>-এর পোর্টালের "🧾 ভাউচার/রিসিট" মেনুতে
+              রিসিটটি <b>{person.name}</b>-এর পোর্টালের "🧾 Vouchers/Receipts" মেনুতে
               যোগ হয়েছে এবং নোটিফিকেশন পাঠানো হয়েছে।
             </div>
             <Btn
@@ -778,7 +778,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
                 onClose();
               }}
             >
-              আলহামদুলিল্লাহ, ঠিক আছে
+              Alhamdulillah, OK
             </Btn>
           </div>
         </div>
@@ -874,7 +874,7 @@ const Btn = ({ children, kind = "primary", sm, style, ...p }) => {
   };
   /* ⚠️ আগে danger/soft/ghost — তিনটিরই পটভূমি এত হালকা ছিল যে সাদা কার্ডের
      উপর সেগুলো বাটন বলে চেনাই যেত না, নিছক লেখা মনে হতো। বিশেষ করে কনফার্ম
-     পপআপে ("জুম হোস্ট অ্যাকাউন্ট" সতর্কতা ইত্যাদি) "না, থাক" ও "হ্যাঁ, নিশ্চিত"
+     পপআপে ("জুম হোস্ট অ্যাকাউন্ট" সতর্কতা ইত্যাদি) "No, cancel" ও "Yes, confirm"
      দুটোই ফ্যাকাসে দেখাত। এখন প্রতিটিরই স্পষ্ট রং ও কিনারা আছে। */
   const kinds = {
     primary: { background: C.emerald, color: "#fff" },
@@ -1016,9 +1016,9 @@ const Modal = ({ title, onClose, children, wide }) => (
   </div>
 );
 
-// loading=true দিলে ডেটা আসার আগে "কোনো তথ্য নেই" না দেখিয়ে "লোড হচ্ছে…" দেখায় —
+// loading=true দিলে ডেটা আসার আগে "কোনো তথ্য নেই" না দেখিয়ে "Loading…" দেখায় —
 // নইলে প্রতিবার পেজ খোলার সময় এক ঝলক ভুল করে "কিছু নেই" দেখাত
-const Table = ({ head, rows, empty = "কোনো তথ্য নেই", loading = false }) => (
+const Table = ({ head, rows, empty = "No data", loading = false }) => (
   <div
     style={{
       overflowX: "auto",
@@ -1061,7 +1061,7 @@ const Table = ({ head, rows, empty = "কোনো তথ্য নেই", load
               colSpan={head.length}
               style={{ padding: 18, textAlign: "center", color: C.muted }}
             >
-              {loading ? "লোড হচ্ছে…" : empty}
+              {loading ? "Loading…" : empty}
             </td>
           </tr>
         )}
@@ -1102,7 +1102,7 @@ const Section = ({ title, sub, action, children }) => (
 );
 
 /* ইসলামিক টোনে লোডার — আরবি দুআসহ, মৃদু ভাসমান অ্যানিমেশন */
-const Loader = ({ text = "একটু অপেক্ষা করুন…" }) => (
+const Loader = ({ text = "Please wait…" }) => (
   <div
     style={{
       display: "grid",
@@ -1118,7 +1118,7 @@ const Loader = ({ text = "একটু অপেক্ষা করুন…" })
     <div style={{ animation: "tqaFloat 2.2s ease-in-out infinite" }}>
       <img
         src="/brand/logo-green.png"
-        alt="তারবিয়াতুল কুরআন একাডেমি"
+        alt="Tarbiyatul Quran Academy"
         style={{ width: 52, height: 52, borderRadius: 12 }}
       />
     </div>
@@ -1138,7 +1138,7 @@ const Loader = ({ text = "একটু অপেক্ষা করুন…" })
     <div style={{ fontSize: 12.5, color: C.muted, marginTop: 6, lineHeight: 1.6 }}>
       {CURRENT_LANG === "en"
         ? "“My Lord, increase me in knowledge”"
-        : "“হে আমার রব, আমার জ্ঞান বাড়িয়ে দিন”"}
+        : "“My Lord, increase me in knowledge”"}
       <br />
       {text}
     </div>
@@ -1196,15 +1196,15 @@ const waGuardianMsgs = (k, course, reason) => {
       if (!s.phone) return null;
       const text =
         reason === "reminder"
-          ? `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম ${s.guardian || "অভিভাবক"}, ${s.name}-এর "${course.name}" ক্লাস আজ ${k.time}-এ (আর ৫ মিনিটের মধ্যে) শুরু হচ্ছে ইনশাআল্লাহ। অনুগ্রহ করে ক্লাসে যুক্ত হতে সহায়তা করুন। জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি`
-          : `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম ${s.guardian || "অভিভাবক"}, ${s.name}-এর "${course.name}" ক্লাসটি (${fmtDate(k.date)}, ${k.time}) অনিবার্য কারণে / উস্তাদ-উস্তাদা অসুস্থ থাকার দরুন স্থগিত করা হয়েছে। ক্লাসটি পরবর্তীতে শিডিউল করে মেকআপ করা হবে ইনশাআল্লাহ। জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি`;
+          ? `Assalamu Alaikum wa Rahmatullah. Respected ${s.guardian || "Guardian"}, ${s.name}'s "${course.name}" class starts today at ${k.time} (in 5 minutes), insha'Allah. Please help them join the class. Jazakumullahu Khairan. — Tarbiyatul Quran Academy`
+          : `Assalamu Alaikum wa Rahmatullah. Respected ${s.guardian || "Guardian"}, ${s.name}'s "${course.name}" class (${fmtDate(k.date)}, ${k.time}) has been postponed due to unavoidable circumstances / the teacher being unwell. The class will be rescheduled and made up, insha'Allah. Jazakumullahu Khairan. — Tarbiyatul Quran Academy`;
       return {
         id: uid(),
         toName: s.guardian || s.name,
         student: s.name,
         phone: s.phone,
         text,
-        reason: reason === "reminder" ? "৫ মিনিট রিমাইন্ডার" : "ক্লাস স্থগিত",
+        reason: reason === "reminder" ? "5-minute reminder" : "Class postponed",
         date: todayISO(),
         sent: false,
       };
@@ -1230,9 +1230,9 @@ const dataUrlToBlobUrl = (dataUrl) => {
 const bookExt = (n) => (n || "").split(".").pop().toUpperCase().slice(0, 5);
 
 const sylLabel = (e) => {
-  const prefix = e.book && e.book !== "অন্যান্য" ? e.book + " — " : "";
+  const prefix = e.book && e.book !== "Other" ? e.book + " — " : "";
   if (e.category === "qirat" || !e.category) {
-    return `${prefix}${e.lesson}${e.pages ? `, পৃষ্ঠা: ${e.pages}` : ""}${e.lines ? `, লাইন: ${e.lines}` : ""}`;
+    return `${prefix}${e.lesson}${e.pages ? `, page: ${e.pages}` : ""}${e.lines ? `, line: ${e.lines}` : ""}`;
   }
   return `${prefix}${e.lesson}`;
 };
@@ -1270,72 +1270,72 @@ const adaptLecture = (l) => ({
 const SYL_CATEGORIES = [
   {
     key: "memorized_surah",
-    label: "মুখস্থ সূরা",
+    label: "Memorised Surah",
     labelEn: "Memorized Surah",
     icon: "📖",
     book: false,
-    placeholder: "যেমন: সূরা ইখলাস",
+    placeholder: "e.g. Surah Al-Ikhlas",
   },
   {
     key: "memorized_hadith",
-    label: "মুখস্থ হাদিস",
+    label: "Memorised Hadith",
     labelEn: "Memorized Hadith",
     icon: "📜",
     book: false,
-    placeholder: "যেমন: ১ম হাদিস — নিয়ত",
+    placeholder: "e.g. 1st Hadith — Intention",
   },
   {
     key: "qirat",
-    label: "কিরাত",
+    label: "Qiraat",
     labelEn: "Qirat",
     icon: "🕋",
     book: true,
-    placeholder: "যেমন: কায়দা — লেসন ৪",
+    placeholder: "e.g. Qaida — Lesson 4",
   },
   {
     key: "dua_masala",
-    label: "দুআ/মাসআলা",
+    label: "Du'a / Masa'il",
     labelEn: "Dua/Masala",
     icon: "🤲",
     book: true,
-    placeholder: "যেমন: খাবারের দুআ",
+    placeholder: "e.g. Du'a before eating",
   },
   {
     key: "moral_story",
-    label: "নৈতিক শিক্ষা/হাদিসের গল্প",
+    label: "Moral Story / Hadith Story",
     labelEn: "Moral Lesson/Hadith Story",
     icon: "🌟",
     book: true,
-    placeholder: "যেমন: সততার গল্প",
+    placeholder: "e.g. Story of honesty",
   },
 ];
 const catInfo = (k) =>
   SYL_CATEGORIES.find((c) => c.key === k) || SYL_CATEGORIES[2];
 
 const CLASS_KINDS = [
-  "মেকআপ ক্লাস",
-  "সাপোর্ট ক্লাস",
-  "রিকভারি ক্লাস",
-  "ট্রায়াল ক্লাস",
-  "নিয়মিত ক্লাস",
-  "অন্যান্য",
+  "Makeup Class",
+  "Support Class",
+  "Recovery Class",
+  "Trial Class",
+  "Regular Class",
+  "Other",
 ];
 /* ব্যাকএন্ড ClassSession.KINDS (ইংরেজি key) ↔ ফ্রন্টএন্ড বাংলা লেবেল */
 const KIND_TO_KEY = {
-  "মেকআপ ক্লাস": "makeup",
-  "সাপোর্ট ক্লাস": "support",
-  "রিকভারি ক্লাস": "recovery",
-  "ট্রায়াল ক্লাস": "trial",
-  "নিয়মিত ক্লাস": "regular",
-  অন্যান্য: "other",
+  "Makeup Class": "makeup",
+  "Support Class": "support",
+  "Recovery Class": "recovery",
+  "Trial Class": "trial",
+  "Regular Class": "regular",
+  Other: "other",
 };
 const KEY_TO_KIND = {
-  makeup: "মেকআপ ক্লাস",
-  support: "সাপোর্ট ক্লাস",
-  recovery: "রিকভারি ক্লাস",
-  trial: "ট্রায়াল ক্লাস",
-  regular: "নিয়মিত ক্লাস",
-  other: "অন্যান্য",
+  makeup: "Makeup Class",
+  support: "Support Class",
+  recovery: "Recovery Class",
+  trial: "Trial Class",
+  regular: "Regular Class",
+  other: "Other",
 };
 /* API ClassSession → ফ্রন্টএন্ড shape */
 const adaptClass = (k) => ({
@@ -1352,9 +1352,9 @@ const adaptClass = (k) => ({
   // ১ম নাকি ২য় জুম লিংক দেখাতে হবে — সার্ভারের সিদ্ধান্ত (দুজনের জন্য একই)
   rejoinActive: !!k.rejoin_active,
   // উস্তাদ নিজে "ক্লাস শেষ করুন" চেপেছেন কিনা। ক্লাসটি তখনো আজকের তালিকাতেই
-  // থাকে (status বদলায় না) — পরিচালক/এডমিন যাচাই করে "সম্পন্ন" করলে তবেই সরে
+  // থাকে (status বদলায় না) — পরিচালক/এডমিন যাচাই করে "Completed" করলে তবেই সরে
   teacherFinished: !!k.teacher_finished,
-  kind: KEY_TO_KIND[k.kind] || "নিয়মিত ক্লাস",
+  kind: KEY_TO_KIND[k.kind] || "Regular Class",
   teacherId: k.teacher,
   studentIds: k.students || [],
   studentNames: k.student_names || [],
@@ -1374,7 +1374,7 @@ const adaptClass = (k) => ({
 
    ⚠️ কেন একটিমাত্র জায়গায়: আগে জয়েন ও রিজয়েনের শর্ত দুই জায়গায় আলাদা
    করে লেখা ছিল, আর দুটোই ছিল হুবহু এক — তাই উস্তাদ জয়েন করার পরেও
-   "🎥 জুমে জয়েন করুন" থেকে যেত, আর জয়েন ও রিজয়েন পাশাপাশি দেখা যেত।
+   "🎥 Join Zoom" থেকে যেত, আর জয়েন ও রিজয়েন পাশাপাশি দেখা যেত।
    কোনটা চাপবেন তা বোঝার উপায় ছিল না। নিয়মটা এক জায়গায় থাকলে দুটো আর
    কখনো আলাদা পথে চলে যেতে পারে না।
 
@@ -1435,7 +1435,7 @@ const adaptRoutine = (r) => ({
   dur: r.duration_min,
   zoom: r.zoom_link,
   zoom2: r.zoom_link_2 || "",
-  kind: "নিয়মিত ক্লাস",
+  kind: "Regular Class",
   // প্রতি স্টুডেন্ট আলাদাভাবে ম্যানুয়ালি বসানো তাদের নিজের সময়ের বার+সময়
   // (কোনো স্বয়ংক্রিয় টাইমজোন-হিসাব নয়) — না থাকলে রুটিনের মূল বার-সময়ই প্রযোজ্য
   studentSchedule: Object.fromEntries(
@@ -1587,7 +1587,7 @@ function InstallBanner({ lang }) {
           </div>
           <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
             {T(
-              'নিচের শেয়ার বাটনে (□↑) ট্যাপ করুন, তারপর "Add to Home Screen" চাপুন',
+              'Tap the Share button (□↑) below, then select "Add to Home Screen"',
               'Tap the Share button (□↑) below, then tap "Add to Home Screen"',
             )}
           </div>
@@ -1632,34 +1632,34 @@ const loginErrorText = (e, T) => {
   if (s === 429)
     // নিরাপত্তার জন্য মিনিটে সর্বোচ্চ ২০ বার চেষ্টার সীমা — সার্ভার-ডাউন নয়
     return T(
-      "অনেকবার চেষ্টা হয়েছে — নিরাপত্তার জন্য সাময়িকভাবে আটকানো হয়েছে। ১ মিনিট অপেক্ষা করে আবার চেষ্টা করুন।",
+      "Too many attempts — temporarily blocked for security. Wait 1 minute then try again.",
       "Too many attempts — temporarily blocked for security. Please wait 1 minute and try again.",
     );
   if (s === 502 || s === 503 || s === 504)
     // নতুন কোড বসানোর পর সার্ভার চালু হতে কয়েক মিনিট লাগে
     return T(
-      "সার্ভার এখন চালু হচ্ছে — ১-২ মিনিট পর আবার চেষ্টা করুন।",
+      "Server is starting up — please try again in 1–2 minutes.",
       "The server is starting up — please try again in a minute or two.",
     );
   if (s >= 500)
     return T(
-      `সার্ভারে সমস্যা হয়েছে (${s})। একটু পরে আবার চেষ্টা করুন — না সারলে জানাবেন।`,
+      `Server error (${s}). Please try again later — contact us if it persists.`,
       `Server error (${s}). Please try again shortly.`,
     );
   if (s === 403)
     return T(
-      "এই অ্যাকাউন্টে ঢোকার অনুমতি নেই।",
+      "Access to this account is not permitted.",
       "This account is not allowed to sign in.",
     );
   if (s)
     // অচেনা কোড — নম্বরটা দেখিয়ে দিই, নইলে খোঁজার কোনো সূত্রই থাকে না
-    return `${e?.message || T("লগইন করা গেল না", "Could not sign in")} (${s})`;
+    return `${e?.message || T("Could not sign in", "Could not sign in")} (${s})`;
 
   // ── উত্তরই আসেনি ──
   try {
     if (navigator.onLine === false)
       return T(
-        "ইন্টারনেট সংযোগ নেই — সংযোগ দেখে আবার চেষ্টা করুন।",
+        "No internet connection — check your connection and try again.",
         "No internet connection — please check and try again.",
       );
   } catch {
@@ -1667,11 +1667,11 @@ const loginErrorText = (e, T) => {
   }
   if (e?.name === "AbortError" || /abort/i.test(e?.message || ""))
     return T(
-      "সার্ভার সময়মতো সাড়া দিচ্ছে না — সংযোগ ধীর, বা সার্ভার ঘুম থেকে উঠছে। আবার চেষ্টা করুন।",
+      "Server not responding — connection is slow or the server is waking up. Please try again.",
       "The server is not responding in time — slow connection, or the server is waking up. Please try again.",
     );
   return T(
-    "সার্ভারে পৌঁছানো যাচ্ছে না — ইন্টারনেট দেখুন। ঠিক থাকলে সার্ভার সাময়িকভাবে বন্ধ, একটু পরে আবার চেষ্টা করুন।",
+    "Cannot reach the server — check your internet. If it's fine, the server may be temporarily down. Please try again shortly.",
     "Cannot reach the server — check your internet. If that is fine, the server is temporarily down; please try again shortly.",
   );
 };
@@ -1681,34 +1681,34 @@ function Login({ onLogin }) {
   const ROLES = [
     {
       key: "director",
-      label: "পরিচালক / Director",
+      label: "Director",
       icon: "👑",
-      desc: "সার্বিক তত্ত্বাবধান — ফি, বেতন, রিপোর্ট ও সকল ক্ষমতা",
+      desc: "Full oversight — fees, salaries, reports and all permissions",
       tint: "rgba(124,58,237,.10)",
       cardTitle: "Director",
       cardDesc: "Full control — fees, salaries, reports and all settings",
     },
     {
       key: "admin",
-      label: "এডমিন / Admin",
+      label: "Admin",
       icon: "🛡️",
-      desc: "শিক্ষার্থী, উস্তাদ, ক্লাস ও পেমেন্ট ব্যবস্থাপনা",
+      desc: "Manage students, teachers, classes and payments",
       tint: "rgba(99,102,241,.10)",
       cardTitle: "Admin",
       cardDesc: "Full access — manage students, teachers, schedules and payments",
     },
     {
       key: "teacher",
-      label: "উস্তাদ/উস্তাদা / Teacher",
+      label: "Ustadh / Ustadha",
       icon: "📖",
-      desc: "ক্লাস, হাজিরা, পড়ানো ও শিক্ষার্থীর অগ্রগতি",
+      desc: "Classes, attendance, teaching and student progress",
       tint: "rgba(26,92,58,.10)",
       cardTitle: "Ustadh / Ustadha",
       cardDesc: "View your schedule, student progress and lesson notes",
     },
     {
       key: "student",
-      label: "স্টুডেন্ট / Student",
+      label: "Student",
       icon: "🎓",
       desc: "Routine, classes, exams & fee status",
       tint: "rgba(201,150,42,.10)",
@@ -1749,7 +1749,7 @@ function Login({ onLogin }) {
     try {
       const me = await login(q, pw);
       // নিরাপত্তা: বাছাই করা স্ক্রিনের ভূমিকা (role) আর অ্যাকাউন্টের প্রকৃত
-      // ভূমিকা না মিললে লগইন বাতিল করি — নইলে "স্টুডেন্ট" স্ক্রিন থেকেই
+      // ভূমিকা না মিললে লগইন বাতিল করি — নইলে "Student" স্ক্রিন থেকেই
       // পরিচালকের আইডি-পাসওয়ার্ড দিয়ে পরিচালক পোর্টালে ঢুকে যাওয়া সম্ভব হতো
       // (এবং উল্টোটাও) যা নিরাপত্তার জন্য বিপজ্জনক
       if (me.role !== role) {
@@ -1829,7 +1829,7 @@ function Login({ onLogin }) {
             >
               <img
                 src="/brand/logo-green.png"
-                alt="তারবিয়াতুল কুরআন একাডেমি"
+                alt="Tarbiyatul Quran Academy"
                 style={{
                   width: "100%",
                   height: "100%",
@@ -2063,7 +2063,7 @@ function Login({ onLogin }) {
                   </div>
                 </div>
               </div>
-              <label style={S.label}>{T("আইডি", "ID")}</label>
+              <label style={S.label}>{T("ID", "ID")}</label>
               <input
                 style={{ ...S.input, width: "100%", boxSizing: "border-box" }}
                 value={u}
@@ -2075,7 +2075,7 @@ function Login({ onLogin }) {
                 autoFocus
               />
               <div style={{ height: 12 }} />
-              <label style={S.label}>{T("পাসওয়ার্ড", "Password")}</label>
+              <label style={S.label}>{T("Password", "Password")}</label>
               <div style={{ position: "relative" }}>
                 <input
                   style={{
@@ -2093,11 +2093,11 @@ function Login({ onLogin }) {
                 <button
                   onClick={() => setShowPass((s) => !s)}
                   title={T(
-                    showPass ? "পাসওয়ার্ড লুকান" : "পাসওয়ার্ড দেখুন",
+                    showPass ? "Hide password" : "Show password",
                     showPass ? "Hide password" : "Show password",
                   )}
                   aria-label={T(
-                    showPass ? "পাসওয়ার্ড লুকান" : "পাসওয়ার্ড দেখুন",
+                    showPass ? "Hide password" : "Show password",
                     showPass ? "Hide password" : "Show password",
                   )}
                   style={{
@@ -2153,7 +2153,7 @@ const urlBase64ToUint8Array = (base64) => {
 // পুশ-সাবস্ক্রিপশন ব্যাকএন্ডে সেভ, সব এক ফাংশনে
 async function enablePushNotifications(silent = false) {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    if (!silent) notice("এই ব্রাউজারে পুশ নোটিফিকেশন সাপোর্ট নেই।");
+    if (!silent) notice("Push notifications are not supported in this browser.");
     return false;
   }
   try {
@@ -2163,7 +2163,7 @@ async function enablePushNotifications(silent = false) {
     // ফেরত দেয় — তাই silent মোডে এটা নিরাপদে ডাকা যায়, ব্যবহারকারীর ক্লিক ছাড়াই
     const perm = await Notification.requestPermission();
     if (perm !== "granted") {
-      if (!silent) notice("নোটিফিকেশনের অনুমতি দেওয়া হয়নি।");
+      if (!silent) notice("Notification permission was not granted.");
       return false;
     }
     const { key } = await api.vapidPublicKey();
@@ -2181,10 +2181,10 @@ async function enablePushNotifications(silent = false) {
       p256dh: raw.keys.p256dh,
       auth: raw.keys.auth,
     });
-    if (!silent) notice("✔ এই ডিভাইসে নোটিফিকেশন চালু হয়েছে।");
+    if (!silent) notice("✔ Notifications enabled on this device.");
     return true;
   } catch {
-    if (!silent) notice("নোটিফিকেশন চালু করতে ব্যর্থ — একটু পর আবার চেষ্টা করুন।");
+    if (!silent) notice("Failed to enable notifications — please try again shortly.");
     return false;
   }
 }
@@ -2340,7 +2340,7 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
   // চলাকালীন পোর্টালের অন্য পেইজে এক মিনিটের জন্য গেলেও অন্যপাশে তাঁকে
   // "চলে গেছেন" দেখাত এবং শিক্ষার্থীর মিনিট গণনা থেমে যেত। checkpoint()
   // শুধু মিনিট যোগ করে, উপস্থিতিতে হাত দেয় না — তাই উস্তাদ যেখানেই যান বা
-  // যত নেট সমস্যাই হোক, তাঁর "উপস্থিত" অবস্থা অক্ষুণ্ণ থাকে। একমাত্র
+  // যত নেট সমস্যাই হোক, তাঁর "Present" অবস্থা অক্ষুণ্ণ থাকে। একমাত্র
   // "ক্লাস শেষ করুন" বাটনই (endSegment) leave() ডাকে।
   useEffect(() => {
     return () => {
@@ -2406,7 +2406,7 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
   };
 
   /* ক্লাস সত্যিই শেষ করা — নিছক বেরিয়ে যাওয়া নয়। সার্ভারে জমে থাকা মিনিট
-     হাজিরায় বসে, হাজিরা পাকা হয়, ক্লাসটি "সম্পন্ন" হিসেবে তালিকাবদ্ধ হয়, আর
+     হাজিরায় বসে, হাজিরা পাকা হয়, ক্লাসটি "Completed" হিসেবে তালিকাবদ্ধ হয়, আর
      শিক্ষার্থীর কাছে রিজয়েন লিংক খুলে যায়।
 
      দেরির কারণ ছিল: leave → refreshPresence → loadClasses — তিনটি কল একের পর
@@ -2421,37 +2421,19 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
   const finishClass = () =>
     askConfirm(
       lastPart
-        ? T(
-            "সত্যিই কি ক্লাস শেষ করতে চান?" +
-              "\n\n" +
-              "শেষ করলে আজকের হাজিরা ও ক্লাসের হিসাব চূড়ান্ত হবে এবং ক্লাসটি " +
-              "কর্তৃপক্ষের যাচাইয়ের জন্য জমা পড়বে।" +
-              "\n\n" +
-              "যাচাই না হওয়া পর্যন্ত ক্লাসটি আজকের তালিকাতেই থাকবে। কর্তৃপক্ষ " +
-              "যাচাই শেষে \"সম্পন্ন\" চিহ্নিত করলে তবেই এটি তালিকা থেকে সরবে।",
-            "Do you really want to end the class?" +
-              "\n\n" +
-              "Today's attendance and class record will be finalised, and " +
-              "the class will be submitted for review by the administration." +
-              "\n\n" +
-              "Until it is reviewed, the class stays in today's list. It " +
-              "moves out only after the administration marks it completed.",
-          )
-        : T(
-            "সত্যিই কি ১ম পর্ব শেষ করতে চান?" +
-              "\n\n" +
-              "শেষ করলে কয়েক সেকেন্ডের মধ্যেই শিক্ষার্থীদের পোর্টালে রিজয়েন " +
-              "বাটন চলে যাবে। এরপর আপনি \"🔁 রিজয়েন করুন\" চেপে ২য় পর্ব " +
-              "শুরু করবেন।" +
-              "\n\n" +
-              "এতে ক্লাস শেষ হবে না — ক্লাসটি আজকের তালিকাতেই থাকবে।",
-            "Do you really want to end the first part?" +
-              "\n\n" +
-              "Your students will get the rejoin button within a few " +
-              "seconds. Then press \"🔁 Rejoin\" to start the second part." +
-              "\n\n" +
-              "This does not end the class — it stays in today's list.",
-          ),
+        ? "Do you really want to end the class?" +
+          "\n\n" +
+          "Today's attendance and class record will be finalised, and " +
+          "the class will be submitted for review by the administration." +
+          "\n\n" +
+          "Until it is reviewed, the class stays in today's list. It " +
+          "moves out only after the administration marks it completed."
+        : "Do you really want to end the first part?" +
+          "\n\n" +
+          "Your students will get the rejoin button within a few " +
+          "seconds. Then press \"🔁 Rejoin\" to start the second part." +
+          "\n\n" +
+          "This does not end the class — it stays in today's list.",
       async () => {
         setEnding(true);
         setInMeeting(false);
@@ -2473,25 +2455,13 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
              কোন পর্ব শেষ হলো তা সার্ভারই বলে দেয় (part_finished)। */
           notice(
             res?.part_finished === 1
-              ? T(
-                  "✅ ১ম পর্ব শেষ — এবার \"🔁 রিজয়েন করুন\" চেপে ২য় পর্ব শুরু করুন।",
-                  "✅ First part ended — now press \"🔁 Rejoin\" to start the second part.",
-                )
-              : T(
-                  "✅ ক্লাস শেষ হয়েছে — কর্তৃপক্ষের যাচাইয়ের জন্য জমা হলো।",
-                  "✅ Class ended — submitted for review by the administration.",
-                ),
+              ? "✅ First part ended — now press \"🔁 Rejoin\" to start the second part."
+              : "✅ Class ended — submitted for review by the administration.",
           );
         } catch (e) {
           notice(
-            T(
-              "ক্লাস শেষ করার খবরটা সার্ভারে পৌঁছায়নি — " +
-                (e?.data?.detail || e?.data?.error || e?.message || "") +
-                " আবার চেষ্টা করুন, অথবা পরিচালককে ক্লাসটি \"সম্পন্ন\" " +
-                "চিহ্নিত করতে বলুন।",
-              "Ending the class didn't reach the server — please try again, " +
-                "or ask the director to mark the class as completed.",
-            ),
+            "Ending the class didn't reach the server — please try again, " +
+              "or ask the director to mark the class as completed.",
           );
         }
       },
@@ -2690,7 +2660,7 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
       {!bothIn ? (
         <span style={{ fontWeight: 700, color: C.gold }}>
           {T(
-            `⏳ ${user.role === "teacher" ? "শিক্ষার্থীর" : "উস্তাদের"} জয়েনের অপেক্ষায়…`,
+            `⏳ ${user.role === "teacher" ? "student's" : "Teacher's"} জয়েনের অপেক্ষায়…`,
             `⏳ Waiting for ${user.role === "teacher" ? "student" : "teacher"} to join…`,
           )}
           <button
@@ -2718,7 +2688,7 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
       )}
       {/* উস্তাদের দুটি বাটন — কাজ দুরকম, তাই আলাদা:
             ✅ ক্লাস শেষ করুন → সত্যিকারের সমাপ্তি। নিশ্চিত করার প্রশ্নের পর
-               সার্ভারে হাজিরা ও মিনিট চূড়ান্ত হয়, ক্লাস "সম্পন্ন" হয়, আর
+               সার্ভারে হাজিরা ও মিনিট চূড়ান্ত হয়, ক্লাস "Completed" হয়, আর
                শিক্ষার্থীর কাছে রিজয়েন লিংক খুলে যায়।
             🔄 পুনঃসংযোগ → শুধু নিজে বেরিয়ে যাওয়া (আগে এটাই "ক্লাস শেষ করুন"
                নামে ছিল)। নেট কেটে গেলে বেরিয়ে গিয়ে একই ক্লাসে ফেরার জন্য —
@@ -2763,7 +2733,7 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
           >
             {T(
               "🔄 পুনঃসংযোগ — ক্লাস শেষ হবে না। নেট কেটে গেলে বা বেরিয়ে যেতে " +
-                "হলে এটি চাপুন, পরে একই ক্লাসে আবার জয়েন করতে পারবেন।",
+                "press this, and you can rejoin the same class later.",
               "🔄 Reconnect — this does not end the class. Use it if your " +
                 "connection drops, then rejoin the same class.",
             )}
@@ -2798,14 +2768,14 @@ function AttnMarkModal({ k, nameOf, onClose }) {
   };
   return (
     <Modal
-      title={`✋ ম্যানুয়াল হাজিরা — ${k.courseName || ""}`}
+      title={`✋ Manual Attendance — ${k.courseName || ""}`}
       onClose={onClose}
     >
       <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
-        ২০ মিনিটের কম হলেও পরিচালক এখানে হাজিরা দিতে/সরাতে পারবেন।
+        The director can mark or remove attendance here, even if under 20 minutes.
       </div>
       {list.length === 0 && (
-        <div style={{ color: C.muted }}>এই ক্লাসে কোনো স্টুডেন্ট নেই।</div>
+        <div style={{ color: C.muted }}>There are no students in this class.</div>
       )}
       {list.map((sid, i) => {
         const r = rowFor(sid);
@@ -2828,10 +2798,10 @@ function AttnMarkModal({ k, nameOf, onClose }) {
               {(k.studentNames && k.studentNames[i]) || nameOf(sid)}
             </span>
             <span style={{ fontSize: 12, color: C.muted }}>
-              {bn(r?.minutes || 0)} মি
+              {r?.minutes || 0} min
             </span>
             {present ? (
-              <Tag>হাজির ✔</Tag>
+              <Tag>Present ✔</Tag>
             ) : (
               <Tag color={C.muted} bg="#fff">
                 অনুপস্থিত
@@ -2842,7 +2812,7 @@ function AttnMarkModal({ k, nameOf, onClose }) {
               kind={present ? "danger" : "primary"}
               onClick={() => toggle(sid, !present)}
             >
-              {present ? "সরান" : "হাজিরা দিন"}
+              {present ? "Remove" : "Mark Present"}
             </Btn>
           </div>
         );
@@ -2870,7 +2840,7 @@ function ClassesView({
     lectureNo: 1,
     zoom: "https://zoom.us/j/",
     zoom2: "", // রিজয়েন লিংক (ঐচ্ছিক) — উস্তাদ+স্টুডেন্ট ১ম লিংকে একবার জয়েন করার পর এই লিংকেই আবার জয়েন হবে
-    kind: "মেকআপ ক্লাস",
+    kind: "Makeup Class",
     teacherId: courses[0]?.teacherId,
     studentIds: [],
     req: "",
@@ -2893,9 +2863,9 @@ function ClassesView({
       setApiClasses(null);
       // ব্যর্থ হলে কারণটা জানিয়ে দিই — নইলে শুধু ফাঁকা তালিকা দেখে মনে হতো
       // "কোনো ক্লাস নেই", অথচ আসলে সার্ভার থেকে আনাই যায়নি
-      setLoadError(e?.data?.error || e?.message || "সার্ভার থেকে ক্লাস আনা যায়নি");
+      setLoadError(e?.data?.error || e?.message || "Could not load classes from server");
     } finally {
-      // ব্যর্থ হলেও লোডিং শেষ — নইলে "লোড হচ্ছে" চিরকাল আটকে থাকত
+      // ব্যর্থ হলেও লোডিং শেষ — নইলে "Loading" চিরকাল আটকে থাকত
       setClassesLoading(false);
     }
   };
@@ -2940,7 +2910,7 @@ function ClassesView({
       if (c.teacherId != null && !m.has(String(c.teacherId)))
         m.set(String(c.teacherId), {
           id: c.teacherId,
-          name: c.teacherName || "উস্তাদ",
+          name: c.teacherName || "Teacher",
           sub: "",
         });
     });
@@ -2954,7 +2924,7 @@ function ClassesView({
     ).name || "—";
   // ব্যাকএন্ড আগেই রোল অনুযায়ী ফিল্টার করে দেয়; লোড হওয়ার আগে খালি (লোডার দেখায়)
   // ⚠️ আগে এটা `apiClasses === null` থেকে হিসাব হতো — কিন্তু লোড ব্যর্থ হলেও
-  // apiClasses null-ই থাকে, তাই "লোড হচ্ছে" কখনো শেষ হতো না (উস্তাদের পোর্টালে
+  // apiClasses null-ই থাকে, তাই "Loading" কখনো শেষ হতো না (উস্তাদের পোর্টালে
   // চিরকাল ঘুরত)। এখন আলাদা স্টেট — ব্যর্থ হোক বা সফল, একবার শেষ মানে শেষ।
   const mine = (apiClasses || []).sort((a, b) =>
     (a.date + a.time).localeCompare(b.date + b.time),
@@ -2999,8 +2969,8 @@ function ClassesView({
       await loadClasses();
     } catch (e) {
       notice(
-        "রিজয়েন চালু করতে ব্যর্থ — শিক্ষার্থীরা এখনো ১ম লিংকই দেখছেন। " +
-          (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+        "Could not enable rejoin — students are still seeing the 1st link." +
+          (e?.data?.error || e?.message || "Please try again"),
       );
     }
   };
@@ -3017,23 +2987,23 @@ function ClassesView({
       /* নিচে জানিয়ে দিচ্ছি */
     }
     if (!win) {
-      notice("ব্রাউজার নতুন ট্যাব খুলতে দেয়নি — জুম লিংকটি নিজে খুলে নিন: " + link);
+      notice("Your browser blocked the new tab — please open the Zoom link yourself:" + link);
     }
   };
   const HOST_CHECK =
-    "জুম খোলার আগে একটু নিশ্চিত হয়ে নিন — আপনার ডিভাইসের জুম অ্যাপে এই ক্লাসের " +
-    "নির্ধারিত হোস্ট অ্যাকাউন্টেই সাইন-ইন করা আছে তো? অন্য কোনো অ্যাকাউন্টে সুইচ " +
-    "করা থাকলে আপনি হোস্ট হিসেবে ঢুকতে পারবেন না এবং শিক্ষার্থীরা অপেক্ষায় থেকে যাবে।";
+    "Please check before opening Zoom — in the Zoom app on your device, is this class's" +
+    "designated host account signed in? If you have switched to another account" +
+    "if so, you won't be able to join as host and the students will be left waiting.";
   const confirmJoin = (k) =>
-    askConfirm(HOST_CHECK + "\n\nসব ঠিক থাকলে জুম খুলে দিচ্ছি।", () => {
+    askConfirm(HOST_CHECK + "\n\nIf everything is fine, I'll open Zoom.", () => {
       openZoomLink(k.zoom);
       join(k);
     });
   const confirmRejoin = (k) =>
     askConfirm(
       HOST_CHECK +
-        "\n\nসব ঠিক থাকলে ২য় জুম খুলে দিচ্ছি। এরপর শিক্ষার্থীদের পোর্টাল " +
-        "থেকে ১ম জয়েন বাটন সরে গিয়ে রিজয়েন বাটন চলে আসবে।",
+        "\n\nIf everything is fine, I'll open the 2nd Zoom. After that, the students' portal" +
+        "the 1st join button will be replaced by the rejoin button.",
       () => {
         openZoomLink(k.zoom2 || k.zoom);
         openRejoinFor(k);
@@ -3056,15 +3026,15 @@ function ClassesView({
      অক্ষত থাকে। পর্যবেক্ষণ যেন ক্লাসের রেকর্ড বদলে না দেয়। */
   const watchClass = (link) =>
     askConfirm(
-      "ক্লাসটি দেখার জন্য জুম খুলছি।" +
+      "Opening Zoom to view the class." +
         "\n\n" +
-        "আপনার জুম অ্যাপ যদি এই ক্লাসের হোস্ট অ্যাকাউন্টে সাইন-ইন করা থাকে, " +
-        "তাহলে আপনি ঢুকলে উস্তাদের হোস্ট নিয়ন্ত্রণ চলে যেতে পারে — সেক্ষেত্রে " +
-        "অন্য অ্যাকাউন্টে বা অতিথি হিসেবে ঢুকুন।" +
+        "If your Zoom app is signed in to this class's host account," +
+        "then your joining may take host control away from the teacher — in that case" +
+        "sign in with another account or as a guest." +
         "\n\n" +
-        "নিশ্চিন্ত থাকুন — এতে কারও হাজিরা বা ক্লাসের কোনো হিসাবে প্রভাব পড়বে না।",
+        "Rest assured — this does not affect anyone's attendance or class records.",
       () => openZoomLink(link),
-      { yes: "ঠিক আছে, জুম খুলুন", no: "থাক" },
+      { yes: "OK, open Zoom", no: "Cancel" },
     );
   // এডমিন/পরিচালক → আজকের ক্লাসের টিচার ও শিক্ষার্থী উভয়কে জয়েন-করার রিমাইন্ডার
   // WhatsApp (ইংরেজি, ইসলামিক টোন) — একই বাটনে একসাথে দুজনকেই পাঠানো হয়
@@ -3080,7 +3050,7 @@ function ClassesView({
       ...studentTargets,
     ];
     if (!targets.length)
-      return notice("এই ক্লাসের টিচার/শিক্ষার্থীর কোনো ফোন নম্বর পাওয়া যায়নি।");
+      return notice("No phone number found for this class's teacher/student.");
     const courseName = c.name || k.courseName || "your class";
     targets.forEach((p, i) => {
       const text =
@@ -3109,7 +3079,7 @@ function ClassesView({
     // (কে কে জয়েন করেছেন) শুধু পেজ-লোডে একবার আসত, ক্লাস চলাকালীন ব্যাকএন্ডে
     // দুজনের হাজিরা নিশ্চিত হলেও এখানে পুরনো (খালি) ডেটাই থেকে যেত। ফলে
     // বের হওয়ার পর "দুজনেই জয়েন করেছেন" বোঝা যেত না, আর "🔁 রিজয়েন করুন"-এর
-    // বদলে আবার "🎥 জুমে জয়েন করুন" দেখাত
+    // বদলে আবার "🎥 Join Zoom" দেখাত
     /* ⚠️ আগে এই loadClasses()-এর জন্য await করা হতো, ফলে ধীর নেটে বাটন চাপার
        পরেও কয়েক সেকেন্ড প্যানেলটা খোলা থেকে যেত — ব্যবহারকারীর মনে হতো কিছুই
        হয়নি। এখন প্যানেল আগে বন্ধ হয়, তালিকা পেছনে হালনাগাদ হয়ে নিজে থেকেই
@@ -3135,11 +3105,11 @@ function ClassesView({
         stars,
         comment,
       });
-      notice("✔ রেটিং জমা হয়েছে, ধন্যবাদ।");
+      notice("✔ Rating submitted, thank you.");
     } catch (e) {
       notice(
-        "রেটিং জমা দিতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not submit rating —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
       return;
     }
@@ -3152,23 +3122,23 @@ function ClassesView({
         await loadClasses();
       } catch (e) {
         notice(
-          "ক্লাস মুছতে ব্যর্থ — " +
-            (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+          "Could not delete class —" +
+            (e?.data?.error || e?.message || "Please check your server connection and try again"),
         );
       }
       return;
     }
     setDb((d) => ({ ...d, classes: d.classes.filter((k) => k.id !== id) }));
   };
-  // পরিচালক/এডমিন আজকের ও বিগত ক্লাসকে "সম্পন্ন" চিহ্নিত করতে পারবেন (ভবিষ্যতের
-  // "আসন্ন" ক্লাস নয়) — আজকের ক্লাস "সম্পন্ন" করলে তা "আজকের ক্লাস" তালিকা থেকে
+  // পরিচালক/এডমিন আজকের ও বিগত ক্লাসকে "Completed" চিহ্নিত করতে পারবেন (ভবিষ্যতের
+  // "আসন্ন" ক্লাস নয়) — আজকের ক্লাস "Completed" করলে তা "আজকের ক্লাস" তালিকা থেকে
   // সরে "বিগত"-এ চলে যাবে (today ফিল্টার status!=="done")
   const setStatus = async (k, status) => {
     try {
       await api.editClass(k.id, { status });
       await loadClasses();
     } catch (e) {
-      notice("আপডেট ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+      notice("Update failed —" + (e?.data?.error || e?.message || "Verify"));
     }
   };
   // অটো জয়েন/রিজয়েন-নির্ধারণ (দুজনের হাজিরার ওপর ভিত্তি করে) কোনো কারণে ঠিক
@@ -3179,18 +3149,18 @@ function ClassesView({
       await api.setClassJoinMode(k.id, mode);
       await loadClasses();
     } catch (e) {
-      notice("ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+      notice("Failed —" + (e?.data?.error || e?.message || "Verify"));
     }
   };
   const postponeOne = (k) => {
     askConfirm(
-      "ক্লাসটি স্থগিত করবেন? উস্তাদ, স্টুডেন্ট সবার পোর্টালে সাথে সাথে আপডেট হবে।",
+      "Postpone this class? It will update immediately in the teacher's and students' portals.",
       async () => {
         try {
           await api.postponeClass(k.id);
           await loadClasses();
         } catch (e) {
-          notice("ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+          notice("Failed —" + (e?.data?.error || e?.message || "Verify"));
         }
       },
     );
@@ -3208,13 +3178,13 @@ function ClassesView({
         setF(blankSched());
         notice(
           editId
-            ? "✔ ক্লাস আপডেট হয়েছে"
-            : "✔ ক্লাস শিডিউল হয়েছে — সময় হলে পোর্টালে জয়েন অপশন আসবে",
+            ? "✔ Class updated"
+            : "✔ Class scheduled — the join option will appear in the portal at the scheduled time",
         );
       } catch (e) {
         notice(
-          "ক্লাস সেভ করতে ব্যর্থ — " +
-            (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+          "Could not save class —" +
+            (e?.data?.error || e?.message || "Please check your server connection and try again"),
         );
       }
       return;
@@ -3261,7 +3231,7 @@ function ClassesView({
           {
             id: uid(),
             for: [f.teacherId, ...students, "admin1", "dir1"],
-            text: `${f.kind !== "নিয়মিত ক্লাস" ? `[${f.kind}] ` : ""}${fmtDate(f.date)} ${f.time} — ${c.name} ক্লাস নির্ধারিত হয়েছে (উস্তাদ: ${userById(f.teacherId).name})। শিক্ষার্থী: ${students.map((s) => userById(s).name).join(", ")}। সময় হলে ড্যাশবোর্ড থেকে জয়েন করুন।`,
+            text: `${f.kind !== "Regular Class" ? `[${f.kind}] ` : ""}${fmtDate(f.date)} ${f.time} — ${c.name} class has been scheduled (Teacher: ${userById(f.teacherId).name}). Students: ${students.map((s) => userById(s).name).join(", ")}. Join from the dashboard at the scheduled time.`,
             date: todayISO(),
             read: false,
           },
@@ -3280,9 +3250,9 @@ function ClassesView({
       // অপ্রাসঙ্গিক স্টুডেন্ট ক্লাসে ঢুকে যাওয়ার কারণ ছিল এটাই; এখন স্পষ্ট
       // নিশ্চিতকরণ ছাড়া এগোবে না
       const whole = c.studentIds || [];
-      const names = whole.map((sid) => nameOf(sid)).join(", ") || "কেউ নেই";
+      const names = whole.map((sid) => nameOf(sid)).join(", ") || "Nobody";
       askConfirm(
-        `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "এই কোর্সের"}" কোর্সে ভর্তি সবাই (${names}) এই ক্লাসে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
+        `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "of this course"}" কোর্সে ভর্তি সবাই (${names}) এই ক্লাসে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
         () => saveClass(whole),
       );
       return;
@@ -3299,7 +3269,7 @@ function ClassesView({
       lectureNo: k.lectureNo,
       zoom: k.zoom,
       zoom2: k.zoom2 || "",
-      kind: k.kind || "নিয়মিত ক্লাস",
+      kind: k.kind || "Regular Class",
       teacherId: k.teacherId || courseById(courses, k.courseId).teacherId,
       studentIds: k.studentIds || [],
       req: k.req || "",
@@ -3351,7 +3321,7 @@ function ClassesView({
     // বিগত দিনের ক্লাসেও ভুলভাবে "🔴 ক্লাস চলছে" দেখাত
     const effTeacherId = k.teacherId ?? c.teacherId;
     const withinClassWindow = (() => {
-      // "সম্পন্ন" বা "স্থগিত" চিহ্নিত ক্লাসে কখনোই "চলছে" দেখাবে না — এডমিন
+      // "Completed" বা "Postponed" চিহ্নিত ক্লাসে কখনোই "চলছে" দেখাবে না — এডমিন
       // সম্পন্ন করে দেওয়া মানেই ক্লাস শেষ, কেউ "ক্লাস শেষ করুন" চাপুক বা না চাপুক
       // উস্তাদ শেষ করে দিলে আর "চলছে" নয় — যাচাই বাকি থাকলেও নয়
       if (!isToday || k.status !== "upcoming" || k.teacherFinished) return false;
@@ -3419,14 +3389,14 @@ function ClassesView({
             <span style={{ color: C.muted, fontWeight: 600, fontSize: 12.5 }}>
               · {T(`লেকচার ${bn(k.lectureNo)}`, `Lecture ${k.lectureNo}`)}
             </span>{" "}
-            {k.kind && k.kind !== "নিয়মিত ক্লাস" && (
+            {k.kind && k.kind !== "Regular Class" && (
               <Tag color={C.red} bg={C.redBg}>
                 {k.kind}
               </Tag>
             )}
           </div>
           <div style={{ fontSize: 12.5, color: C.muted }}>
-            {lec?.title} · {T("উস্তাদ", "Teacher")}:{" "}
+            {lec?.title} · {T("Teacher", "Teacher")}:{" "}
             {k.teacherName || nameOf(k.teacherId || c.teacherId)}
           </div>
           {user.role !== "student" && (
@@ -3477,11 +3447,11 @@ function ClassesView({
                 display: "inline-block",
               }}
             >
-              🔴 ক্লাস চলছে — {teacherLive ? "উস্তাদ আছেন" : "উস্তাদ নেই"}
+              🔴 ক্লাস চলছে — {teacherLive ? "Teacher is in" : "No teacher"}
               {" · "}
               {liveStudentCount > 0
                 ? `${bn(liveStudentCount)} জন স্টুডেন্ট আছে`
-                : "স্টুডেন্ট নেই"}
+                : "No students"}
             </div>
           )}
           {isJoined && (
@@ -3522,7 +3492,7 @@ function ClassesView({
                 style={{ background: C.red, color: "#fff" }}
                 onClick={() => confirmJoin(k)}
               >
-                {T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}
+                {T("🎥 Join Zoom", "🎥 Join Zoom")}
               </Btn>
             )}
           {stillJoinable && k.status !== "postponed" && !isTeacherOf &&
@@ -3535,7 +3505,7 @@ function ClassesView({
                 style={{ textDecoration: "none" }}
               >
                 <Btn style={{ background: C.red, color: "#fff" }}>
-                  {T("🎥 জুমে জয়েন করুন", "🎥 Join Zoom")}
+                  {T("🎥 Join Zoom", "🎥 Join Zoom")}
                 </Btn>
               </a>
             )}
@@ -3606,7 +3576,7 @@ function ClassesView({
             )}
           {/* ট্রায়াল ক্লাসের উস্তাদ এখান থেকেই মূল্যায়ন লিখতে পারেন —
               তাঁর আলাদা কোনো পর্দা নেই, তাই ক্লাসের পাশেই */}
-          {k.kind === "ট্রায়াল ক্লাস" &&
+          {k.kind === "Trial Class" &&
             isTeacherOf &&
             (kStudents || []).length > 0 && (
               <Btn
@@ -3615,7 +3585,7 @@ function ClassesView({
                 onClick={() =>
                   setTrialReportFor({
                     id: kStudents[0],
-                    name: (k.studentNames || [])[0] || "ট্রায়াল অতিথি",
+                    name: (k.studentNames || [])[0] || "Trial guest",
                     trial_course: k.courseId,
                   })
                 }
@@ -3677,7 +3647,7 @@ function ClassesView({
           )}
           {isDir(user) && (
             <Btn sm kind="danger" onClick={() => delClass(k.id)}>
-              মুছুন
+              Delete
             </Btn>
           )}
           {k.status === "upcoming" && isAdm(user) && (
@@ -3698,7 +3668,7 @@ function ClassesView({
             </Tag>
           )}
           {(() => {
-            // আজকের ক্লাস এডমিন/পরিচালক কেউ "সম্পন্ন" চিহ্নিত না করলে সময় পার হয়ে
+            // আজকের ক্লাস এডমিন/পরিচালক কেউ "Completed" চিহ্নিত না করলে সময় পার হয়ে
             // "বিগত"-এ চলে যাওয়ার পরও status="upcoming"-ই থেকে যায় — তখন সেটাকে
             // "আসন্ন" (যা এখন আর সত্যি না) না বলে "অসম্পন্ন" দেখানো হচ্ছে
             // ⚠️ উস্তাদ শেষ করে দিলে সেটা "অসম্পন্ন" নয় — শুধু কর্তৃপক্ষের
@@ -3708,7 +3678,7 @@ function ClassesView({
               k.status === "upcoming" && k.date < todayISO() && !k.teacherFinished;
             // উস্তাদ শেষ করেছেন, কর্তৃপক্ষের যাচাই এখনো বাকি
             const awaitingReview = k.teacherFinished && k.status !== "done";
-            // আজকের ক্লাস "সম্পন্ন" চিহ্নিত করা এডমিন+পরিচালক দুজনেই পারবেন, কিন্তু
+            // আজকের ক্লাস "Completed" চিহ্নিত করা এডমিন+পরিচালক দুজনেই পারবেন, কিন্তু
             // বিগত (পুরনো) ক্লাসের স্ট্যাটাস সংশোধন কেবল পরিচালকের এখতিয়ার
             const canEditStatus = k.date === todayISO() ? isAdm(user) : isDir(user);
             if (!joinable && k.date <= todayISO() && canEditStatus && k.status !== "postponed") {
@@ -3717,7 +3687,7 @@ function ClassesView({
                   style={{ ...S.input, width: "auto", padding: "6px 10px", fontSize: 12.5 }}
                   /* উস্তাদ শেষ করেছেন অথচ যাচাই বাকি — এটা কোনো স্ট্যাটাস নয়,
                      তাই দেখানোর জন্য আলাদা একটি মান। এখান থেকে দুই দিকেই যাওয়া
-                     যায়: "সম্পন্ন" (যাচাই শেষ) অথবা "আবার চালু" (ভুলে শেষ হয়ে
+                     যায়: "Completed" (যাচাই শেষ) অথবা "আবার চালু" (ভুলে শেষ হয়ে
                      গেলে ফেরার পথ — সার্ভারে যাচাই-বাকি অবস্থাটাও মুছে যায়)। */
                   value={awaitingReview ? "review" : k.status}
                   onChange={(e) => setStatus(k, e.target.value)}
@@ -3734,14 +3704,14 @@ function ClassesView({
                         ? T("অসম্পন্ন", "Incomplete")
                         : T("আসন্ন", "Upcoming")}
                   </option>
-                  <option value="done">{T("সম্পন্ন", "Done")}</option>
+                  <option value="done">{T("Completed", "Done")}</option>
                 </select>
               );
             }
             // উস্তাদ শেষ করেছেন অথচ যাচাই বাকি — এই অবস্থায় উপরে
             // "✅ ক্লাস সম্পন্ন — যাচাই বাকি" ট্যাগটাই আছে, তাই এখানে আবার
             // একই কথা লেখা হয় না। কিন্তু যাচাই হয়ে গেলে ওই ট্যাগটা সরে যায়,
-            // তখন এখানে "সম্পন্ন" দেখাতেই হবে — নইলে কোনো চিহ্নই থাকত না।
+            // তখন এখানে "Completed" দেখাতেই হবে — নইলে কোনো চিহ্নই থাকত না।
             if (!joinable && k.status !== "postponed" && !awaitingReview) {
               return (
                 <Tag
@@ -3749,7 +3719,7 @@ function ClassesView({
                   bg={k.status === "done" ? C.greenBg : incomplete ? C.redBg : C.blueBg}
                 >
                   {k.status === "done"
-                    ? T("সম্পন্ন", "Done")
+                    ? T("Completed", "Done")
                     : incomplete
                       ? T("অসম্পন্ন", "Incomplete")
                       : T("আসন্ন", "Upcoming")}
@@ -3791,7 +3761,7 @@ function ClassesView({
         >
           <span style={{ flex: 1, minWidth: 200 }}>
             {T(
-              `⚠️ ক্লাসের তালিকা আনা যায়নি — ${loadError}। নিচে কিছু না দেখালে সেটা "ক্লাস নেই" নয়।`,
+              `⚠️ ক্লাসের তালিকা আনা যায়নি — ${loadError}। নিচে কিছু না দেখালে সেটা "No classes" নয়।`,
               `⚠️ Couldn't load your classes — ${loadError}. An empty list below does not mean "no classes".`,
             )}
           </span>
@@ -3815,7 +3785,7 @@ function ClassesView({
         )}
         action={
           isAdm(user) && (
-            <Btn onClick={() => setShow(true)}>+ ক্লাস শিডিউল</Btn>
+            <Btn onClick={() => setShow(true)}>+ Schedule class</Btn>
           )
         }
       >
@@ -3834,7 +3804,7 @@ function ClassesView({
       >
         <div style={{ display: "grid", gap: 10 }}>
           {classesLoading ? (
-            <Loader text={T("লোড হচ্ছে", "Loading")} />
+            <Loader text={T("Loading", "Loading")} />
           ) : upcoming.length === 0 ? (
             <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
               {T("কিছু নেই", "Nothing yet")}
@@ -3872,7 +3842,7 @@ function ClassesView({
       {show && (
         <Modal
           title={
-            editId ? "✏️ ক্লাস শিডিউল এডিট করুন" : "নতুন ক্লাস শিডিউল করুন"
+            editId ? "✏️ Edit class schedule" : "Schedule a new class"
           }
           onClose={() => {
             setShow(false);
@@ -3899,7 +3869,7 @@ function ClassesView({
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
           >
             <div>
-              <label style={S.label}>ক্লাসের ধরন</label>
+              <label style={S.label}>Class type</label>
               <select
                 style={S.input}
                 value={f.kind}
@@ -3911,7 +3881,7 @@ function ClassesView({
               </select>
             </div>
             <div>
-              <label style={S.label}>কোর্স</label>
+              <label style={S.label}>Course</label>
               <select
                 style={S.input}
                 value={f.courseId}
@@ -3933,7 +3903,7 @@ function ClassesView({
             </div>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>উস্তাদ/উস্তাদা — কার কাছে পড়বে</label>
+            <label style={S.label}>Teacher — who they study with</label>
             <select
               style={S.input}
               value={f.teacherId || ""}
@@ -3973,7 +3943,7 @@ function ClassesView({
             }}
           >
             <div>
-              <label style={S.label}>তারিখ</label>
+              <label style={S.label}>Date</label>
               <input
                 type="date"
                 style={S.input}
@@ -3982,7 +3952,7 @@ function ClassesView({
               />
             </div>
             <div>
-              <label style={S.label}>সময়</label>
+              <label style={S.label}>Time</label>
               <input
                 type="time"
                 style={S.input}
@@ -3991,7 +3961,7 @@ function ClassesView({
               />
             </div>
             <div>
-              <label style={S.label}>সময়কাল (মিনিট)</label>
+              <label style={S.label}>Duration (minutes)</label>
               <input
                 type="number"
                 style={S.input}
@@ -4000,7 +3970,7 @@ function ClassesView({
               />
             </div>
             <div>
-              <label style={S.label}>লেকচার নং</label>
+              <label style={S.label}>Lecture no.</label>
               <input
                 type="number"
                 min="1"
@@ -4011,7 +3981,7 @@ function ClassesView({
             </div>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>১ম জুম লিংক</label>
+            <label style={S.label}>1st Zoom link</label>
             <input
               style={S.input}
               value={f.zoom}
@@ -4019,29 +3989,29 @@ function ClassesView({
             />
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>২য় জুম লিংক (রিজয়েন — ঐচ্ছিক)</label>
+            <label style={S.label}>2nd Zoom link (rejoin — optional)</label>
             <input
               style={S.input}
               value={f.zoom2}
               onChange={(e) => setF({ ...f, zoom2: e.target.value })}
-              placeholder="উস্তাদ+স্টুডেন্ট ১ম লিংকে একবার জয়েন করার পর, আবার জয়েন করতে চাইলে এই লিংক ব্যবহার হবে"
+              placeholder="Once the teacher and student have joined via the 1st link, this link is used to rejoin"
             />
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>অভিভাবকের রিকোয়ারমেন্ট (ঐচ্ছিক)</label>
+            <label style={S.label}>Guardian's requirements (optional)</label>
             <textarea
               rows={2}
               style={{ ...S.input, resize: "vertical" }}
               value={f.req}
               onChange={(e) => setF({ ...f, req: e.target.value })}
-              placeholder="যেমন: তিলাওয়াতের ভুলগুলোতে বেশি জোর দেবেন, লন্ডন সময় সন্ধ্যার পর..."
+              placeholder="e.g. Focus more on recitation mistakes, after evening London time..."
             />
           </div>
           <Btn
             style={{ marginTop: 16, width: "100%", justifyContent: "center" }}
             onClick={addClass}
           >
-            {editId ? "✏️ আপডেট করুন" : "শিডিউল করুন ও সবাইকে নোটিফিকেশন পাঠান"}
+            {editId ? "✏️ Update" : "Schedule and notify everyone"}
           </Btn>
         </Modal>
       )}
@@ -4065,7 +4035,7 @@ function InstantClassView({ courses, user }) {
   const blankForm = () => {
     const now = new Date();
     return {
-      kind: "মেকআপ ক্লাস",
+      kind: "Makeup Class",
       courseId: courses[0]?.id,
       teacherId: courses[0]?.teacherId,
       studentIds: [],
@@ -4100,15 +4070,15 @@ function InstantClassView({ courses, user }) {
       setCreated({ ...res, courseName: c.name });
       setF(blankForm());
       setPreviewZone("");
-      notice("✔ ক্লাস শিডিউল হয়েছে — সময় হলে টিচার ও স্টুডেন্টের পোর্টালে জয়েন অপশন আসবে।");
+      notice("✔ Class scheduled — the join option will appear in the teacher's and student's portals at the scheduled time.");
     } catch (e) {
-      notice("ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+      notice("Failed —" + (e?.data?.error || e?.message || "Verify"));
     }
     setBusy(false);
   };
   const create = () => {
-    if (!f.courseId || !f.teacherId) return notice("কোর্স ও উস্তাদ বেছে নিন।");
-    if (!f.zoom.trim()) return notice("জুম লিংক দিন।");
+    if (!f.courseId || !f.teacherId) return notice("Please choose a course and teacher.");
+    if (!f.zoom.trim()) return notice("Please enter a Zoom link.");
     const c = courseById(courses, f.courseId);
     if (!f.studentIds.length) {
       // কাউকে না বাছলে আগে চুপচাপ পুরো কোর্সের সবাইকে যুক্ত করে দিত — ভুলবশত
@@ -4117,9 +4087,9 @@ function InstantClassView({ courses, user }) {
       const whole = c.studentIds || [];
       const names =
         whole.map((sid) => students.find((s) => String(s.id) === String(sid))?.name || sid).join(", ") ||
-        "কেউ নেই";
+        "Nobody";
       askConfirm(
-        `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "এই কোর্সের"}" কোর্সে ভর্তি সবাই (${names}) এই ক্লাসে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
+        `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "of this course"}" কোর্সে ভর্তি সবাই (${names}) এই ক্লাসে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
         () => doCreate(whole),
       );
       return;
@@ -4134,7 +4104,7 @@ function InstantClassView({ courses, user }) {
       .map((id) => students.find((s) => String(s.id) === String(id)))
       .filter((s) => s && s.phone);
     const targets = [...(teacher && teacher.phone ? [teacher] : []), ...studentTargets];
-    if (!targets.length) return notice("এই ক্লাসের টিচার/শিক্ষার্থীর কোনো ফোন নম্বর পাওয়া যায়নি।");
+    if (!targets.length) return notice("No phone number found for this class's teacher/student.");
     targets.forEach((p, i) => {
       const text =
         `Assalamu Alaikum Warahmatullah,\n\n` +
@@ -4153,12 +4123,12 @@ function InstantClassView({ courses, user }) {
 
   return (
     <Section
-      title="⚡ ইনস্ট্যান্ট ক্লাস"
-      sub="ইমার্জেন্সি/হঠাৎ প্রয়োজনীয় ক্লাসের জন্য — আজকের তারিখে তৈরি করলে অপেক্ষা করতে হয় না, তৈরি হওয়ার সাথে সাথেই টিচার ও স্টুডেন্টের পোর্টালে জয়েন অপশন চলে যায়"
+      title="⚡ Instant Class"
+      sub="For emergency or sudden classes — create it for today's date and there's no waiting; the join option reaches the teacher's and student's portals immediately"
     >
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <div>
-          <label style={S.label}>ক্লাসের ধরন</label>
+          <label style={S.label}>Class type</label>
           <select
             style={S.input}
             value={f.kind}
@@ -4170,7 +4140,7 @@ function InstantClassView({ courses, user }) {
           </select>
         </div>
         <div>
-          <label style={S.label}>কোর্স</label>
+          <label style={S.label}>Course</label>
           <select
             style={S.input}
             value={f.courseId || ""}
@@ -4188,7 +4158,7 @@ function InstantClassView({ courses, user }) {
         </div>
       </div>
       <div style={{ marginTop: 10 }}>
-        <label style={S.label}>উস্তাদ/উস্তাদা — কার জন্য তৈরি হবে</label>
+        <label style={S.label}>Teacher — who this is created for</label>
         <select
           style={S.input}
           value={f.teacherId || ""}
@@ -4221,7 +4191,7 @@ function InstantClassView({ courses, user }) {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
         <div>
-          <label style={S.label}>তারিখ</label>
+          <label style={S.label}>Date</label>
           <input
             type="date"
             style={S.input}
@@ -4230,7 +4200,7 @@ function InstantClassView({ courses, user }) {
           />
         </div>
         <div>
-          <label style={S.label}>সময় (বাংলাদেশ সময় অনুযায়ী লিখুন)</label>
+          <label style={S.label}>Time (enter in Bangladesh time)</label>
           <input
             type="time"
             style={S.input}
@@ -4239,7 +4209,7 @@ function InstantClassView({ courses, user }) {
           />
         </div>
         <div>
-          <label style={S.label}>সময়কাল (মিনিট)</label>
+          <label style={S.label}>Duration (minutes)</label>
           <input
             type="number"
             style={S.input}
@@ -4248,7 +4218,7 @@ function InstantClassView({ courses, user }) {
           />
         </div>
         <div>
-          <label style={S.label}>লেকচার নং (ঐচ্ছিক)</label>
+          <label style={S.label}>Lecture no. (optional)</label>
           <input
             type="number"
             min="1"
@@ -4259,13 +4229,13 @@ function InstantClassView({ courses, user }) {
         </div>
       </div>
       <div style={{ marginTop: 10 }}>
-        <label style={S.label}>🌍 টাইমজোন প্রিভিউ (ঐচ্ছিক — বিদেশে থাকা কাউকে জানাতে সুবিধার জন্য)</label>
+        <label style={S.label}>🌍 Timezone preview (optional — handy for telling someone abroad)</label>
         <select
           style={S.input}
           value={previewZone}
           onChange={(e) => setPreviewZone(e.target.value)}
         >
-          <option value="">— বাছাই করুন —</option>
+          <option value="">— Choose —</option>
           {allZones.map((z) => (
             <option key={z.zone} value={z.zone}>
               {z.label}
@@ -4280,7 +4250,7 @@ function InstantClassView({ courses, user }) {
         )}
       </div>
       <div style={{ marginTop: 10 }}>
-        <label style={S.label}>১ম জুম লিংক</label>
+        <label style={S.label}>1st Zoom link</label>
         <input
           style={S.input}
           value={f.zoom}
@@ -4288,29 +4258,29 @@ function InstantClassView({ courses, user }) {
         />
       </div>
       <div style={{ marginTop: 10 }}>
-        <label style={S.label}>২য় জুম লিংক (রিজয়েন — ঐচ্ছিক)</label>
+        <label style={S.label}>2nd Zoom link (rejoin — optional)</label>
         <input
           style={S.input}
           value={f.zoom2}
           onChange={(e) => setF({ ...f, zoom2: e.target.value })}
-          placeholder="উস্তাদ+স্টুডেন্ট ১ম লিংকে একবার জয়েন করার পর, আবার জয়েন করতে চাইলে এই লিংক ব্যবহার হবে"
+          placeholder="Once the teacher and student have joined via the 1st link, this link is used to rejoin"
         />
       </div>
       <div style={{ marginTop: 10 }}>
-        <label style={S.label}>অভিভাবকের রিকোয়ারমেন্ট (ঐচ্ছিক)</label>
+        <label style={S.label}>Guardian's requirements (optional)</label>
         <textarea
           rows={2}
           style={{ ...S.input, resize: "vertical" }}
           value={f.req}
           onChange={(e) => setF({ ...f, req: e.target.value })}
-          placeholder="যেমন: তিলাওয়াতের ভুলগুলোতে বেশি জোর দেবেন..."
+          placeholder="e.g. Focus more on recitation mistakes..."
         />
       </div>
       <Btn
         style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: busy ? 0.6 : 1 }}
         onClick={create}
       >
-        {busy ? "⏳ তৈরি হচ্ছে…" : "⚡ এখনই ক্লাস তৈরি করুন"}
+        {busy ? "⏳ Creating…" : "⚡ Create class now"}
       </Btn>
       {created && (
         <div
@@ -4363,12 +4333,12 @@ function PostponedClassesView({ user }) {
   const sorted = [...filtered].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
 
   const remove = (k) => {
-    askConfirm("এই স্থগিত ক্লাসের রেকর্ডটা স্থায়ীভাবে মুছে ফেলবেন?", async () => {
+    askConfirm("Permanently delete this postponed class record?", async () => {
       try {
         await api.deleteClass(k.id);
         await load();
       } catch (e) {
-        notice("মুছতে ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+        notice("Could not delete —" + (e?.data?.error || e?.message || "Verify"));
       }
     });
   };
@@ -4386,7 +4356,7 @@ function PostponedClassesView({ user }) {
           await load();
           notice(T("✔ ক্লাস সম্পন্ন হিসেবে চিহ্নিত হয়েছে।", "✔ Class marked as completed."));
         } catch (e) {
-          notice(T("ব্যর্থ — ", "Failed — ") + (e?.data?.error || e?.message || "যাচাই করুন"));
+          notice(T("Failed —", "Failed — ") + (e?.data?.error || e?.message || "Verify"));
         }
         setCompleting(null);
       },
@@ -4395,8 +4365,8 @@ function PostponedClassesView({ user }) {
 
   // ছাত্র অনুযায়ী মাসভিত্তিক এক্সেল এক্সপোর্ট — কেবল পরিচালক (এডমিনও না, অন্য কেউ না)
   const exportExcel = () => {
-    if (!sorted.length) return notice("কোনো স্থগিত ক্লাস নেই।");
-    const head = ["শিক্ষার্থী", "কোর্স", "উস্তাদ", "তারিখ", "সময়"];
+    if (!sorted.length) return notice("No postponed classes.");
+    const head = ["Student", "Course", "Teacher", "Date", "Time"];
     const body = sorted.flatMap((k) => {
       const names = k.student_names && k.student_names.length ? k.student_names : ["—"];
       return names.map((n) => [
@@ -4413,7 +4383,7 @@ function PostponedClassesView({ user }) {
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }); // BOM — Excel-এ বাংলা যেন না ভাঙে
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `স্থগিত-ক্লাস-${month || "সব"}.csv`;
+    a.download = `স্থগিত-ক্লাস-${month || "All"}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -4444,7 +4414,7 @@ function PostponedClassesView({ user }) {
       }
     >
       {loading ? (
-        <Loader text={T("লোড হচ্ছে", "Loading")} />
+        <Loader text={T("Loading", "Loading")} />
       ) : sorted.length === 0 ? (
         <div style={{ textAlign: "center", color: C.muted, padding: "24px 0", fontSize: 14 }}>
           {T("কোনো স্থগিত ক্লাস নেই", "No postponed classes")}
@@ -4515,7 +4485,7 @@ function PostponedClassesView({ user }) {
                   )}
                   {isDir(user) && (
                     <Btn sm kind="danger" onClick={() => remove(k)}>
-                      🗑️ {T("মুছুন", "Delete")}
+                      🗑️ {T("Delete", "Delete")}
                     </Btn>
                   )}
                 </div>
@@ -4537,11 +4507,11 @@ function PostponedClassesView({ user }) {
    ⚠️ ভেতরের লেখা কেবল প্রথমবারই বসানো হয়। প্রতিবার বসালে টাইপ করার সময়
    কার্সর লাফিয়ে শুরুতে চলে যেত — contentEditable-এর পরিচিত সমস্যা। */
 const RT_SIZES = [
-  { v: "2", label: "ছোট" },
-  { v: "3", label: "সাধারণ" },
-  { v: "4", label: "বড়" },
-  { v: "5", label: "আরও বড়" },
-  { v: "6", label: "শিরোনাম" },
+  { v: "2", label: "Small" },
+  { v: "3", label: "Normal" },
+  { v: "4", label: "Large" },
+  { v: "5", label: "Larger" },
+  { v: "6", label: "Title" },
 ];
 const RT_COLORS = [
   "#1a1f2e", "#1a5c3a", "#c9962a", "#d92626", "#1d4ed8", "#7c3aed", "#6b7280",
@@ -4553,12 +4523,12 @@ const RT_BG_COLORS = [
 /* index.html-এ যে ফন্টগুলো সত্যিই লোড করা আছে, কেবল সেগুলোই — নইলে বেছে
    নিলেও কিছুই বদলাত না। শেষ তিনটি সব ডিভাইসেই থাকে। */
 const RT_FONTS = [
-  { v: "'Hind Siliguri', sans-serif", label: "বাংলা (Hind Siliguri)" },
-  { v: "Amiri, serif", label: "আরবি (Amiri)" },
-  { v: "'Playfair Display', serif", label: "ইংরেজি শিরোনাম (Playfair)" },
-  { v: "Georgia, serif", label: "ইংরেজি সেরিফ (Georgia)" },
-  { v: "Arial, Helvetica, sans-serif", label: "ইংরেজি সাধারণ (Arial)" },
-  { v: "'Courier New', monospace", label: "টাইপরাইটার (Courier)" },
+  { v: "'Hind Siliguri', sans-serif", label: "Bengali (Hind Siliguri)" },
+  { v: "Amiri, serif", label: "Arabic (Amiri)" },
+  { v: "'Playfair Display', serif", label: "English heading (Playfair)" },
+  { v: "Georgia, serif", label: "English serif (Georgia)" },
+  { v: "Arial, Helvetica, sans-serif", label: "English regular (Arial)" },
+  { v: "'Courier New', monospace", label: "Typewriter (Courier)" },
 ];
 
 /* টগলের ভেতরের লেখায় বসানো ছবি ও টেবিল যেন বাক্স ছাপিয়ে না যায় —
@@ -4580,17 +4550,17 @@ const LESSON_BODY_CSS = `
 
 /* টগলের ভেতরে বসানো লেখার বাক্স — তিন রকম, তিন কাজের জন্য */
 const RT_BOXES = [
-  { k: "green", label: "🟢 সবুজ বাক্স (গুরুত্বপূর্ণ)", border: "#1a5c3a", bg: "#eafaf1" },
-  { k: "gold", label: "🟡 হলুদ বাক্স (সতর্কতা)", border: "#c9962a", bg: "#fdf6e7" },
-  { k: "grey", label: "⚪ ধূসর বাক্স (নোট)", border: "#d5dbd6", bg: "#f4f6f4" },
+  { k: "green", label: "🟢 Green box (important)", border: "#1a5c3a", bg: "#eafaf1" },
+  { k: "gold", label: "🟡 Yellow box (warning)", border: "#c9962a", bg: "#fdf6e7" },
+  { k: "grey", label: "⚪ Grey box (note)", border: "#d5dbd6", bg: "#f4f6f4" },
 ];
 /* লেখার ধরন — প্যারাগ্রাফ ও তিন মাপের শিরোনাম */
 const RT_BLOCKS = [
-  { v: "p", label: "সাধারণ লেখা" },
-  { v: "h2", label: "শিরোনাম — বড়" },
-  { v: "h3", label: "শিরোনাম — মাঝারি" },
-  { v: "h4", label: "শিরোনাম — ছোট" },
-  { v: "blockquote", label: "উদ্ধৃতি" },
+  { v: "p", label: "Normal text" },
+  { v: "h2", label: "Heading — large" },
+  { v: "h3", label: "Heading — medium" },
+  { v: "h4", label: "Heading — small" },
+  { v: "blockquote", label: "Quote" },
 ];
 
 /* নির্বাচিত ছবির চারপাশে যে দাগটা দেখানো হয় — এটি কখনো সংরক্ষিত হয় না,
@@ -4864,15 +4834,15 @@ function RichText({ value, onChange, placeholder }) {
       }
     }
     push();
-    notice(rtl ? "এই অনুচ্ছেদ এখন ডান থেকে বাঁয়ে"
-               : "এই অনুচ্ছেদ এখন বাঁ থেকে ডানে");
+    notice(rtl ? "This paragraph is now right-to-left"
+               : "This paragraph is now left-to-right");
   };
 
   const arabic = () => {
     ref.current?.focus();
     const sel = window.getSelection();
     const txt = sel && !sel.isCollapsed ? String(sel) : "";
-    if (!txt) return notice("আগে যে লেখাটুকু আরবি করতে চান তা নির্বাচন করুন।");
+    if (!txt) return notice("First select the text you want to make Arabic.");
     cmd(
       "insertHTML",
       `<span dir="rtl" style="font-family: Amiri, serif; font-size: 1.35em; line-height: 2">${txt.replace(
@@ -4891,7 +4861,7 @@ function RichText({ value, onChange, placeholder }) {
     try {
       const r = await api.uploadLessonMedia(f);
       const url = String(r.url).replace(/"/g, "&quot;");
-      const name = String(r.name || "ফাইল").replace(/[&<>]/g, (c) =>
+      const name = String(r.name || "File").replace(/[&<>]/g, (c) =>
         ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c],
       );
       cmd(
@@ -4903,8 +4873,8 @@ function RichText({ value, onChange, placeholder }) {
       );
     } catch (err) {
       notice(
-        "আপলোড ব্যর্থ — " +
-          (err?.data?.error || err?.message || "আবার চেষ্টা করুন"),
+        "Upload failed —" +
+          (err?.data?.error || err?.message || "Please try again"),
       );
     } finally {
       setBusy(false);
@@ -4912,11 +4882,11 @@ function RichText({ value, onChange, placeholder }) {
   };
   // টেবিল — সারি ও কলাম জিজ্ঞেস করে খালি ছক বসাই
   const insertTable = () => {
-    const rows = parseInt(window.prompt("কয়টি সারি?", "3") || "", 10);
-    const cols = parseInt(window.prompt("কয়টি কলাম?", "3") || "", 10);
+    const rows = parseInt(window.prompt("How many rows?", "3") || "", 10);
+    const cols = parseInt(window.prompt("How many columns?", "3") || "", 10);
     if (!rows || !cols || rows < 1 || cols < 1) return;
     if (rows > 50 || cols > 12)
-      return notice("সর্বোচ্চ ৫০টি সারি ও ১২টি কলাম।");
+      return notice("Maximum 50 rows and 12 columns.");
     const td =
       '<td style="border: 1px solid #1a5c3a; padding: 6px 8px">&nbsp;</td>';
     const th =
@@ -4950,11 +4920,11 @@ function RichText({ value, onChange, placeholder }) {
           borderBottom: `1px solid ${C.line}`,
         }}
       >
-        <button type="button" onMouseDown={noBlur} title="মোটা" style={{ ...tool, fontWeight: 900 }} onClick={() => cmd("bold")}>B</button>
-        <button type="button" onMouseDown={noBlur} title="বাঁকা" style={{ ...tool, fontStyle: "italic" }} onClick={() => cmd("italic")}>I</button>
-        <button type="button" onMouseDown={noBlur} title="আন্ডারলাইন" style={{ ...tool, textDecoration: "underline" }} onClick={() => cmd("underline")}>U</button>
+        <button type="button" onMouseDown={noBlur} title="Bold" style={{ ...tool, fontWeight: 900 }} onClick={() => cmd("bold")}>B</button>
+        <button type="button" onMouseDown={noBlur} title="Italic" style={{ ...tool, fontStyle: "italic" }} onClick={() => cmd("italic")}>I</button>
+        <button type="button" onMouseDown={noBlur} title="Underline" style={{ ...tool, textDecoration: "underline" }} onClick={() => cmd("underline")}>U</button>
         <select
-          title="লেখার ধরন — শিরোনাম নাকি সাধারণ লেখা"
+          title="Text style — heading or normal text"
           defaultValue=""
           onChange={(e) => {
             if (e.target.value) blockAs(e.target.value);
@@ -4962,13 +4932,13 @@ function RichText({ value, onChange, placeholder }) {
           }}
           style={{ ...tool, padding: "5px 6px" }}
         >
-          <option value="">ধরন</option>
+          <option value="">Type</option>
           {RT_BLOCKS.map((b) => (
             <option key={b.v} value={b.v}>{b.label}</option>
           ))}
         </select>
         <select
-          title="লেখার বাক্স বসান"
+          title="Insert text box"
           defaultValue=""
           onChange={(e) => {
             if (e.target.value) insertBox(e.target.value);
@@ -4976,13 +4946,13 @@ function RichText({ value, onChange, placeholder }) {
           }}
           style={{ ...tool, padding: "5px 6px" }}
         >
-          <option value="">▭ বাক্স</option>
+          <option value="">▭ Box</option>
           {RT_BOXES.map((b) => (
             <option key={b.k} value={b.k}>{b.label}</option>
           ))}
         </select>
         <select
-          title="অক্ষরের আকার"
+          title="Font size"
           defaultValue=""
           onChange={(e) => {
             if (e.target.value) cmd("fontSize", e.target.value);
@@ -4990,13 +4960,13 @@ function RichText({ value, onChange, placeholder }) {
           }}
           style={{ ...tool, padding: "5px 6px" }}
         >
-          <option value="">আকার</option>
+          <option value="">Size</option>
           {RT_SIZES.map((z) => (
             <option key={z.v} value={z.v}>{z.label}</option>
           ))}
         </select>
         <select
-          title="লেখার ফন্ট"
+          title="Font"
           defaultValue=""
           onChange={(e) => {
             if (e.target.value) cmd("fontName", e.target.value);
@@ -5004,7 +4974,7 @@ function RichText({ value, onChange, placeholder }) {
           }}
           style={{ ...tool, padding: "5px 6px", maxWidth: 150 }}
         >
-          <option value="">ফন্ট</option>
+          <option value="">Font</option>
           {RT_FONTS.map((f) => (
             <option key={f.v} value={f.v} style={{ fontFamily: f.v }}>
               {f.label}
@@ -5012,12 +4982,12 @@ function RichText({ value, onChange, placeholder }) {
           ))}
         </select>
         <span style={{ display: "flex", gap: 3, alignItems: "center" }}>
-          <span style={{ fontSize: 11, color: C.muted, marginRight: 1 }}>ক</span>
+          <span style={{ fontSize: 11, color: C.muted, marginRight: 1 }}>A</span>
           {RT_COLORS.map((col) => (
             <button
               key={col}
               type="button"
-              title="লেখার রঙ"
+              title="Text colour"
               onClick={() => cmd("foreColor", col)}
               style={{
                 width: 18,
@@ -5037,7 +5007,7 @@ function RichText({ value, onChange, placeholder }) {
             <button
               key={col}
               type="button"
-              title="লেখার পেছনের রঙ"
+              title="Text background colour"
               onClick={() => bgColor(col)}
               style={{
                 width: 18,
@@ -5052,7 +5022,7 @@ function RichText({ value, onChange, placeholder }) {
           ))}
           <button
             type="button" onMouseDown={noBlur}
-            title="পেছনের রঙ তুলে দিন"
+            title="Remove background colour"
             onClick={() => bgColor("transparent")}
             style={{
               width: 18,
@@ -5070,15 +5040,15 @@ function RichText({ value, onChange, placeholder }) {
             ✕
           </button>
         </span>
-        <button type="button" onMouseDown={noBlur} title="বুলেট তালিকা" style={tool} onClick={() => cmd("insertUnorderedList")}>• তালিকা</button>
-        <button type="button" onMouseDown={noBlur} title="নম্বর তালিকা" style={tool} onClick={() => cmd("insertOrderedList")}>১. তালিকা</button>
-        <button type="button" onMouseDown={noBlur} title="বাঁয়ে" style={tool} onClick={() => cmd("justifyLeft")}>⇤</button>
-        <button type="button" onMouseDown={noBlur} title="মাঝবরাবর" style={tool} onClick={() => cmd("justifyCenter")}>⇔</button>
-        <button type="button" onMouseDown={noBlur} title="ডানে" style={tool} onClick={() => cmd("justifyRight")}>⇥</button>
+        <button type="button" onMouseDown={noBlur} title="Bullet list" style={tool} onClick={() => cmd("insertUnorderedList")}>• List</button>
+        <button type="button" onMouseDown={noBlur} title="Number list" style={tool} onClick={() => cmd("insertOrderedList")}>1. List</button>
+        <button type="button" onMouseDown={noBlur} title="Left" style={tool} onClick={() => cmd("justifyLeft")}>⇤</button>
+        <button type="button" onMouseDown={noBlur} title="Centre" style={tool} onClick={() => cmd("justifyCenter")}>⇔</button>
+        <button type="button" onMouseDown={noBlur} title="Right" style={tool} onClick={() => cmd("justifyRight")}>⇥</button>
         {/* অনুচ্ছেদের দিক — আরবি উল্টো ক্রমে বসলে এখান থেকেই ঠিক করা যায় */}
         <button
           type="button" onMouseDown={noBlur}
-          title="এই অনুচ্ছেদ ডান থেকে বাঁয়ে (আরবি) — শব্দ উল্টো বসলে এটি চাপুন"
+          title="This paragraph right-to-left (Arabic) — press this if words appear reversed"
           style={tool}
           onClick={() => setDir(true)}
         >
@@ -5086,7 +5056,7 @@ function RichText({ value, onChange, placeholder }) {
         </button>
         <button
           type="button" onMouseDown={noBlur}
-          title="এই অনুচ্ছেদ বাঁ থেকে ডানে (বাংলা/ইংরেজি)"
+          title="This paragraph left-to-right (Bengali/English)"
           style={tool}
           onClick={() => setDir(false)}
         >
@@ -5094,17 +5064,17 @@ function RichText({ value, onChange, placeholder }) {
         </button>
         <button
           type="button" onMouseDown={noBlur}
-          title="নির্বাচিত লেখাকে আরবি করুন (ডান থেকে বাঁ)"
+          title="Make selected text Arabic (right-to-left)"
           style={{ ...tool, fontFamily: "Amiri, serif", fontSize: 15 }}
           onClick={arabic}
         >
           ع
         </button>
-        <button type="button" onMouseDown={noBlur} title="ছবি বা PDF যোগ করুন" style={tool} onClick={busy ? undefined : pickFile}>
-          {busy ? "⏳ যাচ্ছে…" : "🖼️ ছবি/PDF"}
+        <button type="button" onMouseDown={noBlur} title="Add image or PDF" style={tool} onClick={busy ? undefined : pickFile}>
+          {busy ? "⏳ Sending…" : "🖼️ Image/PDF"}
         </button>
-        <button type="button" onMouseDown={noBlur} title="টেবিল বসান" style={tool} onClick={insertTable}>▦ টেবিল</button>
-        <button type="button" onMouseDown={noBlur} title="সাজসজ্জা মুছুন" style={tool} onClick={() => cmd("removeFormat")}>✕ সাজ</button>
+        <button type="button" onMouseDown={noBlur} title="Insert table" style={tool} onClick={insertTable}>▦ Table</button>
+        <button type="button" onMouseDown={noBlur} title="Clear formatting" style={tool} onClick={() => cmd("removeFormat")}>✕ Format</button>
         <input
           ref={fileRef}
           type="file"
@@ -5131,8 +5101,8 @@ function RichText({ value, onChange, placeholder }) {
           </span>
           {/* ⚠️ onMouseDown-এ preventDefault — নইলে বাটনে চাপা মাত্র লেখার ঘর
               ফোকাস হারাত, আর কোনো কোনো ব্রাউজারে নির্বাচিত ছবিটাও ছুটে যেত */}
-          <button type="button" title="ছোট করুন" style={tool} onMouseDown={noBlur} onClick={() => resizeImg(-10)}>➖ ছোট</button>
-          <button type="button" title="বড় করুন" style={tool} onMouseDown={noBlur} onClick={() => resizeImg(10)}>➕ বড়</button>
+          <button type="button" title="Shrink" style={tool} onMouseDown={noBlur} onClick={() => resizeImg(-10)}>➖ Smaller</button>
+          <button type="button" title="Enlarge" style={tool} onMouseDown={noBlur} onClick={() => resizeImg(10)}>➕ Larger</button>
           {[25, 50, 75, 100].map((z) => (
             <button
               key={z}
@@ -5145,12 +5115,12 @@ function RichText({ value, onChange, placeholder }) {
               {bn(z)}%
             </button>
           ))}
-          <button type="button" title="বাঁয়ে, লেখা পাশ দিয়ে যাবে" style={tool} onMouseDown={noBlur} onClick={() => alignImg("left")}>⇤ বাঁয়ে</button>
-          <button type="button" title="মাঝবরাবর" style={tool} onMouseDown={noBlur} onClick={() => alignImg("center")}>⇔ মাঝে</button>
-          <button type="button" title="ডানে, লেখা পাশ দিয়ে যাবে" style={tool} onMouseDown={noBlur} onClick={() => alignImg("right")}>⇥ ডানে</button>
+          <button type="button" title="Left, text wraps alongside" style={tool} onMouseDown={noBlur} onClick={() => alignImg("left")}>⇤ Left</button>
+          <button type="button" title="Centre" style={tool} onMouseDown={noBlur} onClick={() => alignImg("center")}>⇔ Centre</button>
+          <button type="button" title="Right, text wraps alongside" style={tool} onMouseDown={noBlur} onClick={() => alignImg("right")}>⇥ Right</button>
           <button
             type="button"
-            title="এই ছবিটি মুছে ফেলুন"
+            title="Delete this image"
             style={{ ...tool, color: C.red, borderColor: C.red }}
             onMouseDown={noBlur}
             onClick={removeImg}
@@ -5238,7 +5208,7 @@ function LecturePlan({ db, courses, user, refresh }) {
       notice(
         T(
           "দারস পরিকল্পনা আনা যায়নি — " +
-            (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+            (e?.data?.error || e?.message || "Please try again"),
           "Couldn't load the lesson plan — " + (e?.message || "please try again"),
         ),
       );
@@ -5276,17 +5246,17 @@ function LecturePlan({ db, courses, user, refresh }) {
     if (!canMark && !isAdmin) return;
     if (!forStudent) {
       setPickOpen(true);
-      return notice("আগে কোন শিক্ষার্থীর জন্য টিক দিচ্ছেন তা বেছে নিন।");
+      return notice("First choose which student you are ticking for.");
     }
     if (canMark && !isAdmin && tp.covered === "missed")
-      return notice("লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করতে পারবেন।");
+      return notice("Only an admin/director can clear the red cross.");
     try {
       await api.markTopic(tp.id, val, forStudent.id);
       await load();
     } catch (e) {
       notice(
-        "টপিক মার্ক করতে ব্যর্থ — " +
-          (e?.data?.error || e?.data?.detail || e?.message || "আবার চেষ্টা করুন"),
+        "Could not mark topic —" +
+          (e?.data?.error || e?.data?.detail || e?.message || "Please try again"),
       );
     }
   };
@@ -5298,7 +5268,7 @@ function LecturePlan({ db, courses, user, refresh }) {
       await api.toggleTodayPlan(tp.id);
       await load();
     } catch (e) {
-      notice("আজকের পাঠ আপডেট করা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not update today's lesson —" + (e?.data?.error || e?.message || ""));
     } finally {
       setTodayPlanSaving(null);
     }
@@ -5306,23 +5276,23 @@ function LecturePlan({ db, courses, user, refresh }) {
 
   // ── হেডিং ──
   const addSection = () => {
-    const name = (window.prompt("নতুন হেডিংয়ের নাম?", "") || "").trim();
+    const name = (window.prompt("New heading name?", "") || "").trim();
     if (!name) return;
     api
       .addSection(sel, name, sections.length, trialTab)
       .then(load)
       .catch((e) =>
-        notice("হেডিং যোগ করা যায়নি — " + (e?.data?.error || e?.message || "")),
+        notice("Could not add heading —" + (e?.data?.error || e?.message || "")),
       );
   };
   const renameSection = (sec) => {
-    const name = (window.prompt("হেডিংয়ের নাম", sec.name) || "").trim();
+    const name = (window.prompt("Heading name", sec.name) || "").trim();
     if (!name || name === sec.name) return;
     api
       .renameSection(sec.id, name)
       .then(load)
       .catch((e) =>
-        notice("নাম বদলানো যায়নি — " + (e?.data?.error || e?.message || "")),
+        notice("Could not rename —" + (e?.data?.error || e?.message || "")),
       );
   };
   const delSection = (sec) =>
@@ -5336,7 +5306,7 @@ function LecturePlan({ db, courses, user, refresh }) {
           .delSection(sec.id)
           .then(load)
           .catch((e) =>
-            notice("মুছে ফেলা যায়নি — " + (e?.data?.error || e?.message || "")),
+            notice("Could not delete —" + (e?.data?.error || e?.message || "")),
           ),
     );
   const moveSection = (i, d) => {
@@ -5348,7 +5318,7 @@ function LecturePlan({ db, courses, user, refresh }) {
       .reorderSections(ids)
       .then(load)
       .catch((e) =>
-        notice("ক্রম বদলানো যায়নি — " + (e?.data?.error || e?.message || "")),
+        notice("Could not reorder —" + (e?.data?.error || e?.message || "")),
       );
   };
 
@@ -5399,10 +5369,10 @@ function LecturePlan({ db, courses, user, refresh }) {
       await api.saveSectionTopics(edit.sectionId, topics);
       await load();
       setEdit(null);
-      notice("✔ সংরক্ষিত হয়েছে।");
+      notice("✔ Saved.");
     } catch (e) {
       notice(
-        "সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+        "Could not save —" + (e?.data?.error || e?.message || "Please try again"),
       );
     } finally {
       setSaving(false);
@@ -5420,7 +5390,7 @@ function LecturePlan({ db, courses, user, refresh }) {
         "বিষয় অনুযায়ী হেডিং · প্রতিটির নিচে টপিক · কভার করা ✔ সবুজ · বাদ পড়া ✘ লাল",
         "Topics grouped by subject · covered ✔ green · missed ✘ red",
       )}
-      action={isDir(user) && <Btn onClick={addSection}>+ হেডিং যোগ করুন</Btn>}
+      action={isDir(user) && <Btn onClick={addSection}>+ Add heading</Btn>}
     >
       {isDir(user) && (
         <div style={{ marginBottom: 14 }}>
@@ -5444,9 +5414,9 @@ function LecturePlan({ db, courses, user, refresh }) {
                 sm
                 kind={todayPlanMode ? "gold" : "soft"}
                 onClick={() => setTodayPlanMode((v) => !v)}
-                title="আজকের ক্লাসে কোন টপিকগুলো পড়ানো হবে তা চিহ্নিত করুন — উস্তাদের পোর্টালে শুধু এই টপিকগুলোই দেখাবে।"
+                title="Mark which topics will be taught in today's class — only these will show in the teacher's portal."
               >
-                📋 {todayPlanMode ? "আজকের পাঠ সেট হচ্ছে…" : "আজকের পাঠ সেট করুন"}
+                📋 {todayPlanMode ? "Setting today's lesson…" : "Set today's lesson"}
               </Btn>
             )}
           </div>
@@ -5463,7 +5433,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                 color: C.text,
               }}
             >
-              <b style={{ color: C.gold }}>📋 আজকের পাঠ সেট মোড চালু।</b>{" "}
+              <b style={{ color: C.gold }}>📋 Today's-lesson mode is on.</b>{" "}
               প্রতিটি টপিকে <b style={{ color: C.gold }}>📌</b> বোতাম চেপে আজকের ক্লাসে কী পড়ানো হবে চিহ্নিত করুন।
               চিহ্নিত টপিকগুলোই কেবল উস্তাদের পোর্টালে দেখাবে — শিক্ষার্থীরা সব দেখবেন।
             </div>
@@ -5481,7 +5451,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                 color: C.text,
               }}
             >
-              <b style={{ color: C.gold }}>এটি কেবল ট্রায়াল অতিথিরা দেখবেন।</b>{" "}
+              <b style={{ color: C.gold }}>Only trial guests will see this.</b>{" "}
               নিয়মিত শিক্ষার্থীদের পরিকল্পনায় এর কোনো প্রভাব নেই — দুটি
               সম্পূর্ণ আলাদা, টপিক বা কভারের টিক কখনো মেশে না। একবার সাজিয়ে
               রাখলেই এই কোর্সের সব ট্রায়াল অতিথি এটাই পাবেন।
@@ -5515,7 +5485,7 @@ function LecturePlan({ db, courses, user, refresh }) {
             color: C.text,
           }}
         >
-          📋 <b style={{ color: C.gold }}>আজকের ক্লাসের টপিক</b> — পরিচালক আজকের জন্য যে টপিকগুলো নির্ধারণ করেছেন সেগুলো দেখাচ্ছে।
+          📋 <b style={{ color: C.gold }}>Today's class topics</b> — পরিচালক আজকের জন্য যে টপিকগুলো নির্ধারণ করেছেন সেগুলো দেখাচ্ছে।
           {allTopics.length === 0 && (
             <span style={{ color: C.muted, marginLeft: 6 }}>
               (এখনো কোনো টপিক নির্ধারিত হয়নি)
@@ -5578,7 +5548,7 @@ function LecturePlan({ db, courses, user, refresh }) {
             fontSize: 13,
           }}
         >
-          <span style={{ fontWeight: 800, color: C.emerald }}>👤 এখন টিক পড়বে:</span>
+          <span style={{ fontWeight: 800, color: C.emerald }}>👤 Ticking for:</span>
           <span style={{ fontWeight: 800 }}>{forStudent.name}</span>
           {forStudent.student_id && (
             <span style={{ color: C.muted, fontSize: 12 }}>({forStudent.student_id})</span>
@@ -5594,7 +5564,7 @@ function LecturePlan({ db, courses, user, refresh }) {
         <BlockingPopup
           icon="👤"
           zIndex={306}
-          title="কোন শিক্ষার্থীর জন্য?"
+          title="For which student?"
           footer={
             /* বের হওয়ার পথ সবসময় থাকতেই হবে — কোর্সে শিক্ষার্থী না থাকলে
                বাছার কিছু নেই, আর পরিচালক তো টপিক লিখতে আসেন */
@@ -5613,15 +5583,15 @@ function LecturePlan({ db, courses, user, refresh }) {
                 onClick={() => setPickOpen(false)}
               >
                 {courseStudents.length === 0
-                  ? "ঠিক আছে"
-                  : "শিক্ষার্থী না বেছেই দেখি (টিক দেওয়া যাবে না)"}
+                  ? "OK"
+                  : "View without choosing a student (ticking disabled)"}
               </Btn>
             ) : null
           }
         >
           <div style={{ marginBottom: 10 }}>
             যাঁর টপিকে টিক দেবেন তাঁকে বেছে নিন। টিক কেবল{" "}
-            <b>তাঁর নিজের পোর্টালেই</b> দেখাবে, অন্য কারও নয়।
+            <b>in their own portal</b> দেখাবে, অন্য কারও নয়।
           </div>
           {courseStudents.length === 0 ? (
             <div style={{ color: C.muted }}>
@@ -5664,7 +5634,7 @@ function LecturePlan({ db, courses, user, refresh }) {
         </BlockingPopup>
       )}
 
-      {loading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
+      {loading && <Loader text={T("Loading", "Loading")} />}
       {!loading && sections.length === 0 && (
         <div style={{ ...S.card, textAlign: "center", color: C.muted, padding: 28 }}>
           {T(
@@ -5709,7 +5679,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                     ✏️ টপিক
                   </Btn>
                   <Btn sm kind="soft" onClick={() => renameSection(sec)}>
-                    নাম
+                    Name
                   </Btn>
                   <Btn sm kind="soft" onClick={() => moveSection(si, -1)}>
                     ▲
@@ -5728,7 +5698,7 @@ function LecturePlan({ db, courses, user, refresh }) {
               {(sec.topics || []).length === 0 ? (
                 <div style={{ color: C.muted, fontSize: 12.5, textAlign: "center", padding: 8 }}>
                   {isDir(user)
-                    ? '"✏️ টপিক" চেপে এই হেডিংয়ের নিচে টপিক যোগ করুন'
+                    ? '"✏️ Topics" চেপে এই হেডিংয়ের নিচে টপিক যোগ করুন'
                     : "—"}
                 </div>
               ) : (
@@ -5740,7 +5710,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                     <div key={tp.id}>
                       <div
                         onClick={() => toggleOpen(tp.id)}
-                        title={openTopics[tp.id] ? "বন্ধ করুন" : "খুলে পড়ুন"}
+                        title={openTopics[tp.id] ? "Close" : "Open and read"}
                         style={{
                           cursor: "pointer",
                           display: "flex",
@@ -5807,7 +5777,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                                 disabled={todayPlanSaving === tp.id}
                                 onClick={() => toggleTodayPlan(tp)}
                               >
-                                {tp.today_plan ? "📌 আজকে" : "📌"}
+                                {tp.today_plan ? "📌 Today" : "📌"}
                               </Btn>
                             )}
                             <Btn
@@ -5931,20 +5901,20 @@ function LecturePlan({ db, courses, user, refresh }) {
                       padding: "4px 2px",
                     }}
                   />
-                  <button type="button" onClick={() => moveBlock(i, -1)} title="উপরে"
+                  <button type="button" onClick={() => moveBlock(i, -1)} title="Up"
                     style={{ border: "none", background: "none", cursor: "pointer", color: C.muted, fontSize: 13 }}>
                     ▲
                   </button>
-                  <button type="button" onClick={() => moveBlock(i, 1)} title="নিচে"
+                  <button type="button" onClick={() => moveBlock(i, 1)} title="Down"
                     style={{ border: "none", background: "none", cursor: "pointer", color: C.muted, fontSize: 13 }}>
                     ▼
                   </button>
                   <button
                     type="button"
                     onClick={() =>
-                      askConfirm(`"${b.text || "নামহীন"}" টপিকটি সরাবেন?`, () => delBlock(i))
+                      askConfirm(`"${b.text || "Untitled"}" টপিকটি সরাবেন?`, () => delBlock(i))
                     }
-                    title="সরান"
+                    title="Move"
                     style={{ border: "none", background: "none", cursor: "pointer", color: C.red, fontSize: 14 }}
                   >
                     🗑
@@ -5956,7 +5926,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                       key={b._uid}
                       value={b.content}
                       onChange={(html) => setBlock(i, { content: html })}
-                      placeholder="এখানে লিখুন কী পড়াবেন — আরবি, বাংলা বা ইংরেজি।"
+                      placeholder="Write what you will teach here — Arabic, Bengali or English."
                     />
                   </div>
                 )}
@@ -5970,7 +5940,7 @@ function LecturePlan({ db, courses, user, refresh }) {
             style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: saving ? 0.7 : 1 }}
             onClick={saving ? undefined : saveTopics}
           >
-            {saving ? "সংরক্ষণ হচ্ছে…" : "✔ সংরক্ষণ করুন"}
+            {saving ? "Saving…" : "✔ Save"}
           </Btn>
         </Modal>
       )}
@@ -6005,16 +5975,16 @@ function AttendanceView({ user }) {
       await api.updateAttendance(a.id, { marked_present: !a.present });
       await load();
     } catch (e) {
-      notice("আপডেট ব্যর্থ — " + (e?.message || "যাচাই করুন"));
+      notice("Update failed —" + (e?.message || "Verify"));
     }
   };
   const remove = (a) => {
-    askConfirm(`${a.user_name || "এই শিক্ষার্থীর"}-এর এই হাজিরা রেকর্ডটি মুছে ফেলবেন?`, async () => {
+    askConfirm(`${a.user_name || "this student's"}-এর এই হাজিরা রেকর্ডটি মুছে ফেলবেন?`, async () => {
       try {
         await api.deleteAttendance(a.id);
         await load();
       } catch (e) {
-        notice("মুছতে ব্যর্থ — " + (e?.message || "যাচাই করুন"));
+        notice("Could not delete —" + (e?.message || "Verify"));
       }
     });
   };
@@ -6032,15 +6002,15 @@ function AttendanceView({ user }) {
   // অক্ষতই থাকছে, যাতে কেউ কম সময় থেকে বেরিয়ে যাওয়াকে স্বাভাবিক না ভাবেন)
   const showMinutes = isDir(user);
   const exportExcel = () => {
-    if (!rows || !rows.length) return notice("এই মাসে কোনো হাজিরা রেকর্ড নেই।");
-    const head = ["নাম", "কোর্স", "উস্তাদ", "তারিখ", ...(showMinutes ? ["মিনিট"] : []), "অবস্থা"];
+    if (!rows || !rows.length) return notice("No attendance records for this month.");
+    const head = ["Name", "Course", "Teacher", "Date", ...(showMinutes ? ["Minutes"] : []), "Status"];
     const body = rows.map((r) => [
       r.user_name || "—",
       r.course_name || "—",
       r.teacher_name || "—",
       r.class_date ? fmtDate(r.class_date) : "—",
       ...(showMinutes ? [r.minutes ?? 0] : []),
-      r.present ? "উপস্থিত" : "অনুপস্থিত",
+      r.present ? "Present" : "Absent",
     ]);
     const csv = [head, ...body]
       .map((row) => row.map(csvCell).join(","))
@@ -6057,13 +6027,13 @@ function AttendanceView({ user }) {
   };
 
   const printReport = () => {
-    if (!rows || !rows.length) return notice("এই মাসে কোনো হাজিরা রেকর্ড নেই।");
+    if (!rows || !rows.length) return notice("No attendance records for this month.");
     const esc = (s) =>
       String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
     const body = rows
       .map(
         (r) =>
-          `<tr><td>${esc(r.user_name)}</td><td>${esc(r.course_name)}</td><td>${esc(r.teacher_name)}</td><td>${r.class_date ? fmtDate(r.class_date) : "—"}</td>${showMinutes ? `<td>${bn(r.minutes ?? 0)}</td>` : ""}<td>${r.present ? "উপস্থিত ✔" : "অনুপস্থিত ✘"}</td></tr>`,
+          `<tr><td>${esc(r.user_name)}</td><td>${esc(r.course_name)}</td><td>${esc(r.teacher_name)}</td><td>${r.class_date ? fmtDate(r.class_date) : "—"}</td>${showMinutes ? `<td>${bn(r.minutes ?? 0)}</td>` : ""}<td>${r.present ? "Present ✔" : "Absent ✘"}</td></tr>`,
       )
       .join("");
     const html = `<!doctype html><html lang="bn"><head><meta charset="utf-8"><title>হাজিরা রিপোর্ট — ${monthLabel}</title>
@@ -6077,16 +6047,16 @@ th{background:#eef5f0}
 .pr{display:block;margin:18px auto 0;background:#1a5c3a;color:#fff;border:none;padding:11px 26px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}
 @media print{.pr{display:none}body{padding:0}}
 </style></head><body>
-<h1>তারবিয়াতুল কুরআন একাডেমী — হাজিরা রিপোর্ট</h1>
+<h1>Tarbiyatul Quran Academy — Attendance Report</h1>
 <div class="s">${monthLabel}</div>
-<table><tr><th>নাম</th><th>কোর্স</th><th>উস্তাদ</th><th>তারিখ</th>${showMinutes ? "<th>মিনিট</th>" : ""}<th>অবস্থা</th></tr>${body}</table>
-<button class="pr" onclick="window.print()">🖨️ প্রিন্ট / PDF সেভ করুন</button>
+<table><tr><th>Name</th><th>Course</th><th>Teacher</th><th>Date</th>${showMinutes ? "<th>Minutes</th>" : ""}<th>Status</th></tr>${body}</table>
+<button class="pr" onclick="window.print()">🖨️ Print / Save as PDF</button>
 </body></html>`;
     openPrintDoc(html, `হাজিরা-রিপোর্ট-${month}.html`);
   };
 
   const sendWhatsApp = () => {
-    if (!rows || !rows.length) return notice("এই মাসে কোনো হাজিরা রেকর্ড নেই।");
+    if (!rows || !rows.length) return notice("No attendance records for this month.");
     const present = rows.filter((r) => r.present).length;
     const text =
       `📊 হাজিরা রিপোর্ট — ${monthLabel}\n` +
@@ -6098,13 +6068,13 @@ th{background:#eef5f0}
   };
 
   const head = [
-    T("নাম", "Name"),
-    T("কোর্স", "Course"),
-    T("উস্তাদ", "Teacher"),
-    T("তারিখ", "Date"),
-    ...(showMinutes ? [T("মিনিট", "Minutes")] : []),
-    T("অবস্থা", "Status"),
-    ...(isDirector ? ["অ্যাকশন"] : []),
+    T("Name", "Name"),
+    T("Course", "Course"),
+    T("Teacher", "Teacher"),
+    T("Date", "Date"),
+    ...(showMinutes ? [T("Minutes", "Minutes")] : []),
+    T("Status", "Status"),
+    ...(isDirector ? ["Action"] : []),
   ];
   const tableRows = (rows || []).map((r) => [
     r.user_name || "—",
@@ -6113,17 +6083,17 @@ th{background:#eef5f0}
     r.class_date ? fmtDate(r.class_date) : "—",
     ...(showMinutes ? [T(`${bn(r.minutes ?? 0)} মিনিট`, `${r.minutes ?? 0} min`)] : []),
     r.present ? (
-      <Tag key="t">{T("উপস্থিত ✔", "Present ✔")}</Tag>
+      <Tag key="t">{T("Present ✔", "Present ✔")}</Tag>
     ) : (
       <Tag key="t" color={C.red} bg={C.redBg}>
-        {T("অনুপস্থিত", "Absent")}
+        {T("Absent", "Absent")}
       </Tag>
     ),
     ...(isDirector
       ? [
           <div key="act" style={{ display: "flex", gap: 4 }}>
             <Btn sm kind="soft" onClick={() => toggle(r)}>
-              {r.present ? "❌ অনুপস্থিত করুন" : "✔️ উপস্থিত করুন"}
+              {r.present ? "❌ Mark absent" : "✔️ Mark present"}
             </Btn>
             <Btn sm kind="danger" onClick={() => remove(r)}>
               🗑️
@@ -6186,7 +6156,7 @@ function QBuilder({ qs, setQs, allowMcq }) {
     setQs(qs.map((q) => (q.id === id ? { ...q, ...patch } : q)));
   return (
     <div style={{ marginTop: 10 }}>
-      <label style={S.label}>প্রশ্নসমূহ</label>
+      <label style={S.label}>Questions</label>
       {qs.map((q, i) => (
         <div
           key={q.id}
@@ -6204,7 +6174,7 @@ function QBuilder({ qs, setQs, allowMcq }) {
               style={{ ...S.input, flex: 1 }}
               value={q.q}
               onChange={(e) => upd(q.id, { q: e.target.value })}
-              placeholder="প্রশ্ন লিখুন..."
+              placeholder="Write a question..."
             />
             <Btn
               sm
@@ -6232,7 +6202,7 @@ function QBuilder({ qs, setQs, allowMcq }) {
                     type="radio"
                     checked={q.correct === oi}
                     onChange={() => upd(q.id, { correct: oi })}
-                    title="সঠিক উত্তর"
+                    title="Correct answer"
                   />
                   <input
                     style={{ ...S.input, padding: "7px 10px", fontSize: 13 }}
@@ -6515,7 +6485,7 @@ function EvalWork({ item, onClose, onMark }) {
                 </Tag>
               )}
               <span style={{ fontSize: 13 }}>
-                {isOpen ? "▲" : "▼ মূল্যায়ন করুন"}
+                {isOpen ? "▲" : "▼ Evaluate"}
               </span>
             </div>
             {isOpen && (
@@ -6606,7 +6576,7 @@ function EvalWork({ item, onClose, onMark }) {
                       <a href={sub.image.data} target="_blank" rel="noreferrer">
                         <img
                           src={sub.image.data}
-                          alt="জমা"
+                          alt="Submitted"
                           style={{
                             width: "100%",
                             borderRadius: 12,
@@ -6739,9 +6709,9 @@ function AssignmentsView({ db, setDb, courses, user }) {
   const list = assignments.filter((a) => courseById(courses, a.courseId).id);
   const canCreate = user.role === "teacher" || isAdm(user);
   const add = async () => {
-    if (!f.title) return notice("শিরোনাম দিন।");
+    if (!f.title) return notice("Please enter a title.");
     if (f.mode === "form" && qs.length === 0)
-      return notice("ফরম মোডে অন্তত একটি প্রশ্ন যোগ করুন।");
+      return notice("Add at least one question in form mode.");
     try {
       await api.createAssignment({
         course: f.courseId,
@@ -6761,11 +6731,11 @@ function AssignmentsView({ db, setDb, courses, user }) {
             : [],
       });
       await loadData();
-      notice("✔ অ্যাসাইনমেন্ট তৈরি হয়েছে।");
+      notice("✔ Assignment created.");
     } catch (e) {
       notice(
-        "অ্যাসাইনমেন্ট তৈরি করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not create assignment —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
       return;
     }
@@ -6776,11 +6746,11 @@ function AssignmentsView({ db, setDb, courses, user }) {
     try {
       await api.deleteAssignment(id);
       await loadData();
-      notice("✔ অ্যাসাইনমেন্ট মুছে ফেলা হয়েছে।");
+      notice("✔ Assignment deleted.");
     } catch (e) {
       notice(
-        "অ্যাসাইনমেন্ট মুছতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not delete assignment —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
@@ -6795,7 +6765,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
           (e?.data?.error ||
             e?.message ||
             T(
-              "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন",
+              "Please check your server connection and try again",
               "check your connection and try again",
             )),
       );
@@ -6807,26 +6777,26 @@ function AssignmentsView({ db, setDb, courses, user }) {
     try {
       await api.gradeAssignment(a.id, sub.id, mark);
       await loadData();
-      notice("✔ মার্ক সেভ হয়েছে।");
+      notice("✔ Marks saved.");
     } catch (e) {
       notice(
-        "মার্ক সেভ করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not save marks —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
   return (
     <Section
-      title={T("অ্যাসাইনমেন্ট", "Assignments")}
-      sub="ফরম বানিয়ে বা ছবি জমার নির্দেশনা দিয়ে — মূল্যায়ন করলেই মার্ক স্টুডেন্ট পোর্টালে"
+      title={T("Assignments", "Assignments")}
+      sub="Build a form or ask for a photo submission — once evaluated, the marks go to the student portal"
       action={
         canCreate && (
-          <Btn onClick={() => setShow(true)}>+ নতুন অ্যাসাইনমেন্ট</Btn>
+          <Btn onClick={() => setShow(true)}>+ New assignment</Btn>
         )
       }
     >
       <div style={{ display: "grid", gap: 10 }}>
-        {loading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
+        {loading && <Loader text={T("Loading", "Loading")} />}
         {!loading && list.length === 0 && (
           <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
             {T("এখনো কোনো অ্যাসাইনমেন্ট নেই।", "No assignments yet.")}
@@ -6857,7 +6827,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
                       bg={a.mode === "form" ? C.greenBg : C.amberBg}
                     >
                       {T(
-                      a.mode === "form" ? "📋 ফরম" : "📷 ছবি জমা",
+                      a.mode === "form" ? "📋 Form" : "📷 Photo submission",
                       a.mode === "form" ? "📋 Form" : "📷 Photo Submission",
                     )}
                     </Tag>
@@ -6871,7 +6841,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
                     {T("📅 শেষ তারিখ", "📅 Due date")}:{" "}
                     <b>{fmtDate(a.due)}</b> ·{" "}
                     {T("পূর্ণমান", "Total marks")}: <b>{T(bn(a.total), a.total)}</b> ·{" "}
-                    {T("জমা", "Submitted")}:{" "}
+                    {T("Submitted", "Submitted")}:{" "}
                     <b>{T(bn(a.subs.length), a.subs.length)}</b>{" "}
                     {T("জন", "")}
                     {canCreate && pendingEval > 0 && (
@@ -6915,7 +6885,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
                   )}
                   {isAdm(user) && (
                     <Btn sm kind="danger" onClick={() => del(a.id)}>
-                      মুছুন
+                      Delete
                     </Btn>
                   )}
                 </div>
@@ -6941,7 +6911,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
       )}
       {show && (
         <Modal
-          title="নতুন অ্যাসাইনমেন্ট বানান"
+          title="Create new assignment"
           onClose={() => setShow(false)}
           wide
         >
@@ -6949,7 +6919,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
           >
             <div>
-              <label style={S.label}>কোর্স</label>
+              <label style={S.label}>Course</label>
               <select
                 style={S.input}
                 value={f.courseId}
@@ -6963,7 +6933,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
               </select>
             </div>
             <div>
-              <label style={S.label}>পূর্ণমান</label>
+              <label style={S.label}>Total marks</label>
               <input
                 type="number"
                 style={S.input}
@@ -6973,7 +6943,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
             </div>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>শিরোনাম</label>
+            <label style={S.label}>Title</label>
             <input
               style={S.input}
               value={f.title}
@@ -6981,7 +6951,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
             />
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>নির্দেশনা / বিবরণ</label>
+            <label style={S.label}>Instructions / Description</label>
             <textarea
               rows={2}
               style={{ ...S.input, resize: "vertical" }}
@@ -6990,7 +6960,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
             />
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>জমা দেওয়ার ধরন — যেটা ইচ্ছা বানান</label>
+            <label style={S.label}>Submission type — build it however you like</label>
             <div
               style={{
                 display: "grid",
@@ -7034,7 +7004,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
             <QBuilder qs={qs} setQs={setQs} allowMcq={false} />
           )}
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>শেষ তারিখ</label>
+            <label style={S.label}>Due date</label>
             <input
               type="date"
               style={S.input}
@@ -7118,9 +7088,9 @@ function ExamsView({ db, setDb, courses, user }) {
   const list = exams.filter((e) => courseById(courses, e.courseId).id);
   const canCreate = isAdm(user) || user.role === "teacher";
   const add = async () => {
-    if (!f.title) return notice("শিরোনাম দিন।");
+    if (!f.title) return notice("Please enter a title.");
     if (f.mode === "form" && qs.length === 0)
-      return notice("ফরম মোডে অন্তত একটি প্রশ্ন যোগ করুন।");
+      return notice("Add at least one question in form mode.");
     try {
       await api.createExam({
         course: f.courseId,
@@ -7140,11 +7110,11 @@ function ExamsView({ db, setDb, courses, user }) {
             : [],
       });
       await loadData();
-      notice("✔ পরীক্ষা তৈরি হয়েছে।");
+      notice("✔ Exam created.");
     } catch (e) {
       notice(
-        "পরীক্ষা তৈরি করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not create exam —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
       return;
     }
@@ -7155,11 +7125,11 @@ function ExamsView({ db, setDb, courses, user }) {
     try {
       await api.examDirectMark(ex.id, sid, +val);
       await loadData();
-      notice("✔ মার্ক সেভ হয়েছে।");
+      notice("✔ Marks saved.");
     } catch (e) {
       notice(
-        "মার্ক সেভ করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not save marks —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
@@ -7174,7 +7144,7 @@ function ExamsView({ db, setDb, courses, user }) {
           (e?.data?.error ||
             e?.message ||
             T(
-              "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন",
+              "Please check your server connection and try again",
               "check your connection and try again",
             )),
       );
@@ -7186,26 +7156,26 @@ function ExamsView({ db, setDb, courses, user }) {
     try {
       await api.gradeExam(ex.id, sub.id, mark);
       await loadData();
-      notice("✔ মার্ক সেভ হয়েছে।");
+      notice("✔ Marks saved.");
     } catch (e) {
       notice(
-        "মার্ক সেভ করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not save marks —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
   return (
     <Section
       title={T("পরীক্ষা — মাসিক MCQ ও লাইভ টেস্ট", "Exams — Monthly MCQ & Live Tests")}
-      sub="ফরমে (MCQ/লিখিত) বা ছবিতে — মূল্যায়ন করলেই ফলাফল অটো স্টুডেন্ট পোর্টালে"
+      sub="By form (MCQ/written) or photo — once evaluated, results go automatically to the student portal"
       action={
         canCreate && (
-          <Btn onClick={() => setShow(true)}>+ নতুন পরীক্ষা বানান</Btn>
+          <Btn onClick={() => setShow(true)}>+ Create new exam</Btn>
         )
       }
     >
       <div style={{ display: "grid", gap: 10 }}>
-        {loading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
+        {loading && <Loader text={T("Loading", "Loading")} />}
         {list.map((ex) => {
           const c = courseById(courses, ex.courseId);
           const myMark = ex.marks[user.id];
@@ -7241,7 +7211,7 @@ function ExamsView({ db, setDb, courses, user }) {
                       bg={ex.mode === "form" ? C.greenBg : C.amberBg}
                     >
                       {T(
-                        ex.mode === "form" ? "📋 ফরম" : "📷 ছবি/খাতা",
+                        ex.mode === "form" ? "📋 Form" : "📷 Photo/notebook",
                         ex.mode === "form" ? "📋 Form" : "📷 Photo/Answer sheet",
                       )}
                     </Tag>
@@ -7323,7 +7293,7 @@ function ExamsView({ db, setDb, courses, user }) {
                         }
                       }}
                     >
-                      মুছুন
+                      Delete
                     </Btn>
                   )}
                 </div>
@@ -7348,23 +7318,23 @@ function ExamsView({ db, setDb, courses, user }) {
         />
       )}
       {show && (
-        <Modal title="নতুন পরীক্ষা বানান" onClose={() => setShow(false)} wide>
+        <Modal title="Create new exam" onClose={() => setShow(false)} wide>
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
           >
             <div>
-              <label style={S.label}>ধরন</label>
+              <label style={S.label}>Type</label>
               <select
                 style={S.input}
                 value={f.type}
                 onChange={(e) => setF({ ...f, type: e.target.value })}
               >
-                <option value="mcq">মাসিক MCQ</option>
-                <option value="live">লাইভ টেস্ট</option>
+                <option value="mcq">Monthly MCQ</option>
+                <option value="live">Live test</option>
               </select>
             </div>
             <div>
-              <label style={S.label}>কোর্স</label>
+              <label style={S.label}>Course</label>
               <select
                 style={S.input}
                 value={f.courseId}
@@ -7378,7 +7348,7 @@ function ExamsView({ db, setDb, courses, user }) {
               </select>
             </div>
             <div>
-              <label style={S.label}>পূর্ণমান</label>
+              <label style={S.label}>Total marks</label>
               <input
                 type="number"
                 style={S.input}
@@ -7387,7 +7357,7 @@ function ExamsView({ db, setDb, courses, user }) {
               />
             </div>
             <div>
-              <label style={S.label}>তারিখ</label>
+              <label style={S.label}>Date</label>
               <input
                 type="date"
                 style={S.input}
@@ -7397,16 +7367,16 @@ function ExamsView({ db, setDb, courses, user }) {
             </div>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>শিরোনাম</label>
+            <label style={S.label}>Title</label>
             <input
               style={S.input}
               value={f.title}
               onChange={(e) => setF({ ...f, title: e.target.value })}
-              placeholder="যেমন: মাসিক MCQ — জুলাই ২০২৬"
+              placeholder="e.g. Monthly MCQ — July 2026"
             />
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>পরীক্ষার ধরন — যেটা ইচ্ছা বানান</label>
+            <label style={S.label}>Exam type — build it however you like</label>
             <div
               style={{
                 display: "grid",
@@ -7548,7 +7518,7 @@ function ProgressView({ db, setDb, courses, user }) {
 
   const [pay, setPay] = useState(false);
   const [maker, setMaker] = useState(false);
-  const [pf, setPf] = useState({ method: "বিকাশ", trx: "" });
+  const [pf, setPf] = useState({ method: "bKash", trx: "" });
   const [sel, setSel] = useState(allStudents[0]?.id || user.id);
   // তালিকা লোড হলে সিলেকশন প্রথম স্টুডেন্টে বসাই (আগে খালি থাকলে)
   useEffect(() => {
@@ -7643,7 +7613,7 @@ function ProgressView({ db, setDb, courses, user }) {
   const paid = myFees.reduce((s, p) => s + (+p.amount || 0), 0);
   const dueMonths = duesMap[selId] || db.dueMonths?.[sel] || [];
   const due = dueMonths.length * (st?.monthly_fee || st?.fee || 0);
-  // "মেকআপ ক্লাস" আলাদা কোনো ফিচার/এন্ডপয়েন্ট নয় — kind="makeup" দিয়ে সিডিউল
+  // "Makeup Class" আলাদা কোনো ফিচার/এন্ডপয়েন্ট নয় — kind="makeup" দিয়ে সিডিউল
   // করা একটা সাধারণ ক্লাস; আগে stale mock db.makeups (সবসময় খালি) থেকে আসত,
   // এখন ইতিমধ্যে লোড করা sessions থেকেই বের করা হচ্ছে
   const makeups = (sessions || []).filter(
@@ -7657,14 +7627,14 @@ function ProgressView({ db, setDb, courses, user }) {
       await api.payFee({
         amount: st.fee,
         month_label: month,
-        method: "নগদ গ্রহণ (অফিস)",
+        method: "Cash received (office)",
       });
       await loadData();
       notice(`✔ ${month} মাসের ফি পরিশোধ রেকর্ড করা হয়েছে।`);
     } catch (e) {
       notice(
-        "পেমেন্ট রেকর্ড করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not record payment —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
@@ -7682,20 +7652,20 @@ function ProgressView({ db, setDb, courses, user }) {
       notice(`✔ ${month} মাসের ফি জমা হয়েছে — ভেরিফাই বাকি।`);
     } catch (e) {
       notice(
-        "ফি জমা দিতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not submit fee —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
       return;
     }
     setPay(false);
-    setPf({ method: "বিকাশ", trx: "" });
+    setPf({ method: "bKash", trx: "" });
   };
   const verifyPay = async (pid) => {
     const paySnap = myFees.find((p) => String(p.id) === String(pid));
     try {
       await api.verifyFee(pid);
       await loadData();
-      notice("✔ পেমেন্ট ভেরিফাই হয়েছে।");
+      notice("✔ Payment verified.");
       if (paySnap && st) {
         const currencySymbol = (st.fee_currency || paySnap.currency || "BDT") === "USD" ? "$" : "৳";
         printReceipt(
@@ -7706,8 +7676,8 @@ function ProgressView({ db, setDb, courses, user }) {
       }
     } catch (e) {
       notice(
-        "ভেরিফাই করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not verify —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
@@ -7782,7 +7752,7 @@ function ProgressView({ db, setDb, courses, user }) {
           label={T("বকেয়া", "Due")}
           value={`${(st?.fee_currency || "BDT") === "USD" ? "$" : "৳"}${bn(due.toLocaleString("en"))}`}
           accent={C.red}
-          note={dueMonths.join(", ") || T("নেই", "None")}
+          note={dueMonths.join(", ") || T("None", "None")}
         />
       </div>
       <div style={{ display: "grid", gap: 14 }}>
@@ -7849,7 +7819,7 @@ function ProgressView({ db, setDb, courses, user }) {
           </div>
           <Table
             head={T(
-              ["মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "অবস্থা"],
+              ["Month", "Amount", "Date", "Method", "Status"],
               ["Month", "Amount", "Date", "Method", "Status"],
             )}
             rows={myFees.map((p) => [
@@ -7868,7 +7838,7 @@ function ProgressView({ db, setDb, courses, user }) {
                   </Tag>
                 )
               ) : (
-                <Tag key="t">{T("যাচাইকৃত ✔", "Verified ✔")}</Tag>
+                <Tag key="t">{T("Verified ✔", "Verified ✔")}</Tag>
               ),
             ])}
             empty={T("কোনো পেমেন্ট নেই", "No payments yet")}
@@ -7911,7 +7881,7 @@ function ProgressView({ db, setDb, courses, user }) {
                   marginBottom: 12,
                 }}
               >
-                {["বিকাশ", "নগদ", "ব্যাংক ট্রান্সফার"].map((m) => (
+                {["bKash", "Nagad", "Bank transfer"].map((m) => (
                   <button
                     key={m}
                     onClick={() => setPf({ ...pf, method: m })}
@@ -7927,13 +7897,13 @@ function ProgressView({ db, setDb, courses, user }) {
                       color: pf.method === m ? C.emerald : C.text,
                     }}
                   >
-                    {m === "বিকাশ" ? "📱" : m === "নগদ" ? "🟠" : "🏦"}
+                    {m === "bKash" ? "📱" : m === "Nagad" ? "🟠" : "🏦"}
                     <br />
                     {T(
                       m,
-                      m === "বিকাশ"
+                      m === "bKash"
                         ? "bKash"
-                        : m === "নগদ"
+                        : m === "Nagad"
                           ? "Nagad"
                           : "Bank Transfer",
                     )}
@@ -7970,7 +7940,7 @@ function ProgressView({ db, setDb, courses, user }) {
             {T("📝 পরীক্ষার ফলাফল", "📝 Exam Results")}
           </div>
           <Table
-            head={T(["পরীক্ষা", "তারিখ", "প্রাপ্ত মার্ক"], ["Exam", "Date", "Marks Obtained"])}
+            head={T(["Exams", "Date", "Marks obtained"], ["Exam", "Date", "Marks Obtained"])}
             rows={exams.map((e) => [
               e.title,
               fmtDate(e.date),
@@ -8012,7 +7982,7 @@ function ProgressView({ db, setDb, courses, user }) {
           </div>
           <Table
             head={T(
-              ["কোর্স", "তারিখ ও সময়", "অবস্থা"],
+              ["Course", "Date & time", "Status"],
               ["Course", "Date & Time", "Status"],
             )}
             rows={makeups.map((m) => [
@@ -8021,12 +7991,12 @@ function ProgressView({ db, setDb, courses, user }) {
               <Tag key="t" color={C.blue} bg={C.blueBg}>
                 {T(
                   m.status === "done"
-                    ? "সম্পন্ন"
+                    ? "Completed"
                     : m.status === "postponed"
-                      ? "স্থগিত"
+                      ? "Postponed"
                       : m.teacher_finished
-                        ? "যাচাই বাকি"
-                        : "নির্ধারিত",
+                        ? "Pending verification"
+                        : "Scheduled",
                   m.status === "done"
                     ? "Completed"
                     : m.status === "postponed"
@@ -8118,7 +8088,7 @@ function AccountsView({ db }) {
       notice(`✔ চলতি মাসের বকেয়া তৈরি হয়েছে — ${bn(r.created)}টি নতুন যোগ হলো`);
       await loadData();
     } catch (e) {
-      notice("বকেয়া তৈরি ব্যর্থ — " + (e?.message || "যাচাই করুন"));
+      notice("Could not create dues —" + (e?.message || "Verify"));
     }
     setGenDuesBusy(false);
   };
@@ -8128,7 +8098,7 @@ function AccountsView({ db }) {
   // না সব মিলিয়ে পূর্ণ বেতনের সমান হয়, ততক্ষণ ব্যাকএন্ডে বকেয়া থেকেই যায়
   // কোনো মাসে ইতিমধ্যে আংশিক পেমেন্ট হয়ে থাকলে কত জমা পড়েছে তা হিসাব — শুধু
   // ভিউয়ের জন্য (স্ট্যাটাস দেখানো); এখান থেকে আর পেমেন্ট এডিট/তৈরি করা যায় না —
-  // পেমেন্ট দেওয়া ও রিসিট বানানো এখন "টিচার রিপোর্ট ও পেমেন্ট" পেজে
+  // পেমেন্ট দেওয়া ও রিসিট বানানো এখন "Teacher Report & Payment" পেজে
   const paidSoFar = (teacherId, month) =>
     salaries
       .filter(
@@ -8144,15 +8114,15 @@ function AccountsView({ db }) {
 
   return (
     <Section
-      title="হিসাব-নিকাশ"
-      sub="আয় (স্টুডেন্ট ফি) · ব্যয় (উস্তাদদের বেতন) · বকেয়া — শুধু তথ্য দেখার জন্য"
+      title="Accounts"
+      sub="Income (student fees) · Expenses (teacher salaries) · Dues — for viewing only"
       action={
         <Btn
           kind="soft"
           onClick={genDuesNow}
           style={{ opacity: genDuesBusy ? 0.6 : 1 }}
         >
-          {genDuesBusy ? "⏳ তৈরি হচ্ছে…" : "🔄 এই মাসের বকেয়া তৈরি করুন"}
+          {genDuesBusy ? "⏳ Creating…" : "🔄 Create this month's dues"}
         </Btn>
       }
     >
@@ -8166,29 +8136,29 @@ function AccountsView({ db }) {
       >
         <Stat
           icon="📥"
-          label="মোট আয় (ফি)"
+          label="Total income (fees)"
           value={`৳${bn(income.toLocaleString("en"))}`}
         />
         <Stat
           icon="📤"
-          label="মোট ব্যয় (বেতন)"
+          label="Total expense (salaries)"
           value={`৳${bn(expense.toLocaleString("en"))}`}
           accent={C.red}
         />
         <Stat
           icon="🏦"
-          label="ব্যালেন্স"
+          label="Balance"
           value={`৳${bn((income - expense).toLocaleString("en"))}`}
           accent={C.gold}
         />
       </div>
-      {loading && <Loader text="হিসাব লোড হচ্ছে" />}
+      {loading && <Loader text="Loading accounts" />}
       <div style={{ ...S.card, marginBottom: 14, display: loading ? "none" : undefined }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
           👳 উস্তাদদের বেতন
         </div>
         <Table
-          head={["নাম", "মাসিক বেতন", "বকেয়া মাস"]}
+          head={["Name", "Monthly salary", "Dues months"]}
           rows={teachers.map((t) => {
             const dues = duesMap[String(t.id)] || db.dueMonths?.[t.id] || [];
             const month = dues[0];
@@ -8201,16 +8171,16 @@ function AccountsView({ db }) {
               /* ⚠️ আগে বকেয়ার রেকর্ড না থাকলেই "পরিশোধিত ✔" দেখাত। কিন্তু
                  বকেয়া তৈরি হয় মাসিক cron চললে — নতুন উস্তাদের ক্ষেত্রে বা
                  cron না চললে কোনো বকেয়াই থাকে না, ফলে এক টাকা বেতন না
-                 দিয়েও "পরিশোধিত" দেখাত। এখন আসল বেতনের রেকর্ড দেখে বলা হয়। */
+                 দিয়েও "Paid" দেখাত। এখন আসল বেতনের রেকর্ড দেখে বলা হয়। */
               dues.length ? (
                 <Tag key="d" color={C.red} bg={C.redBg}>
                   {month}
                   {paid > 0
-                    ? ` — ৳${bn(paid.toLocaleString("en"))} পেয়েছেন, ৳${bn(remaining.toLocaleString("en"))} বাকি`
+                    ? ` — ৳${bn(paid.toLocaleString("en"))} received, ৳${bn(remaining.toLocaleString("en"))} due`
                     : ""}
                 </Tag>
               ) : everPaid(t.id) ? (
-                <Tag key="d">পরিশোধিত ✔</Tag>
+                <Tag key="d">Paid ✔</Tag>
               ) : (
                 <Tag key="d" color={C.red} bg={C.redBg}>
                   এখনো কোনো বেতন দেওয়া হয়নি
@@ -8225,7 +8195,7 @@ function AccountsView({ db }) {
           📤 বেতন পরিশোধের ইতিহাস
         </div>
         <Table
-          head={["উস্তাদ", "মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "স্ট্যাটাস"]}
+          head={["Teacher", "Month", "Amount", "Date", "Method", "Status"]}
           rows={salaries.map((p) => {
             const tId = p.teacherId || p.teacher;
             const tRec = teachers.find((t) => String(t.id) === String(tId));
@@ -8245,11 +8215,11 @@ function AccountsView({ db }) {
                   ⚠️ আংশিক — ৳{bn(remaining.toLocaleString("en"))} বাকি
                 </Tag>
               ) : (
-                <Tag key="s">✅ ভেরিফাইড</Tag>
+                <Tag key="s">✅ Verified</Tag>
               ),
             ];
           })}
-          empty="কোনো পেমেন্ট ইতিহাস নেই"
+          empty="No payment history"
           loading={loading}
         />
       </div>
@@ -8258,7 +8228,7 @@ function AccountsView({ db }) {
           📥 স্টুডেন্ট ফি বকেয়া
         </div>
         <Table
-          head={["স্টুডেন্ট", "মাসিক ফি", "বকেয়া মাস", "বকেয়া টাকা"]}
+          head={["Student", "Monthly fee", "Dues months", "Dues amount"]}
           rows={students
             .filter((s) => (duesMap[String(s.id)] || []).length > 0)
             .map((s) => {
@@ -8272,7 +8242,7 @@ function AccountsView({ db }) {
                 </Tag>,
               ];
             })}
-          empty="কোনো বকেয়া নেই ✔"
+          empty="No dues ✔"
           loading={loading}
         />
       </div>
@@ -8296,7 +8266,7 @@ function FormsView({ db, setDb }) {
           setForms(
             contactForms.map((a) => ({
               id: a.id,
-              type: a.kind === "trial" ? "ফ্রি ট্রায়াল" : "যোগাযোগ",
+              type: a.kind === "trial" ? "Free Trial" : "Contact",
               name: a.name,
               contact: a.contact || a.email,
               msg: a.message || a.msg,
@@ -8319,14 +8289,14 @@ function FormsView({ db, setDb }) {
       setBusyId(id);
       try {
         await api.sendAdmissionReply(id);
-        notice("✔ WhatsApp রিপ্লাই পাঠানো হয়েছে।");
+        notice("✔ WhatsApp reply sent.");
         setForms((prev) =>
           prev.map((x) => (x.id === id ? { ...x, status: "replied" } : x)),
         );
       } catch (e) {
         notice(
-          "রিপ্লাই পাঠাতে ব্যর্থ — " +
-            (e?.data?.error || e?.message || "যাচাই করুন"),
+          "Could not send reply —" +
+            (e?.data?.error || e?.message || "Verify"),
         );
       }
       setBusyId(null);
@@ -8343,8 +8313,8 @@ function FormsView({ db, setDb }) {
   };
   return (
     <Section
-      title="ওয়েবসাইট ফর্ম সাবমিশন"
-      sub="tarbiyatulquran.org-এর যোগাযোগ ও ফ্রি ট্রায়াল ফর্ম থেকে আসা তথ্য"
+      title="Website Form Submissions"
+      sub="Submissions from the contact and free-trial forms on tarbiyatulquran.org"
     >
       <div style={{ display: "grid", gap: 10 }}>
         {forms.map((f) => (
@@ -8384,10 +8354,10 @@ function FormsView({ db, setDb }) {
               style={{ opacity: busyId === f.id ? 0.6 : 1 }}
             >
               {busyId === f.id
-                ? "⏳ পাঠানো হচ্ছে…"
+                ? "⏳ Sending…"
                 : f.status === "new"
-                  ? "📲 WhatsApp রিপ্লাই পাঠান"
-                  : "✔ রিপ্লাই হয়েছে"}
+                  ? "📲 Send WhatsApp reply"
+                  : "✔ Replied"}
             </Btn>
           </div>
         ))}
@@ -8445,11 +8415,11 @@ function BooksView({ db, user }) {
           type: res.file_type || "PDF",
         },
       ]);
-      notice("✔ বই যোগ করা হয়েছে।");
+      notice("✔ Book added.");
     } catch (e) {
       notice(
-        "বই যোগ করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not add book —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
       return;
     }
@@ -8460,20 +8430,20 @@ function BooksView({ db, user }) {
     try {
       await api.deleteLibraryBook(b.id);
       setBooks((prev) => prev.filter((x) => x.id !== b.id));
-      notice("✔ বই মুছে ফেলা হয়েছে।");
+      notice("✔ Book deleted.");
     } catch (e) {
       notice(
-        "বই মুছতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not delete book —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
   return (
     <Section
-      title="বই লাইব্রেরি"
-      sub="সকল শ্রেণির পাঠ্যবই ও সহায়ক বই — ডাউনলোডযোগ্য"
+      title="Book Library"
+      sub="Textbooks and supplementary books for all classes — downloadable"
       action={
-        isAdm(user) && <Btn onClick={() => setShow(true)}>+ বই যোগ করুন</Btn>
+        isAdm(user) && <Btn onClick={() => setShow(true)}>+ Add book</Btn>
       }
     >
       {groups.map((g) => (
@@ -8548,16 +8518,16 @@ function BooksView({ db, user }) {
         </div>
       ))}
       {show && (
-        <Modal title="নতুন বই যোগ করুন" onClose={() => setShow(false)}>
-          <label style={S.label}>শ্রেণি / কোর্স</label>
+        <Modal title="Add a new book" onClose={() => setShow(false)}>
+          <label style={S.label}>Class / Course</label>
           <input
             style={S.input}
             value={f.cls}
             onChange={(e) => setF({ ...f, cls: e.target.value })}
-            placeholder="যেমন: তাজবীদ"
+            placeholder="e.g. Tajweed"
           />
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>বইয়ের নাম</label>
+            <label style={S.label}>Book name</label>
             <input
               style={S.input}
               value={f.title}
@@ -8565,7 +8535,7 @@ function BooksView({ db, user }) {
             />
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>লেখক</label>
+            <label style={S.label}>Author</label>
             <input
               style={S.input}
               value={f.author}
@@ -8573,7 +8543,7 @@ function BooksView({ db, user }) {
             />
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>ডাউনলোড লিংক</label>
+            <label style={S.label}>Download link</label>
             <input
               style={S.input}
               value={f.link}
@@ -8585,7 +8555,7 @@ function BooksView({ db, user }) {
             style={{ marginTop: 16, width: "100%", justifyContent: "center" }}
             onClick={add}
           >
-            যোগ করুন
+            Add
           </Btn>
         </Modal>
       )}
@@ -8621,7 +8591,7 @@ function NoticesView({ db, setDb, user }) {
 
      ⚠️ show ও f রিফ্রেশেও টিকে থাকে (usePersistedState), তাই editId-ও
      টিকতে হবে। নইলে সংশোধনের মাঝপথে পাতা রিফ্রেশ হলে লেখাটা থেকে যেত
-     কিন্তু "কোনটা সংশোধন করছি" ভুলে যেত — ফলে "প্রকাশ করুন" চাপলে
+     কিন্তু "কোনটা সংশোধন করছি" ভুলে যেত — ফলে "Publish" চাপলে
      একই নোটিশ দ্বিতীয়বার তৈরি হয়ে যেত। */
   const [editId, setEditId] = usePersistedState("notice_editId", null);
   const openEdit = (n) => {
@@ -8636,7 +8606,7 @@ function NoticesView({ db, setDb, user }) {
   };
 
   const publish = async () => {
-    if (!f.title.trim() || !f.body.trim()) return notice("শিরোনাম ও বিস্তারিত দিন।");
+    if (!f.title.trim() || !f.body.trim()) return notice("Please enter a title and details.");
     setBusy(true);
     try {
       const body = { title: f.title.trim(), body: f.body.trim() };
@@ -8644,38 +8614,38 @@ function NoticesView({ db, setDb, user }) {
       else await api.createNotice(body);
       await loadNotices();
       closeForm();
-      notice(editId ? "✔ নোটিশ সংশোধন হয়েছে।" : "✔ নোটিশ প্রকাশ হয়েছে।");
+      notice(editId ? "✔ Notice updated." : "✔ Notice published.");
     } catch (e) {
       notice(
-        (editId ? "নোটিশ সংশোধন করতে ব্যর্থ — " : "নোটিশ প্রকাশ করতে ব্যর্থ — ") +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        (editId ? "Could not edit notice —" : "Could not publish notice —") +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
     setBusy(false);
   };
   const remove = (id) =>
     askConfirm(
-      "নোটিশটি চিরতরে মুছে ফেলা হবে — সবার পাতা থেকে, আর যাঁদের " +
-        "নোটিফিকেশনে গিয়েছিল তাঁদের ঘণ্টা থেকেও।",
+      "The notice will be permanently deleted — from everyone's page, and from those whose" +
+        "and from the bell of everyone who received the notification.",
       () => reallyRemove(id),
-      { yes: "হ্যাঁ, মুছে ফেলুন", no: "না, থাক" },
+      { yes: "Yes, delete", no: "No, cancel" },
     );
   const reallyRemove = async (id) => {
     try {
       await api.deleteNotice(id);
       await loadNotices();
-      notice("✔ নোটিশ মুছে ফেলা হয়েছে।");
+      notice("✔ Notice deleted.");
     } catch (e) {
       notice(
-        "নোটিশ মুছতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not delete notice —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
 
   return (
     <Section
-      title={T("নোটিশ বোর্ড", "Notice Board")}
+      title={T("Notice Board", "Notice Board")}
       action={
         isAdm(user) && (
           <Btn
@@ -8715,7 +8685,7 @@ function NoticesView({ db, setDb, user }) {
                     ✏️ এডিট
                   </Btn>
                   <Btn sm kind="danger" onClick={() => remove(n.id)}>
-                    মুছুন
+                    Delete
                   </Btn>
                 </span>
               )}
@@ -8729,17 +8699,17 @@ function NoticesView({ db, setDb, user }) {
       </div>
       {show && (
         <Modal
-          title={editId ? "নোটিশ সংশোধন" : "নতুন নোটিশ"}
+          title={editId ? "Edit notice" : "New notice"}
           onClose={closeForm}
         >
-          <label style={S.label}>শিরোনাম</label>
+          <label style={S.label}>Title</label>
           <input
             style={S.input}
             value={f.title}
             onChange={(e) => setF({ ...f, title: e.target.value })}
           />
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>বিস্তারিত</label>
+            <label style={S.label}>Details</label>
             <textarea
               rows={4}
               style={{ ...S.input, resize: "vertical" }}
@@ -8758,10 +8728,10 @@ function NoticesView({ db, setDb, user }) {
             onClick={busy ? undefined : publish}
           >
             {busy
-              ? "⏳ সংরক্ষণ হচ্ছে…"
+              ? "⏳ Saving…"
               : editId
-                ? "💾 সংশোধন সংরক্ষণ করুন"
-                : "প্রকাশ করুন"}
+                ? "💾 Save changes"
+                : "Publish"}
           </Btn>
         </Modal>
       )}
@@ -8931,12 +8901,12 @@ function TeacherReportView({ db, setDb, courses, user }) {
   const quality = !ratingCount
     ? ["—", C.muted, C.cream]
     : avg >= 4.5
-      ? ["অসাধারণ", C.green, C.greenBg]
+      ? ["Excellent", C.green, C.greenBg]
       : avg >= 4
-        ? ["খুব ভালো", C.emerald, C.greenBg]
+        ? ["Very good", C.emerald, C.greenBg]
         : avg >= 3
-          ? ["ভালো", C.gold, C.amberBg]
-          : ["উন্নতি প্রয়োজন", C.red, C.redBg];
+          ? ["Good", C.gold, C.amberBg]
+          : ["Needs improvement", C.red, C.redBg];
   const dist = ratingSummary
     ? [5, 4, 3, 2, 1].map((n) => ({
         n,
@@ -8970,7 +8940,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
   const [pmBusy, setPmBusy] = useState(false);
   const payTeacher = async (teacher, month, amount) => {
     if (!month) return;
-    if (!amount || amount <= 0) return notice("সঠিক পরিমাণ দিন।");
+    if (!amount || amount <= 0) return notice("Please enter a valid amount.");
     // পেমেন্ট সেভ ও রিসিট পাঠানো — আলাদা try/catch, নইলে পেমেন্ট আসলে সফল
     // হয়ে গেলেও শুধু রিসিট পাঠাতে ব্যর্থ হলে সেটাকে "পেমেন্ট ব্যর্থ" দেখানো
     // হতো, ফলে পরিচালক আবার পেমেন্ট দিলে ডুপ্লিকেট বেতন সেভ হয়ে যেতে পারত
@@ -8979,27 +8949,27 @@ function TeacherReportView({ db, setDb, courses, user }) {
         teacher: teacher.id,
         amount,
         month_label: month,
-        method: "ব্যাংক",
+        method: "Bank",
       });
     } catch (e) {
-      notice("পেমেন্ট সেভ করতে ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+      notice("Could not save payment —" + (e?.data?.error || e?.message || "Verify"));
       return;
     }
     await loadSalaries();
     try {
       await api.sendReceipt({
         to_user: teacher.id,
-        kind: "বেতন পরিশোধ ভাউচার",
+        kind: "Salary Payment Voucher",
         month_label: month,
         amount,
-        method: "ব্যাংক",
+        method: "Bank",
       });
-      notice("✔ বেতন পেমেন্ট সেভ হয়েছে ও ভাউচার পাঠানো হয়েছে।");
+      notice("✔ Salary payment saved and voucher sent.");
     } catch (e) {
       notice(
-        "✔ বেতন পেমেন্ট সেভ হয়েছে — কিন্তু ভাউচার পাঠাতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "যাচাই করুন") +
-          " (আবার পেমেন্ট দেবেন না, শুধু ভাউচারটা পরে আবার পাঠান)",
+        "✔ Salary payment saved — but the voucher could not be sent —" +
+          (e?.data?.error || e?.message || "Verify") +
+          " (do not pay again — just resend the voucher later)",
       );
     }
   };
@@ -9010,10 +8980,10 @@ function TeacherReportView({ db, setDb, courses, user }) {
     ? Math.max(0, pmSalary - (pmMonthLabel ? paidSoFar(pmTeacher.id, pmMonthLabel) : 0))
     : 0;
   const submitPayModal = async () => {
-    if (!pmTeacher) return notice("উস্তাদ বেছে নিন।");
-    if (!pm.month) return notice("মাস ও সাল বেছে নিন।");
+    if (!pmTeacher) return notice("Please choose a teacher.");
+    if (!pm.month) return notice("Please choose a month and year.");
     const amount = pm.amount ? +pm.amount : pmRemaining;
-    if (!amount || amount <= 0) return notice("সঠিক পরিমাণ দিন।");
+    if (!amount || amount <= 0) return notice("Please enter a valid amount.");
     setPmBusy(true);
     await payTeacher(pmTeacher, pmMonthLabel, amount);
     setPmBusy(false);
@@ -9066,7 +9036,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
     }
   };
   useEffect(() => {
-    // সব লোড শেষ হওয়ার আগে "কোনো রেকর্ড নেই" না দেখাতে
+    // সব লোড শেষ হওয়ার আগে "No records" না দেখাতে
     Promise.all([
       loadTeachers(),
       loadSalaries(),
@@ -9079,8 +9049,8 @@ function TeacherReportView({ db, setDb, courses, user }) {
   }, [tid]);
   return (
     <Section
-      title="টিচার রিপোর্ট ও পেমেন্ট"
-      sub="উপস্থিতি · ক্লাসের মান (স্টুডেন্ট মূল্যায়ন) · বেতন — চিহ্নিত করে দেখানো হয়েছে"
+      title="Teacher Report & Payment"
+      sub="Attendance · Class quality (student evaluation) · Salary — shown marked"
       action={
         isAdm(user) && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -9100,21 +9070,21 @@ function TeacherReportView({ db, setDb, courses, user }) {
         )
       }
     >
-      {loading && <Loader text="রিপোর্ট লোড হচ্ছে" />}
+      {loading && <Loader text="Loading report" />}
       {maker && <ReceiptMaker user={user} onClose={() => setMaker(false)} />}
       {payModal && (
         <Modal
-          title="উস্তাদের পেমেন্ট সম্পন্ন করুন"
+          title="Complete teacher payment"
           onClose={() => setPayModal(false)}
         >
           <div>
-            <label style={S.label}>উস্তাদ</label>
+            <label style={S.label}>Teacher</label>
             <select
               style={S.input}
               value={pm.teacherId}
               onChange={(e) => setPm({ ...pm, teacherId: e.target.value })}
             >
-              <option value="">বেছে নিন</option>
+              <option value="">Choose</option>
               {allTeachers.map((x) => (
                 <option key={x.id} value={x.id}>
                   {x.name}
@@ -9123,7 +9093,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
             </select>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>মাসিক বেতন</label>
+            <label style={S.label}>Monthly salary</label>
             <div
               style={{
                 ...S.input,
@@ -9137,7 +9107,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
             </div>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>কোন মাসের পেমেন্ট</label>
+            <label style={S.label}>Payment for which month</label>
             <input
               type="month"
               style={S.input}
@@ -9146,7 +9116,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
             />
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>কত পরিশোধ করছেন (ফাঁকা রাখলে ফুল পেমেন্ট ধরা হবে)</label>
+            <label style={S.label}>How much are you paying (leave blank for full payment)</label>
             <input
               type="number"
               style={S.input}
@@ -9160,7 +9130,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
             kind="gold"
             onClick={submitPayModal}
           >
-            {pmBusy ? "⏳ সেভ হচ্ছে…" : "✔ পেমেন্ট দিন"}
+            {pmBusy ? "⏳ Saving…" : "✔ Make payment"}
           </Btn>
         </Modal>
       )}
@@ -9232,23 +9202,23 @@ function TeacherReportView({ db, setDb, courses, user }) {
           marginBottom: 14,
         }}
       >
-        <Stat icon="🎥" label="ক্লাস নিয়েছেন" value={bn(taken)} />
+        <Stat icon="🎥" label="Classes taught" value={bn(taken)} />
         <Stat
           icon="✅"
-          label="পূর্ণ উপস্থিতি"
+          label="Full attendance"
           value={bn(present)}
-          note="২০+ মিনিট"
+          note="20+ minutes"
         />
         <Stat
           icon="⚠️"
-          label="অসম্পূর্ণ উপস্থিতি"
+          label="Incomplete attendance"
           value={bn(short)}
           accent={C.red}
-          note="২০ মিনিটের কম"
+          note="Under 20 minutes"
         />
         <Stat
           icon="🌟"
-          label="মোট মূল্যায়ন"
+          label="Total evaluations"
           value={bn(ratingCount)}
           accent={C.gold}
         />
@@ -9305,7 +9275,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
                 কে কী মূল্যায়ন করেছে (কেবল এডমিন/পরিচালক দেখছেন):
               </div>
               <Table
-                head={["স্টুডেন্ট", "কোর্স", "রেটিং", "মন্তব্য", "তারিখ"]}
+                head={["Student", "Course", "Rating", "Remarks", "Date"]}
                 rows={allRatings
                   .filter(
                     (r) => String(r.teacher || r.teacherId) === String(tid),
@@ -9317,7 +9287,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
                     r.comment || "—",
                     fmtDate(r.rated_at || r.date),
                   ])}
-                empty="এখনো কোনো মূল্যায়ন নেই"
+                empty="No evaluations yet"
                 loading={loading}
               />
             </div>
@@ -9343,11 +9313,11 @@ function TeacherReportView({ db, setDb, courses, user }) {
           </div>
           <Table
             head={[
-              "কোর্স",
-              "তারিখ",
+              "Course",
+              "Date",
               // কত মিনিট ক্লাস হয়েছে তা কেবল পরিচালকই দেখবেন
-              ...(isDir(user) ? ["উপস্থিতি"] : []),
-              "অবস্থা",
+              ...(isDir(user) ? ["Attendance"] : []),
+              "Status",
             ]}
             rows={att.map((a) => {
               return [
@@ -9355,7 +9325,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
                 a.class_date ? fmtDate(a.class_date) : "—",
                 ...(isDir(user) ? [`${bn(a.minutes)} মিনিট`] : []),
                 (a.present ?? a.minutes >= 20) ? (
-                  <Tag key="t">উপস্থিত ✔</Tag>
+                  <Tag key="t">Present ✔</Tag>
                 ) : (
                   <Tag key="t" color={C.red} bg={C.redBg}>
                     অসম্পূর্ণ ✘
@@ -9363,7 +9333,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
                 ),
               ];
             })}
-            empty="কোনো রেকর্ড নেই"
+            empty="No records"
             loading={loading}
           />
         </div>
@@ -9377,7 +9347,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
               marginBottom: 10,
             }}
           >
-            <div style={{ fontWeight: 800 }}>💰 আমার বেতন ও পেমেন্ট</div>
+            <div style={{ fontWeight: 800 }}>💰 My Salary & Payments</div>
             <div style={{ fontSize: 13 }}>
               মাসিক বেতন:{" "}
               <b>
@@ -9389,12 +9359,12 @@ function TeacherReportView({ db, setDb, courses, user }) {
                   {dues.join(", ")}
                 </Tag>
               ) : (
-                <Tag>নেই ✔</Tag>
+                <Tag>None ✔</Tag>
               )}
             </div>
           </div>
           <Table
-            head={["মাস", "পরিমাণ", "তারিখ", "মাধ্যম", "স্ট্যাটাস"]}
+            head={["Month", "Amount", "Date", "Method", "Status"]}
             rows={pays.map((p) => {
               const monthLbl = p.month_label || p.month;
               const salary = t.monthly_salary || t.salary || 0;
@@ -9412,11 +9382,11 @@ function TeacherReportView({ db, setDb, courses, user }) {
                     ⚠️ আংশিক — ৳{bn(remaining.toLocaleString("en"))} বাকি
                   </Tag>
                 ) : (
-                  <Tag key="s">✅ ভেরিফাইড</Tag>
+                  <Tag key="s">✅ Verified</Tag>
                 ),
               ];
             })}
-            empty="এখনো কোনো পেমেন্ট হয়নি"
+            empty="No payments yet"
             loading={loading}
           />
         </div>
@@ -9468,21 +9438,21 @@ function AdmissionsView({ db, setDb, user, refresh }) {
       `${a.name}-এর এই আবেদনটি চিরতরে মুছে ফেলা হবে।` +
         "\n\n" +
         (a.status === "accepted"
-          ? "তিনি ইতিমধ্যে গৃহীত — তাঁর অ্যাকাউন্ট, হাজিরা ও সব তথ্য অক্ষত থাকবে, শুধু আবেদনের কাগজটি সরে যাবে।"
-          : "এটি আর ফেরানো যাবে না।"),
+          ? "They are already admitted — their account, attendance and all data stay intact; only the application record is removed."
+          : "This cannot be undone."),
       async () => {
         try {
           await api.deleteAdmission(a.id);
           await loadData();
-          notice("🗑️ আবেদনটি মুছে ফেলা হয়েছে");
+          notice("🗑️ Application deleted");
         } catch (e) {
           notice(
-            "মুছতে ব্যর্থ — " +
-              (e?.data?.error || e?.data?.detail || e?.message || "আবার চেষ্টা করুন"),
+            "Could not delete —" +
+              (e?.data?.error || e?.data?.detail || e?.message || "Please try again"),
           );
         }
       },
-      { yes: "হ্যাঁ, মুছে ফেলুন", no: "না, থাক" },
+      { yes: "Yes, delete", no: "No, cancel" },
     );
 
   const accept = async (a) => {
@@ -9506,9 +9476,9 @@ function AdmissionsView({ db, setDb, user, refresh }) {
       // আইডি-পাসওয়ার্ড দিয়ে কখনোই লগইন করা যেত না। এখন স্পষ্ট এরর দেখাচ্ছে,
       // কোনো ভুয়া অ্যাকাউন্ট তৈরি করছে না।
       notice(
-        "ভর্তি গ্রহণ করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন") +
-          " (আবেদনটা এখনো 'পেন্ডিং'-ই আছে)",
+        "Could not accept admission —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again") +
+          " (the application is still 'pending')",
       );
     } finally {
       setAcceptingId(null);
@@ -9518,11 +9488,11 @@ function AdmissionsView({ db, setDb, user, refresh }) {
     try {
       await api.rejectAdmission(a.id);
       await loadData();
-      notice("✔ আবেদনটি বাতিল করা হয়েছে।");
+      notice("✔ The application has been cancelled.");
     } catch (e) {
       notice(
-        "আবেদন বাতিল করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not cancel application —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
@@ -9530,11 +9500,11 @@ function AdmissionsView({ db, setDb, user, refresh }) {
     try {
       await api.forwardAdmission(a.id);
       await loadData();
-      notice("✔ আবেদনটি পরিচালকের কাছে পাঠানো হয়েছে।");
+      notice("✔ The application has been sent to the director.");
     } catch (e) {
       notice(
-        "আবেদন পাঠাতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not send application —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
@@ -9597,7 +9567,7 @@ function AdmissionsView({ db, setDb, user, refresh }) {
                   disabled={acceptingId === a.id}
                   onClick={() => accept(a)}
                 >
-                  {acceptingId === a.id ? "..." : "✔ গ্রহণ করুন"}
+                  {acceptingId === a.id ? "..." : "✔ Accept"}
                 </Btn>
                 <Btn sm kind="danger" onClick={() => reject(a)}>
                   ✘ বাতিল
@@ -9614,7 +9584,7 @@ function AdmissionsView({ db, setDb, user, refresh }) {
             </Btn>
           )
         ) : a.status === "accepted" ? (
-          <Tag>গৃহীত ✔</Tag>
+          <Tag>Accepted ✔</Tag>
         ) : (
           <Tag color={C.red} bg={C.redBg}>
             বাতিল ✘
@@ -9625,7 +9595,7 @@ function AdmissionsView({ db, setDb, user, refresh }) {
           <Btn
             sm
             kind="danger"
-            title="এই আবেদনটি মুছে ফেলুন"
+            title="Delete this application"
             onClick={() => removeAdmission(a)}
             style={{ alignSelf: "flex-start" }}
           >
@@ -9637,8 +9607,8 @@ function AdmissionsView({ db, setDb, user, refresh }) {
   );
   return (
     <Section
-      title="ভর্তি আবেদন"
-      sub="গ্রহণ/বাতিলের ক্ষমতা কেবল পরিচালকের — এডমিন বিস্তারিত দেখে পরিচালক বরাবর পাঠাবেন"
+      title="Admission Applications"
+      sub="Only the director can accept or reject — the admin reviews the details and forwards to the director"
     >
       <div
         style={{
@@ -9652,7 +9622,7 @@ function AdmissionsView({ db, setDb, user, refresh }) {
       </div>
       <div style={{ display: "grid", gap: 10, marginBottom: 18 }}>
         {loading ? (
-          <Loader text="আবেদন লোড হচ্ছে" />
+          <Loader text="Loading applications" />
         ) : pending.length === 0 ? (
           <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
             নতুন আবেদন নেই
@@ -9685,12 +9655,12 @@ function BroadcastCard({ user }) {
   const [busy, setBusy] = useState(false);
   if (!isDir(user)) return null;
   const READY_MADE =
-    "📲 অ্যাপের লোগো ও নাম নতুন করা হয়েছে। যাঁরা ফোনে/পিসিতে অ্যাপটি ইনস্টল " +
-    "করে রেখেছেন, একবার আনইনস্টল করে আবার ইনস্টল করে নিন — তাহলেই নতুন " +
-    "লোগো ও নাম বসে যাবে। আপনার কোনো তথ্য হারাবে না।";
+    "📲 The app's logo and name have been updated. Those who" +
+    "have it installed, please uninstall and reinstall it once — then the new" +
+    "logo and name will appear. None of your data will be lost.";
   const send = () => {
     const msg = text.trim();
-    if (!msg) return notice("বার্তা লিখুন।");
+    if (!msg) return notice("Please write a message.");
     askConfirm(
       `এই বার্তাটি একাডেমির সবাইকে পাঠানো হবে — পরিচালক, এডমিন, উস্তাদ ও সব শিক্ষার্থীকে।
 
@@ -9702,7 +9672,7 @@ function BroadcastCard({ user }) {
           notice(`পাঠানো হয়েছে — ${bn(r?.sent ?? 0)} জনের কাছে।`);
           setText("");
         } catch (e) {
-          notice("পাঠানো যায়নি — " + (e?.data?.error || e?.message || "আবার চেষ্টা করুন"));
+          notice("Could not send —" + (e?.data?.error || e?.message || "Please try again"));
         } finally {
           setBusy(false);
         }
@@ -9711,7 +9681,7 @@ function BroadcastCard({ user }) {
   };
   return (
     <div style={{ ...S.card, border: `1.5px solid ${C.emerald}`, marginBottom: 14 }}>
-      <div style={{ fontWeight: 800, marginBottom: 4 }}>📢 সবাইকে নোটিফিকেশন</div>
+      <div style={{ fontWeight: 800, marginBottom: 4 }}>📢 Notify everyone</div>
       <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
         একাডেমির সবার পোর্টালের নোটিফিকেশন ঘণ্টায় বার্তাটি চলে যাবে। যাঁরা
         ফোনে নোটিফিকেশন চালু করেছেন, তাঁদের কাছে অ্যাপ বন্ধ থাকলেও পৌঁছাবে।
@@ -9721,7 +9691,7 @@ function BroadcastCard({ user }) {
         onChange={(e) => setText(e.target.value)}
         rows={3}
         maxLength={500}
-        placeholder="যে বার্তাটি সবাইকে জানাতে চান…"
+        placeholder="The message you want everyone to see…"
         style={{ ...S.input, width: "100%", resize: "vertical", marginBottom: 8 }}
       />
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -9729,7 +9699,7 @@ function BroadcastCard({ user }) {
           📲 অ্যাপ নতুন করে ইনস্টলের বার্তা বসান
         </Btn>
         <Btn kind="gold" onClick={send} style={{ opacity: busy ? 0.7 : 1 }}>
-          {busy ? "পাঠানো হচ্ছে…" : "📢 সবাইকে পাঠান"}
+          {busy ? "Sending…" : "📢 Send to everyone"}
         </Btn>
       </div>
     </div>
@@ -9750,7 +9720,7 @@ function BackupCard() {
       setDone(true);
       setTimeout(() => setDone(false), 4000);
     } catch (e) {
-      setErr(e.message || "ব্যর্থ হয়েছে");
+      setErr(e.message || "Failed");
     } finally {
       setBusy(false);
     }
@@ -9764,7 +9734,7 @@ function BackupCard() {
         marginBottom: 14,
       }}
     >
-      <div style={{ fontWeight: 800, marginBottom: 4 }}>💾 ডেটা ব্যাকআপ</div>
+      <div style={{ fontWeight: 800, marginBottom: 4 }}>💾 Data Backup</div>
       <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
         সকল ডেটা (ব্যবহারকারী, কোর্স, ফি, ভর্তি, বই, উপস্থিতি ইত্যাদি) JSON
         ফাইলে ডাউনলোড করুন। যেকোনো সময় সার্ভার পরিবর্তন করলেও ডেটা কাছে থাকবে।
@@ -9775,8 +9745,8 @@ function BackupCard() {
         style={{ opacity: busy ? 0.7 : 1 }}
       >
         {busy
-          ? "⏳ ডাউনলোড হচ্ছে…"
-          : "⬇️ সম্পূর্ণ ব্যাকআপ ডাউনলোড করুন (.json)"}
+          ? "⏳ Downloading…"
+          : "⬇️ Download full backup (.json)"}
       </Btn>
       {done && (
         <div
@@ -9804,11 +9774,11 @@ function TimezoneManagerCard() {
   const [err, setErr] = useState("");
 
   const add = () => {
-    if (!label.trim() || !zone.trim()) { setErr("নাম ও টাইমজোন আইডি দিন।"); return; }
+    if (!label.trim() || !zone.trim()) { setErr("Please enter a name and timezone ID."); return; }
     try { Intl.DateTimeFormat("en", { timeZone: zone.trim() }); }
-    catch { setErr("ভুল টাইমজোন আইডি — সঠিক উদাহরণ: Europe/Rome, America/Toronto"); return; }
+    catch { setErr("Invalid timezone ID — valid examples: Europe/Rome, America/Toronto"); return; }
     if ([...COMMON_ZONES, ...custom].some((z) => z.zone === zone.trim())) {
-      setErr("এই টাইমজোন তালিকায় আগেই আছে।"); return;
+      setErr("This timezone is already in the list."); return;
     }
     const updated = [...custom, { label: label.trim(), zone: zone.trim() }];
     setCustom(updated);
@@ -9824,7 +9794,7 @@ function TimezoneManagerCard() {
 
   return (
     <div style={{ ...S.card, marginBottom: 14 }}>
-      <div style={{ fontWeight: 800, marginBottom: 4 }}>🌍 টাইমজোন পরিচালনা</div>
+      <div style={{ fontWeight: 800, marginBottom: 4 }}>🌍 Manage timezones</div>
       <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
         ক্লাস শিডিউল ফর্মে নতুন দেশের সময় দেখাতে এখানে যোগ করুন।
         টাইমজোন আইডি খুঁজুন:{" "}
@@ -9842,23 +9812,23 @@ function TimezoneManagerCard() {
             <div key={z.zone} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5, background: C.cream, borderRadius: 8, padding: "6px 10px" }}>
               <span style={{ flex: 1, fontSize: 13 }}>{z.label}</span>
               <code style={{ fontSize: 11, color: C.muted, background: "none" }}>{z.zone}</code>
-              <Btn sm kind="danger" onClick={() => remove(z.zone)}>মুছুন</Btn>
+              <Btn sm kind="danger" onClick={() => remove(z.zone)}>Delete</Btn>
             </div>
           ))}
         </div>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, alignItems: "end" }}>
         <div>
-          <label style={S.label}>নাম (যেমন: 🇮🇹 ইতালি)</label>
+          <label style={S.label}>Name (e.g. 🇮🇹 Italy)</label>
           <input
             style={S.input}
             value={label}
             onChange={(e) => { setLabel(e.target.value); setErr(""); }}
-            placeholder="🇮🇹 ইতালি (Rome)"
+            placeholder="🇮🇹 Italy (Rome)"
           />
         </div>
         <div>
-          <label style={S.label}>IANA টাইমজোন আইডি</label>
+          <label style={S.label}>IANA timezone ID</label>
           <input
             style={S.input}
             value={zone}
@@ -9866,7 +9836,7 @@ function TimezoneManagerCard() {
             placeholder="Europe/Rome"
           />
         </div>
-        <Btn kind="soft" onClick={add} style={{ whiteSpace: "nowrap" }}>+ যোগ করুন</Btn>
+        <Btn kind="soft" onClick={add} style={{ whiteSpace: "nowrap" }}>+ Add</Btn>
       </div>
       {err && <div style={{ marginTop: 6, fontSize: 12.5, color: C.red }}>{err}</div>}
     </div>
@@ -9900,7 +9870,7 @@ function ManageView({ db, setDb, user, refresh }) {
       const data = await api.allUsers();
       setAllUsers(
         // ট্রায়াল (সাময়িক অতিথি) এখানে দেখানো হয় না — তাঁদের নিজস্ব
-        // "🎓 ট্রায়াল" পর্দা আছে। এই পর্দাটা একাডেমির স্থায়ী লোকজনের জন্য,
+        // "🎓 Trial" পর্দা আছে। এই পর্দাটা একাডেমির স্থায়ী লোকজনের জন্য,
         // তাই এখানে আগের মতোই কেবল পরিচালক/এডমিন/উস্তাদ/স্টুডেন্ট থাকবেন।
         data
           .filter((u) => u.role !== "trial")
@@ -10012,8 +9982,8 @@ function ManageView({ db, setDb, user, refresh }) {
     });
   };
   const saveUser = async () => {
-    if (!f.name || !f.user) return notice("নাম ও লগইন আইডি দিন।");
-    if (!editId && !f.pass) return notice("পাসওয়ার্ড দিন।");
+    if (!f.name || !f.user) return notice("Please enter a name and login ID.");
+    if (!editId && !f.pass) return notice("Please enter a password.");
     setSaving(true);
     try {
       const payload = {
@@ -10023,10 +9993,10 @@ function ManageView({ db, setDb, user, refresh }) {
         sub_title:
           f.sub ||
           (f.role === "student"
-            ? "নতুন স্টুডেন্ট"
+            ? "New Student"
             : f.role === "teacher"
-              ? "উস্তাদ/উস্তাদা"
-              : "একাডেমিক এডমিন"),
+              ? "Ustadh / Ustadha"
+              : "Academic Admin"),
         ...(f.role === "student" ? { monthly_fee: +f.fee, fee_currency: f.feeCurrency || "BDT" } : {}),
         ...(f.role === "teacher" ? { monthly_salary: +f.salary } : {}),
         // পাসওয়ার্ড খালি রাখলে অপরিবর্তিত; নতুন দিলে বদলে যায়
@@ -10036,16 +10006,16 @@ function ManageView({ db, setDb, user, refresh }) {
       await loadUsers();
       const wasEdit = !!editId;
       closeForm();
-      notice(wasEdit ? "✔ আপডেট হয়েছে" : "✔ নতুন ব্যবহারকারী যোগ হয়েছে");
+      notice(wasEdit ? "✔ Updated" : "✔ New user added");
     } catch (err) {
       if (editId) {
         setSaving(false);
-        return notice("আপডেট ব্যর্থ — সার্ভার সংযোগ যাচাই করুন।");
+        return notice("Update failed — please check your server connection.");
       }
       // ব্যাকএন্ড না থাকলে / আইডি ডুপ্লিকেট — mock এ যোগ
       if (USERS.some((x) => x.user === f.user)) {
         setSaving(false);
-        return notice("এই লগইন আইডি আগে থেকেই আছে — অন্যটি দিন।");
+        return notice("This login ID already exists — please use another.");
       }
       const id = f.role[0] + uid();
       USERS.push({
@@ -10055,10 +10025,10 @@ function ManageView({ db, setDb, user, refresh }) {
         sub:
           f.sub ||
           (f.role === "student"
-            ? "নতুন স্টুডেন্ট"
+            ? "New Student"
             : f.role === "teacher"
-              ? "উস্তাদ/উস্তাদা"
-              : "একাডেমিক এডমিন"),
+              ? "Ustadh / Ustadha"
+              : "Academic Admin"),
         user: f.user,
         pass: f.pass,
         ...(f.role === "student" ? { fee: +f.fee } : {}),
@@ -10097,7 +10067,7 @@ function ManageView({ db, setDb, user, refresh }) {
           // ধারণা হতো যে অ্যাক্সেস বাতিল হয়ে গেছে। এখন স্পষ্ট এরর দেখাচ্ছে।
           notice(
             `${u.name}-কে মুছতে ব্যর্থ — ` +
-              (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+              (e?.data?.error || e?.message || "Please check your server connection and try again"),
           );
         }
       },
@@ -10121,10 +10091,10 @@ function ManageView({ db, setDb, user, refresh }) {
   };
   const permOn = (t) => t.can_fix_cross ?? db.permissions.fixCross[t.id];
   const roleBn = {
-    director: "পরিচালক",
-    admin: "এডমিন",
-    teacher: "উস্তাদ/উস্তাদা",
-    student: "স্টুডেন্ট",
+    director: "Director",
+    admin: "Admin",
+    teacher: "Ustadh / Ustadha",
+    student: "Student",
   };
 
   /* এক ব্যবহারকারীর বিস্তারিত রিপোর্ট — পরিচালক সব দেখেন */
@@ -10190,7 +10160,7 @@ function ManageView({ db, setDb, user, refresh }) {
               borderRadius: 10,
             }}
           >
-            লগইন: <b>{u.user}</b> · পাস: <b>{u.pass}</b>
+            লগইন: <b>{u.user}</b> · Pass: <b>{u.pass}</b>
           </div>
           {u.role !== "admin" && u.role !== "director" && (
             <div
@@ -10224,17 +10194,17 @@ function ManageView({ db, setDb, user, refresh }) {
               marginBottom: 12,
             }}
           >
-            <Stat icon="✅" label="উপস্থিত" value={bn(present)} />
+            <Stat icon="✅" label="Present" value={bn(present)} />
             <Stat
               icon="❌"
-              label="অনুপস্থিত/অসম্পূর্ণ"
+              label="Absent/Incomplete"
               value={bn(missed)}
               accent={C.red}
             />
             {u.role === "teacher" && (
               <Stat
                 icon="🌟"
-                label="ক্লাসের মান"
+                label="Class quality"
                 value={avg ? `★ ${bn(avg)}` : "—"}
                 accent={C.gold}
                 note={`${bn(ratingsGot.length)}টি মূল্যায়ন`}
@@ -10243,17 +10213,17 @@ function ManageView({ db, setDb, user, refresh }) {
             {u.role === "student" && (
               <Stat
                 icon="💰"
-                label="ফি দিয়েছে"
+                label="Fee paid"
                 value={`৳${bn(paid.reduce((s, p) => s + (+p.amount || 0), 0).toLocaleString("en"))}`}
                 accent={C.gold}
               />
             )}
             <Stat
               icon="⏳"
-              label="বকেয়া মাস"
+              label="Dues months"
               value={bn(dues.length)}
               accent={dues.length ? C.red : C.emerald}
-              note={dues.join(", ") || "নেই"}
+              note={dues.join(", ") || "None"}
             />
           </div>
         )}
@@ -10263,7 +10233,7 @@ function ManageView({ db, setDb, user, refresh }) {
               📝 পরীক্ষার ফল
             </div>
             <Table
-              head={["পরীক্ষা", "মার্ক"]}
+              head={["Exams", "Marks"]}
               rows={exams.map((e) => [
                 e.title,
                 `${bn(e.marks[uid2])}/${bn(e.total)}`,
@@ -10279,7 +10249,7 @@ function ManageView({ db, setDb, user, refresh }) {
               🌟 সে যেসব মূল্যায়ন করেছে (কেবল পরিচালক/এডমিন দেখেন)
             </div>
             <Table
-              head={["উস্তাদ", "রেটিং", "মন্তব্য", "তারিখ"]}
+              head={["Teacher", "Rating", "Remarks", "Date"]}
               rows={ratingsGiven.map((r) => [
                 allUsers.find((x) => String(x.id) === String(r.teacher))?.name || "—",
                 "★".repeat(r.stars),
@@ -10297,7 +10267,7 @@ function ManageView({ db, setDb, user, refresh }) {
               🌟 তার সম্পর্কে স্টুডেন্টদের মূল্যায়ন (নাম-মন্তব্যসহ)
             </div>
             <Table
-              head={["স্টুডেন্ট", "রেটিং", "মন্তব্য", "তারিখ"]}
+              head={["Student", "Rating", "Remarks", "Date"]}
               rows={ratingsGot.map((r) => [
                 allUsers.find((x) => String(x.id) === String(r.student))?.name || "—",
                 "★".repeat(r.stars),
@@ -10315,13 +10285,13 @@ function ManageView({ db, setDb, user, refresh }) {
               💰 বেতন পরিশোধ
             </div>
             <Table
-              head={["মাস", "পরিমাণ", "তারিখ"]}
+              head={["Month", "Amount", "Date"]}
               rows={tPaid.map((p) => [
                 p.month_label,
                 `৳${bn((+p.amount || 0).toLocaleString("en"))}`,
                 fmtDate(p.paid_at),
               ])}
-              empty="এখনো পেমেন্ট হয়নি"
+              empty="No payments yet"
               loading={loading}
             />
           </>
@@ -10334,14 +10304,14 @@ function ManageView({ db, setDb, user, refresh }) {
               💳 ফি পরিশোধ
             </div>
             <Table
-              head={["মাস", "পরিমাণ", "মাধ্যম", "অবস্থা"]}
+              head={["Month", "Amount", "Method", "Status"]}
               rows={paid.map((p) => [
                 p.month_label,
                 `৳${bn((+p.amount || 0).toLocaleString("en"))}`,
                 p.method,
-                p.status === "pending" ? "যাচাই বাকি" : "যাচাইকৃত ✔",
+                p.status === "pending" ? "Pending verification" : "Verified ✔",
               ])}
-              empty="এখনো পেমেন্ট নেই"
+              empty="No payments yet"
               loading={loading}
             />
           </>
@@ -10357,8 +10327,8 @@ function ManageView({ db, setDb, user, refresh }) {
             }}
           >
             {u.role === "admin"
-              ? "একাডেমিক এডমিন — ক্লাস, লেকচার, ভর্তি, পরীক্ষা, ফি যাচাই ও ফর্ম নিয়ন্ত্রণ করেন। হিসাব-নিকাশ ও ম্যানেজ সেটিংসে প্রবেশাধিকার নেই।"
-              : "পরিচালক — সফটওয়্যারের পূর্ণ নিয়ন্ত্রণ।"}
+              ? "Academic Admin — manages classes, lectures, admissions, exams, fee verification and forms. No access to Accounts or Settings."
+              : "Director — full control of the software."}
           </div>
         )}
       </Modal>
@@ -10367,8 +10337,8 @@ function ManageView({ db, setDb, user, refresh }) {
 
   return (
     <Section
-      title="ম্যানেজ সেটিংস"
-      sub="পরিচালকের পূর্ণ নিয়ন্ত্রণ — সবার আইডি-পাসওয়ার্ড, বিস্তারিত রিপোর্ট; কোনো কিছুই আড়াল নয়"
+      title="Settings"
+      sub="Full director control — everyone's ID and password, detailed reports; nothing is hidden"
       action={
         <Btn
           onClick={() => {
@@ -10391,19 +10361,19 @@ function ManageView({ db, setDb, user, refresh }) {
         </Btn>
       }
     >
-      {loading && <Loader text="ব্যবহারকারী তালিকা আসছে" />}
+      {loading && <Loader text="Loading user list" />}
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
           👥 সকল ব্যবহারকারী — আইডি, পাসওয়ার্ড ও রিপোর্টসহ
         </div>
         <Table
           head={[
-            "নাম",
-            "ভূমিকা",
-            "লগইন আইডি",
-            "পাসওয়ার্ড",
-            "রিপোর্ট",
-            "অ্যাকশন",
+            "Name",
+            "Role",
+            "Login ID",
+            "Password",
+            "Report",
+            "Action",
           ]}
           rows={allUsers.map((u) => [
             u.name,
@@ -10443,7 +10413,7 @@ function ManageView({ db, setDb, user, refresh }) {
               </Btn>
               {u.role !== "director" && (
                 <Btn sm kind="danger" onClick={() => delUser(u)}>
-                  মুছুন
+                  Delete
                 </Btn>
               )}
             </span>,
@@ -10485,7 +10455,7 @@ function ManageView({ db, setDb, user, refresh }) {
                 {t.name}
               </span>
               {permOn(t) ? (
-                <Tag>অনুমতি চালু ✔</Tag>
+                <Tag>Permission granted ✔</Tag>
               ) : (
                 <Tag color={C.muted} bg={"#fff"}>
                   বন্ধ
@@ -10496,7 +10466,7 @@ function ManageView({ db, setDb, user, refresh }) {
                 kind={permOn(t) ? "danger" : "ghost"}
                 onClick={() => togglePerm(t.id)}
               >
-                {permOn(t) ? "বন্ধ করুন" : "অনুমতি দিন"}
+                {permOn(t) ? "Close" : "Allow"}
               </Btn>
             </div>
           ))}
@@ -10509,14 +10479,14 @@ function ManageView({ db, setDb, user, refresh }) {
           ⚠️ ডেঞ্জার জোন
         </div>
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
-          ক্লাস, পরীক্ষা, নোটিশ, বই — প্রতিটি পেজে পরিচালকের জন্য আলাদা "মুছুন"
+          ক্লাস, পরীক্ষা, নোটিশ, বই — প্রতিটি পেজে পরিচালকের জন্য আলাদা "Delete"
           বাটন চালু আছে। এছাড়া:
         </div>
         <Btn
           kind="danger"
           sm
           onClick={() =>
-            askConfirm("সব নোটিফিকেশন মুছে ফেলবেন?", () =>
+            askConfirm("Delete all notifications?", () =>
               setDb((d) => ({ ...d, notifications: [] })),
             )
           }
@@ -10528,22 +10498,22 @@ function ManageView({ db, setDb, user, refresh }) {
       {show && (
         <Modal
           title={
-            editId ? "✏️ ব্যবহারকারী এডিট করুন" : "নতুন ব্যবহারকারী যোগ করুন"
+            editId ? "✏️ Edit user" : "Add a new user"
           }
           onClose={closeForm}
         >
-          <label style={S.label}>ভূমিকা</label>
+          <label style={S.label}>Role</label>
           <select
             style={S.input}
             value={f.role}
             onChange={(e) => setF({ ...f, role: e.target.value })}
           >
-            <option value="student">স্টুডেন্ট</option>
-            <option value="teacher">উস্তাদ/উস্তাদা</option>
-            <option value="admin">এডমিন</option>
+            <option value="student">Student</option>
+            <option value="teacher">Ustadh / Ustadha</option>
+            <option value="admin">Admin</option>
           </select>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>নাম</label>
+            <label style={S.label}>Name</label>
             <input
               style={S.input}
               value={f.name}
@@ -10551,25 +10521,25 @@ function ManageView({ db, setDb, user, refresh }) {
             />
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>লগইন আইডি — জিমেইল বা মোবাইল নম্বর</label>
+            <label style={S.label}>Login ID — Gmail or mobile number</label>
             <input
               style={S.input}
               value={f.user}
               onChange={(e) => setF({ ...f, user: e.target.value })}
-              placeholder="যেমন: name@gmail.com বা 01712345678"
+              placeholder="e.g. name@gmail.com or 01712345678"
             />
           </div>
           <div style={{ marginTop: 10 }}>
             <label style={S.label}>
               পাসওয়ার্ড — অক্ষর ও সংখ্যা মিশ্রিত
-              {editId ? " (খালি রাখলে অপরিবর্তিত থাকবে)" : ""}
+              {editId ? " (leave blank to keep unchanged)" : ""}
             </label>
             <div style={{ display: "flex", gap: 8 }}>
               <input
                 style={{ ...S.input, flex: 1 }}
                 value={f.pass}
                 onChange={(e) => setF({ ...f, pass: e.target.value })}
-                placeholder={editId ? "নতুন পাসওয়ার্ড দিলে বদলে যাবে" : ""}
+                placeholder={editId ? "Entering a new password will change it" : ""}
               />
               <Btn kind="soft" onClick={() => setF({ ...f, pass: genPass() })}>
                 🎲 বানিয়ে দিন
@@ -10578,11 +10548,11 @@ function ManageView({ db, setDb, user, refresh }) {
           </div>
           {f.role === "student" && (
             <div style={{ marginTop: 10 }}>
-              <label style={S.label}>মাসিক ফি — কারেন্সি ও পরিমাণ</label>
+              <label style={S.label}>Monthly fee — currency and amount</label>
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
                 {[
-                  { val: "BDT", label: "৳ টাকা" },
-                  { val: "USD", label: "$ ডলার" },
+                  { val: "BDT", label: "৳ Taka" },
+                  { val: "USD", label: "$ Dollar" },
                 ].map((c) => (
                   <button
                     key={c.val}
@@ -10633,7 +10603,7 @@ function ManageView({ db, setDb, user, refresh }) {
               )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <label style={S.label}>{f.feeCurrency === "USD" ? "পরিমাণ ($)" : "পরিমাণ (৳)"}</label>
+                  <label style={S.label}>{f.feeCurrency === "USD" ? "Amount ($)" : "Amount (৳)"}</label>
                   <input
                     type="number"
                     style={S.input}
@@ -10642,7 +10612,7 @@ function ManageView({ db, setDb, user, refresh }) {
                   />
                 </div>
                 <div>
-                  <label style={S.label}>কোর্স</label>
+                  <label style={S.label}>Course</label>
                   <select
                     style={S.input}
                     value={f.courseId}
@@ -10660,7 +10630,7 @@ function ManageView({ db, setDb, user, refresh }) {
           )}
           {f.role === "teacher" && (
             <div style={{ marginTop: 10 }}>
-              <label style={S.label}>মাসিক বেতন (৳)</label>
+              <label style={S.label}>Monthly salary (৳)</label>
               <input
                 type="number"
                 style={S.input}
@@ -10679,10 +10649,10 @@ function ManageView({ db, setDb, user, refresh }) {
             onClick={saveUser}
           >
             {saving
-              ? "সংরক্ষণ হচ্ছে…"
+              ? "Saving…"
               : editId
-                ? "✏️ সংরক্ষণ করুন"
-                : "যোগ করুন — আইডি ও পাসওয়ার্ড তৈরি হবে"}
+                ? "✏️ Save"
+                : "Add — an ID and password will be created"}
           </Btn>
         </Modal>
       )}
@@ -10727,7 +10697,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
         <div style={{ animation: "tqaPulse 1.6s infinite" }}>
           <img
             src="/brand/logo-green.png"
-            alt="তারবিয়াতুল কুরআন একাডেমি"
+            alt="Tarbiyatul Quran Academy"
             style={{ width: 60, height: 60, borderRadius: 14 }}
           />
         </div>
@@ -10744,7 +10714,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
         </div>
         <div style={{ fontSize: 14, color: "#d7e9de", marginBottom: 4 }}>
           {T(
-            '"এবং বলো: হে আমার রব! আমার জ্ঞান বৃদ্ধি করে দিন।"',
+            '"And say: My Lord, increase me in knowledge."',
             '"And say: My Lord, increase me in knowledge."',
           )}
         </div>
@@ -10772,7 +10742,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
             </div>
           )}
           <div style={{ fontSize: 12.5, color: "#cfe6d8", marginBottom: 16 }}>
-            🕐 {k.time} · {T("উস্তাদ", "Teacher")}: {course.teacher_name || userById(course.teacherId || course.teacher).name}
+            🕐 {k.time} · {T("Teacher", "Teacher")}: {course.teacher_name || userById(course.teacherId || course.teacher).name}
           </div>
           {/* উস্তাদ রিজয়েন চালু করার পর ১ম লিংক আর দেখানো হয় না — নইলে
               শিক্ষার্থী ভুল করে পুরনো মিটিংয়ে ঢুকে পড়ত */}
@@ -10878,7 +10848,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
 function StudentPaymentsView({ db, setDb, user }) {
   const [payMonth, setPayMonth] = useState(null);
   const [pf, setPf] = useState({
-    method: "বিকাশ",
+    method: "bKash",
     trx: "",
     shot: null,
     shotFile: null,
@@ -10947,9 +10917,9 @@ function StudentPaymentsView({ db, setDb, user }) {
         month_label: payMonth,
         method: pf.method
           .toLowerCase()
-          .replace("বিকাশ", "bkash")
-          .replace("নগদ", "nagad")
-          .replace("ব্যাংক ট্রান্সফার", "bank"),
+          .replace("bKash", "bkash")
+          .replace("Nagad", "nagad")
+          .replace("Bank transfer", "bank"),
         trx_id: pf.trx,
         screenshot: pf.shotFile || undefined,
       });
@@ -10963,7 +10933,7 @@ function StudentPaymentsView({ db, setDb, user }) {
       return;
     }
     setPayMonth(null);
-    setPf({ method: "বিকাশ", trx: "", shot: null, shotFile: null });
+    setPf({ method: "bKash", trx: "", shot: null, shotFile: null });
     setDuaMsg(true);
   };
   const acct = {
@@ -10979,7 +10949,7 @@ function StudentPaymentsView({ db, setDb, user }) {
       line1: "Nagad Personal (Send Money)",
       line2: "Number: 01402-499027",
     },
-    "ব্যাংক ট্রান্সফার": {
+    "Bank transfer": {
       icon: "🏦",
       name: "Bank Transfer",
       line1: "Islami Bank Bangladesh — Tarbiyatul Quran Academy",
@@ -11322,19 +11292,19 @@ function ReceiptMaker({ onClose, user }) {
   const [f, setF] = useState({
     who: "custom",
     custom: "",
-    kind: "ফি পরিশোধ রিসিট",
+    kind: "Fee Payment Receipt",
     month: "",
     amount: "",
     currency: "৳",
-    method: "বিকাশ",
+    method: "bKash",
     date: todayISO(),
   });
   // মাসিক ফি/বেতন রিসিটে মাস ক্যালেন্ডার থেকে বাছাই হয় (backend-এর DueMonth
   // লেবেলের সাথে ফরম্যাট মেলাতে) — ভর্তি/অনুদান/অন্যান্যতে যেকোনো বিবরণ লেখা যায়
-  const isMonthKind = f.kind === "ফি পরিশোধ রিসিট" || f.kind === "বেতন পরিশোধ ভাউচার";
+  const isMonthKind = f.kind === "Fee Payment Receipt" || f.kind === "Salary Payment Voucher";
   const monthDisplay = isMonthKind ? (f.month ? monthLabelBn(f.month) : "") : f.month;
   // মাসিক ফি/ভর্তি/অনুদান হলে স্টুডেন্ট তালিকা, বেতন হলে উস্তাদ তালিকা
-  const people = f.kind === "বেতন পরিশোধ ভাউচার" ? teachers : students;
+  const people = f.kind === "Salary Payment Voucher" ? teachers : students;
   // কাইন্ড বদলালে বা তালিকা লোড হলে আগের বাছাই অবৈধ হয়ে গেলে প্রথম জনকে বেছে দিই
   useEffect(() => {
     if (!people.some((p) => String(p.id) === String(f.who))) {
@@ -11347,8 +11317,8 @@ function ReceiptMaker({ onClose, user }) {
       f.who === "custom"
         ? { name: f.custom.trim() }
         : people.find((p) => String(p.id) === String(f.who)) || {};
-    if (!person.name) return notice("নাম দিন।");
-    if (!f.amount || +f.amount <= 0) return notice("সঠিক পরিমাণ দিন।");
+    if (!person.name) return notice("Please enter a name.");
+    if (!f.amount || +f.amount <= 0) return notice("Please enter a valid amount.");
     printReceipt(
       {
         id: uid(),
@@ -11364,21 +11334,21 @@ function ReceiptMaker({ onClose, user }) {
     );
   };
   return (
-    <Modal title="🧾 রিসিট বানান" onClose={onClose}>
-      <label style={S.label}>রিসিটের ধরন</label>
+    <Modal title="🧾 Create receipt" onClose={onClose}>
+      <label style={S.label}>Receipt type</label>
       <select
         style={S.input}
         value={f.kind}
         onChange={(e) => setF({ ...f, kind: e.target.value, month: "" })}
       >
-        <option>ফি পরিশোধ রিসিট</option>
-        {isDir(user) && <option>বেতন পরিশোধ ভাউচার</option>}
-        <option>ভর্তি ফি রিসিট</option>
-        <option>অনুদান রিসিট</option>
-        <option>অন্যান্য পরিশোধ রিসিট</option>
+        <option>Fee Payment Receipt</option>
+        {isDir(user) && <option>Salary Payment Voucher</option>}
+        <option>Admission Fee Receipt</option>
+        <option>Donation Receipt</option>
+        <option>Other Payment Receipt</option>
       </select>
       <div style={{ marginTop: 10 }}>
-        <label style={S.label}>কার জন্য</label>
+        <label style={S.label}>For whom</label>
         <select
           style={S.input}
           value={f.who}
@@ -11386,15 +11356,15 @@ function ReceiptMaker({ onClose, user }) {
         >
           {people.map((u) => (
             <option key={u.id} value={u.id}>
-              {u.name} ({f.kind === "বেতন পরিশোধ ভাউচার" ? "উস্তাদ" : "স্টুডেন্ট"})
+              {u.name} ({f.kind === "Salary Payment Voucher" ? "Teacher" : "Student"})
             </option>
           ))}
-          <option value="custom">✏️ অন্য কেউ — নিজে লিখুন</option>
+          <option value="custom">✏️ Someone else — type it yourself</option>
         </select>
       </div>
       {f.who === "custom" && (
         <div style={{ marginTop: 10 }}>
-          <label style={S.label}>নাম</label>
+          <label style={S.label}>Name</label>
           <input
             style={S.input}
             value={f.custom}
@@ -11411,7 +11381,7 @@ function ReceiptMaker({ onClose, user }) {
         }}
       >
         <div>
-          <label style={S.label}>{isMonthKind ? "মাস ও সাল" : "মাস / বিবরণ"}</label>
+          <label style={S.label}>{isMonthKind ? "Month & year" : "Month / Description"}</label>
           {isMonthKind ? (
             <input
               type="month"
@@ -11424,21 +11394,21 @@ function ReceiptMaker({ onClose, user }) {
               style={S.input}
               value={f.month}
               onChange={(e) => setF({ ...f, month: e.target.value })}
-              placeholder="যেমন: ভর্তি ফি"
+              placeholder="e.g. Admission fee"
             />
           )}
         </div>
         <div>
-          <label style={S.label}>পরিমাণ</label>
+          <label style={S.label}>Amount</label>
           <div style={{ display: "flex", gap: 6 }}>
             <select
               style={{ ...S.input, width: 78, flexShrink: 0 }}
               value={f.currency}
               onChange={(e) => setF({ ...f, currency: e.target.value })}
-              title="মুদ্রা"
+              title="Currency"
             >
-              <option value="৳">৳ টাকা</option>
-              <option value="$">$ ডলার</option>
+              <option value="৳">৳ Taka</option>
+              <option value="$">$ Dollar</option>
             </select>
             <input
               type="number"
@@ -11449,20 +11419,20 @@ function ReceiptMaker({ onClose, user }) {
           </div>
         </div>
         <div>
-          <label style={S.label}>মাধ্যম</label>
+          <label style={S.label}>Method</label>
           <select
             style={S.input}
             value={f.method}
             onChange={(e) => setF({ ...f, method: e.target.value })}
           >
-            <option>বিকাশ</option>
-            <option>নগদ</option>
-            <option>ব্যাংক ট্রান্সফার</option>
-            <option>নগদ গ্রহণ (অফিস)</option>
+            <option>bKash</option>
+            <option>Nagad</option>
+            <option>Bank transfer</option>
+            <option>Cash received (office)</option>
           </select>
         </div>
         <div>
-          <label style={S.label}>তারিখ</label>
+          <label style={S.label}>Date</label>
           <input
             type="date"
             style={S.input}
@@ -11501,7 +11471,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
   const [mp, setMp] = useState({
     studentId: "",
     month: "",
-    method: "নগদ",
+    method: "Nagad",
   });
   const [mpBusy, setMpBusy] = useState(false);
   const [genDuesBusy, setGenDuesBusy] = useState(false);
@@ -11559,7 +11529,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
     try {
       await api.verifyFee(pid);
       await loadData();
-      notice("✔ পেমেন্ট ভেরিফাই হয়েছে।");
+      notice("✔ Payment verified.");
       if (paySnap) {
         const st = studentById(paySnap.studentId);
         const currSymbol = (st?.fee_currency || paySnap.currency || "BDT") === "USD" ? "$" : "৳";
@@ -11573,19 +11543,19 @@ function DirectorPaymentsView({ db, setDb, user }) {
       // আগে ব্যর্থ হলেও স্ক্রিনে "ভেরিফাইড" দেখানো হতো, সার্ভারে আসলে হতো না —
       // এখন স্পষ্ট এরর দেখাচ্ছে, স্ক্রিনে ভুয়া স্ট্যাটাস বসাচ্ছে না
       notice(
-        "ভেরিফাই করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not verify —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
   const studentById = (id) => students.find((s) => s.id === id) || userById(id);
 
   // পরিচালক/এডমিন সরাসরি যেকোনো স্টুডেন্টের যেকোনো মাসের (সামনে বা পিছনের) পেমেন্ট
-  // "পরিশোধিত" হিসেবে সরাসরি সেভ করতে পারেন — স্টুডেন্টের নিজে জমা দেওয়ার অপেক্ষা ছাড়াই
+  // "Paid" হিসেবে সরাসরি সেভ করতে পারেন — স্টুডেন্টের নিজে জমা দেওয়ার অপেক্ষা ছাড়াই
   const markPaid = async () => {
     const st = students.find((s) => String(s.id) === String(mp.studentId));
-    if (!st) return notice("স্টুডেন্ট বেছে নিন।");
-    if (!mp.month) return notice("মাস ও সাল বেছে নিন।");
+    if (!st) return notice("Please choose a student.");
+    if (!mp.month) return notice("Please choose a month and year.");
     const label = monthLabelBn(mp.month); // "2026-07" → "জুলাই ২০২৬" — backend-এর DueMonth লেবেলের সাথে হুবহু মিলতে হবে, নইলে বকেয়া মুছবে না
     setMpBusy(true);
     try {
@@ -11595,16 +11565,16 @@ function DirectorPaymentsView({ db, setDb, user }) {
         amount: st.fee || 0,
         method: mp.method
           .toLowerCase()
-          .replace("বিকাশ", "bkash")
-          .replace("নগদ গ্রহণ (অফিস)", "cash")
-          .replace("নগদ", "nagad")
-          .replace("ব্যাংক ট্রান্সফার", "bank"),
+          .replace("bKash", "bkash")
+          .replace("Cash received (office)", "cash")
+          .replace("Nagad", "nagad")
+          .replace("Bank transfer", "bank"),
       });
       notice(`✔ ${st.name}-এর "${label}" মাসের পেমেন্ট পরিশোধিত হিসেবে সেভ হয়েছে।`);
       setMp((prev) => ({ ...prev, month: "" }));
       await loadData();
     } catch (e) {
-      notice("সেভ করতে ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+      notice("Could not save —" + (e?.data?.error || e?.message || "Verify"));
     }
     setMpBusy(false);
   };
@@ -11617,15 +11587,15 @@ function DirectorPaymentsView({ db, setDb, user }) {
       notice(`✔ "${monthLabel}" মাসের বকেয়া মওকুফ করা হয়েছে।`);
     } catch (e) {
       notice(
-        "মওকুফ করা যায়নি — " +
-          (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+        "Could not waive —" +
+          (e?.data?.error || e?.message || "Please try again"),
       );
     }
   };
 
   const waMsg = (s) => {
     const dues = s.dueMonths || db.dueMonths[s.id] || [];
-    return `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহি ওয়া বারাকাতুহ।\n\nমুহতারাম ${s.guardian || "অভিভাবক"},\nতারবিয়াতুল কুরআন একাডেমির পক্ষ থেকে আন্তরিক দুআ ও সালাম। আল্লাহ তাআলা আপনার সন্তানের ইলম ও আমলে বরকত দান করুন।\n\nবিনয়ের সাথে স্মরণ করিয়ে দিচ্ছি — ${s.name}-এর ${dues.join(", ")} মাসের ফি (মোট ৳${(dues.length * (s.fee || 0)).toLocaleString("en")}) এখনো অপরিশোধিত রয়েছে। আপনার সুবিধাজনক সময়ে পরিশোধ করে দিলে কৃতজ্ঞ থাকব ইনশাআল্লাহ।\n\nজাযাকুমুল্লাহু খাইরান।\n— তারবিয়াতুল কুরআন একাডেমি`;
+    return `Assalamu Alaikum wa Rahmatullahi wa Barakatuh.\n\nRespected ${s.guardian || "Guardian"},\nWarm greetings and duas from Tarbiyatul Quran Academy. May Allah bless your child's knowledge and practice.\n\nThis is a gentle reminder that the fee for ${s.name} for ${dues.join(", ")} (total ৳${(dues.length * (s.fee || 0)).toLocaleString("en")}) is still outstanding. We would be grateful if you could settle it at your convenience, insha'Allah.\n\nJazakumullahu Khairan.\n— Tarbiyatul Quran Academy`;
   };
   const sendAll = () => {
     const full = dueStudents
@@ -11634,14 +11604,14 @@ function DirectorPaymentsView({ db, setDb, user }) {
         return `• ${s.name} (${s.guardian || ""}): ${dm.join(", ")} — ৳${(dm.length * (s.fee || 0)).toLocaleString("en")}`;
       })
       .join("\n");
-    const msg = `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ।\nমুহতারাম অভিভাবকবৃন্দ, বিনয়ের সাথে ফি পরিশোধের কথা স্মরণ করিয়ে দিচ্ছি ইনশাআল্লাহ:\n${full}\nজাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি`;
+    const msg = `Assalamu Alaikum wa Rahmatullah.\nRespected guardians, this is a gentle reminder about the outstanding fees, insha'Allah:\n${full}\nJazakumullahu Khairan. — Tarbiyatul Quran Academy`;
     navigator.clipboard?.writeText(msg.replace(/\\n/g, "\n"));
     notice(
-      "সবার রিমাইন্ডার মেসেজ কপি হয়েছে ✔ — WhatsApp গ্রুপ বা ব্রডকাস্ট লিস্টে পেস্ট করে পাঠিয়ে দিন।",
+      "All reminder messages copied ✔ — paste and send them in your WhatsApp group or broadcast list.",
     );
   };
   // এখানকার বাটন শুধু স্টুডেন্টদের বকেয়া তৈরি করে (roles=["student"]) — উস্তাদদের
-  // বকেয়া তৈরি হয় "হিসাব-নিকাশ" পেজের বাটন থেকে, দুটো আলাদা রাখা হয়েছে
+  // বকেয়া তৈরি হয় "Accounts" পেজের বাটন থেকে, দুটো আলাদা রাখা হয়েছে
   const genDuesNow = async () => {
     setGenDuesBusy(true);
     try {
@@ -11649,14 +11619,14 @@ function DirectorPaymentsView({ db, setDb, user }) {
       notice(`✔ চলতি মাসের স্টুডেন্ট বকেয়া তৈরি হয়েছে — ${bn(r.created)}টি নতুন যোগ হলো`);
       await loadData();
     } catch (e) {
-      notice("বকেয়া তৈরি ব্যর্থ — " + (e?.message || "যাচাই করুন"));
+      notice("Could not create dues —" + (e?.message || "Verify"));
     }
     setGenDuesBusy(false);
   };
   return (
     <Section
-      title="স্টুডেন্ট পেমেন্ট"
-      sub="কে পেমেন্ট করেছে, কার বাকি — মিলিয়ে ভেরিফাই করুন (ভেরিফাই কেবল পরিচালকই করতে পারেন)"
+      title="Student Payments"
+      sub="Who has paid and who hasn't — reconcile and verify (only the director can verify)"
       action={
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Btn
@@ -11664,7 +11634,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
             onClick={genDuesNow}
             style={{ opacity: genDuesBusy ? 0.6 : 1 }}
           >
-            {genDuesBusy ? "⏳ তৈরি হচ্ছে…" : "🔄 এই মাসের বকেয়া তৈরি করুন"}
+            {genDuesBusy ? "⏳ Creating…" : "🔄 Create this month's dues"}
           </Btn>
           <Btn kind="gold" onClick={() => setMaker(true)}>
             🧾 রিসিট বানান
@@ -11683,14 +11653,14 @@ function DirectorPaymentsView({ db, setDb, user }) {
       >
         <Stat
           icon="⏳"
-          label="ভেরিফাই বাকি"
+          label="Pending verification"
           value={bn(pending.length)}
           accent={C.gold}
         />
-        <Stat icon="✅" label="ভেরিফাইড পেমেন্ট" value={bn(verified.length)} />
+        <Stat icon="✅" label="Verified payments" value={bn(verified.length)} />
         <Stat
           icon="📵"
-          label="বকেয়া আছে"
+          label="Has dues"
           value={`${bn(dueStudents.length)} জন`}
           accent={C.red}
         />
@@ -11707,7 +11677,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
         </div>
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
           স্টুডেন্ট নিজে জমা না দিলেও, যেকোনো (সামনের বা পিছনের) মাসের পেমেন্ট
-          এখান থেকে সরাসরি "পরিশোধিত" হিসেবে সেভ করতে পারবেন — সেই মাসের বকেয়া
+          এখান থেকে সরাসরি "Paid" হিসেবে সেভ করতে পারবেন — সেই মাসের বকেয়া
           থাকলে তা অটো সরে যাবে।
         </div>
         <div
@@ -11719,13 +11689,13 @@ function DirectorPaymentsView({ db, setDb, user }) {
           }}
         >
           <div>
-            <label style={S.label}>স্টুডেন্ট</label>
+            <label style={S.label}>Student</label>
             <select
               style={S.input}
               value={mp.studentId}
               onChange={(e) => setMp({ ...mp, studentId: e.target.value })}
             >
-              <option value="">বেছে নিন</option>
+              <option value="">Choose</option>
               {students.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -11734,7 +11704,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
             </select>
           </div>
           <div>
-            <label style={S.label}>মাস ও সাল</label>
+            <label style={S.label}>Month & year</label>
             <input
               type="month"
               style={S.input}
@@ -11743,16 +11713,16 @@ function DirectorPaymentsView({ db, setDb, user }) {
             />
           </div>
           <div>
-            <label style={S.label}>মাধ্যম</label>
+            <label style={S.label}>Method</label>
             <select
               style={S.input}
               value={mp.method}
               onChange={(e) => setMp({ ...mp, method: e.target.value })}
             >
-              <option>নগদ</option>
-              <option>বিকাশ</option>
-              <option>ব্যাংক ট্রান্সফার</option>
-              <option>নগদ গ্রহণ (অফিস)</option>
+              <option>Nagad</option>
+              <option>bKash</option>
+              <option>Bank transfer</option>
+              <option>Cash received (office)</option>
             </select>
           </div>
           <Btn
@@ -11760,7 +11730,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
             onClick={markPaid}
             style={{ opacity: mpBusy ? 0.6 : 1 }}
           >
-            {mpBusy ? "⏳ সেভ হচ্ছে…" : "✔ সম্পন্ন করুন"}
+            {mpBusy ? "⏳ Saving…" : "✔ Complete"}
           </Btn>
         </div>
       </div>
@@ -11774,7 +11744,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
           ⏳ ভেরিফাইয়ের অপেক্ষায় — মিলিয়ে দেখে ক্লিক করুন
         </div>
-        {loading && <Loader text="পেমেন্ট লোড হচ্ছে" />}
+        {loading && <Loader text="Loading payments" />}
         {!loading && pending.length === 0 && (
           <div
             style={{
@@ -11930,7 +11900,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
                       `${s.name}-এর "${m}" মাসের বকেয়া মওকুফ করবেন?\n\n` +
                         `ছুটিতে থাকলে বা অন্য কারণে ফি না নিলে এটা করুন। ` +
                         `বকেয়াটি তালিকা থেকে সরে যাবে।`,
-                      () => waiveDueHere(s.id, m, "ছুটি/মওকুফ"),
+                      () => waiveDueHere(s.id, m, "Leave/Waiver"),
                     )
                   }
                 >
@@ -11945,7 +11915,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
           ✅ ভেরিফাইড পেমেন্টসমূহ
         </div>
         <Table
-          head={["স্টুডেন্ট", "মাস", "পরিমাণ", "মাধ্যম", "তারিখ", "স্ট্যাটাস", ""]}
+          head={["Student", "Month", "Amount", "Method", "Date", "Status", ""]}
           rows={verified.map((p) => {
             const s = studentById(p.studentId);
             return [
@@ -11954,7 +11924,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
               `৳${bn(p.amount.toLocaleString("en"))}`,
               p.method,
               fmtDate(p.date),
-              <Tag key="s">✅ ভেরিফাইড</Tag>,
+              <Tag key="s">✅ Verified</Tag>,
               <Btn
                 key="d"
                 sm
@@ -11966,10 +11936,10 @@ function DirectorPaymentsView({ db, setDb, user }) {
                       try {
                         await api.deleteFee(p.id);
                         await loadData();
-                        notice("✔ পেমেন্ট রেকর্ড মুছে ফেলা হয়েছে।");
+                        notice("✔ Payment record deleted.");
                       } catch (e) {
                         notice(
-                          "মুছতে ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"),
+                          "Could not delete —" + (e?.data?.error || e?.message || "Verify"),
                         );
                       }
                     },
@@ -11983,10 +11953,10 @@ function DirectorPaymentsView({ db, setDb, user }) {
         />
       </div>
       {viewShot && (
-        <Modal title="পেমেন্টের স্ক্রিনশট" onClose={() => setViewShot(null)}>
+        <Modal title="Payment screenshot" onClose={() => setViewShot(null)}>
           <img
             src={viewShot.data}
-            alt="স্ক্রিনশট"
+            alt="Screenshot"
             style={{
               width: "100%",
               borderRadius: 12,
@@ -12001,13 +11971,13 @@ function DirectorPaymentsView({ db, setDb, user }) {
 
 /* ═══════════════ ক্লাস রুটিন (সাপ্তাহিক) — পরিচালক/এডমিন বানাবেন, অটো সবার পোর্টালে ═══════════════ */
 const DAY_BN = [
-  "রবিবার",
-  "সোমবার",
-  "মঙ্গলবার",
-  "বুধবার",
-  "বৃহস্পতিবার",
-  "শুক্রবার",
-  "শনিবার",
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
 ]; // JS getDay() ক্রম
 const DAY_EN = [
   "Sunday",
@@ -12056,26 +12026,26 @@ const toZoneFullDateTime = (dateISO, timeStr, ianaZone) => {
 // পরিচালক/এডমিনের জন্য প্রায়ই-দরকারি দেশ/শহরের তালিকা (এই একাডেমির বেশিরভাগ
 // প্রবাসী পরিবার যেসব দেশে থাকেন) — প্রয়োজনে সহজেই আরও যোগ করা যাবে
 const COMMON_ZONES = [
-  { label: "🇧🇩 বাংলাদেশ (Dhaka)", zone: "Asia/Dhaka" },
-  { label: "🇬🇧 যুক্তরাজ্য (London)", zone: "Europe/London" },
-  { label: "🇺🇸 আমেরিকা · পূর্ব (New York)", zone: "America/New_York" },
-  { label: "🇺🇸 আমেরিকা · কেন্দ্রীয় (Chicago)", zone: "America/Chicago" },
-  { label: "🇺🇸 আমেরিকা · পার্বত্য (Denver)", zone: "America/Denver" },
-  { label: "🇺🇸 আমেরিকা · পশ্চিম (Los Angeles)", zone: "America/Los_Angeles" },
-  { label: "🇨🇦 কানাডা · পূর্ব (Toronto)", zone: "America/Toronto" },
-  { label: "🇦🇺 অস্ট্রেলিয়া (Sydney)", zone: "Australia/Sydney" },
-  { label: "🇦🇪 সংযুক্ত আরব আমিরাত (Dubai)", zone: "Asia/Dubai" },
-  { label: "🇸🇦 সৌদি আরব (Riyadh)", zone: "Asia/Riyadh" },
-  { label: "🇶🇦 কাতার (Doha)", zone: "Asia/Qatar" },
-  { label: "🇰🇼 কুয়েত", zone: "Asia/Kuwait" },
-  { label: "🇲🇾 মালয়েশিয়া (Kuala Lumpur)", zone: "Asia/Kuala_Lumpur" },
-  { label: "🇸🇬 সিঙ্গাপুর", zone: "Asia/Singapore" },
-  { label: "🇩🇪 জার্মানি (Berlin)", zone: "Europe/Berlin" },
-  { label: "🇫🇷 ফ্রান্স (Paris)", zone: "Europe/Paris" },
-  { label: "🇫🇮 ফিনল্যান্ড (Helsinki)", zone: "Europe/Helsinki" },
-  { label: "🇮🇳 ভারত (Kolkata)", zone: "Asia/Kolkata" },
-  { label: "🇵🇰 পাকিস্তান (Karachi)", zone: "Asia/Karachi" },
-  { label: "🇫🇮 ফিনল্যান্ড (Helsinki)", zone: "Europe/Helsinki" },
+  { label: "🇧🇩 Bangladesh (Dhaka)", zone: "Asia/Dhaka" },
+  { label: "🇬🇧 United Kingdom (London)", zone: "Europe/London" },
+  { label: "🇺🇸 USA · East (New York)", zone: "America/New_York" },
+  { label: "🇺🇸 USA · Central (Chicago)", zone: "America/Chicago" },
+  { label: "🇺🇸 USA · Mountain (Denver)", zone: "America/Denver" },
+  { label: "🇺🇸 USA · West (Los Angeles)", zone: "America/Los_Angeles" },
+  { label: "🇨🇦 Canada · East (Toronto)", zone: "America/Toronto" },
+  { label: "🇦🇺 Australia (Sydney)", zone: "Australia/Sydney" },
+  { label: "🇦🇪 United Arab Emirates (Dubai)", zone: "Asia/Dubai" },
+  { label: "🇸🇦 Saudi Arabia (Riyadh)", zone: "Asia/Riyadh" },
+  { label: "🇶🇦 Qatar (Doha)", zone: "Asia/Qatar" },
+  { label: "🇰🇼 Kuwait", zone: "Asia/Kuwait" },
+  { label: "🇲🇾 Malaysia (Kuala Lumpur)", zone: "Asia/Kuala_Lumpur" },
+  { label: "🇸🇬 Singapore", zone: "Asia/Singapore" },
+  { label: "🇩🇪 Germany (Berlin)", zone: "Europe/Berlin" },
+  { label: "🇫🇷 France (Paris)", zone: "Europe/Paris" },
+  { label: "🇫🇮 Finland (Helsinki)", zone: "Europe/Helsinki" },
+  { label: "🇮🇳 India (Kolkata)", zone: "Asia/Kolkata" },
+  { label: "🇵🇰 Pakistan (Karachi)", zone: "Asia/Karachi" },
+  { label: "🇫🇮 Finland (Helsinki)", zone: "Europe/Helsinki" },
 ];
 
 const CUSTOM_ZONES_KEY = "tqa_custom_zones";
@@ -12112,7 +12082,7 @@ function RemarkBox({ studentId, studentName }) {
       setText("");
       load();
     } catch (e) {
-      notice("মন্তব্য যোগ করতে ব্যর্থ — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+      notice("Could not add remark —" + (e?.data?.error || e?.message || "Verify"));
     }
     setBusy(false);
   };
@@ -12120,7 +12090,7 @@ function RemarkBox({ studentId, studentName }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        title="মন্তব্য"
+        title="Remarks"
         style={{
           border: "none",
           background: "none",
@@ -12154,20 +12124,20 @@ function RemarkBox({ studentId, studentName }) {
               ))}
             </div>
           )}
-          <label style={S.label}>নতুন মন্তব্য</label>
+          <label style={S.label}>New remark</label>
           <textarea
             rows={3}
             style={{ ...S.input, resize: "vertical" }}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="স্টুডেন্টের ব্যাপারে মন্তব্য লিখুন (ইংরেজিতে লিখুন — স্টুডেন্ট পোর্টালে সরাসরি এভাবেই দেখাবে)"
+            placeholder="Write remarks about the student (write in English — this appears exactly as-is in the student portal)"
           />
           <Btn
             kind="gold"
             style={{ marginTop: 10, width: "100%", justifyContent: "center", opacity: busy ? 0.6 : 1 }}
             onClick={submit}
           >
-            {busy ? "⏳ সেভ হচ্ছে…" : "+ মন্তব্য যোগ করুন"}
+            {busy ? "⏳ Saving…" : "+ Add remark"}
           </Btn>
         </Modal>
       )}
@@ -12186,7 +12156,7 @@ function RoutineView({ db, setDb, courses, user }) {
     dur: 60,
     zoom: "https://zoom.us/j/8801402499027",
     zoom2: "", // রিজয়েন লিংক (ঐচ্ছিক) — উস্তাদ+স্টুডেন্ট প্রথম লিংকে একবার জয়েন করার পর এই লিংকেই আবার জয়েন হবে
-    kind: "নিয়মিত ক্লাস",
+    kind: "Regular Class",
     teacherId: courses[0]?.teacherId,
     studentIds: [],
     studentSchedule: {}, // { [studentId]: { days: [0..6], time: "HH:MM" } } — শিক্ষার্থীর নিজের সময়ে ম্যানুয়াল ওভাররাইড (ঐচ্ছিক)
@@ -12207,7 +12177,7 @@ function RoutineView({ db, setDb, courses, user }) {
         `✔ ${bn(r?.created || 0)}টি নতুন ক্লাস তৈরি হয়েছে — উস্তাদ ও শিক্ষার্থীর পোর্টালে (রিফ্রেশ করলে) দেখা যাবে।`,
       );
     } catch {
-      notice("ক্লাস তৈরি ব্যর্থ — সার্ভার সংযোগ যাচাই করুন।");
+      notice("Class creation failed — please check your server connection.");
     } finally {
       setGenBusy(false);
     }
@@ -12245,7 +12215,7 @@ function RoutineView({ db, setDb, courses, user }) {
       if (c.teacherId != null && !m.has(String(c.teacherId)))
         m.set(String(c.teacherId), {
           id: c.teacherId,
-          name: c.teacherName || "উস্তাদ",
+          name: c.teacherName || "Teacher",
           sub: "",
         });
     });
@@ -12300,7 +12270,7 @@ function RoutineView({ db, setDb, courses, user }) {
         status: "upcoming",
         lectureNo: 1,
         fromRoutine: true,
-        kind: "নিয়মিত ক্লাস",
+        kind: "Regular Class",
         teacherId: ff.teacherId,
         studentIds: students,
       })),
@@ -12316,16 +12286,16 @@ function RoutineView({ db, setDb, courses, user }) {
       setF(blankR());
       notice(
         editId
-          ? "✔ রুটিন আপডেট হয়েছে"
-          : "✔ স্থায়ী রুটিন তৈরি হয়েছে — ক্লাস পোর্টালে যোগ হয়েছে",
+          ? "✔ Routine updated"
+          : "✔ Permanent routine created — added to the class portal",
       );
     } catch (e) {
       const detail = e?.data
         ? Object.entries(e.data)
             .map(([k, v]) => `${k}: ${v}`)
             .join(" · ")
-        : e?.message || "যাচাই করুন";
-      notice("রুটিন সংরক্ষণ ব্যর্থ — " + detail);
+        : e?.message || "Verify";
+      notice("Could not save routine —" + detail);
     }
   };
   // একই উস্তাদের জন্য একই বারে সময়-ওভারল্যাপ করে এমন অন্য কোনো (সক্রিয়) রুটিন
@@ -12347,9 +12317,9 @@ function RoutineView({ db, setDb, courses, user }) {
     });
   };
   const add = () => {
-    if (!f.days.length) return notice("সপ্তাহের অন্তত একটি দিন বাছাই করুন।");
+    if (!f.days.length) return notice("Please choose at least one day of the week.");
     if (!f.teacherId)
-      return notice("উস্তাদ/উস্তাদা বাছাই করুন — ড্রপডাউন থেকে একজন নির্বাচন করুন।");
+      return notice("Choose a teacher — select one from the dropdown.");
     const c = courseById(courses, f.courseId);
     const afterConflictCheck = () => {
       if (!f.studentIds.length) {
@@ -12357,9 +12327,9 @@ function RoutineView({ db, setDb, courses, user }) {
         // অপ্রাসঙ্গিক স্টুডেন্ট রুটিনে ঢুকে যাওয়ার কারণ ছিল এটাই; এখন স্পষ্ট
         // নিশ্চিতকরণ ছাড়া এগোবে না
         const whole = c.studentIds || [];
-        const names = whole.map((sid) => nameOf(sid)).join(", ") || "কেউ নেই";
+        const names = whole.map((sid) => nameOf(sid)).join(", ") || "Nobody";
         askConfirm(
-          `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "এই কোর্সের"}" কোর্সে ভর্তি সবাই (${names}) এই রুটিনে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
+          `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "of this course"}" কোর্সে ভর্তি সবাই (${names}) এই রুটিনে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
           () => saveRoutine(whole),
         );
         return;
@@ -12377,7 +12347,7 @@ function RoutineView({ db, setDb, courses, user }) {
         )
         .join(" · ");
       askConfirm(
-        `⚠️ ${nameOf(f.teacherId)} এই বারে-সময়ে ইতিমধ্যে অন্য রুটিনে ব্যস্ত: ${details} — একই সময়ে দুইটা ক্লাসে "বুক" হয়ে যাবেন। তবুও এগিয়ে যাবেন?`,
+        `⚠️ ${nameOf(f.teacherId)} এই বারে-সময়ে ইতিমধ্যে অন্য রুটিনে ব্যস্ত: ${details} — একই সময়ে দুইটা ক্লাসে "Book" হয়ে যাবেন। তবুও এগিয়ে যাবেন?`,
         afterConflictCheck,
       );
       return;
@@ -12389,7 +12359,7 @@ function RoutineView({ db, setDb, courses, user }) {
       await api.deleteRoutine(id);
       await loadRoutines();
     } catch (e) {
-      notice("রুটিন মুছতে ব্যর্থ — " + (e?.message || "সার্ভার যাচাই করুন"));
+      notice("Could not delete routine —" + (e?.message || "Please check the server"));
     }
   };
   const visible = apiRoutines || [];
@@ -12416,7 +12386,7 @@ function RoutineView({ db, setDb, courses, user }) {
       title={T("ক্লাস রুটিন (স্থায়ী সাপ্তাহিক)", "Class Routine (Fixed Weekly)")}
       sub={
         canEdit
-          ? "কোন স্টুডেন্ট কোন উস্তাদের কাছে কোন বারে কোন সময়ে কোন কোর্সে পড়বে — সব সময়ের জন্য; এডিট কেবল এডমিনের হাতে · সময়/দিন বাংলাদেশ সময় অনুযায়ী দেখানো হচ্ছে"
+          ? "Which student studies which course with which teacher, on which day and time — permanently; editing is admin-only · times/days shown in Bangladesh time"
           : T(
               "আপনার স্থায়ী সাপ্তাহিক ক্লাসের সময়সূচি — জয়েন অপশন অটো আসবে",
               "Your fixed weekly class schedule — the join option will appear automatically at the right time",
@@ -12430,9 +12400,9 @@ function RoutineView({ db, setDb, courses, user }) {
               onClick={genClassesNow}
               style={{ opacity: genBusy ? 0.6 : 1 }}
             >
-              {genBusy ? "⏳ তৈরি হচ্ছে…" : "🔄 সব রুটিনের ক্লাস তৈরি করুন"}
+              {genBusy ? "⏳ Creating…" : "🔄 Create classes for all routines"}
             </Btn>
-            <Btn onClick={() => setShow(true)}>+ রুটিন তৈরি করুন</Btn>
+            <Btn onClick={() => setShow(true)}>+ Create routine</Btn>
           </div>
         )
       }
@@ -12503,7 +12473,7 @@ function RoutineView({ db, setDb, courses, user }) {
                         <b style={{ color: c.color || C.emerald }}>
                           {c.name || r.courseName}
                         </b>{" "}
-                        {r.kind && r.kind !== "নিয়মিত ক্লাস" && (
+                        {r.kind && r.kind !== "Regular Class" && (
                           <Tag color={C.red} bg={C.redBg}>
                             {r.kind}
                           </Tag>
@@ -12531,7 +12501,7 @@ function RoutineView({ db, setDb, courses, user }) {
                         )}
                         {canEdit && (
                           <button
-                            title="এডিট — কেবল এডমিন"
+                            title="Edit — admin only"
                             onClick={() => {
                               setF({
                                 courseId: r.courseId,
@@ -12540,7 +12510,7 @@ function RoutineView({ db, setDb, courses, user }) {
                                 dur: r.dur,
                                 zoom: r.zoom,
                                 zoom2: r.zoom2 || "",
-                                kind: "নিয়মিত ক্লাস",
+                                kind: "Regular Class",
                                 teacherId: r.teacherId,
                                 studentIds: r.studentIds || [],
                                 studentSchedule: r.studentSchedule || {},
@@ -12584,8 +12554,8 @@ function RoutineView({ db, setDb, courses, user }) {
         <Modal
           title={
             editId
-              ? "✏️ রুটিন এডিট করুন (কেবল এডমিন)"
-              : "স্থায়ী সাপ্তাহিক রুটিন তৈরি করুন"
+              ? "✏️ Edit routine (admin only)"
+              : "Create a permanent weekly routine"
           }
           onClose={() => {
             setShow(false);
@@ -12606,10 +12576,10 @@ function RoutineView({ db, setDb, courses, user }) {
           >
             💡 কোন স্টুডেন্ট কোন উস্তাদের কাছে সপ্তাহের কোন বারে, কোন সময়ে, কোন
             কোর্সে পড়বে — সব সময়ের জন্য রুটিন। ছুটে যাওয়া ক্লাসের
-            মেকআপ/সাপোর্টের জন্য "ক্লাস ও জুম জয়েন" পেজের শিডিউল ব্যবহার করুন।
+            মেকআপ/সাপোর্টের জন্য "Classes & Zoom Join" পেজের শিডিউল ব্যবহার করুন।
           </div>
           <div>
-            <label style={S.label}>কোর্স</label>
+            <label style={S.label}>Course</label>
             <select
               style={S.input}
               value={f.courseId}
@@ -12630,7 +12600,7 @@ function RoutineView({ db, setDb, courses, user }) {
             </select>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>উস্তাদ/উস্তাদা — কার কাছে পড়বে</label>
+            <label style={S.label}>Teacher — who they study with</label>
             <select
               style={S.input}
               value={f.teacherId || ""}
@@ -12662,7 +12632,7 @@ function RoutineView({ db, setDb, courses, user }) {
             />
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>সপ্তাহের কোন কোন দিন</label>
+            <label style={S.label}>Which days of the week</label>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {WEEK_ORDER.map((wd) => (
                 <button
@@ -12694,7 +12664,7 @@ function RoutineView({ db, setDb, courses, user }) {
             }}
           >
             <div>
-              <label style={S.label}>সময় (বাংলাদেশ সময় 🇧🇩)</label>
+              <label style={S.label}>Time (Bangladesh time 🇧🇩)</label>
               <input
                 type="time"
                 style={S.input}
@@ -12703,7 +12673,7 @@ function RoutineView({ db, setDb, courses, user }) {
               />
             </div>
             <div>
-              <label style={S.label}>সময়কাল (মিনিট)</label>
+              <label style={S.label}>Duration (minutes)</label>
               <input
                 type="number"
                 style={S.input}
@@ -12766,8 +12736,8 @@ function RoutineView({ db, setDb, courses, user }) {
                         {nameOf(sid)}{" "}
                         <span style={{ fontWeight: 400, color: C.muted }}>
                           {custom
-                            ? "— আলাদা সময় সেট করা"
-                            : "— বাংলাদেশ সময়ের বারেই দেখবে"}
+                            ? "— custom time set"
+                            : "— shown on the Bangladesh-time day"}
                         </span>
                       </label>
                       {custom && (
@@ -12817,7 +12787,7 @@ function RoutineView({ db, setDb, courses, user }) {
             </div>
           )}
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>১ম জুম লিংক</label>
+            <label style={S.label}>1st Zoom link</label>
             <input
               style={S.input}
               value={f.zoom}
@@ -12826,13 +12796,13 @@ function RoutineView({ db, setDb, courses, user }) {
           </div>
           <div style={{ marginTop: 10 }}>
             <label style={S.label}>
-              ২য় জুম লিংক (রিজয়েন — ঐচ্ছিক)
+              2nd Zoom link (rejoin — optional)
             </label>
             <input
               style={S.input}
               value={f.zoom2}
               onChange={(e) => setF({ ...f, zoom2: e.target.value })}
-              placeholder="উস্তাদ+স্টুডেন্ট ১ম লিংকে একবার জয়েন করার পর, আবার জয়েন করতে চাইলে এই লিংক ব্যবহার হবে"
+              placeholder="Once the teacher and student have joined via the 1st link, this link is used to rejoin"
             />
           </div>
           <Btn
@@ -12840,8 +12810,8 @@ function RoutineView({ db, setDb, courses, user }) {
             onClick={add}
           >
             {editId
-              ? "✏️ রুটিন আপডেট করুন"
-              : "রুটিন তৈরি করুন — স্টুডেন্ট ও উস্তাদের পোর্টালে অটো যোগ হবে"}
+              ? "✏️ Update routine"
+              : "Create a routine — it is added automatically to student and teacher portals"}
           </Btn>
         </Modal>
       )}
@@ -12853,7 +12823,7 @@ function RoutineView({ db, setDb, courses, user }) {
 const LEAVE_TYPE_EN = {
   অসুস্থতা: "Sickness",
   সফর: "Travel",
-  "পারিবারিক প্রয়োজন": "Family Reasons",
+  "Family need": "Family Reasons",
   পরীক্ষা: "Exam",
   অন্যান্য: "Other",
 };
@@ -12861,7 +12831,7 @@ function LeaveView({ db, setDb, user }) {
   const T = (_bnText, enText) => enText;
   const [show, setShow] = usePersistedState("leave_show", false);
   const [f, setF] = usePersistedState("leave_f", {
-    type: "অসুস্থতা",
+    type: "Illness",
     from: todayISO(),
     to: todayISO(),
     reason: "",
@@ -12916,22 +12886,22 @@ function LeaveView({ db, setDb, user }) {
         T(
           "আবেদন জমা দিতে ব্যর্থ — ",
           "Failed to submit application — ",
-        ) + (e?.data?.error || e?.message || T("সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন", "Check your connection and try again")),
+        ) + (e?.data?.error || e?.message || T("Please check your server connection and try again", "Check your connection and try again")),
       );
       return;
     }
     setShow(false);
-    setF({ type: "অসুস্থতা", from: todayISO(), to: todayISO(), reason: "" });
+    setF({ type: "Illness", from: todayISO(), to: todayISO(), reason: "" });
   };
   const forward = async (l) => {
     try {
       await api.forwardLeave(l.id);
       await loadData();
-      notice("✔ ছুটির আবেদনটি পরিচালকের কাছে পাঠানো হয়েছে।");
+      notice("✔ The leave application has been sent to the director.");
     } catch (e) {
       notice(
-        "আবেদন পাঠাতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not send application —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
@@ -12939,11 +12909,11 @@ function LeaveView({ db, setDb, user }) {
     try {
       await api.decideLeave(l.id, ok);
       await loadData();
-      notice(ok ? "✔ ছুটি মঞ্জুর করা হয়েছে।" : "✔ ছুটি নামঞ্জুর করা হয়েছে।");
+      notice(ok ? "✔ Leave approved." : "✔ Leave rejected.");
     } catch (e) {
       notice(
-        "সিদ্ধান্ত সেভ করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not save decision —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
   };
@@ -12965,7 +12935,7 @@ function LeaveView({ db, setDb, user }) {
     );
   return (
     <Section
-      title={T("ছুটির আবেদন", "Leave Application")}
+      title={T("Leave Application", "Leave Application")}
       sub={T(
         "দরখাস্ত ফরম পূরণ করে জমা দিন — এডমিন দেখে পরিচালক বরাবর পাঠাবেন, মঞ্জুরের ক্ষমতা কেবল পরিচালকের",
         "Fill out and submit the application form — the admin will forward it to the director, who alone can approve it",
@@ -12979,7 +12949,7 @@ function LeaveView({ db, setDb, user }) {
       }
     >
       <div style={{ display: "grid", gap: 10 }}>
-        {loading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
+        {loading && <Loader text={T("Loading", "Loading")} />}
         {!loading && list.length === 0 && (
           <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
             {T("কোনো ছুটির আবেদন নেই।", "No leave applications.")}
@@ -13013,10 +12983,10 @@ function LeaveView({ db, setDb, user }) {
                   <Tag color={C.blue} bg={C.blueBg}>
                     {T(
                       apRole === "student"
-                        ? "স্টুডেন্ট"
+                        ? "Student"
                         : apRole === "teacher"
-                          ? "উস্তাদ/উস্তাদা"
-                          : "এডমিন",
+                          ? "Ustadh / Ustadha"
+                          : "Admin",
                       apRole === "student"
                         ? "Student"
                         : apRole === "teacher"
@@ -13104,10 +13074,10 @@ function LeaveView({ db, setDb, user }) {
                       <br />
                       সবিনয় নিবেদন এই যে, আমি {apName}, আপনার প্রতিষ্ঠানের একজন{" "}
                       {apRole === "student"
-                        ? "শিক্ষার্থী"
+                        ? "Student"
                         : apRole === "teacher"
-                          ? "শিক্ষক"
-                          : "এডমিন"}
+                          ? "Teacher"
+                          : "Admin"}
                       । {l.reason} এমতাবস্থায়, {fmtDate(l.from)} থেকে{" "}
                       {fmtDate(l.to)} পর্যন্ত ছুটি মঞ্জুর করতে আপনার সদয় মর্জি হয়।
                     </div>
@@ -13272,7 +13242,7 @@ function MyReceiptsView({ db, user }) {
     >
       <Table
         head={T(
-          ["ধরন", "মাস/বিবরণ", "পরিমাণ", "তারিখ", "পাঠিয়েছেন", "দেখুন"],
+          ["Type", "Month/Description", "Amount", "Date", "Sent by", "View"],
           ["Type", "Month/Detail", "Amount", "Date", "Sent By", "View"],
         )}
         rows={receipts.map((x) => [
@@ -13416,7 +13386,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   // ব্যাকএন্ড থেকে স্টুডেন্ট তালিকা লোড — ব্যর্থ হলে mock USERS
   // ফি স্টেটাস আসল পেমেন্ট দেখে বলার জন্য (null = এখনো আসেনি)
   const [payments, setPayments] = useState(null);
-  // কোন কোন মাস মওকুফ করা হয়েছে — "মওকুফ" ও "পরিশোধিত" আলাদা দেখাতে
+  // কোন কোন মাস মওকুফ করা হয়েছে — "মওকুফ" ও "Paid" আলাদা দেখাতে
   const [waived, setWaived] = useState([]);
   useEffect(() => {
     let alive = true;
@@ -13453,7 +13423,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           email: s.email,
           days: s.class_days || [],
           studentId: s.student_id || "", // অটো/ম্যানুয়াল স্টুডেন্ট আইডি (SH-LC-US-007)
-          dues: s.due_months || [], // বকেয়া মাসের তালিকা — "বিস্তারিত"-এ ফি স্টেটাস দেখাতে
+          dues: s.due_months || [], // বকেয়া মাসের তালিকা — "Details"-এ ফি স্টেটাস দেখাতে
         })),
       );
     } catch {
@@ -13498,7 +13468,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         try {
           await api.waiveDue(studentId, monthLabel);
         } catch {
-          return notice("মওকুফ করতে ব্যর্থ — সার্ভার সংযোগ যাচাই করুন।");
+          return notice("Could not waive — please check your server connection.");
         }
         const strip = (arr) => (arr || []).filter((m) => m !== monthLabel);
         setStudents((prev) =>
@@ -13525,12 +13495,12 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
       notice(
         r?.created
           ? `✔ ${bn(r.created)} জন স্টুডেন্টের আইডি তৈরি হয়েছে।`
-          : "সব স্টুডেন্টেরই আইডি আগে থেকেই আছে।",
+          : "Every student already has an ID.",
       );
     } catch (e) {
       notice(
-        "স্টুডেন্ট আইডি তৈরি করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not create student ID —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
     setIdBusy(false);
@@ -13554,7 +13524,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   };
 
   const saveEdit = async () => {
-    if (!edit.name || !edit.user) return notice("নাম ও আইডি দিন।");
+    if (!edit.name || !edit.user) return notice("Please enter a name and ID.");
     setSaving(true);
     try {
       const payload = {
@@ -13606,7 +13576,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           } catch (e) {
             notice(
               `"${c.name}" কোর্স থেকে সরানো যায়নি — ` +
-                (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+                (e?.data?.error || e?.message || "Please try again"),
             );
           }
         }
@@ -13621,7 +13591,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           } catch (e) {
             notice(
               `"${target.name}" কোর্সে যুক্ত করা যায়নি — ` +
-                (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+                (e?.data?.error || e?.message || "Please try again"),
             );
           }
         }
@@ -13630,8 +13600,8 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
       setEdit(null);
       if (courseMoved && edit.id)
         notice(
-          "✔ কোর্স বদলানো হয়েছে। মনে রাখবেন — ক্লাস রুটিনে শিক্ষার্থীর " +
-            "তালিকা আলাদা, দরকার হলে সেটাও মিলিয়ে নিন।",
+          "✔ Course changed. Remember — in the class routine, the student's" +
+            "list is separate — check that too if needed.",
         );
     } catch {
       // ব্যাকএন্ড না থাকলে — mock এ সংরক্ষণ
@@ -13655,7 +13625,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           id,
           role: "student",
           name: edit.name,
-          sub: courseById(COURSES, edit.courseId)?.name || "নতুন স্টুডেন্ট",
+          sub: courseById(COURSES, edit.courseId)?.name || "New Student",
           user: edit.user,
           pass: edit.pass || genPass(),
           fee: +edit.fee || DEFAULT_FEE,
@@ -13684,7 +13654,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
       } catch (e) {
         notice(
           `${s.name}-কে মুছতে ব্যর্থ — ` +
-            (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+            (e?.data?.error || e?.message || "Please check your server connection and try again"),
         );
       }
     });
@@ -13711,7 +13681,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
     /* ⚠️ আগে কেবল "বকেয়া আছে কিনা" দেখে বলা হতো — বকেয়া না থাকলেই
        "পরিশোধিত ✔"। কিন্তু বকেয়ার রেকর্ড তৈরি হয় মাসিক cron চললে
        (cron/monthly/)। নতুন ভর্তি হওয়া শিক্ষার্থীর জন্য সেটা চলার আগে
-       কোনো বকেয়াই থাকে না — ফলে এক টাকাও না দিয়েই "পরিশোধিত" দেখাত।
+       কোনো বকেয়াই থাকে না — ফলে এক টাকাও না দিয়েই "Paid" দেখাত।
        এখন আসল পেমেন্টের রেকর্ড দেখে বলা হয়।
        ⚠️ তালিকাটা প্যারেন্টে আনা হয়, এখানে নয় — এটি সাধারণ ফাংশন,
        কম্পোনেন্ট নয়, তাই এর ভেতরে হুক রাখা চলে না। */
@@ -13750,8 +13720,8 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             marginBottom: 12,
           }}
         >
-          {inf("স্টুডেন্ট আইডি", s.studentId)}
-          {inf("বাবা/অভিভাবকের নাম", s.guardian)}
+          {inf("Student ID", s.studentId)}
+          {inf("Father's/guardian's name", s.guardian)}
           {s.email ? (
             <div
               style={{
@@ -13767,19 +13737,19 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 target="_blank"
                 rel="noreferrer"
                 style={{ color: C.emerald, fontWeight: 700 }}
-                title="জিমেইলে নতুন মেইল লিখুন"
+                title="Compose a new mail in Gmail"
               >
                 {s.email}
               </a>
             </div>
           ) : (
-            inf("ইমেইল", s.email)
+            inf("Email", s.email)
           )}
-          {inf("দেশ", s.country)}
+          {inf("Country", s.country)}
           {inf("WhatsApp", s.phone ? "+" + s.phone : "—")}
-          {inf("আইডি", s.user)}
-          {inf("পাসওয়ার্ড", s.pass)}
-          {inf("মাসিক ফি", `৳${bn((s.fee || 0).toLocaleString("en"))}`)}
+          {inf("ID", s.user)}
+          {inf("Password", s.pass)}
+          {inf("Monthly fee", `৳${bn((s.fee || 0).toLocaleString("en"))}`)}
           <div
             style={{
               padding: "8px 10px",
@@ -13804,7 +13774,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                     {isDir(user) && (
                       <button
                         onClick={() => waiveDue(s.id, m)}
-                        title="এই মাসের বকেয়া মওকুফ করুন"
+                        title="Waive this month's dues"
                         style={{
                           marginLeft: 6,
                           border: "none",
@@ -13914,11 +13884,11 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   };
   return (
     <Section
-      title="সকল স্টুডেন্ট"
+      title="All Students"
       sub={
         isDir(user)
-          ? "সম্পূর্ণ তালিকা — এডিট, যোগ ও মুছে ফেলার নিয়ন্ত্রণ কেবল পরিচালকের"
-          : "সম্পূর্ণ তালিকা — আপনি (এডমিন) কেবল দেখতে পারবেন"
+          ? "Full list — only the director can edit, add or delete"
+          : "Full list — you (admin) have view-only access"
       }
       action={
         isDir(user) && (
@@ -13929,7 +13899,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 onClick={genStudentIds}
                 style={{ opacity: idBusy ? 0.6 : 1 }}
               >
-                {idBusy ? "⏳ তৈরি হচ্ছে…" : "🆔 বাকিদের স্টুডেন্ট আইডি তৈরি করুন"}
+                {idBusy ? "⏳ Creating…" : "🆔 Create student IDs for the rest"}
               </Btn>
             )}
             <Btn
@@ -13957,16 +13927,16 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         )
       }
     >
-      {loading && <Loader text="স্টুডেন্ট তালিকা আসছে" />}
+      {loading && <Loader text="Loading student list" />}
       <Table
         head={[
-          "স্টুডেন্ট নাম",
-          "দেশ",
-          "লগইন আইডি",
-          "পাসওয়ার্ড",
-          "WhatsApp নম্বর",
-          "বিস্তারিত",
-          ...(isDir(user) ? ["অ্যাকশন"] : []),
+          "Student name",
+          "Country",
+          "Login ID",
+          "Password",
+          "WhatsApp number",
+          "Details",
+          ...(isDir(user) ? ["Action"] : []),
         ]}
         rows={students.map((s) => [
           <span key="n">
@@ -13984,7 +13954,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                   fontWeight: 800,
                   whiteSpace: "nowrap",
                 }}
-                title="স্টুডেন্ট আইডি"
+                title="Student ID"
               >
                 {s.studentId}
               </span>
@@ -14087,7 +14057,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           title={
             edit.id
               ? `✏️ এডিট — ${edit.name}`
-              : "+ নতুন স্টুডেন্ট যোগ করুন (কেবল পরিচালক)"
+              : "+ Add new student (director only)"
           }
           onClose={() => setEdit(null)}
           wide
@@ -14096,7 +14066,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
           >
             <div>
-              <label style={S.label}>নাম</label>
+              <label style={S.label}>Name</label>
               <input
                 style={S.input}
                 value={edit.name}
@@ -14104,7 +14074,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               />
             </div>
             <div>
-              <label style={S.label}>বাবা/অভিভাবকের নাম</label>
+              <label style={S.label}>Father's/guardian's name</label>
               <input
                 style={S.input}
                 value={edit.guardian}
@@ -14122,17 +14092,17 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 style={S.input}
                 value={edit.studentId || ""}
                 onChange={(e) => setEdit({ ...edit, studentId: e.target.value })}
-                placeholder={edit.id ? "" : "যেমন: SH-LC-US-007 (অটো তৈরি হবে)"}
+                placeholder={edit.id ? "" : "e.g. SH-LC-US-007 (auto-generated)"}
               />
             </div>
             <div>
-              <label style={S.label}>দেশ</label>
+              <label style={S.label}>Country</label>
               <select
                 style={S.input}
                 value={edit.country || ""}
                 onChange={(e) => setEdit({ ...edit, country: e.target.value })}
               >
-                <option value="">— দেশ নির্বাচন করুন —</option>
+                <option value="">— Select a country —</option>
                 {edit.country &&
                   !COUNTRIES.some((c) => c.name === edit.country) && (
                     <option value={edit.country}>{edit.country}</option>
@@ -14145,14 +14115,14 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               </select>
             </div>
             <div>
-              <label style={S.label}>WhatsApp নম্বর</label>
+              <label style={S.label}>WhatsApp number</label>
               {/* দেশ বেছে নিলে কোড বসে; পাশে শুধু নম্বর — দুটো আলাদা, মিশে যায় না */}
               <select
                 style={S.input}
                 value={edit.phoneIso || ""}
                 onChange={(e) => setEdit({ ...edit, phoneIso: e.target.value })}
               >
-                <option value="">— কোড / দেশ বাছুন —</option>
+                <option value="">— Choose code / country —</option>
                 {COUNTRIES.map((c) => (
                   <option key={c.iso} value={c.iso}>
                     {c.flag} {c.name} ({c.dial})
@@ -14164,7 +14134,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 type="tel"
                 value={edit.phone}
                 onChange={(e) => setEdit({ ...edit, phone: e.target.value })}
-                placeholder="নম্বর (কোড ছাড়া, যেমন 1712345678)"
+                placeholder="Number (without code, e.g. 1712345678)"
               />
               <div style={{ fontSize: 11.5, color: C.muted, marginTop: 4 }}>
                 পূর্ণ নম্বর:{" "}
@@ -14174,7 +14144,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               </div>
             </div>
             <div>
-              <label style={S.label}>ইমেইল</label>
+              <label style={S.label}>Email</label>
               <input
                 style={S.input}
                 value={edit.email}
@@ -14182,7 +14152,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               />
             </div>
             <div>
-              <label style={S.label}>মাসিক ফি (৳)</label>
+              <label style={S.label}>Monthly fee (৳)</label>
               <input
                 type="number"
                 style={S.input}
@@ -14191,7 +14161,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               />
             </div>
             <div>
-              <label style={S.label}>লগইন আইডি</label>
+              <label style={S.label}>Login ID</label>
               <input
                 style={S.input}
                 value={edit.user}
@@ -14199,7 +14169,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               />
             </div>
             <div>
-              <label style={S.label}>পাসওয়ার্ড</label>
+              <label style={S.label}>Password</label>
               <div style={{ display: "flex", gap: 6 }}>
                 <input
                   style={{ ...S.input, flex: 1 }}
@@ -14270,7 +14240,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             }}
           >
               <div>
-                <label style={S.label}>📚 কী পড়ে (কোর্স)</label>
+                <label style={S.label}>📚 What they study (course)</label>
                 <select
                   style={S.input}
                   value={edit.courseId || ""}
@@ -14290,7 +14260,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                     });
                   }}
                 >
-                  <option value="">— কোর্স নির্বাচন করুন —</option>
+                  <option value="">— Select a course —</option>
                   {courseList.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -14315,7 +14285,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                     setEdit({ ...edit, teacherId: e.target.value })
                   }
                 >
-                  <option value="">— উস্তাদ/উস্তাদা নির্বাচন করুন —</option>
+                  <option value="">— Select a teacher —</option>
                   {teachers.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -14346,7 +14316,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                       ⚠️ এই উস্তাদ বাছাই করা কোর্সটির সাথে যুক্ত নন। এভাবে
                       সংরক্ষণ করলে <b>তিনি এই শিক্ষার্থীকে নিজের তালিকায়
                       দেখতে পাবেন</b> (কারণ শিক্ষার্থী তাঁর কাছেই পড়ে), তবে{" "}
-                      <b>কোর্সের অন্য উস্তাদ দেখবেন না</b>। ইচ্ছা করে এমন
+                      <b>Other teachers of the course will not see it</b>। ইচ্ছা করে এমন
                       চাইলে ঠিক আছে।
                     </div>
                   )}
@@ -14362,10 +14332,10 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             onClick={saveEdit}
           >
             {saving
-              ? "সংরক্ষণ হচ্ছে…"
+              ? "Saving…"
               : edit.id
-                ? "✏️ সংরক্ষণ করুন"
-                : "+ যোগ করুন"}
+                ? "✏️ Save"
+                : "+ Add"}
           </Btn>
         </Modal>
       )}
@@ -14463,7 +14433,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
       zoom: k.zoom_link || k.zoom || "",
     });
   const saveEditClass = async () => {
-    if (!editK.date || !editK.time) return notice("তারিখ ও সময় দিন।");
+    if (!editK.date || !editK.time) return notice("Please enter a date and time.");
     setSavingK(true);
     try {
       await api.editClass(editK.id, {
@@ -14488,18 +14458,18 @@ function TeacherWiseBoard({ db, setDb, user }) {
         ),
       );
       setEditK(null);
-      notice("✔ ক্লাসটি আপডেট হয়েছে — উস্তাদ ও স্টুডেন্টের পোর্টালেও বদলে গেছে।");
+      notice("✔ Class updated — it has changed in the teacher's and student's portals too.");
     } catch (e) {
       notice(
-        "ক্লাস আপডেট করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not update class —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     }
     setSavingK(false);
   };
   const postpone = (k) =>
     askConfirm(
-      "ক্লাসটি স্থগিত করবেন? উস্তাদ, স্টুডেন্ট সবার পোর্টালে সাথে সাথে আপডেট হবে এবং অভিভাবকের WhatsApp মেসেজ তৈরি হবে।",
+      "Postpone this class? It will update immediately in the teacher's and students' portals, and a WhatsApp message will be prepared for the guardian.",
       async () => {
         try {
           await api.postponeClass(k.id);
@@ -14571,7 +14541,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
       >
         📚 {t.name}-এর কাছে যারা পড়ে:
       </div>
-      {loading && <Loader text="লোড হচ্ছে" />}
+      {loading && <Loader text="Loading" />}
       {!loading && myRoutines.length === 0 && (
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8 }}>
           এখনো রুটিন নেই
@@ -14583,7 +14553,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
         const names =
           r.studentNames && r.studentNames.length
             ? r.studentNames
-            : studs.map((s) => userById(s)?.name || "স্টুডেন্ট " + s);
+            : studs.map((s) => userById(s)?.name || "Student" + s);
         return (
           <div
             key={r.id}
@@ -14599,8 +14569,8 @@ function TeacherWiseBoard({ db, setDb, user }) {
             {studs.length ? (
               studs.map((sid, i) => (
                 <span key={sid} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
-                  <b>{names[i] || "স্টুডেন্ট " + sid}</b>
-                  <RemarkBox studentId={sid} studentName={names[i] || "স্টুডেন্ট " + sid} />
+                  <b>{names[i] || "Student" + sid}</b>
+                  <RemarkBox studentId={sid} studentName={names[i] || "Student" + sid} />
                   {i < studs.length - 1 ? <span>,&nbsp;</span> : null}
                 </span>
               ))
@@ -14636,7 +14606,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
           k.student_names && k.student_names.length
             ? k.student_names.map((n) => n.split(" ")[0]).join(", ")
             : studs
-                .map((s) => (userById(s)?.name || "ছাত্র " + s).split(" ")[0])
+                .map((s) => (userById(s)?.name || "Student" + s).split(" ")[0])
                 .join(", ");
         return (
           <div
@@ -14673,7 +14643,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
       })}
       {editK && (
         <Modal
-          title="✏️ এই ক্লাসটি এডিট করুন"
+          title="✏️ Edit this class"
           onClose={() => setEditK(null)}
         >
           <div
@@ -14692,7 +14662,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <label style={S.label}>তারিখ</label>
+              <label style={S.label}>Date</label>
               <input
                 type="date"
                 style={S.input}
@@ -14701,7 +14671,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
               />
             </div>
             <div>
-              <label style={S.label}>সময় (বাংলাদেশ সময় 🇧🇩)</label>
+              <label style={S.label}>Time (Bangladesh time 🇧🇩)</label>
               <input
                 type="time"
                 style={S.input}
@@ -14711,7 +14681,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
             </div>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>সময়কাল (মিনিট)</label>
+            <label style={S.label}>Duration (minutes)</label>
             <input
               type="number"
               style={S.input}
@@ -14720,7 +14690,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
             />
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>জুম লিংক</label>
+            <label style={S.label}>Zoom link</label>
             <input
               style={S.input}
               value={editK.zoom}
@@ -14736,7 +14706,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
             }}
             onClick={saveEditClass}
           >
-            {savingK ? "⏳ সেভ হচ্ছে…" : "✔ আপডেট করুন"}
+            {savingK ? "⏳ Saving…" : "✔ Update"}
           </Btn>
         </Modal>
       )}
@@ -14796,8 +14766,8 @@ function WaOutboxView({ db, setDb, user }) {
     );
   return (
     <Section
-      title="WhatsApp মেসেজ"
-      sub="ক্লাস শুরুর ৫ মিনিট আগের রিমাইন্ডার ও স্থগিতের মেসেজ অভিভাবকের জন্য স্বয়ংক্রিয়ভাবে তৈরি হয় — API চালু থাকলে নিজে নিজেই চলে যায়"
+      title="WhatsApp Messages"
+      sub="Reminders 5 minutes before class and postponement messages for guardians are generated automatically — they send themselves when the API is live"
     >
       {isDir(user) && (
         <div
@@ -14849,7 +14819,7 @@ function WaOutboxView({ db, setDb, user }) {
                 checked={cfg.autoSend}
                 onChange={(e) => setCfg({ autoSend: e.target.checked })}
               />
-              ⚡ অটো-সেন্ড {cfg.autoSend ? "চালু" : "বন্ধ"}
+              ⚡ অটো-সেন্ড {cfg.autoSend ? "Active" : "Off"}
             </label>
           </div>
           {cfg.autoSend && !cfg.backendUrl && (
@@ -14860,7 +14830,7 @@ function WaOutboxView({ db, setDb, user }) {
         </div>
       )}
       <div style={{ display: "grid", gap: 10 }}>
-        {loading && <Loader text="মেসেজ লোড হচ্ছে" />}
+        {loading && <Loader text="Loading messages" />}
         {!loading && list.length === 0 && (
           <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
             এখনো কোনো মেসেজ তৈরি হয়নি — ক্লাস শুরুর ৫ মিনিট আগে বা ক্লাস স্থগিত
@@ -14873,7 +14843,7 @@ function WaOutboxView({ db, setDb, user }) {
             style={{
               ...S.card,
               padding: 14,
-              borderLeft: `4px solid ${m.sent ? C.green : m.reason === "ক্লাস স্থগিত" ? C.red : C.gold}`,
+              borderLeft: `4px solid ${m.sent ? C.green : m.reason === "Class postponed" ? C.red : C.gold}`,
             }}
           >
             <div
@@ -14887,8 +14857,8 @@ function WaOutboxView({ db, setDb, user }) {
               <div style={{ flex: 1, minWidth: 220 }}>
                 <b style={{ fontSize: 13.5 }}>{m.toName}</b>{" "}
                 <Tag
-                  color={m.reason === "ক্লাস স্থগিত" ? C.red : C.gold}
-                  bg={m.reason === "ক্লাস স্থগিত" ? C.redBg : C.amberBg}
+                  color={m.reason === "Class postponed" ? C.red : C.gold}
+                  bg={m.reason === "Class postponed" ? C.redBg : C.amberBg}
                 >
                   {m.reason}
                 </Tag>{" "}
@@ -15042,7 +15012,7 @@ function CourseManagerView({ db, setDb, refresh }) {
   }, []);
 
   const save = async () => {
-    if (!edit.name?.trim()) return notice("কোর্সের নাম দিন।");
+    if (!edit.name?.trim()) return notice("Please enter a course name.");
     // সার্ভার teacher হিসেবে কেবল role="teacher" ব্যবহারকারীকেই গ্রহণ করে, আর
     // books হিসেবে কেবল বিদ্যমান একাডেমিক বই। কোনো উস্তাদের রোল বদলে গেলে বা
     // কোনো বই মুছে গেলে কোর্সে তার পুরনো আইডি রয়ে যেত, আর সেভ করতে গেলে
@@ -15050,7 +15020,7 @@ function CourseManagerView({ db, setDb, refresh }) {
     // আগেই যাচাই করে স্পষ্ট বাংলা বার্তা দেখানো হয়।
     if (!teachers.some((t) => String(t.id) === String(edit.teacherId))) {
       return notice(
-        "দায়িত্বপ্রাপ্ত উস্তাদ/উস্তাদা বেছে নিন — আগে যিনি ছিলেন তিনি এখন আর উস্তাদ তালিকায় নেই (তাঁর রোল বদলে থাকতে পারে)।",
+        "Choose the assigned teacher — the previous one is no longer in the teacher list (their role may have changed).",
       );
     }
     const validBookIds = new Set(academicBooks.map((b) => String(b.id)));
@@ -15066,12 +15036,12 @@ function CourseManagerView({ db, setDb, refresh }) {
       await api.saveCourse(payload, edit.id || undefined);
       await loadCourses();
       setEdit(null);
-      notice(edit.id ? "✔ কোর্স আপডেট হয়েছে।" : "✔ কোর্স তৈরি হয়েছে।");
+      notice(edit.id ? "✔ Course updated." : "✔ Course created.");
       refresh();
     } catch (e) {
       notice(
-        "কোর্স সেভ করতে ব্যর্থ — " +
-          (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+        "Could not save course —" +
+          (e?.data?.error || e?.message || "Please check your server connection and try again"),
       );
     } finally {
       setSaving(false);
@@ -15080,9 +15050,9 @@ function CourseManagerView({ db, setDb, refresh }) {
 
   // ইনলাইন বই আপলোড → তালিকা রিলোড → নতুন বই অটো-নির্বাচন
   const saveNewBook = async () => {
-    if (!bookForm.name.trim()) return notice("বইয়ের নাম লিখুন।");
+    if (!bookForm.name.trim()) return notice("Please enter the book name.");
     if (!(bookForm.fileObj instanceof File))
-      return notice("ডিভাইস থেকে বইয়ের ফাইল যুক্ত করুন।");
+      return notice("Attach the book file from your device.");
     try {
       await api.uploadBook(bookForm.name.trim(), bookForm.fileObj);
       const bks = (await api.books()).map(adaptBook);
@@ -15096,10 +15066,10 @@ function CourseManagerView({ db, setDb, refresh }) {
         });
       }
       setBookForm(null);
-      notice("বই যোগ হয়েছে এবং স্বয়ংক্রিয়ভাবে নির্বাচিত হয়েছে।");
+      notice("Book added and automatically selected.");
     } catch (e) {
       notice(
-        "বই যোগ ব্যর্থ: " + (e?.data?.error || e?.message || "অজানা সমস্যা"),
+        "Failed to add book:" + (e?.data?.error || e?.message || "Unknown error"),
       );
     }
   };
@@ -15115,16 +15085,16 @@ function CourseManagerView({ db, setDb, refresh }) {
           refresh();
         } catch (e) {
           notice(
-            "কোর্স মুছতে ব্যর্থ — " +
-              (e?.data?.error || e?.message || "সার্ভার সংযোগ যাচাই করে আবার চেষ্টা করুন"),
+            "Could not delete course —" +
+              (e?.data?.error || e?.message || "Please check your server connection and try again"),
           );
         }
       },
     );
   return (
     <Section
-      title="কোর্স ব্যবস্থাপনা"
-      sub="নতুন কোর্স যোগ, এডিট ও বাদ — কেবল পরিচালকের নিয়ন্ত্রণে; এখানকার তালিকাই সর্বত্র (রুটিন, শিডিউল, লেকচার প্ল্যান, ভর্তি ফরম) দেখা যায়"
+      title="Course Management"
+      sub="Adding, editing and removing courses — director only; this list appears everywhere (routine, schedule, lecture plan, admission form)"
       action={
         <Btn
           onClick={() =>
@@ -15140,7 +15110,7 @@ function CourseManagerView({ db, setDb, refresh }) {
         </Btn>
       }
     >
-      {loading && <Loader text="কোর্স তালিকা আসছে" />}
+      {loading && <Loader text="Loading course list" />}
       <div style={{ display: "grid", gap: 10 }}>
         {courses.map((c) => (
           <div
@@ -15197,7 +15167,7 @@ function CourseManagerView({ db, setDb, refresh }) {
       {edit && (
         <Modal
           title={
-            edit.id ? `✏️ কোর্স এডিট — ${edit.name}` : "+ নতুন কোর্স যোগ করুন"
+            edit.id ? `✏️ কোর্স এডিট — ${edit.name}` : "+ Add new course"
           }
           onClose={() => {
             setEdit(null);
@@ -15205,15 +15175,15 @@ function CourseManagerView({ db, setDb, refresh }) {
           }}
           wide
         >
-          <label style={S.label}>কোর্সের নাম</label>
+          <label style={S.label}>Course name</label>
           <input
             style={S.input}
             value={edit.name}
             onChange={(e) => setEdit({ ...edit, name: e.target.value })}
-            placeholder="যেমন: সহীহ মাসনুন দুআ কোর্স"
+            placeholder="e.g. Sahih Masnun Dua Course"
           />
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>দায়িত্বপ্রাপ্ত উস্তাদ/উস্তাদা</label>
+            <label style={S.label}>Assigned teacher</label>
             <select
               style={S.input}
               value={
@@ -15226,7 +15196,7 @@ function CourseManagerView({ db, setDb, refresh }) {
               }
               onChange={(e) => setEdit({ ...edit, teacherId: e.target.value })}
             >
-              <option value="">— বেছে নিন —</option>
+              <option value="">— Choose —</option>
               {teachers.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name} ({t.sub})
@@ -15235,7 +15205,7 @@ function CourseManagerView({ db, setDb, refresh }) {
             </select>
           </div>
           <div style={{ marginTop: 10 }}>
-            <label style={S.label}>রং</label>
+            <label style={S.label}>Colour</label>
             <div style={{ display: "flex", gap: 8 }}>
               {PALETTE.map((p) => (
                 <button
@@ -15309,7 +15279,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                   onChange={(e) =>
                     setBookForm({ ...bookForm, name: e.target.value })
                   }
-                  placeholder="বইয়ের নাম (যেমন: নুরানী কায়দা সংশোধিত)"
+                  placeholder="Book name (e.g. Noorani Qaida Revised)"
                 />
                 <label
                   style={{
@@ -15331,7 +15301,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                   <span>
                     {bookForm.file
                       ? bookForm.file.name
-                      : "ডিভাইস থেকে ফাইল বেছে নিন (PDF, DOC, JPG…)"}
+                      : "Choose a file from your device (PDF, DOC, JPG…)"}
                   </span>
                   <input
                     type="file"
@@ -15356,7 +15326,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                     আপলোড ও নির্বাচন করুন
                   </Btn>
                   <Btn sm kind="soft" onClick={() => setBookForm(null)}>
-                    বাতিল
+                    Cancel
                   </Btn>
                 </div>
               </div>
@@ -15374,7 +15344,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                   border: `1px dashed ${C.line}`,
                 }}
               >
-                📭 কোনো একাডেমিক বই নেই — উপরের "+ নতুন বই যোগ" বাটনে ক্লিক করে
+                📭 কোনো একাডেমিক বই নেই — উপরের "+ Add new book" বাটনে ক্লিক করে
                 সরাসরি এখানেই বই আপলোড ও নির্বাচন করুন।
               </div>
             ) : (
@@ -15441,10 +15411,10 @@ function CourseManagerView({ db, setDb, refresh }) {
             onClick={save}
           >
             {saving
-              ? "সংরক্ষণ হচ্ছে…"
+              ? "Saving…"
               : edit.id
-                ? "✏️ সংরক্ষণ করুন"
-                : "+ কোর্স যোগ করুন — সর্বত্র দেখা যাবে"}
+                ? "✏️ Save"
+                : "+ Add course — visible everywhere"}
           </Btn>
         </Modal>
       )}
@@ -15531,7 +15501,7 @@ function SyllabusView({ db, setDb, courses, user }) {
           e?.data?.detail ||
           (e?.status ? `সার্ভার সাড়া দিয়েছে কোড ${e.status}` : null) ||
           e?.message ||
-          "আবার চেষ্টা করুন";
+          "Please try again";
         notice(
           T(
             "সিলেবাস আনা যায়নি — " + why,
@@ -15567,19 +15537,19 @@ function SyllabusView({ db, setDb, courses, user }) {
     touch();
   };
   const addCol = () => {
-    if (cols >= 12) return notice("সর্বোচ্চ ১২টি কলাম রাখা যাবে।");
+    if (cols >= 12) return notice("A maximum of 12 columns is allowed.");
     setHeaders((h) => [...h, ""]);
     setRows((rs) => rs.map((r) => [...r, ""]));
     touch();
   };
   const delRow = (i) =>
-    askConfirm("এই সারিটি মুছে ফেলবেন?", () => {
+    askConfirm("Delete this row?", () => {
       setRows((rs) => rs.filter((_, j) => j !== i));
       touch();
     });
   const delCol = (i) =>
     askConfirm(
-      `"${headers[i] || "নামহীন"}" কলামটি মুছে ফেলবেন? এই কলামের সব ঘরের লেখা চলে যাবে।`,
+      `"${headers[i] || "Untitled"}" কলামটি মুছে ফেলবেন? এই কলামের সব ঘরের লেখা চলে যাবে।`,
       () => {
         setHeaders((h) => h.filter((_, j) => j !== i));
         setRows((rs) => rs.map((r) => r.filter((_, j) => j !== i)));
@@ -15593,10 +15563,10 @@ function SyllabusView({ db, setDb, courses, user }) {
     try {
       await api.saveSyllabusSheet(selCourse, headers, rows);
       setDirty(false);
-      notice("সিলেবাস সংরক্ষিত হয়েছে।");
+      notice("Syllabus saved.");
     } catch (e) {
       notice(
-        "সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || "আবার চেষ্টা করুন"),
+        "Could not save —" + (e?.data?.error || e?.message || "Please try again"),
       );
     } finally {
       setSaving(false);
@@ -15618,9 +15588,9 @@ function SyllabusView({ db, setDb, courses, user }) {
   };
 
   const roleNote = canEdit
-    ? "শিরোনাম ও ঘরগুলো সরাসরি লিখুন — সংরক্ষণ করলে উস্তাদ ও শিক্ষার্থীদের পোর্টালেও একই টেবিল দেখাবে · যে কেউ প্রিন্ট/PDF করতে পারবে"
+    ? "Type the headings and cells directly — once saved, the same table appears in the teacher's and students' portals · anyone can print or save as PDF"
     : user.role === "teacher"
-      ? "আপনি যে কোর্সগুলোতে পড়ান তার সিলেবাস (দেখা ও প্রিন্ট)"
+      ? "Syllabus for the courses you teach (view and print)"
       : "Your course syllabus (view & print)";
 
   // ঘরের রেখা গাঢ় সবুজ — আগে খুব হালকা ধূসর (#e5e9e5) ছিল বলে কোন লেখা
@@ -15636,18 +15606,18 @@ function SyllabusView({ db, setDb, courses, user }) {
   };
 
   return (
-    <Section title={T("কোর্স সিলেবাস", "Course Syllabus")} sub={roleNote}>
-      {loading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
+    <Section title={T("Course Syllabus", "Course Syllabus")} sub={roleNote}>
+      {loading && <Loader text={T("Loading", "Loading")} />}
       {!loading && courseList.length === 0 && (
         <div
           style={{ ...S.card, textAlign: "center", color: C.muted, padding: 28 }}
         >
           📜{" "}
           {user.role === "teacher"
-            ? "আপনি এখনো কোনো কোর্সে যুক্ত নন।"
+            ? "You are not enrolled in any course yet."
             : user.role === "student"
               ? "You are not enrolled in any course yet."
-              : "এখনো কোনো কোর্স তৈরি হয়নি।"}
+              : "No courses created yet."}
         </div>
       )}
 
@@ -15673,7 +15643,7 @@ function SyllabusView({ db, setDb, courses, user }) {
               {showPicker && (
                 <>
                   <span style={{ fontWeight: 800, fontSize: 14 }}>
-                    {T("কোর্স:", "Course:")}
+                    {T("Course:", "Course:")}
                   </span>
                   <select
                     value={selCourse || ""}
@@ -15712,7 +15682,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                   onClick={saving ? undefined : save}
                   style={{ opacity: saving ? 0.7 : 1 }}
                 >
-                  {saving ? "সংরক্ষণ হচ্ছে…" : "💾 সংরক্ষণ করুন"}
+                  {saving ? "Saving…" : "💾 Save"}
                 </Btn>
               )}
             </div>
@@ -15789,7 +15759,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                 lineHeight: 1.35,
               }}
             >
-              {T("কোর্স:", "Course:")} {activeCourse.name}
+              {T("Course:", "Course:")} {activeCourse.name}
             </div>
             {/* নির্বাচিত বইয়ের তালিকা — একাধিক কলামে, তাই অনেক বই থাকলেও
                 জায়গা কম নেয়। সরু পর্দায় নিজে থেকেই এক কলামে নেমে আসে। */}
@@ -15810,7 +15780,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                   }}
                 >
                   {T(
-                    "কোর্সের জন্য নির্বাচিত বইসমূহ",
+                    "Books selected for this course",
                     "Books selected for this course",
                   )}
                 </div>
@@ -15846,7 +15816,7 @@ function SyllabusView({ db, setDb, courses, user }) {
             )}
 
             {sheetLoading ? (
-              <Loader text={T("লোড হচ্ছে", "Loading")} />
+              <Loader text={T("Loading", "Loading")} />
             ) : (
               <div
                 style={{
@@ -15893,7 +15863,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                               <input
                                 value={h}
                                 onChange={(e) => setHeader(i, e.target.value)}
-                                placeholder="কলামের শিরোনাম"
+                                placeholder="Column heading"
                                 style={{
                                   ...S.input,
                                   width: "100%",
@@ -15908,7 +15878,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                               />
                               <button
                                 onClick={() => delCol(i)}
-                                title="এই কলামটি মুছুন"
+                                title="Delete this column"
                                 style={{
                                   border: "none",
                                   background: "none",
@@ -15956,7 +15926,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                           }}
                         >
                           {canEdit
-                            ? "এখনো কিছু লেখা হয়নি — নিচের “➕ সারি যোগ করুন” চেপে শুরু করুন"
+                            ? "Nothing written yet — press “➕ Add row” below to start"
                             : "—"}
                         </td>
                       </tr>
@@ -16001,7 +15971,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                             >
                               <button
                                 onClick={() => delRow(ri)}
-                                title="এই সারিটি মুছুন"
+                                title="Delete this row"
                                 style={{
                                   border: "none",
                                   background: "none",
@@ -16045,7 +16015,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                   onClick={saving ? undefined : save}
                   style={{ opacity: saving ? 0.7 : 1 }}
                 >
-                  {saving ? "সংরক্ষণ হচ্ছে…" : "💾 সংরক্ষণ করুন"}
+                  {saving ? "Saving…" : "💾 Save"}
                 </Btn>
               </div>
             )}
@@ -16062,26 +16032,26 @@ function AcademicBooksView({ db, setDb, user, courses }) {
   // আসল নামই দেখেন; শুধু স্টুডেন্টের পোর্টালে দেখানোর জন্য এই ম্যাপিং দিয়ে ইংরেজি
   // নাম দেখানো হয় (তালিকায় না থাকা নতুন বই হলে আসল নামই দেখাবে, কিছু বাদ পড়বে না)
   const BOOK_NAME_EN = {
-    "নুজহাতুল ক্বারী": "Nuzhatul Qari",
-    "কায়দা ফর বিগেনার": "Qaida for Beginner",
-    "আকাঈদ ও ফিকহ ফর বিগেনার": "Aqaid and Fiqh for Beginner",
-    "আখলাক ফর বিগেনার এনড কায়দা": "Akhlaq for Beginner and Qaida",
-    "দুআ-মেনার্স ফর বিগেনার এনড কায়েদা কোর্স":
+    "Nuzhatul Qari": "Nuzhatul Qari",
+    "Qaida for Beginners": "Qaida for Beginner",
+    "Aqeedah & Fiqh for Beginners": "Aqaid and Fiqh for Beginner",
+    "Akhlaq for Beginners and Qaida": "Akhlaq for Beginner and Qaida",
+    "Dua & Manners for Beginners and Qaida Course":
       "Dua & Manners for Beginner and Qaida Course",
-    "প্রফেট স্টোরি ফর বিগেনার এন্ড কায়েদা কোর্স":
+    "Prophet Stories for Beginners and Qaida Course":
       "Prophet Stories for Beginner and Qaida Course",
-    "নূরানী কায়েদা ফর কায়েদা কোর্স": "Noorani Qaida for Qaida Course",
-    "আকাঈদ ও ফিকহ ফর কায়েদা কোর্স": "Aqaid and Fiqh for Qaida Course",
-    "দুআ-মেনার্স ফর কায়দা কোর্স": "Dua & Manners for Qaida Course",
-    "সূরা মুখস্থ (বিগেনার)": "Surah Memorisation (Beginner)",
-    "হাদিস মুখস্থ (বিগেনার)": "Hadith Memorisation (Beginner)",
-    "সূরা মুখস্থ (কায়দা কোর্স)": "Surah Memorisation (Qaida Course)",
-    "হাদিস মূখস্থ (কায়দা কোর্স)": "Hadith Memorisation (Qaida Course)",
-    "তাজভীদ ফর কায়দা কোর্স": "Tajweed for Qaida Course",
-    "গল্পসহ হাদিস": "Hadith with Stories",
-    "তাজভীদ ও মাখরাজ": "Tajweed and Makhraj",
-    "আকাঈদ ও ফিকহ (৯-১২ বছর)": "Aqaid and Fiqh (Ages 9-12)",
-    "আকাঈদ ও ফিকহ (১২-১৭ বছর)": "Aqaid and Fiqh (Ages 12-17)",
+    "Noorani Qaida for Qaida Course": "Noorani Qaida for Qaida Course",
+    "Aqeedah & Fiqh for Qaida Course": "Aqaid and Fiqh for Qaida Course",
+    "Dua & Manners for Qaida Course": "Dua & Manners for Qaida Course",
+    "Surah Memorisation (Beginners)": "Surah Memorisation (Beginner)",
+    "Hadith Memorisation (Beginners)": "Hadith Memorisation (Beginner)",
+    "Surah Memorisation (Qaida Course)": "Surah Memorisation (Qaida Course)",
+    "Hadith Memorisation (Qaida Course)": "Hadith Memorisation (Qaida Course)",
+    "Tajweed for Qaida Course": "Tajweed for Qaida Course",
+    "Hadith with stories": "Hadith with Stories",
+    "Tajweed & Makhraj": "Tajweed and Makhraj",
+    "Aqeedah & Fiqh (ages 9–12)": "Aqaid and Fiqh (Ages 9-12)",
+    "Aqeedah & Fiqh (ages 12–17)": "Aqaid and Fiqh (Ages 12-17)",
   };
   // ডাটাবেজ থেকে আসা নামে বাড়তি স্পেস/Unicode ভিন্নতা থাকলেও যেন মিলে যায় —
   // trim + একাধিক স্পেস এক করা + Unicode NFC নরমালাইজেশন দিয়ে তুলনা করা হচ্ছে
@@ -16162,7 +16132,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     if (!f) return;
     if (f.size > MAX_UPLOAD)
       notice(
-        `⚠️ ফাইলটি ${(f.size / 1048576).toFixed(1)} MB — ফ্রি সীমা ১০ MB। PDF ছোট করুন অথবা উপরের "🔗 লিংক দিয়ে যোগ" ব্যবহার করুন।`,
+        `⚠️ ফাইলটি ${(f.size / 1048576).toFixed(1)} MB — ফ্রি সীমা ১০ MB। PDF ছোট করুন অথবা উপরের "🔗 Add by link" ব্যবহার করুন।`,
       );
     setForm((x) => ({
       ...x,
@@ -16182,17 +16152,17 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     });
   };
   const save = async () => {
-    if (!form.name.trim()) return notice("বইয়ের নাম লিখুন।");
+    if (!form.name.trim()) return notice("Please enter the book name.");
     const isLink = form.mode === "link";
     if (isLink) {
       if (!(form.link || "").trim())
-        return notice("বইয়ের ডাউনলোড/দেখার লিংকটি বসান।");
+        return notice("Paste the book's download/view link.");
     } else {
       if (!(form.fileObj instanceof File))
-        return notice("ডিভাইস থেকে বইয়ের ফাইল যুক্ত করুন।");
+        return notice("Attach the book file from your device.");
       if (form.fileObj.size > MAX_UPLOAD)
         return notice(
-          'ফাইলটি ১০ MB-র বেশি — "🔗 লিংক দিয়ে যোগ" ব্যবহার করুন অথবা PDF ছোট করুন।',
+          'ফাইলটি ১০ MB-র বেশি — "🔗 Add by link" ব্যবহার করুন অথবা PDF ছোট করুন।',
         );
     }
     try {
@@ -16216,7 +16186,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
       await loadData();
       setForm(null);
     } catch (e) {
-      const msg = e?.data?.error || e?.message || "অজানা সমস্যা";
+      const msg = e?.data?.error || e?.message || "Unknown error";
       notice(`বই যোগ ব্যর্থ: ${msg}`);
     }
   };
@@ -16245,13 +16215,13 @@ function AcademicBooksView({ db, setDb, user, courses }) {
   };
   const saveRename = async (b) => {
     const newName = editName.trim();
-    if (!newName) return notice("বইয়ের নাম খালি রাখা যাবে না।");
+    if (!newName) return notice("Book name cannot be empty.");
     if (newName === b.name) return setEditingId(null);
     try {
       await api.updateBookName(b.id, newName);
       await loadData();
     } catch (e) {
-      notice(`নাম বদলাতে ব্যর্থ: ${e?.data?.error || e?.message || "অজানা সমস্যা"}`);
+      notice(`নাম বদলাতে ব্যর্থ: ${e?.data?.error || e?.message || "Unknown error"}`);
     }
     setEditingId(null);
   };
@@ -16320,7 +16290,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
         : status === "opening"
           ? T("ডিভাইস থেকে খুলছে…", "Opening from device…")
           : status === "done"
-            ? T("খুলছে…", "Opening…")
+            ? T("Opening…", "Opening…")
             : null;
     const icon =
       status === "downloading"
@@ -16342,8 +16312,8 @@ function AcademicBooksView({ db, setDb, user, courses }) {
         }}
         title={T(
           busy
-            ? "একটু অপেক্ষা করুন…"
-            : "ক্লিক করলেই খুলবে — প্রথমবার একবার নামবে, পরেরবার সরাসরি ডিভাইস থেকে",
+            ? "Please wait a moment…"
+            : "Opens on click — downloads once the first time, then straight from your device",
           busy
             ? "Please wait…"
             : "Click to open — downloads once the first time, then opens directly from your device",
@@ -16403,7 +16373,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
             {isDir(user) && (
               <button
                 onClick={() => startRename(b)}
-                title="বইয়ের নাম বদলান"
+                title="Rename book"
                 style={{
                   border: "none",
                   background: "none",
@@ -16440,7 +16410,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
               · কোর্স:{" "}
               {bookCourses(b.id)
                 .map((c) => c.name)
-                .join(", ") || "কোনো কোর্সে যুক্ত নয়"}
+                .join(", ") || "Not enrolled in any course"}
             </span>
           )}
         </div>
@@ -16454,10 +16424,10 @@ function AcademicBooksView({ db, setDb, user, courses }) {
   );
   return (
     <Section
-      title={T("একাডেমিক বইসমূহ", "Academic Books")}
+      title={T("Academic Books", "Academic Books")}
       sub={
         isAdm(user)
-          ? "একাডেমির সকল বইয়ের কেন্দ্রীয় তালিকা — কোর্স তৈরির সময় এখান থেকেই বই সিলেক্ট হয়"
+          ? "The academy's central book list — books are selected from here when creating a course"
           : T(
               "আপনার কোর্সের নির্ধারিত বইসমূহ — নামে ক্লিক করলেই খুলবে",
               "Books assigned to your course — click a name to open it",
@@ -16470,7 +16440,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
               setForm({ name: "", file: null, fileObj: null, courseIds: [], mode: "file", link: "" })
             }
           >
-            + বই যোগ করুন
+            + Add book
           </Btn>
         )
       }
@@ -16488,7 +16458,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
         >
           📚{" "}
           {isAdm(user)
-            ? 'এখনো কোনো বই যোগ হয়নি — "+ বই যোগ করুন" দিয়ে শুরু করুন।'
+            ? 'এখনো কোনো বই যোগ হয়নি — "+ Add book" দিয়ে শুরু করুন।'
             : T(
                 "আপনার কোর্সে এখনো কোনো বই নির্ধারিত হয়নি।",
                 "No books have been assigned to your course yet.",
@@ -16520,13 +16490,13 @@ function AcademicBooksView({ db, setDb, user, courses }) {
         })
       )}
       {form && (
-        <Modal title="+ বই যোগ করুন" onClose={() => setForm(null)}>
-          <label style={S.label}>বইয়ের নাম লিখুন</label>
+        <Modal title="+ Add book" onClose={() => setForm(null)}>
+          <label style={S.label}>Enter the book name</label>
           <input
             style={S.input}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="যেমন: নুরানী কায়দা (সংশোধিত)"
+            placeholder="e.g. Noorani Qaida (Revised)"
           />
           {/* ফাইল আপলোড / লিংক — টগল */}
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
@@ -16587,7 +16557,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
                 <span style={{ fontSize: 13, fontWeight: 700 }}>
                   {form.file
                     ? form.file.name
-                    : "ডিভাইস থেকে ফাইল বেছে নিন (≤ ১০ MB)"}
+                    : "Choose a file from your device (≤ 10 MB)"}
                 </span>
                 <input
                   type="file"
@@ -16779,7 +16749,7 @@ function Overview({ db, courses, user, goTo }) {
     .filter((t) => t.covered === false).length;
   const greet =
     user.role === "director"
-      ? "আসসালামু আলাইকুম, পরিচালক সাহেব"
+      ? "Assalamu Alaikum, Director"
       : user.role === "admin"
         ? `আসসালামু আলাইকুম, ${user.name} (এডমিন)`
         : user.role === "teacher"
@@ -16914,7 +16884,7 @@ function Overview({ db, courses, user, goTo }) {
         {user.role === "student" && (
           <Stat
             icon={hasDue ? "⚠️" : "💳"}
-            label={T("পেমেন্ট", "Payment")}
+            label={T("Payments", "Payment")}
             value={
               hasDue ? T("বাকি", "Due") : T("সম্পন্ন ✔", "Paid ✔")
             }
@@ -16924,7 +16894,7 @@ function Overview({ db, courses, user, goTo }) {
         {isAdm(user) && (
           <Stat
             icon="💰"
-            label="মোট ফি আদায়"
+            label="Total fees collected"
             value={`৳${bn(income.toLocaleString("en"))}`}
             accent={C.gold}
           />
@@ -16932,16 +16902,16 @@ function Overview({ db, courses, user, goTo }) {
         {isAdm(user) && (
           <Stat
             icon="🎓"
-            label="ভর্তি আবেদন"
+            label="Admission Applications"
             value={bn(admissionsPending)}
             accent={C.gold}
-            note="অপেক্ষমাণ"
+            note="Pending"
           />
         )}
         {user.role === "teacher" && (
           <Stat
             icon="🌟"
-            label="ক্লাসের মান"
+            label="Class quality"
             value={`★ ${bn(teacherRating.count ? teacherRating.avg.toFixed(1) : "—")}`}
             accent={C.gold}
             note={`${bn(teacherRating.count)}টি মূল্যায়ন`}
@@ -16950,16 +16920,16 @@ function Overview({ db, courses, user, goTo }) {
         {isAdm(user) && (
           <Stat
             icon="📨"
-            label="নতুন ফর্ম"
+            label="New form"
             value={bn(newForms)}
             accent={C.red}
-            note="উত্তর বাকি"
+            note="Answer pending"
           />
         )}
         {user.role !== "admin" && (
           <Stat
             icon="📝"
-            label={T("অ্যাসাইনমেন্ট", "Assignments")}
+            label={T("Assignments", "Assignments")}
             value={T(bn(assignmentsCount), assignmentsCount)}
             accent={C.gold}
           />
@@ -16983,7 +16953,7 @@ function Overview({ db, courses, user, goTo }) {
         }
       >
         <div style={{ display: "grid", gap: 10 }}>
-          {todayLoading && <Loader text={T("লোড হচ্ছে", "Loading")} />}
+          {todayLoading && <Loader text={T("Loading", "Loading")} />}
           {!todayLoading && todayClasses.length === 0 && (
             <div style={{ ...S.card, textAlign: "center", color: C.muted }}>
               {T(
@@ -17064,10 +17034,10 @@ function Overview({ db, courses, user, goTo }) {
    নিচের তালিকাটি কেবল শেষ ভরসা — সার্ভার থেকে আনা না গেলে যেন পর্দা
    ফাঁকা না থাকে। */
 const TRIAL_SCORES = [
-  { key: "letters", bn: "হরফ চেনা", en: "Recognising letters" },
-  { key: "makhraj", bn: "মাখরাজ ও উচ্চারণ", en: "Makhraj & pronunciation" },
-  { key: "fluency", bn: "তিলাওয়াতের সাবলীলতা", en: "Fluency" },
-  { key: "attentiveness", bn: "মনোযোগ", en: "Attentiveness" },
+  { key: "letters", bn: "Letter recognition", en: "Recognising letters" },
+  { key: "makhraj", bn: "Makhraj & pronunciation", en: "Makhraj & pronunciation" },
+  { key: "fluency", bn: "Recitation fluency", en: "Fluency" },
+  { key: "attentiveness", bn: "Attention", en: "Attentiveness" },
 ];
 /* সার্ভারের সারিকে পর্দার চেনা আকারে আনা */
 const adaptScoreItem = (x) => ({
@@ -17239,10 +17209,10 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
         ? await api.editTrialReport(rep.id, body)
         : await api.createTrialReport({ ...body, student: guest.id });
       setRep(saved);
-      notice("✅ মূল্যায়ন সংরক্ষিত হয়েছে");
+      notice("✅ Evaluation saved");
       onSaved && onSaved();
     } catch (e) {
-      notice("সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.data?.detail || e?.message || ""));
+      notice("Could not save —" + (e?.data?.error || e?.data?.detail || e?.message || ""));
     } finally {
       setBusy(false);
     }
@@ -17251,20 +17221,20 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
   const doReview = async () => {
     try {
       setRep(await api.reviewTrialReport(rep.id));
-      notice("✅ যাচাই সম্পন্ন — এবার পরিবারের কাছে পাঠাতে পারেন");
+      notice("✅ Verified — you can now send it to the family");
       onSaved && onSaved();
     } catch (e) {
-      notice("ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+      notice("Failed —" + (e?.data?.error || e?.message || ""));
     }
   };
 
   const doOffer = async () => {
     try {
       setRep(await api.offerTrialReport(rep.id));
-      notice("🎁 প্রস্তাব পাঠানো হলো — অতিথি এখন পোর্টালে দেখতে পাবেন");
+      notice("🎁 Offer sent — the guest can now see it in the portal");
       onSaved && onSaved();
     } catch (e) {
-      notice("ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+      notice("Failed —" + (e?.data?.error || e?.message || ""));
     }
   };
 
@@ -17275,7 +17245,7 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
       onSaved && onSaved();
       const phone = String(saved.phone || "").replace(/[^\d]/g, "");
       const text = [
-        `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম ${saved.guardian || "অভিভাবক"},`,
+        `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম ${saved.guardian || "Guardian"},`,
         "",
         `${saved.student_name}-এর ট্রায়াল ক্লাসের মূল্যায়ন রিপোর্ট প্রস্তুত হয়েছে। পোর্টালে লগইন করলেই দেখতে পাবেন ইনশাআল্লাহ:`,
         "🔗 https://app.tarbiyatulquran.org",
@@ -17284,7 +17254,7 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
           ? `আমাদের পরামর্শ: ${saved.recommended_course_name}${saved.recommended_level ? " — " + saved.recommended_level : ""}`
           : "",
         "",
-        "জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি",
+        "Jazakumullahu Khairan. — Tarbiyatul Quran Academy",
       ]
         .filter((x) => x !== "")
         .join("\n");
@@ -17293,24 +17263,24 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
           `https://wa.me/${phone}?text=${encodeURIComponent(text)}`,
           "_blank",
         );
-      else notice("✅ পাঠানো হিসেবে চিহ্নিত — তবে WhatsApp নম্বর নেই");
+      else notice("✅ Marked as sent — but there is no WhatsApp number");
     } catch (e) {
-      notice("ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+      notice("Failed —" + (e?.data?.error || e?.message || ""));
     }
   };
 
   const stage = !rep
-    ? "খসড়া"
+    ? "Draft"
     : !rep.reviewed_at
-      ? "যাচাইয়ের অপেক্ষায়"
+      ? "Awaiting verification"
       : !rep.sent_at
-        ? "যাচাই হয়েছে — পাঠানো বাকি"
-        : "পরিবারের কাছে পাঠানো হয়েছে";
+        ? "Verified — not yet sent"
+        : "Sent to the family";
 
   return (
     <Modal title={`📋 ট্রায়াল মূল্যায়ন — ${guest.name || guest.name_bn}`} onClose={onClose} wide>
       {loading || !f ? (
-        <Loader text="মূল্যায়ন আনা হচ্ছে" />
+        <Loader text="Loading evaluations" />
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           <div>
@@ -17328,7 +17298,7 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
           </div>
 
           <div>
-            <label style={S.label}>নম্বর (৫-এর মধ্যে)</label>
+            <label style={S.label}>Score (out of 5)</label>
             <div style={{ display: "grid", gap: 7 }}>
               {scoreItems.map((sc) => (
                 <div
@@ -17358,9 +17328,9 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
           </div>
 
           {[
-            ["strengths", "শক্তির দিক (পরিবার এটাই পড়বেন — ইংরেজিতে লিখুন)"],
-            ["work_on", "যা নিয়ে কাজ করতে হবে"],
-            ["advice", "উস্তাদের পরামর্শ"],
+            ["strengths", "Strengths (the family reads this — write in English)"],
+            ["work_on", "Areas to work on"],
+            ["advice", "Teacher's advice"],
           ].map(([k, label]) => (
             <div key={k}>
               <label style={S.label}>{label}</label>
@@ -17375,14 +17345,14 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <label style={S.label}>উপযুক্ত কোর্স</label>
+              <label style={S.label}>Suitable course</label>
               <select
                 style={S.input}
                 value={f.recommended_course || ""}
                 disabled={locked}
                 onChange={(e) => setF({ ...f, recommended_course: e.target.value })}
               >
-                <option value="">— বাছাই করুন —</option>
+                <option value="">— Choose —</option>
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -17391,12 +17361,12 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
               </select>
             </div>
             <div>
-              <label style={S.label}>উপযুক্ত স্তর</label>
+              <label style={S.label}>Suitable level</label>
               <input
                 style={S.input}
                 value={f.recommended_level}
                 disabled={locked}
-                placeholder="যেমন: Level 2"
+                placeholder="e.g. Level 2"
                 onChange={(e) => setF({ ...f, recommended_level: e.target.value })}
               />
             </div>
@@ -17417,13 +17387,13 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <label style={S.label}>প্রস্তাবিত উস্তাদ</label>
+                  <label style={S.label}>Suggested teacher</label>
                   <select
                     style={S.input}
                     value={f.offer_teacher || ""}
                     onChange={(e) => setF({ ...f, offer_teacher: e.target.value })}
                   >
-                    <option value="">— বাছাই করুন —</option>
+                    <option value="">— Choose —</option>
                     {(teachers || []).map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name || t.name_bn}
@@ -17432,7 +17402,7 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
                   </select>
                 </div>
                 <div>
-                  <label style={S.label}>মাসিক ফি (৳)</label>
+                  <label style={S.label}>Monthly fee (৳)</label>
                   <input
                     style={S.input}
                     type="number"
@@ -17442,7 +17412,7 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
                 </div>
               </div>
               <div style={{ marginTop: 8 }}>
-                <label style={S.label}>দিন ও সময় (পরিবার এটাই পড়বেন)</label>
+                <label style={S.label}>Day & time (the family reads this)</label>
                 <input
                   style={S.input}
                   value={f.offer_schedule}
@@ -17465,7 +17435,7 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
             {!locked && (
               <Btn kind="primary" onClick={busy ? undefined : save} style={{ opacity: busy ? 0.6 : 1 }}>
-                {busy ? "সংরক্ষণ হচ্ছে…" : "💾 সংরক্ষণ করুন"}
+                {busy ? "Saving…" : "💾 Save"}
               </Btn>
             )}
             {rep && (
@@ -17488,7 +17458,7 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
             )}
             {rep && canReview && rep.reviewed_at && (
               <Btn kind="gold" onClick={doSend}>
-                {rep.sent_at ? "💬 আবার পাঠান" : "💬 পরিবারকে পাঠান"}
+                {rep.sent_at ? "💬 Send again" : "💬 Send to family"}
               </Btn>
             )}
             {rep && canReview && rep.reviewed_at && !rep.offered_at && (
@@ -17512,7 +17482,7 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
 }
 
 /* ═══════════ 🎓 ট্রায়াল — সাময়িক অতিথি (পরিচালক ও এডমিন) ═══════════
-   ট্রায়াল শিক্ষার্থী ভর্তি নন, সাময়িক অতিথি। তাই তাঁরা "সকল স্টুডেন্ট",
+   ট্রায়াল শিক্ষার্থী ভর্তি নন, সাময়িক অতিথি। তাই তাঁরা "All Students",
    ফি, বকেয়া, বেতন বা মাসিক রিপোর্টে কোথাও আসেন না — সার্ভারের ওই সব
    কোয়েরি role="student" ধরে চলে, আর ট্রায়ালের ভূমিকা আলাদা। এখানেই
    তাঁদের সব কিছু: আবেদন থেকে আইডি বানানো, মেয়াদ, কোর্স ও উস্তাদ। */
@@ -17746,41 +17716,41 @@ function SlideArt({ kind, small }) {
 }
 
 const LESSON_KINDS = [
-  ["memorization", "মুখস্থ (হিফজ)"],
-  ["qaida", "কায়েদা"],
-  ["tajweed", "তাজবীদ"],
-  ["reading", "তিলাওয়াত"],
-  ["islamic", "ইসলামিক শিক্ষা"],
-  ["other", "অন্যান্য"],
+  ["memorization", "Memorisation (Hifz)"],
+  ["qaida", "Qaida"],
+  ["tajweed", "Tajweed"],
+  ["reading", "Recitation"],
+  ["islamic", "Islamic Studies"],
+  ["other", "Other"],
 ];
 
 const LESSON_STATUS = [
-  ["draft", "খসড়া"],
-  ["ready", "প্রস্তুত"],
-  ["published", "প্রকাশিত"],
-  ["archived", "সংরক্ষিত"],
+  ["draft", "Draft"],
+  ["ready", "Ready"],
+  ["published", "Published"],
+  ["archived", "Archived"],
 ];
 
 /* স্লাইডের ধরন — নামগুলো বাংলায়, কিন্তু পর্দায় বাচ্চা যা দেখবে তা
    স্লাইডের নিজের লেখা থেকেই আসে, এই নাম থেকে নয়। */
 const SLIDE_KINDS = [
-  ["title", "🏷️ শিরোনাম"],
-  ["verse", "📖 আয়াত"],
-  ["letters", "🔤 হরফ"],
-  ["listen", "👂 শোনো"],
-  ["repeat", "🔁 আমার সাথে বলো"],
-  ["your_turn", "🎤 তুমি বলো"],
-  ["question", "❓ প্রশ্ন"],
-  ["meaning", "💡 অর্থ"],
-  ["visual", "🖼️ ছবি"],
-  ["write", "✏️ খাতায় লেখো"],
-  ["activity", "🎲 খেলা"],
-  ["reminder", "🌙 মনে রেখো"],
-  ["praise", "🌟 শাবাশ"],
-  ["review", "🔄 পুনরাবৃত্তি"],
-  ["homework", "📚 বাড়ির কাজ"],
-  ["end", "👋 সমাপ্তি"],
-  ["blank", "⬛ খালি পর্দা"],
+  ["title", "🏷️ Title"],
+  ["verse", "📖 Verse"],
+  ["letters", "🔤 Letter"],
+  ["listen", "👂 Listen"],
+  ["repeat", "🔁 Say it with me"],
+  ["your_turn", "🎤 You say it"],
+  ["question", "❓ Question"],
+  ["meaning", "💡 Meaning"],
+  ["visual", "🖼️ Image"],
+  ["write", "✏️ Write in your notebook"],
+  ["activity", "🎲 Game"],
+  ["reminder", "🌙 Remember"],
+  ["praise", "🌟 Well done"],
+  ["review", "🔄 Repeat"],
+  ["homework", "📚 Homework"],
+  ["end", "👋 Closing"],
+  ["blank", "⬛ Blank screen"],
 ];
 
 const slideKindLabel = (k) =>
@@ -17968,14 +17938,14 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
   /* যাচাই করা আরবির তালা — খোলার আগে কেন সাবধান হতে হবে তা বলে দিই */
   const unlock = () =>
     askConfirm(
-      "এই আরবি লেখাটি যাচাই করে সুরক্ষিত রাখা হয়েছে — উসমানী রসম, " +
-        "যের-যবর-তানভীন সব হুবহু।" +
+      "This Arabic text has been verified and locked — Uthmani script," +
+        "with every harakah and tanween exact." +
         "\n\n" +
-        "তালা খুললে লেখাটি সম্পাদনা করা যাবে। একটি মাত্র চিহ্ন এদিক-ওদিক " +
-        "হলেও অর্থ বদলে যেতে পারে, আর তা পর্দায় শিক্ষার্থীর সামনেই যাবে। " +
-        "নিশ্চিত হয়ে তবেই খুলুন।",
+        "Unlocking lets you edit the text. Even a single misplaced mark" +
+        "can change the meaning, and that goes straight to the student's screen." +
+        "Open only once you are sure.",
       () => setSlide("arabic_locked", false),
-      { yes: "বুঝেছি, তালা খুলুন", no: "না, থাক" },
+      { yes: "Got it, unlock", no: "No, cancel" },
     );
 
   return (
@@ -18027,7 +17997,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
           </span>
           <span style={{ minWidth: 0 }}>
             <span style={{ fontWeight: 700, color: C.text }}>
-              {d.section || "নামহীন ধাপ"}
+              {d.section || "Untitled step"}
             </span>
             <span
               style={{
@@ -18045,7 +18015,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
             </span>
           </span>
         </button>
-        {dirty && <Tag color={C.red} bg={C.redBg}>অসংরক্ষিত</Tag>}
+        {dirty && <Tag color={C.red} bg={C.redBg}>Unsaved</Tag>}
         {canEdit && (
           <span style={{ display: "flex", gap: 4 }}>
             <Btn
@@ -18072,7 +18042,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
           </span>
         )}
         <Btn sm kind="ghost" onClick={() => setOpen((o) => !o)}>
-          {open ? "গুটিয়ে নিন" : "খুলুন"}
+          {open ? "Collapse" : "Open"}
         </Btn>
       </div>
 
@@ -18098,17 +18068,17 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
 
             <div style={{ display: "flex", gap: 8 }}>
               <div style={{ flex: 1 }}>
-                <Lbl>এই ধাপের অংশ</Lbl>
+                <Lbl>Part of this step</Lbl>
                 <input
                   style={S.input}
                   disabled={!canEdit}
-                  placeholder="যেমন: Verse 1 — Repeat"
+                  placeholder="e.g. Verse 1 — Repeat"
                   value={d.section || ""}
                   onChange={(e) => set("section", e.target.value)}
                 />
               </div>
               <div style={{ width: 110 }}>
-                <Lbl>সময় (সেকেন্ড)</Lbl>
+                <Lbl>Time (seconds)</Lbl>
                 <input
                   style={S.input}
                   type="number"
@@ -18122,7 +18092,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
 
             <div>
               <Lbl>
-                🗣️ উস্তাদ বলবেন — <b>হুবহু এই কথাগুলোই</b> মুখে বলবেন
+                🗣️ উস্তাদ বলবেন — <b>These exact words</b> মুখে বলবেন
                 (ইংরেজিতে)
               </Lbl>
               <Area
@@ -18130,41 +18100,41 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
                 onChange={(v) => set("teacher_says", v)}
                 disabled={!canEdit}
                 rows={4}
-                ph="উস্তাদ যেন নিজে থেকে ইংরেজি বানাতে না হয় — পড়লেই যেন ক্লাস হয়ে যায়। ছোট ছোট বাক্য, সহজ শব্দ।"
+                ph="So the teacher doesn't have to compose English on the spot — reading it should be enough to run the class. Short sentences, simple words."
               />
             </div>
             <div>
-              <Lbl>🤲 উস্তাদ যা করবেন — বলার নয়, করার (বাংলায়)</Lbl>
+              <Lbl>🤲 What the teacher does — not says, does</Lbl>
               <Area
                 value={d.teacher_does}
                 onChange={(v) => set("teacher_does", v)}
                 disabled={!canEdit}
-                ph="যেমন: চার আঙুল দেখান"
+                ph="e.g. show four fingers"
               />
             </div>
             <div>
-              <Lbl>🧒 শিক্ষার্থী যা করবে (বাংলায়)</Lbl>
+              <Lbl>🧒 What the student does</Lbl>
               <Area
                 value={d.student_does}
                 onChange={(v) => set("student_does", v)}
                 disabled={!canEdit}
-                ph="যেমন: হরফটি বলে"
+                ph="e.g. says the letter"
               />
             </div>
             <div>
-              <Lbl>✅ প্রত্যাশিত সাড়া — এখানেই যাচাই</Lbl>
+              <Lbl>✅ Expected response — verify here</Lbl>
               <Area value={d.expected} onChange={(v) => set("expected", v)} disabled={!canEdit} />
             </div>
             <div>
               <Lbl>
-                🔧 ভুল হলে — <b>হুবহু যা বলবেন</b> (ইংরেজিতে)
+                🔧 ভুল হলে — <b>Exactly what you will say</b> (ইংরেজিতে)
               </Lbl>
               <Area
                 value={d.correction}
                 onChange={(v) => set("correction", v)}
                 disabled={!canEdit}
                 rows={3}
-                ph="“শিশুকে বলুন…” নয় — সরাসরি সেই কথাগুলোই। যেমন: Almost! Watch my lips. Ba! Now you try."
+                ph="Not “tell the child…” — the exact words themselves. E.g. Almost! Watch my lips. Ba! Now you try."
               />
             </div>
             <div>
@@ -18191,7 +18161,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
         >
           {dirty && (
             <Btn sm kind="soft" onClick={() => setD(step)}>
-              বাতিল
+              Cancel
             </Btn>
           )}
           <Btn
@@ -18200,7 +18170,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
             onClick={save}
             disabled={!dirty || busy}
           >
-            {busy ? "সংরক্ষণ হচ্ছে…" : dirty ? "💾 সংরক্ষণ করুন" : "✓ সংরক্ষিত"}
+            {busy ? "Saving…" : dirty ? "💾 Save" : "✓ Saved"}
           </Btn>
         </div>
       )}
@@ -18238,7 +18208,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  /* ⚠️ silent — সংরক্ষণের পর নতুন করে আনার সময় "লোড হচ্ছে" পর্দা
+  /* ⚠️ silent — সংরক্ষণের পর নতুন করে আনার সময় "Loading" পর্দা
      দেখানো যাবে না।
 
      আগে দেখানো হতো, আর তাতে পুরো ফর্মটি পর্দা থেকে সরে গিয়ে আবার তৈরি
@@ -18257,7 +18227,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
         .then((d) => setSections(d || []))
         .catch(() => setSections([]));
     } catch (e) {
-      notice("দারসটি আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not load the lesson —" + (e?.data?.error || e?.message || ""));
     } finally {
       if (!silent) setLoading(false);
     }
@@ -18276,7 +18246,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
     if (lesson) setDraft(null); // সার্ভারেরটাই এখন সত্য
   }, [headJson]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (loading) return <Loader text="দারস লোড হচ্ছে" />;
+  if (loading) return <Loader text="Loading lessons" />;
   if (!lesson) return null;
 
   /* ⚠️ খসড়া না থাকলে সার্ভারের দারসটিই দেখানো হয়।
@@ -18290,7 +18260,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
   /* ⚠️ সংরক্ষণের পর সার্ভার যা ফেরত দেয় তার সাথে আমরা যা পাঠিয়েছি তা
      মিলিয়ে দেখি। না মিললে পাতাটি নতুন করে লোড করা হয় না — তাহলে
      পরিচালকের লেখা পর্দাতেই থেকে যায়, আর তাঁকে স্পষ্ট করে বলা হয়।
-     নইলে "সংরক্ষিত" দেখিয়ে লেখাটা চুপচাপ হারিয়ে যেতে পারত। */
+     নইলে "Archived" দেখিয়ে লেখাটা চুপচাপ হারিয়ে যেতে পারত। */
   const kept = (sent, got, keys) =>
     !got || keys.every((k) => (got[k] ?? "") === (sent[k] ?? ""));
 
@@ -18308,16 +18278,16 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
       const check = HEAD_FIELDS.filter((k) => k !== "objectives");
       if (!kept(body, got, check)) {
         notice(
-          "⚠️ সার্ভার তথ্যটি রাখেনি — আপনার লেখা পর্দায় রেখে দেওয়া হলো। " +
-            "পাতাটি একবার রিফ্রেশ করে আবার চেষ্টা করুন।",
+          "⚠️ The server did not save the data — your text has been kept on screen." +
+            "Please refresh the page and try again.",
         );
         return;
       }
       await load(true);
       onChanged && onChanged();
-      notice("✅ দারসের তথ্য সংরক্ষিত");
+      notice("✅ Lesson details saved");
     } catch (e) {
-      notice("সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+      notice("Could not save —" + (e?.data?.error || e?.message || ""));
     } finally {
       setBusy(false);
     }
@@ -18331,33 +18301,33 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
       .find((t) => t.id === lesson.topic);
     const had = !!(topic && (topic.content || "").trim());
     askConfirm(
-      "ধাপগুলোর পর্দা থেকে সারাংশ তৈরি হয়ে দারস পরিকল্পনার টপিকের টগলে " +
-        "বসবে — শিক্ষার্থী পরে দেখে রিভিশন দিতে পারবেন।" +
+      "A summary is built from the step screens and placed in the lecture-plan topic toggle" +
+        "— the student can review it later for revision." +
         "\n\n" +
-        "শুধু বাচ্চার পর্দায় যা ছিল তাই যাবে — আপনার লেখা উস্তাদের " +
-        "স্ক্রিপ্ট (বলবেন, করবেন, ভুল হলে, টীকা) যাবে না।" +
+        "Only what was on the child's screen will go — your teacher's" +
+        "script (say, do, on mistakes, notes) will not go." +
         "\n\n" +
         (had
-          ? "⚠️ এই টগলে আগে থেকেই লেখা আছে — সেটি মুছে নতুন সারাংশ বসবে।"
-          : "বসার পরেও আপনি লেকচার প্ল্যানে গিয়ে নিজের মতো বদলে নিতে পারবেন।"),
+          ? "⚠️ This toggle already has text — it will be replaced with the new summary."
+          : "Even after it is inserted, you can go to the lecture plan and change it as you like."),
       async () => {
         setBusy(true);
         try {
           const r = await api.pushLessonSummary(lesson.id);
           notice(
             r.had_content
-              ? "📋 টগলের লেখা নতুন করে বসানো হয়েছে"
-              : "📋 সারাংশ বসানো হয়েছে",
+              ? "📋 Toggle text replaced"
+              : "📋 Summary inserted",
           );
           const secs = await api.lessonSections(lesson.course).catch(() => null);
           if (secs) setSections(secs);
         } catch (e) {
-          notice("বসানো যায়নি — " + (e?.data?.error || e?.message || ""));
+          notice("Could not insert —" + (e?.data?.error || e?.message || ""));
         } finally {
           setBusy(false);
         }
       },
-      { yes: had ? "হ্যাঁ, নতুন করে বসান" : "হ্যাঁ, বসান", no: "না, থাক" },
+      { yes: had ? "Yes, replace" : "Yes, insert", no: "No, cancel" },
     );
   };
 
@@ -18370,15 +18340,15 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
       const got = await api.editLessonStep(d.id, body);
       if (!kept(body, got, STEP_FIELDS)) {
         notice(
-          "⚠️ সার্ভার লেখাটি রাখেনি — আপনার লেখা পর্দায় রেখে দেওয়া হলো। " +
-            "পাতাটি একবার রিফ্রেশ করে আবার চেষ্টা করুন।",
+          "⚠️ The server did not save the text — your text has been kept on screen." +
+            "Please refresh the page and try again.",
         );
         return;
       }
       await load(true);
-      notice("✅ ধাপটি সংরক্ষিত");
+      notice("✅ Step saved");
     } catch (e) {
-      notice("সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+      notice("Could not save —" + (e?.data?.error || e?.message || ""));
     }
   };
 
@@ -18386,13 +18356,13 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
     try {
       await api.addLessonStep({
         lesson: lesson.id,
-        section: "নতুন ধাপ",
+        section: "New step",
         slide: { ...EMPTY_SLIDE },
       });
       await load(true);
       onChanged && onChanged();
     } catch (e) {
-      notice("ধাপ যোগ করা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not add step —" + (e?.data?.error || e?.message || ""));
     }
   };
 
@@ -18431,7 +18401,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
 
       // PDF ও ছবি — ব্রাউজারে রেন্ডার হয়, তারপর আপলোড
       if (otherFiles.length) {
-        setImporting("ফাইল পড়া হচ্ছে…");
+        setImporting("Reading file…");
         const { images: imgs, dropped } = await filesToSlideImages(
           otherFiles,
           (i, n) =>
@@ -18460,14 +18430,14 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
       }
 
       if (!done)
-        notice("চালানোর মতো কিছু পাওয়া যায়নি — PDF, ছবি বা PPTX দিন।");
+        notice("Nothing to run — please provide a PDF, image or PPTX.");
       else notice(`✅ ${bn(String(done))}টি স্লাইড যোগ হয়েছে`);
     } catch (e) {
       const why = e?.data?.error || e?.message || "";
       notice(
         done
           ? `${bn(String(done))}টি বসেছে, তারপর আটকে গেছে — ${why}`
-          : "আনা যায়নি — " + why,
+          : "Could not load —" + why,
       );
     } finally {
       setImporting("");
@@ -18480,21 +18450,21 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
 
   const delStep = (st, n) =>
     askConfirm(
-      `${bn(n)} নং ধাপ — "${st.section || "নামহীন"}" মুছে ফেলা হবে।` +
+      `${bn(n)} নং ধাপ — "${st.section || "Untitled"}" মুছে ফেলা হবে।` +
         "\n\n" +
-        "উস্তাদের স্ক্রিপ্ট ও শিক্ষার্থীর পর্দা — দুটোই একসাথে মুছে যাবে, " +
-        "আর ফেরানো যাবে না।",
+        "The teacher's script and the student's screen will both be deleted together," +
+        "This cannot be undone.",
       async () => {
         try {
           await api.delLessonStep(st.id);
           await load(true);
           onChanged && onChanged();
-          notice("🗑️ ধাপটি মুছে ফেলা হয়েছে");
+          notice("🗑️ Step deleted");
         } catch (e) {
-          notice("মোছা যায়নি — " + (e?.data?.error || e?.message || ""));
+          notice("Could not delete —" + (e?.data?.error || e?.message || ""));
         }
       },
-      { yes: "হ্যাঁ, মুছে ফেলুন", no: "না, থাক" },
+      { yes: "Yes, delete", no: "No, cancel" },
     );
 
   const moveStep = async (i, dir) => {
@@ -18507,7 +18477,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
       await api.reorderLessonSteps(ids);
       await load(true);
     } catch (e) {
-      notice("ক্রম বদলানো যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not reorder —" + (e?.data?.error || e?.message || ""));
     }
   };
 
@@ -18557,7 +18527,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
           }}
         >
           <div>
-            <label style={S.label}>দারসের শিরোনাম</label>
+            <label style={S.label}>Lesson title</label>
             <input
               style={S.input}
               disabled={!canEdit}
@@ -18566,7 +18536,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
             />
           </div>
           <div>
-            <label style={S.label}>আরবি শিরোনাম</label>
+            <label style={S.label}>Arabic title</label>
             <input
               style={{ ...S.input, fontFamily: QURAN_FONT, fontSize: 17 }}
               dir="rtl"
@@ -18586,7 +18556,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
           }}
         >
           <div>
-            <label style={S.label}>ধরন</label>
+            <label style={S.label}>Type</label>
             <select
               style={S.input}
               disabled={!canEdit}
@@ -18601,7 +18571,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
             </select>
           </div>
           <div>
-            <label style={S.label}>বয়স — থেকে</label>
+            <label style={S.label}>Age — from</label>
             <input
               style={S.input}
               type="number"
@@ -18613,7 +18583,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
             />
           </div>
           <div>
-            <label style={S.label}>বয়স — পর্যন্ত</label>
+            <label style={S.label}>Age — to</label>
             <input
               style={S.input}
               type="number"
@@ -18625,7 +18595,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
             />
           </div>
           <div>
-            <label style={S.label}>সময় (মিনিট)</label>
+            <label style={S.label}>Time (minutes)</label>
             <input
               style={S.input}
               type="number"
@@ -18636,7 +18606,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
             />
           </div>
           <div>
-            <label style={S.label}>অবস্থা</label>
+            <label style={S.label}>Status</label>
             <select
               style={S.input}
               disabled={!canEdit}
@@ -18654,7 +18624,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
         {/* দারস পরিকল্পনার কোন টপিকের স্ক্রিপ্ট — বেছে দিলে পাতায় ওই
             হেডিংয়ের নিচে চলে যায় */}
         <div style={{ marginBottom: 10 }}>
-          <label style={S.label}>দারস পরিকল্পনার টপিক</label>
+          <label style={S.label}>Lecture plan topic</label>
           <select
             style={{ ...S.input, maxWidth: 520 }}
             disabled={!canEdit}
@@ -18663,7 +18633,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
               setH("topic", e.target.value ? Number(e.target.value) : null)
             }
           >
-            <option value="">— কোনো টপিকের সাথে যুক্ত নয় —</option>
+            <option value="">— Not linked to any topic —</option>
             {sections.map((sec) => (
               <optgroup key={sec.id} label={sec.name}>
                 {(sec.topics || []).map((t) => (
@@ -18704,7 +18674,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
           <RichText
             value={head.objectives || ""}
             onChange={(v) => setH("objectives", v)}
-            placeholder="এই দারস শেষে শিক্ষার্থী যা পারবে…"
+            placeholder="What the student will be able to do after this lesson…"
           />
         ) : (
           <div
@@ -18723,7 +18693,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
           >
             {headDirty && (
               <Btn sm kind="soft" onClick={() => setDraft(null)}>
-                বাতিল
+                Cancel
               </Btn>
             )}
             <Btn
@@ -18732,7 +18702,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
               onClick={saveHead}
               disabled={!headDirty || busy}
             >
-              {busy ? "সংরক্ষণ হচ্ছে…" : headDirty ? "💾 সংরক্ষণ করুন" : "✓ সংরক্ষিত"}
+              {busy ? "Saving…" : headDirty ? "💾 Save" : "✓ Saved"}
             </Btn>
           </div>
         )}
@@ -18771,9 +18741,9 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
               kind="soft"
               disabled={!!importing}
               onClick={() => importRef.current && importRef.current.click()}
-              title="PDF, ছবি বা PowerPoint (.pptx) ফাইল দিন — প্রতিটি পাতা/স্লাইড একটি করে স্লাইড হবে। সেরা ফলাফলের জন্য PowerPoint থেকে PDF করে আনুন।"
+              title="Provide a PDF, image or PowerPoint (.pptx) file — each page/slide becomes one slide. For best results, export your PowerPoint to PDF first."
             >
-              {importing || "📥 বাইরের স্লাইড আনুন"}
+              {importing || "📥 Import external slides"}
             </Btn>
           </div>
         )}
@@ -18825,8 +18795,8 @@ function TeachFromClass({ courseId, label }) {
       );
       if (!ready.length) {
         notice(
-          "এই কোর্সে পড়ানোর জন্য তৈরি কোনো দারস নেই — “📗 দারস স্ক্রিপ্ট” " +
-            "পাতা থেকে লিখে “প্রকাশিত” করে নিন।",
+          "No lesson has been prepared for this course — use “📗 Lesson Script”" +
+            "write it on the page and mark it “Published”.",
         );
       } else if (ready.length === 1) {
         setTeachId(ready[0].id);
@@ -18838,7 +18808,7 @@ function TeachFromClass({ courseId, label }) {
         setPick(ready);
       }
     } catch (e) {
-      notice("দারস আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not load lessons —" + (e?.data?.error || e?.message || ""));
     } finally {
       setBusy(false);
     }
@@ -18847,12 +18817,12 @@ function TeachFromClass({ courseId, label }) {
   return (
     <>
       <Btn sm kind="soft" onClick={open} disabled={busy}>
-        {busy ? "…" : "📗 শিক্ষক মোড"}
+        {busy ? "…" : "📗 Teacher mode"}
       </Btn>
 
       {pick && (
         <Modal
-          title={"📗 কোন দারসটি পড়াবেন?" + (label ? ` — ${label}` : "")}
+          title={"📗 Which lesson will you teach?" + (label ? ` — ${label}` : "")}
           onClose={() => setPick(null)}
         >
           <div style={{ display: "grid", gap: 8 }}>
@@ -18896,7 +18866,7 @@ function NameModal({ title, label, value, ph, onClose, onSave }) {
   const [busy, setBusy] = useState(false);
   const go = async () => {
     const t = v.trim();
-    if (!t) return notice("নামটি লিখুন");
+    if (!t) return notice("Enter the name");
     setBusy(true);
     try {
       await onSave(t);
@@ -18921,10 +18891,10 @@ function NameModal({ title, label, value, ph, onClose, onSave }) {
         style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}
       >
         <Btn sm kind="soft" onClick={onClose}>
-          বাতিল
+          Cancel
         </Btn>
         <Btn sm onClick={go} disabled={busy}>
-          {busy ? "সংরক্ষণ হচ্ছে…" : "💾 সংরক্ষণ"}
+          {busy ? "Saving…" : "💾 Save"}
         </Btn>
       </div>
     </Modal>
@@ -18969,15 +18939,15 @@ function TopicsEditor({ section, scripted, onClose, onSaved }) {
     askConfirm(
       `“${row.text}” টপিকটি সরিয়ে ফেলা হবে।` +
         (has
-          ? "\n\n⚠️ এই টপিকের একটি ক্লাস স্ক্রিপ্ট আছে। স্ক্রিপ্টটি মুছবে " +
-            "না — কিন্তু টপিকের সাথে সংযোগ হারিয়ে “টপিকের বাইরে” দলে চলে " +
-            "যাবে। পরে সেখান থেকে আবার টপিক বেছে দেওয়া যাবে।"
+          ? "\n\n⚠️ This topic has a class script. It will not delete" +
+            "no — but they will lose their link to the topic and move into the “outside topics” group" +
+            ". You can reassign them to a topic from there later."
           : "") +
         "\n\n" +
-        "লেকচার প্ল্যানেও টপিকটি আর থাকবে না, আর এতে দেওয়া কভারের টিকগুলোও " +
-        "চলে যাবে।",
+        "The topic will no longer appear in the lecture plan either, and the cover ticks given to it" +
+        "will be removed.",
       () => setRows((r) => r.filter((_, j) => j !== i)),
-      { yes: "হ্যাঁ, সরিয়ে ফেলুন", no: "না, থাক" },
+      { yes: "Yes, remove", no: "No, cancel" },
     );
   };
 
@@ -18985,10 +18955,10 @@ function TopicsEditor({ section, scripted, onClose, onSaved }) {
     setBusy(true);
     try {
       await api.saveSectionTopics(section.id, rows);
-      notice("✅ টপিক সংরক্ষিত");
+      notice("✅ Topic saved");
       onSaved();
     } catch (e) {
-      notice("সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+      notice("Could not save —" + (e?.data?.error || e?.message || ""));
     } finally {
       setBusy(false);
     }
@@ -19060,7 +19030,7 @@ function TopicsEditor({ section, scripted, onClose, onSaved }) {
       <div style={{ display: "flex", gap: 6 }}>
         <input
           style={{ ...S.input, flex: 1 }}
-          placeholder="নতুন টপিকের নাম — যেমন: An-Nas-الناس"
+          placeholder="New topic name — e.g. An-Nas-الناس"
           value={add}
           onChange={(e) => setAdd(e.target.value)}
           onKeyDown={(e) => {
@@ -19076,10 +19046,10 @@ function TopicsEditor({ section, scripted, onClose, onSaved }) {
         style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}
       >
         <Btn sm kind="soft" onClick={onClose}>
-          বাতিল
+          Cancel
         </Btn>
         <Btn sm onClick={save} disabled={busy}>
-          {busy ? "সংরক্ষণ হচ্ছে…" : "💾 সংরক্ষণ করুন"}
+          {busy ? "Saving…" : "💾 Save"}
         </Btn>
       </div>
     </Modal>
@@ -19127,11 +19097,11 @@ function SectionBlock({ section, lessons, prog, canEdit, rowProps, onNew,
         </span>
         {canEdit && (
           <span style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-            <button style={hb} onClick={onTopics} title="টপিক যোগ/বদল/ক্রম">
+            <button style={hb} onClick={onTopics} title="Add/edit/reorder topics">
               ✏️ টপিক
             </button>
-            <button style={hb} onClick={onRename} title="হেডিংয়ের নাম বদলান">
-              নাম
+            <button style={hb} onClick={onRename} title="Rename heading">
+              Name
             </button>
             <button
               style={{ ...hb, opacity: first ? 0.4 : 1 }}
@@ -19147,7 +19117,7 @@ function SectionBlock({ section, lessons, prog, canEdit, rowProps, onNew,
             >
               ▼
             </button>
-            <button style={hb} onClick={onDrop} title="হেডিংটি মুছুন">
+            <button style={hb} onClick={onDrop} title="Delete this heading">
               🗑
             </button>
           </span>
@@ -19257,7 +19227,7 @@ function LessonsView({ user, courses }) {
       setSections(secs || []);
       setProg(pr || []);
     } catch (e) {
-      notice("দারস আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not load lessons —" + (e?.data?.error || e?.message || ""));
     } finally {
       setLoading(false);
     }
@@ -19274,13 +19244,13 @@ function LessonsView({ user, courses }) {
     try {
       const l = await api.addLesson({
         course: Number(courseId),
-        title: "নতুন দারস",
+        title: "New lesson",
         status: "draft",
       });
       await load();
       setOpenId(l.id);
     } catch (e) {
-      notice("তৈরি করা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not create —" + (e?.data?.error || e?.message || ""));
     }
   };
 
@@ -19295,9 +19265,9 @@ function LessonsView({ user, courses }) {
       });
       await load();
       setOpenId(l.id);
-      notice("✍️ স্ক্রিপ্ট তৈরি — এখন লিখে নিন");
+      notice("✍️ Script created — now write it");
     } catch (e) {
-      notice("তৈরি করা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not create —" + (e?.data?.error || e?.message || ""));
     }
   };
 
@@ -19305,41 +19275,41 @@ function LessonsView({ user, courses }) {
     askConfirm(
       `"${l.title}" দারসটির একটি নকল তৈরি হবে — সব ধাপ ও পর্দাসহ।` +
         "\n\n" +
-        "একই বিষয়ের আলাদা বয়সের সংস্করণ বানানোর সহজ পথ এটি: নকল করে " +
-        "বয়সসীমা বদলে ভাষাটা ওই বয়সের মতো সাজিয়ে নিন। নকলটি খসড়া " +
-        "হিসেবেই শুরু হবে, তাই আধা-সম্পাদিত অবস্থায় কারও সামনে পড়বে না।",
+        "This is the easy way to make an age-specific version of the same subject: duplicate it," +
+        "change the age range and tune the language to suit that age. The copy starts as a draft" +
+        "so nobody sees it half-edited.",
       async () => {
         try {
           const n = await api.duplicateLesson(l.id);
           await load();
           setOpenId(n.id);
-          notice("📄 নকল তৈরি হয়েছে — এখন বয়স ও ভাষা সাজিয়ে নিন");
+          notice("📄 Duplicate created — now adjust the age and language");
         } catch (e) {
-          notice("নকল করা যায়নি — " + (e?.data?.error || e?.message || ""));
+          notice("Could not duplicate —" + (e?.data?.error || e?.message || ""));
         }
       },
-      { yes: "হ্যাঁ, নকল করুন", no: "না, থাক" },
+      { yes: "Yes, duplicate", no: "No, cancel" },
     );
 
   const remove = (l) =>
     askConfirm(
       `"${l.title}" স্ক্রিপ্টটি চিরতরে মুছে ফেলা হবে — এর ${bn(l.step_count || 0)}টি ` +
-        "ধাপ, উস্তাদের পুরো স্ক্রিপ্ট ও শিক্ষার্থীর সব পর্দাসহ।" +
+        "steps, including the teacher's full script and all student screens." +
         "\n\n" +
-        "দারস পরিকল্পনার টপিকটি মুছবে না — কেবল এই স্ক্রিপ্টটিই যাবে।" +
+        "The lecture-plan topic will not be deleted — only this script." +
         "\n\n" +
-        "আপাতত সরিয়ে রাখতে চাইলে মোছার দরকার নেই — অবস্থা “সংরক্ষিত” " +
-        "করে দিলেই যথেষ্ট।",
+        "To set it aside for now you don't need to delete it — setting the status to “Archived”" +
+        "is enough.",
       async () => {
         try {
           await api.delLesson(l.id);
           await load();
-          notice("🗑️ স্ক্রিপ্টটি মুছে ফেলা হয়েছে");
+          notice("🗑️ Script deleted");
         } catch (e) {
-          notice("মোছা যায়নি — " + (e?.data?.error || e?.message || ""));
+          notice("Could not delete —" + (e?.data?.error || e?.message || ""));
         }
       },
-      { yes: "হ্যাঁ, চিরতরে মুছুন", no: "না, থাক" },
+      { yes: "Yes, delete permanently", no: "No, cancel" },
     );
 
   /* ───── হেডিং সামলানো — লেকচার প্ল্যানের সাথে এক তালিকা ─────
@@ -19350,9 +19320,9 @@ function LessonsView({ user, courses }) {
       await api.addSection(Number(courseId), name, sections.length);
       setNameFor(null);
       await load();
-      notice("✅ হেডিং যোগ হয়েছে");
+      notice("✅ Heading added");
     } catch (e) {
-      notice("যোগ করা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not add —" + (e?.data?.error || e?.message || ""));
     }
   };
 
@@ -19361,9 +19331,9 @@ function LessonsView({ user, courses }) {
       await api.renameSection(sec.id, name);
       setNameFor(null);
       await load();
-      notice("✅ নাম বদলানো হয়েছে");
+      notice("✅ Renamed");
     } catch (e) {
-      notice("বদলানো যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not change —" + (e?.data?.error || e?.message || ""));
     }
   };
 
@@ -19376,7 +19346,7 @@ function LessonsView({ user, courses }) {
       await api.reorderSections(ids);
       await load();
     } catch (e) {
-      notice("ক্রম বদলানো যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not reorder —" + (e?.data?.error || e?.message || ""));
     }
   };
 
@@ -19385,22 +19355,22 @@ function LessonsView({ user, courses }) {
     askConfirm(
       `“${sec.name}” হেডিংটি মুছে ফেলা হবে।` +
         (n
-          ? "\n\n⚠️ এর নিচের " + bn(n) + "টি টপিক মুছবে না — কিন্তু " +
-            "হেডিংহীন হয়ে যাবে, আর লেকচার প্ল্যানের “অন্যান্য” অংশে চলে " +
-            "যাবে। এই পাতায় তখন সেগুলো আর দেখা যাবে না।" +
-            "\n\nচাইলে আগে “✏️ টপিক” দিয়ে টপিকগুলো সরিয়ে নিতে পারেন।"
+          ? "\n\n⚠️ The" + bn(n) + " topics will not be deleted — but" +
+            "will become heading-less and move to the “Other” section of the lecture plan" +
+            ". They will no longer appear on this page." +
+            "\n\nIf you prefer, you can first move the topics out using “✏️ Topics”."
           : "") +
-        "\n\nলেকচার প্ল্যানেও হেডিংটি আর থাকবে না।",
+        "\n\nThe heading will no longer appear in the lecture plan either.",
       async () => {
         try {
           await api.delSection(sec.id);
           await load();
-          notice("🗑️ হেডিংটি মুছে ফেলা হয়েছে");
+          notice("🗑️ Heading deleted");
         } catch (e) {
-          notice("মোছা যায়নি — " + (e?.data?.error || e?.message || ""));
+          notice("Could not delete —" + (e?.data?.error || e?.message || ""));
         }
       },
-      { yes: "হ্যাঁ, মুছে ফেলুন", no: "না, থাক" },
+      { yes: "Yes, delete", no: "No, cancel" },
     );
   };
 
@@ -19442,9 +19412,9 @@ function LessonsView({ user, courses }) {
 
   const nameOverlay = nameFor && (
     <NameModal
-      title={nameFor.sec ? "✏️ হেডিংয়ের নাম" : "➕ নতুন হেডিং"}
-      label="হেডিংয়ের নাম"
-      ph="যেমন: Memorized Surah"
+      title={nameFor.sec ? "✏️ Heading name" : "➕ New heading"}
+      label="Heading name"
+      ph="e.g. Memorized Surah"
       value={nameFor.sec ? nameFor.sec.name : ""}
       onClose={() => setNameFor(null)}
       onSave={(v) =>
@@ -19469,7 +19439,7 @@ function LessonsView({ user, courses }) {
   if (openId)
     return (
       <>
-        <Section title="📗 দারস স্ক্রিপ্ট">
+        <Section title="📗 Lesson Script">
           <LessonEditor
             id={openId}
             canEdit={canEdit}
@@ -19487,8 +19457,8 @@ function LessonsView({ user, courses }) {
 
   return (
     <Section
-      title="📗 দারস স্ক্রিপ্ট"
-      sub="এক দারস, দুই পর্দা — উস্তাদ পড়ানোর পুরো নির্দেশনা দেখেন, শিক্ষার্থী দেখেন কেবল শেখার জিনিসটুকু"
+      title="📗 Lesson Script"
+      sub="One lesson, two screens — the teacher sees the full teaching guide, the student sees only what they need to learn"
       action={
         canEdit && courseId ? (
           <Btn sm onClick={create}>
@@ -19498,13 +19468,13 @@ function LessonsView({ user, courses }) {
       }
     >
       <div style={{ ...S.card, padding: 14, marginBottom: 14 }}>
-        <label style={S.label}>কোন কোর্সের দারস</label>
+        <label style={S.label}>Lesson for which course</label>
         <select
           style={{ ...S.input, maxWidth: 380 }}
           value={courseId}
           onChange={(e) => setCourseId(e.target.value)}
         >
-          {mine.length === 0 && <option value="">কোনো কোর্স নেই</option>}
+          {mine.length === 0 && <option value="">No courses</option>}
           {mine.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -19519,7 +19489,7 @@ function LessonsView({ user, courses }) {
       {nameOverlay}
       {topicsOverlay}
 
-      {loading && <Loader text="দারস লোড হচ্ছে" />}
+      {loading && <Loader text="Loading lessons" />}
 
       {!loading && (
         <>
@@ -19619,10 +19589,10 @@ function LessonsView({ user, courses }) {
 /* একই বিষয়, আলাদা বয়স — শেখানোর ধরনটাই বদলায়, কেবল শব্দ নয়।
    এই চারটি ভাগ একাডেমির স্থায়ী নিয়ম। */
 const AGE_BANDS = [
-  [5, 7, "৫–৭ বছর", "শোনা ও নকল করা, ছোট বাক্য, ছবি, খেলা"],
-  [7, 9, "৭–৯ বছর", "পড়া ও মনে করা, সহজ অর্থ, ছোট কাজ"],
-  [9, 12, "৯–১২ বছর", "অর্থ ও চিন্তা, তাজবীদের ধারণা, নিজে মনে করা"],
-  [12, 15, "১২–১৫ বছর", "গভীর অর্থ, দলিল, নিজে নিজে মুখস্থ"],
+  [5, 7, "Ages 5–7", "Listening and imitating, short sentences, pictures, games"],
+  [7, 9, "Ages 7–9", "Reading and recall, simple meanings, small tasks"],
+  [9, 12, "Ages 9–12", "Meaning and reflection, tajweed concepts, self-recall"],
+  [12, 15, "Ages 12–15", "Deeper meaning, evidence, independent memorisation"],
 ];
 
 const bandLabel = (l) => {
@@ -19649,7 +19619,7 @@ function AgeVersionModal({ lesson, existing, onClose, onDone }) {
       notice(`📄 ${label}-এর সংস্করণ তৈরি — এখন ভাষা ও ধরন সাজিয়ে নিন`);
       onDone(n);
     } catch (e) {
-      notice("তৈরি করা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not create —" + (e?.data?.error || e?.message || ""));
       setBusy(false);
     }
   };
@@ -19680,7 +19650,7 @@ function AgeVersionModal({ lesson, existing, onClose, onDone }) {
               }}
             >
               <div style={{ fontWeight: 800, color: C.text }}>
-                {label} {has && <Tag color={C.muted} bg={C.cream}>আছে</Tag>}
+                {label} {has && <Tag color={C.muted} bg={C.cream}>Yes</Tag>}
               </div>
               <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
                 {how}
@@ -19698,11 +19668,11 @@ function AgeVersionModal({ lesson, existing, onClose, onDone }) {
    ফলে LessonRow-এর কাছে ছিলই না — তালিকায় একটিও দারস থাকলেই পাতা ভেঙে
    পড়ত (statusTag is not defined)। */
 const statusTag = (st) => {
-  if (st === "published") return <Tag>প্রকাশিত</Tag>;
-  if (st === "ready") return <Tag color={C.blue} bg={C.blueBg}>প্রস্তুত</Tag>;
+  if (st === "published") return <Tag>Published</Tag>;
+  if (st === "ready") return <Tag color={C.blue} bg={C.blueBg}>Ready</Tag>;
   if (st === "archived")
-    return <Tag color={C.muted} bg={C.cream}>সংরক্ষিত</Tag>;
-  return <Tag color={C.gold} bg={C.amberBg}>খসড়া</Tag>;
+    return <Tag color={C.muted} bg={C.cream}>Archived</Tag>;
+  return <Tag color={C.gold} bg={C.amberBg}>Draft</Tag>;
 };
 
 /* একটি দারস — একই শিরোনামের কয়েকটি বয়সের সংস্করণ থাকলে সেগুলো একসাথে,
@@ -19726,7 +19696,7 @@ function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
           {/* টপিকের নামে চাপলেই তার স্ক্রিপ্ট খোলে */}
           <button
             onClick={() => onOpen(l)}
-            title="স্ক্রিপ্টটি খুলুন"
+            title="Open the script"
             style={{
               fontWeight: 800,
               display: "flex",
@@ -19767,7 +19737,7 @@ function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
             📈 অগ্রগতি
           </Btn>
           <Btn sm kind="soft" onClick={() => onOpen(l)}>
-            {canEdit ? "✏️ খুলুন" : "👁️ দেখুন"}
+            {canEdit ? "✏️ Open" : "👁️ View"}
           </Btn>
           {canEdit && (
             <>
@@ -19816,18 +19786,18 @@ function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
 /* ═══════════════ 📈 দারসের অগ্রগতি ═══════════════
    কে কোন দারসের কোথায় আছে — উস্তাদ ক্লাস শেষে চিহ্নিত করেন।
 
-   ⚠️ "মুখস্থ হয়েছে" উস্তাদই বলেন, কয়বার পড়ানো হলো তা দিয়ে নয়। শিক্ষার্থী
+   ⚠️ "Memorised" উস্তাদই বলেন, কয়বার পড়ানো হলো তা দিয়ে নয়। শিক্ষার্থী
    একা, ঠিক ক্রমে, এক শব্দের ইশারাতেই সামলে নিয়ে পড়তে পারলে তবেই। */
 
 const PROGRESS_STATUS = [
-  ["learning", "শিখছে", C.gold, C.amberBg],
-  ["review", "পুনরাবৃত্তি দরকার", C.blue, C.blueBg],
-  ["mastered", "মুখস্থ হয়েছে", C.green, C.greenBg],
+  ["learning", "Learning", C.gold, C.amberBg],
+  ["review", "Needs revision", C.blue, C.blueBg],
+  ["mastered", "Memorised", C.green, C.greenBg],
 ];
 
 const progressTag = (st) => {
   const row = PROGRESS_STATUS.find((x) => x[0] === st);
-  if (!row) return <Tag color={C.muted} bg={C.cream}>শুরু হয়নি</Tag>;
+  if (!row) return <Tag color={C.muted} bg={C.cream}>Not started</Tag>;
   return (
     <Tag color={row[2]} bg={row[3]}>
       {row[1]}
@@ -19894,7 +19864,7 @@ function ProgressPanel({ lesson, atStep, onClose }) {
       setNotes(n);
       loadCover(st || []);
     } catch (e) {
-      notice("তালিকা আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not load the list —" + (e?.data?.error || e?.message || ""));
     } finally {
       setLoading(false);
     }
@@ -19910,10 +19880,10 @@ function ProgressPanel({ lesson, atStep, onClose }) {
     try {
       await api.markTopic(lesson.topic, on ? true : null, sid);
       setCover((c) => ({ ...c, [sid]: on ? "covered" : "pending" }));
-      notice(on ? "✔ লেকচার প্ল্যানে কভার হিসেবে বসেছে" : "↩️ টিকটি সরানো হলো");
+      notice(on ? "✔ Set as cover in the lecture plan" : "↩️ Tick removed");
     } catch (e) {
       notice(
-        "চিহ্নিত করা যায়নি — " +
+        "Could not mark —" +
           (e?.data?.detail || e?.data?.error || e?.message || ""),
       );
     } finally {
@@ -19935,9 +19905,9 @@ function ProgressPanel({ lesson, atStep, onClose }) {
         note: notes[sid] ?? rowOf(sid)?.note ?? "",
       });
       await load();
-      notice("✅ চিহ্নিত হয়েছে");
+      notice("✅ Marked");
     } catch (e) {
-      notice("সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+      notice("Could not save —" + (e?.data?.error || e?.message || ""));
     } finally {
       setBusy(0);
     }
@@ -19945,7 +19915,7 @@ function ProgressPanel({ lesson, atStep, onClose }) {
 
   return (
     <Modal title={`📈 অগ্রগতি — ${lesson.title}`} onClose={onClose} wide>
-      {loading && <Loader text="তালিকা লোড হচ্ছে" />}
+      {loading && <Loader text="Loading list" />}
 
       {!loading && students.length === 0 && (
         <div style={{ color: C.muted, fontSize: 14 }}>
@@ -19956,7 +19926,7 @@ function ProgressPanel({ lesson, atStep, onClose }) {
       {!loading && students.length > 0 && (
         <div style={{ display: "grid", gap: 10 }}>
           <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
-            শিক্ষার্থী <b>একা, ঠিক ক্রমে</b>, এক শব্দের ইশারাতেই সামলে নিয়ে
+            শিক্ষার্থী <b>Alone, in the right order</b>, এক শব্দের ইশারাতেই সামলে নিয়ে
             পড়তে পারলে তবেই “মুখস্থ হয়েছে”। কয়েকবার আপনার সাথে বলতে পারা
             এখনো মুখস্থ নয়।
           </div>
@@ -19972,7 +19942,7 @@ function ProgressPanel({ lesson, atStep, onClose }) {
               }}
             >
               ✔ “কভার হয়েছে” চাপলে দারস পরিকল্পনার{" "}
-              <b>{lesson.topic_text || "এই টপিক"}</b> টপিকটি ওই শিক্ষার্থীর
+              <b>{lesson.topic_text || "this topic"}</b> টপিকটি ওই শিক্ষার্থীর
               জন্য কভার হিসেবে বসে যাবে — লেকচার প্ল্যানেও তখনই দেখাবে।
               প্রত্যেকের হিসাব আলাদা।
             </div>
@@ -20019,7 +19989,7 @@ function ProgressPanel({ lesson, atStep, onClose }) {
                         ? `${bn(r.times_taught)} দিন পড়ানো হয়েছে` +
                           (r.last_taught ? ` · শেষ ${fmtDate(r.last_taught)}` : "") +
                           (r.last_step ? ` · ধাপ ${bn(r.last_step + 1)} পর্যন্ত` : "")
-                        : "এখনো শুরু হয়নি"}
+                        : "Not started yet"}
                     </div>
                   </div>
                   {progressTag(r?.status)}
@@ -20068,7 +20038,7 @@ function ProgressPanel({ lesson, atStep, onClose }) {
                       </>
                     ) : cover[s.id] === "covered" ? (
                       <>
-                        <Tag>দারস পরিকল্পনায় কভার ✔</Tag>
+                        <Tag>Covered in lecture plan ✔</Tag>
                         <Btn
                           sm
                           kind="soft"
@@ -20093,7 +20063,7 @@ function ProgressPanel({ lesson, atStep, onClose }) {
 
                 <input
                   style={{ ...S.input, marginTop: 8, fontSize: 13 }}
-                  placeholder="মন্তব্য (ঐচ্ছিক) — যেমন: ৪ নং আয়াতে থেমে যায়"
+                  placeholder="Remarks (optional) — e.g. stops at verse 4"
                   value={notes[s.id] ?? ""}
                   onChange={(e) =>
                     setNotes((n) => ({ ...n, [s.id]: e.target.value }))
@@ -20106,7 +20076,7 @@ function ProgressPanel({ lesson, atStep, onClose }) {
                       api
                         .editLessonProgress(cur.id, { note: notes[s.id] ?? "" })
                         .then(load)
-                        .catch(() => notice("মন্তব্য সংরক্ষণ ব্যর্থ"));
+                        .catch(() => notice("Could not save remark"));
                   }}
                 />
               </div>
@@ -20632,7 +20602,7 @@ const onlySlide = (sl) => {
 const dressPip = (w) => {
   try {
     const d = w.document;
-    d.title = "TQA — উপস্থাপনা";
+    d.title = "TQA — Presentation";
     document.querySelectorAll('link[rel="stylesheet"]').forEach((l) => {
       const c = d.createElement("link");
       c.rel = "stylesheet";
@@ -20706,7 +20676,7 @@ export function PresentWindow() {
       setStage(got);
       setErr("");
     } catch (e) {
-      setErr(e?.data?.error || e?.message || "দারসটি আনা যায়নি");
+      setErr(e?.data?.error || e?.message || "Could not load the lesson");
     }
   };
 
@@ -20851,7 +20821,7 @@ export function PresentWindow() {
       ) : !stage ? (
         <div style={{ textAlign: "center", color: "#ffffff88" }}>
           <div style={{ fontSize: 44, marginBottom: 12 }}>🕌</div>
-          <div style={{ fontSize: 15 }}>উস্তাদের অপেক্ষায়…</div>
+          <div style={{ fontSize: 15 }}>Waiting for the teacher…</div>
         </div>
       ) : (
         <StageSlide slide={cur?.slide} />
@@ -20877,7 +20847,7 @@ export function PresentWindow() {
             maxWidth: "92vw",
           }}
         >
-          🖥️ জুমে <b>এই উইন্ডোটিই</b> শেয়ার করুন · দুই ক্লিকে পুরো পর্দা ·
+          🖥️ জুমে <b>this window</b> শেয়ার করুন · দুই ক্লিকে পুরো পর্দা ·
           এই পরামর্শটি নিজেই সরে যাবে
         </div>
       )}
@@ -20896,13 +20866,13 @@ export function PresentWindow() {
 
 /* উস্তাদের স্ক্রিপ্টের সহায়ক ঘরগুলো — মূল বলার লাইনের নিচে ছোট করে */
 const TM_BLOCKS = [
-  ["teacher_does", "🤲 উস্তাদ করবেন", "#ffffff"],
-  ["student_does", "🧒 শিক্ষার্থী করবে", "#ffffff"],
-  ["expected", "✅ প্রত্যাশিত সাড়া", "#a7e8c4"],
+  ["teacher_does", "🤲 Teacher does", "#ffffff"],
+  ["student_does", "🧒 Student does", "#ffffff"],
+  ["expected", "✅ Expected response", "#a7e8c4"],
   // ⚠️ "ভুল হলে" ঘরে হুবহু বলার কথাগুলোই থাকে — উস্তাদ পড়েই বলে দিতে
   // পারেন, নিজে থেকে ইংরেজি বানাতে হয় না
-  ["correction", "🔧 ভুল হলে এটাই বলুন", "#ffd7a8"],
-  ["note", "📌 টীকা", "#cfd8e3"],
+  ["correction", "🔧 Say this if they make a mistake", "#ffd7a8"],
+  ["note", "📌 Note", "#cfd8e3"],
 ];
 
 const mmss = (s) =>
@@ -20936,7 +20906,7 @@ function TeacherMode({ id, onClose }) {
       try {
         setLesson(await api.lesson(id));
       } catch (e) {
-        notice("দারসটি আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+        notice("Could not load the lesson —" + (e?.data?.error || e?.message || ""));
         onClose();
       } finally {
         setLoading(false);
@@ -21060,8 +21030,8 @@ function TeacherMode({ id, onClose }) {
     }
     if (!pipReady()) {
       notice(
-        "এই ব্রাউজারে ভাসমান পর্দা নেই — ক্রোম বা এজ ব্যবহার করুন, " +
-          "নয়তো “🖥️ উপস্থাপনা” উইন্ডোটিই শেয়ার করুন।",
+        "This browser has no floating window — please use Chrome or Edge," +
+          "otherwise share the “🖥️ Presentation” window itself.",
       );
       return;
     }
@@ -21075,7 +21045,7 @@ function TeacherMode({ id, onClose }) {
       w.addEventListener("pagehide", () => setFloatWin(null));
       setFloatWin(w);
     } catch (e) {
-      notice("ভাসমান পর্দা খোলা গেল না — " + (e?.message || ""));
+      notice("Could not open the floating window —" + (e?.message || ""));
     }
   };
 
@@ -21104,7 +21074,7 @@ function TeacherMode({ id, onClose }) {
     );
     if (!w) {
       notice(
-        "ব্রাউজার নতুন উইন্ডো আটকে দিয়েছে — ঠিকানার পাশে পপআপের অনুমতি দিন।",
+        "Your browser blocked the new window — allow pop-ups next to the address bar.",
       );
       return;
     }
@@ -21155,14 +21125,14 @@ function TeacherMode({ id, onClose }) {
   if (loading)
     return (
       <div style={{ ...shell, display: "grid", placeItems: "center" }}>
-        <div style={{ color: "#ffffffaa" }}>দারস লোড হচ্ছে…</div>
+        <div style={{ color: "#ffffffaa" }}>Loading lesson…</div>
       </div>
     );
 
   if (!steps.length)
     return (
       <div style={{ ...shell, display: "grid", placeItems: "center", gap: 14 }}>
-        <div style={{ fontSize: 16 }}>এই দারসে এখনো কোনো ধাপ লেখা হয়নি।</div>
+        <div style={{ fontSize: 16 }}>No steps have been written for this lesson yet.</div>
         <Btn kind="gold" onClick={onClose}>
           ফিরে যান
         </Btn>
@@ -21229,7 +21199,7 @@ function TeacherMode({ id, onClose }) {
             fontWeight: 700,
             whiteSpace: "nowrap",
           }}
-          title="এই ধাপে কত সময় গেল / কত ধরা ছিল"
+          title="Time spent on this step / time allotted"
         >
           ⏱ {mmss(inStep)}
           {planned ? (
@@ -21241,7 +21211,7 @@ function TeacherMode({ id, onClose }) {
         </span>
         <span
           style={{ fontSize: 12, color: "#ffffff88", whiteSpace: "nowrap" }}
-          title="ক্লাস শুরুর পর মোট সময়"
+          title="Total time since class started"
         >
           মোট {mmss(total)}
         </span>
@@ -21269,7 +21239,7 @@ function TeacherMode({ id, onClose }) {
           <>
             <button
               style={barBtn}
-              title="ভাসমান পর্দার লেখা ছোট — শিক্ষার্থী যা দেখে"
+              title="Floating window text smaller — what the student sees"
               onClick={() =>
                 setStageZoom((z) =>
                   Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(2)),
@@ -21280,14 +21250,14 @@ function TeacherMode({ id, onClose }) {
             </button>
             <button
               style={{ ...barBtn, minWidth: 56 }}
-              title="আবার ঠিক ফিট মাপে ফেরান"
+              title="Reset to fit"
               onClick={() => setStageZoom(1)}
             >
               {bn(String(Math.round(stageZoom * 100)))}%
             </button>
             <button
               style={barBtn}
-              title="ভাসমান পর্দার লেখা বড় — শিক্ষার্থী যা দেখে"
+              title="Floating window text larger — what the student sees"
               onClick={() =>
                 setStageZoom((z) =>
                   Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(2)),
@@ -21310,7 +21280,7 @@ function TeacherMode({ id, onClose }) {
             borderColor: stageOk ? "#4ade8077" : "#ffffff33",
           }}
           onClick={openStage}
-          title="জুমে এই উইন্ডোটিই শেয়ার করবেন"
+          title="Share this window in Zoom"
         >
           {stageOk ? "🟢" : "🖥️"} উপস্থাপনা
         </button>
@@ -21324,8 +21294,8 @@ function TeacherMode({ id, onClose }) {
           onClick={openFloat}
           title={
             floatWin
-              ? "ভাসমান পর্দা চলছে — জুমে এটিই শেয়ার করুন"
-              : "সবার উপরে ভাসমান পর্দা — ঢাকা পড়ে না, তাই শেয়ার জমে না"
+              ? "Floating window is active — share this one in Zoom"
+              : "Always-on-top floating window — never covered, so sharing stays clean"
           }
         >
           {floatWin ? "🟢" : "🔝"} ভাসমান পর্দা
@@ -21438,7 +21408,7 @@ function TeacherMode({ id, onClose }) {
                 }}
               >
                 <span style={{ fontWeight: 800 }}>{bn(n + 1)}.</span>{" "}
-                {st.section || "নামহীন ধাপ"}
+                {st.section || "Untitled step"}
                 <span
                   style={{
                     display: "block",
@@ -21475,7 +21445,7 @@ function TeacherMode({ id, onClose }) {
                 marginBottom: 10,
               }}
             >
-              {step.section || "নামহীন ধাপ"}
+              {step.section || "Untitled step"}
             </div>
 
             {/* মূল লাইন — উস্তাদ যা মুখে বলবেন */}
@@ -21591,7 +21561,7 @@ function TeacherMode({ id, onClose }) {
                     marginBottom: 6,
                   }}
                 >
-                  ⏭️ এরপর — {steps[i + 1].section || "নামহীন ধাপ"}
+                  ⏭️ এরপর — {steps[i + 1].section || "Untitled step"}
                 </div>
                 <div
                   style={{
@@ -21731,7 +21701,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
       setApplications((ad || []).filter((a) => a.kind === "trial"));
       setTeachers(te || []);
     } catch (e) {
-      notice("ট্রায়ালের তথ্য আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not load trial data —" + (e?.data?.error || e?.message || ""));
     } finally {
       setLoading(false);
     }
@@ -21750,23 +21720,23 @@ function TrialView({ db, setDb, user, courses, refresh }) {
       notice(
         r.added
           ? `↩️ ${bn(r.added)}টি মাপকাঠি ফিরিয়ে আনা হয়েছে`
-          : "সবগুলোই আগে থেকে আছে — কিছু বদলানো হয়নি",
+          : "All already exist — nothing was changed",
       );
     } catch (e) {
-      notice("ফিরিয়ে আনা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not restore —" + (e?.data?.error || e?.message || ""));
     }
   };
 
   const addPoint = async () => {
     const bn = newPt.bn.trim();
-    if (!bn) return notice("বাংলা নামটি লিখুন");
+    if (!bn) return notice("Enter the Bengali name");
     try {
       await api.addTrialScoreItem({ label_bn: bn, label_en: newPt.en.trim() });
       setNewPt({ bn: "", en: "" });
       await load();
-      notice("✅ নতুন মাপকাঠি যোগ হয়েছে");
+      notice("✅ New criterion added");
     } catch (e) {
-      notice("যোগ করা যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not add —" + (e?.data?.error || e?.message || ""));
     }
   };
 
@@ -21782,7 +21752,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
       await api.editTrialScoreItem(pt.id, patch);
       await load();
     } catch (e) {
-      notice("সংরক্ষণ ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+      notice("Could not save —" + (e?.data?.error || e?.message || ""));
       await load(); // পর্দা যেন সার্ভারের সাথেই মেলে
     }
   };
@@ -21796,7 +21766,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
       await api.reorderTrialScoreItems(ids);
       await load();
     } catch (e) {
-      notice("ক্রম বদলানো যায়নি — " + (e?.data?.error || e?.message || ""));
+      notice("Could not reorder —" + (e?.data?.error || e?.message || ""));
     }
   };
 
@@ -21804,19 +21774,19 @@ function TrialView({ db, setDb, user, courses, refresh }) {
     askConfirm(
       `"${pt.label_bn}" মাপকাঠিটি সরিয়ে ফেলা হবে।` +
         "\n\n" +
-        "এরপর থেকে উস্তাদের ফরমে ও রিপোর্টে এটি আর দেখাবে না। আগে লেখা " +
-        "রিপোর্টগুলোতে দেওয়া নম্বর ডাটাবেসে থেকেই যাবে, তাই মাপকাঠিটি " +
-        "আবার যোগ করলে সেগুলো ফিরে আসবে।",
+        "From now on it will no longer appear in the teacher's form or reports. Previously entered" +
+        "scores already in reports stay in the database, so the criterion" +
+        "They will come back if you add it again.",
       async () => {
         try {
           await api.delTrialScoreItem(pt.id);
           await load();
-          notice("🗑️ সরিয়ে ফেলা হয়েছে");
+          notice("🗑️ Removed");
         } catch (e) {
-          notice("সরানো যায়নি — " + (e?.data?.error || e?.message || ""));
+          notice("Could not move —" + (e?.data?.error || e?.message || ""));
         }
       },
-      { yes: "হ্যাঁ, সরিয়ে ফেলুন", no: "না, থাক" },
+      { yes: "Yes, remove", no: "No, cancel" },
     );
 
   const courseName = (id) =>
@@ -21848,7 +21818,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
     });
 
   const save = async () => {
-    if (!form.name.trim()) return notice("নাম লিখুন");
+    if (!form.name.trim()) return notice("Enter name");
     setBusy(true);
     try {
       const t = await api.createTrial({
@@ -21867,7 +21837,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
       setTab("students");
       await load();
     } catch (e) {
-      notice("তৈরি করা যায়নি — " + (e?.data?.error || e?.message || "যাচাই করুন"));
+      notice("Could not create —" + (e?.data?.error || e?.message || "Verify"));
     } finally {
       setBusy(false);
     }
@@ -21894,8 +21864,8 @@ function TrialView({ db, setDb, user, courses, refresh }) {
 
   const saveEdit = async () => {
     const f = editFor;
-    if (!f.name.trim()) return notice("নাম খালি রাখা যাবে না");
-    if (!f.username.trim()) return notice("আইডি খালি রাখা যাবে না");
+    if (!f.name.trim()) return notice("Name cannot be empty");
+    if (!f.username.trim()) return notice("ID cannot be empty");
     setBusy(true);
     try {
       // আগে সাধারণ তথ্য, তারপর আইডি/পাসওয়ার্ড — দুটি আলাদা পথ
@@ -21917,13 +21887,13 @@ function TrialView({ db, setDb, user, courses, refresh }) {
       await load();
       notice(
         Object.keys(cred).length
-          ? "✅ সংরক্ষিত — নতুন আইডি/পাসওয়ার্ড পরিবারকে জানিয়ে দিন"
-          : "✅ সংরক্ষিত হয়েছে",
+          ? "✅ Saved — please share the new ID/password with the family"
+          : "✅ Saved",
       );
     } catch (e) {
       notice(
-        "সংরক্ষণ ব্যর্থ — " +
-          (e?.data?.error || e?.data?.detail || e?.message || "যাচাই করুন"),
+        "Could not save —" +
+          (e?.data?.error || e?.data?.detail || e?.message || "Verify"),
       );
     } finally {
       setBusy(false);
@@ -21934,39 +21904,39 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   const removeTrial = (t) =>
     askConfirm(
       `${t.name || t.name_bn} (${t.username}) — এই ট্রায়াল অ্যাকাউন্টটি ` +
-        "চিরতরে মুছে ফেলা হবে।" +
+        "will be permanently deleted." +
         "\n\n" +
-        "সাথে তাঁর ট্রায়ালের হাজিরা ও মূল্যায়নের রিপোর্টও মুছে যাবে। " +
-        "এটি আর ফেরানো যাবে না।" +
+        "Their trial attendance and evaluation reports will be deleted too." +
+        "This cannot be undone." +
         "\n\n" +
-        "শুধু মেয়াদ শেষ করতে চাইলে মোছার দরকার নেই — মেয়াদ ফুরালে " +
-        "অ্যাকাউন্টটি নিজেই সংরক্ষণে চলে যায়।",
+        "To just end the term you don't need to delete — once the term expires" +
+        "the account archives itself.",
       async () => {
         try {
           await api.deleteTrial(t.id);
           await load();
-          notice("🗑️ ট্রায়াল অ্যাকাউন্টটি মুছে ফেলা হয়েছে");
+          notice("🗑️ Trial account deleted");
         } catch (e) {
-          notice("মুছতে ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+          notice("Could not delete —" + (e?.data?.error || e?.message || ""));
         }
       },
-      { yes: "হ্যাঁ, চিরতরে মুছে ফেলুন", no: "না, থাক" },
+      { yes: "Yes, delete permanently", no: "No, cancel" },
     );
 
   const resetPass = (t) =>
     askConfirm(
-      "নতুন পাসওয়ার্ড তৈরি করলে পুরনোটি আর কাজ করবে না। নতুনটি পরিবারকে " +
-        "পাঠিয়ে দিতে হবে। নিশ্চিত?",
+      "Creating a new password stops the old one working. The new one must be" +
+        "must be sent. Are you sure?",
       async () => {
         try {
           const u = await api.resetTrialPassword(t.id);
           setMade(u);
           await load();
         } catch (e) {
-          notice("ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+          notice("Failed —" + (e?.data?.error || e?.message || ""));
         }
       },
-      { yes: "হ্যাঁ, নতুন পাসওয়ার্ড", no: "থাক" },
+      { yes: "Yes, new password", no: "Cancel" },
     );
 
   const extend = async (t, days) => {
@@ -21978,7 +21948,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
       await load();
       notice(`✅ মেয়াদ ${fmtDate(until)} পর্যন্ত বাড়ানো হলো`);
     } catch (e) {
-      notice("ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+      notice("Failed —" + (e?.data?.error || e?.message || ""));
     }
   };
 
@@ -22011,7 +21981,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   const sendWa = (t) => {
     const phone = String(t.phone || "").replace(/[^\d]/g, "");
     if (phone.length < 8)
-      return notice("এই ট্রায়ালের কোনো WhatsApp নম্বর নেই — আগে নম্বরটি যোগ করুন।");
+      return notice("This trial has no WhatsApp number — please add the number first.");
     window.open(
       `https://wa.me/${phone}?text=${encodeURIComponent(welcomeText(t))}`,
       "_blank",
@@ -22025,7 +21995,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   const sendMail = (t) => {
     const to = String(t.email || "").trim();
     if (!to || !to.includes("@"))
-      return notice("এই ট্রায়ালের কোনো ইমেইল নেই — আগে ইমেইলটি যোগ করুন।");
+      return notice("This trial has no email — please add the email first.");
     const su = encodeURIComponent(WELCOME_SUBJECT);
     const body = encodeURIComponent(welcomeText(t));
     const w = window.open(
@@ -22040,7 +22010,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
     const txt = `আইডি: ${t.username}\nপাসওয়ার্ড: ${t.plain_password || ""}`;
     try {
       navigator.clipboard.writeText(txt);
-      notice("📋 কপি হয়েছে");
+      notice("📋 Copied");
     } catch {
       notice(txt);
     }
@@ -22049,10 +22019,10 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   /* মূল্যায়ন কোন ধাপে আছে — বাটনের লেখাটাই সেটা বলে দেয় */
   const reportStage = (guestId) => {
     const r = reports.find((x) => String(x.student) === String(guestId));
-    if (!r) return "মূল্যায়ন";
-    if (!r.reviewed_at) return "যাচাই বাকি";
-    if (!r.sent_at) return "পাঠানো বাকি";
-    return "পাঠানো হয়েছে";
+    if (!r) return "Evaluation";
+    if (!r.reviewed_at) return "Pending verification";
+    if (!r.sent_at) return "Not yet sent";
+    return "Sent";
   };
 
   const accepted = (guestId) => {
@@ -22065,18 +22035,18 @@ function TrialView({ db, setDb, user, courses, refresh }) {
     askConfirm(
       `${t.name || t.name_bn}-কে নিয়মিত শিক্ষার্থী হিসেবে ভর্তি করা হবে।` +
         "\n\n" +
-        "একই অ্যাকাউন্টেই হবে — তাই তাঁর আইডি-পাসওয়ার্ড আগেরটাই থাকবে, আর " +
-        "ট্রায়ালের হাজিরা ও রিপোর্ট সব তাঁর সাথেই থেকে যাবে।",
+        "It stays the same account — so their ID and password remain unchanged, and" +
+        "All trial attendance and reports stay with them.",
       async () => {
         try {
           await api.convertTrial(t.id, { course: t.trial_course });
-          notice("🎓 ভর্তি সম্পন্ন — এখন থেকে তিনি নিয়মিত শিক্ষার্থী");
+          notice("🎓 Admission complete — they are now a regular student");
           await load();
         } catch (e) {
-          notice("ব্যর্থ — " + (e?.data?.error || e?.message || ""));
+          notice("Failed —" + (e?.data?.error || e?.message || ""));
         }
       },
-      { yes: "হ্যাঁ, ভর্তি করুন", no: "থাক" },
+      { yes: "Yes, admit", no: "Cancel" },
     );
 
   /* মেয়াদের অবস্থা — একই হিসাব তালিকা ও ট্যাগ দুই জায়গাতেই */
@@ -22087,7 +22057,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
           মেয়াদ শেষ
         </Tag>
       );
-    if (t.days_left == null) return <Tag>মেয়াদ নেই</Tag>;
+    if (t.days_left == null) return <Tag>No term</Tag>;
     if (t.days_left === 0)
       return (
         <Tag color={C.gold} bg={C.amberBg}>
@@ -22100,7 +22070,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   return (
     <>
       <Section
-        title="🎓 ট্রায়াল"
+        title="🎓 Trial"
         action={
           <Btn sm kind="soft" onClick={() => openForm(null)}>
             + নতুন ট্রায়াল আইডি
@@ -22133,7 +22103,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
           )}
         </div>
 
-        {loading && <Loader text="ট্রায়ালের তথ্য লোড হচ্ছে" />}
+        {loading && <Loader text="Loading trial data" />}
 
         {!loading && tab === "apps" && (
           <div style={{ display: "grid", gap: 8 }}>
@@ -22222,7 +22192,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 <Btn
                   sm
                   kind={
-                    reportStage(t.id) === "যাচাই বাকি" ? "gold" : "soft"
+                    reportStage(t.id) === "Pending verification" ? "gold" : "soft"
                   }
                   onClick={() => setReportFor(t)}
                 >
@@ -22294,23 +22264,23 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 key={`bn-${pt.id}-${pt.label_bn}`}
                 style={{ ...S.input, flex: 1, minWidth: 150 }}
                 defaultValue={pt.label_bn}
-                placeholder="বাংলা নাম"
+                placeholder="Bengali name"
                 onBlur={(e) => savePoint(pt, { label_bn: e.target.value.trim() })}
               />
               <input
                 key={`en-${pt.id}-${pt.label_en}`}
                 style={{ ...S.input, flex: 1, minWidth: 150 }}
                 defaultValue={pt.label_en}
-                placeholder="ইংরেজি নাম"
+                placeholder="English name"
                 onBlur={(e) => savePoint(pt, { label_en: e.target.value.trim() })}
               />
-              <Btn sm kind="soft" title="উপরে" onClick={() => movePoint(i, -1)}>
+              <Btn sm kind="soft" title="Up" onClick={() => movePoint(i, -1)}>
                 ↑
               </Btn>
-              <Btn sm kind="soft" title="নিচে" onClick={() => movePoint(i, 1)}>
+              <Btn sm kind="soft" title="Down" onClick={() => movePoint(i, 1)}>
                 ↓
               </Btn>
-              <Btn sm kind="danger" title="সরিয়ে ফেলুন" onClick={() => removePoint(pt)}>
+              <Btn sm kind="danger" title="Remove" onClick={() => removePoint(pt)}>
                 🗑️
               </Btn>
             </div>
@@ -22328,7 +22298,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
             >
               {pointsOk ? (
                 <>
-                  <b style={{ color: C.gold }}>তালিকাটি এখন খালি।</b> নিচ থেকে
+                  <b style={{ color: C.gold }}>The list is empty.</b> নিচ থেকে
                   নতুন মাপকাঠি যোগ করুন, অথবা একাডেমির চারটি মূল মাপকাঠি
                   ফিরিয়ে আনুন।
                 </>
@@ -22365,18 +22335,18 @@ function TrialView({ db, setDb, user, courses, refresh }) {
           >
             <input
               style={{ ...S.input, flex: 1, minWidth: 150 }}
-              placeholder="বাংলা নাম — যেমন: মুখস্থের গতি"
+              placeholder="Bengali name — e.g. Memorisation speed"
               value={newPt.bn}
               onChange={(e) => setNewPt({ ...newPt, bn: e.target.value })}
             />
             <input
               style={{ ...S.input, flex: 1, minWidth: 150 }}
-              placeholder="ইংরেজি নাম — যেমন: Memorisation speed"
+              placeholder="English name — e.g. Memorisation speed"
               value={newPt.en}
               onChange={(e) => setNewPt({ ...newPt, en: e.target.value })}
             />
             <Btn sm kind="gold" onClick={addPoint}>
-              + যোগ করুন
+              + Add
             </Btn>
           </div>
         </div>
@@ -22384,10 +22354,10 @@ function TrialView({ db, setDb, user, courses, refresh }) {
 
       {/* ───── আইডি তৈরির ফর্ম ───── */}
       {form && (
-        <Modal title="সাময়িক আইডি তৈরি" onClose={() => setForm(null)}>
+        <Modal title="Create temporary ID" onClose={() => setForm(null)}>
           <div style={{ display: "grid", gap: 10 }}>
             <div>
-              <label style={S.label}>নাম *</label>
+              <label style={S.label}>Name *</label>
               <input
                 style={S.input}
                 value={form.name}
@@ -22396,7 +22366,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
-                <label style={S.label}>অভিভাবক</label>
+                <label style={S.label}>Guardian</label>
                 <input
                   style={S.input}
                   value={form.guardian}
@@ -22404,7 +22374,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 />
               </div>
               <div>
-                <label style={S.label}>দেশ</label>
+                <label style={S.label}>Country</label>
                 <input
                   style={S.input}
                   value={form.country}
@@ -22414,7 +22384,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
-                <label style={S.label}>WhatsApp নম্বর (কান্ট্রি কোডসহ)</label>
+                <label style={S.label}>WhatsApp number (with country code)</label>
                 <input
                   style={S.input}
                   value={form.phone}
@@ -22422,7 +22392,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 />
               </div>
               <div>
-                <label style={S.label}>ইমেইল (Gmail-এ বার্তা পাঠাতে)</label>
+                <label style={S.label}>Email (to send a message via Gmail)</label>
                 <input
                   style={S.input}
                   type="email"
@@ -22433,13 +22403,13 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               </div>
             </div>
             <div>
-              <label style={S.label}>কোন কোর্স দেখতে পাবেন</label>
+              <label style={S.label}>Which course they can see</label>
               <select
                 style={S.input}
                 value={form.course}
                 onChange={(e) => setForm({ ...form, course: e.target.value })}
               >
-                <option value="">— বাছাই করুন —</option>
+                <option value="">— Choose —</option>
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -22448,13 +22418,13 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               </select>
             </div>
             <div>
-              <label style={S.label}>কোন উস্তাদের কাছে</label>
+              <label style={S.label}>With which teacher</label>
               <select
                 style={S.input}
                 value={form.teacher}
                 onChange={(e) => setForm({ ...form, teacher: e.target.value })}
               >
-                <option value="">— বাছাই করুন —</option>
+                <option value="">— Choose —</option>
                 {teachers.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name || t.name_bn}
@@ -22463,7 +22433,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               </select>
             </div>
             <div>
-              <label style={S.label}>মেয়াদ</label>
+              <label style={S.label}>Term</label>
               <select
                 style={S.input}
                 value={form.days}
@@ -22477,17 +22447,17 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               </select>
             </div>
             <Btn kind="gold" onClick={busy ? undefined : save} style={{ opacity: busy ? 0.6 : 1 }}>
-              {busy ? "তৈরি হচ্ছে…" : "🎓 আইডি তৈরি করুন"}
+              {busy ? "Creating…" : "🎓 Create ID"}
             </Btn>
           </div>
         </Modal>
       )}
 
       {editFor && (
-        <Modal title="✏️ ট্রায়ালের তথ্য বদলান" onClose={() => setEditFor(null)} wide>
+        <Modal title="✏️ Edit trial details" onClose={() => setEditFor(null)} wide>
           <div style={{ display: "grid", gap: 10 }}>
             <div>
-              <label style={S.label}>নাম *</label>
+              <label style={S.label}>Name *</label>
               <input
                 style={S.input}
                 value={editFor.name}
@@ -22496,7 +22466,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
-                <label style={S.label}>অভিভাবক</label>
+                <label style={S.label}>Guardian</label>
                 <input
                   style={S.input}
                   value={editFor.guardian}
@@ -22504,7 +22474,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 />
               </div>
               <div>
-                <label style={S.label}>দেশ</label>
+                <label style={S.label}>Country</label>
                 <input
                   style={S.input}
                   value={editFor.country}
@@ -22512,7 +22482,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 />
               </div>
               <div>
-                <label style={S.label}>WhatsApp নম্বর</label>
+                <label style={S.label}>WhatsApp number</label>
                 <input
                   style={S.input}
                   value={editFor.phone}
@@ -22520,7 +22490,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 />
               </div>
               <div>
-                <label style={S.label}>ইমেইল</label>
+                <label style={S.label}>Email</label>
                 <input
                   style={S.input}
                   type="email"
@@ -22529,26 +22499,26 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 />
               </div>
               <div>
-                <label style={S.label}>কোর্স</label>
+                <label style={S.label}>Course</label>
                 <select
                   style={S.input}
                   value={editFor.course || ""}
                   onChange={(e) => setEditFor({ ...editFor, course: e.target.value })}
                 >
-                  <option value="">— নেই —</option>
+                  <option value="">— None —</option>
                   {courses.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label style={S.label}>উস্তাদ</label>
+                <label style={S.label}>Teacher</label>
                 <select
                   style={S.input}
                   value={editFor.teacher || ""}
                   onChange={(e) => setEditFor({ ...editFor, teacher: e.target.value })}
                 >
-                  <option value="">— নেই —</option>
+                  <option value="">— None —</option>
                   {teachers.map((t) => (
                     <option key={t.id} value={t.id}>{t.name || t.name_bn}</option>
                   ))}
@@ -22556,7 +22526,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               </div>
             </div>
             <div>
-              <label style={S.label}>মেয়াদ শেষের তারিখ</label>
+              <label style={S.label}>Term end date</label>
               <input
                 style={S.input}
                 type="date"
@@ -22577,7 +22547,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               }}
             >
               <div>
-                <label style={S.label}>লগইন আইডি</label>
+                <label style={S.label}>Login ID</label>
                 <input
                   style={S.input}
                   value={editFor.username}
@@ -22585,10 +22555,10 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 />
               </div>
               <div>
-                <label style={S.label}>নতুন পাসওয়ার্ড</label>
+                <label style={S.label}>New password</label>
                 <input
                   style={S.input}
-                  placeholder="বদলাতে না চাইলে খালি রাখুন"
+                  placeholder="Leave blank to keep unchanged"
                   value={editFor.password}
                   onChange={(e) => setEditFor({ ...editFor, password: e.target.value })}
                 />
@@ -22612,7 +22582,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               onClick={busy ? undefined : saveEdit}
               style={{ opacity: busy ? 0.6 : 1 }}
             >
-              {busy ? "সংরক্ষণ হচ্ছে…" : "💾 সংরক্ষণ করুন"}
+              {busy ? "Saving…" : "💾 Save"}
             </Btn>
           </div>
         </Modal>
@@ -22635,14 +22605,14 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               onClick={() => sendWa(sendFor)}
               style={{ justifyContent: "center", opacity: sendFor.phone ? 1 : 0.5 }}
             >
-              💬 WhatsApp — {sendFor.phone || "নম্বর নেই"}
+              💬 WhatsApp — {sendFor.phone || "No number"}
             </Btn>
             <Btn
               kind="primary"
               onClick={() => sendMail(sendFor)}
               style={{ justifyContent: "center", opacity: sendFor.email ? 1 : 0.5 }}
             >
-              📧 Gmail — {sendFor.email || "ইমেইল নেই"}
+              📧 Gmail — {sendFor.email || "No email"}
             </Btn>
             <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.6 }}>
               নম্বর বা ইমেইল না থাকলে “✏️ এডিট” থেকে যোগ করে নিন।
@@ -22663,7 +22633,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
 
       {/* ───── সদ্য তৈরি আইডি ও পাসওয়ার্ড ───── */}
       {made && (
-        <Modal title="তৈরি হয়েছে" onClose={() => setMade(null)}>
+        <Modal title="Created" onClose={() => setMade(null)}>
           <div
             style={{
               background: C.amberBg,
@@ -23321,7 +23291,7 @@ function FamilySwitcherBar({ user }) {
       localStorage.setItem("tqa_refresh", refresh);
       window.location.replace("/");
     } catch (e) {
-      setErr(e?.data?.detail || "সুইচ করতে ব্যর্থ");
+      setErr(e?.data?.detail || "Could not switch");
       setBusy(null);
     }
   }
@@ -23335,7 +23305,7 @@ function FamilySwitcherBar({ user }) {
       <span style={{ fontSize: 13, color: "var(--clr-muted,#6b7c73)" }}>
         এখন: <strong>{family.current?.name}</strong>
       </span>
-      <span style={{ fontSize: 13, color: "var(--clr-muted,#6b7c73)" }}>অন্য সন্তান →</span>
+      <span style={{ fontSize: 13, color: "var(--clr-muted,#6b7c73)" }}>Other child →</span>
       {family.siblings.map(s => (
         <button key={s.id} disabled={busy !== null}
           onClick={() => go(s)}
@@ -23344,7 +23314,7 @@ function FamilySwitcherBar({ user }) {
             border: "none", borderRadius: 20, padding: "4px 14px",
             fontSize: 13, cursor: busy !== null ? "default" : "pointer", opacity: busy === s.id ? .6 : 1,
           }}>
-          {busy === s.id ? "যাচ্ছে…" : s.name}
+          {busy === s.id ? "Sending…" : s.name}
         </button>
       ))}
       {err && <span style={{ color: "crimson", fontSize: 13 }}>{err}</span>}
@@ -23390,7 +23360,7 @@ function AllTeachersView({ user, courses }) {
   });
 
   const saveEdit = async () => {
-    if (!edit.name || !edit.user) return notice("নাম ও আইডি দিন।");
+    if (!edit.name || !edit.user) return notice("Please enter a name and ID.");
     setSaving(true);
     try {
       const payload = {
@@ -23402,31 +23372,31 @@ function AllTeachersView({ user, courses }) {
       await api.saveUser(payload, edit.id || undefined);
       await load();
       setEdit(null);
-      notice("✔ সংরক্ষিত হয়েছে।");
+      notice("✔ Saved.");
     } catch (e) {
-      notice(e?.data?.detail || e?.data?.username?.[0] || "সংরক্ষণ ব্যর্থ");
+      notice(e?.data?.detail || e?.data?.username?.[0] || "Could not save");
     } finally { setSaving(false); }
   };
 
   const delTeacher = async (id) => {
-    if (!window.confirm("এই শিক্ষকের অ্যাকাউন্ট মুছে ফেলবেন?")) return;
-    try { await api.deleteUser(id); await load(); setSel(null); notice("মুছে ফেলা হয়েছে।"); }
-    catch (e) { notice(e?.data?.detail || "মুছতে ব্যর্থ"); }
+    if (!window.confirm("Delete this teacher's account?")) return;
+    try { await api.deleteUser(id); await load(); setSel(null); notice("Deleted."); }
+    catch (e) { notice(e?.data?.detail || "Could not delete"); }
   };
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <h2 style={{ margin: 0 }}>শিক্ষক তালিকা</h2>
+        <h2 style={{ margin: 0 }}>Teachers</h2>
         {isDir && (
-          <Btn sm onClick={() => setEdit(blankEdit())}>+ নতুন শিক্ষক</Btn>
+          <Btn sm onClick={() => setEdit(blankEdit())}>+ New teacher</Btn>
         )}
       </div>
       {msg && <div style={{ background: "#e6f4ea", padding: "8px 12px", borderRadius: 8, marginBottom: 12, color: "#1a5c3a" }}>{msg}</div>}
       <input value={search} onChange={e => setSearch(e.target.value)}
-        placeholder="নাম বা আইডি দিয়ে খুঁজুন…"
+        placeholder="Search by name or ID…"
         style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid #ccc", marginBottom: 14, fontSize: 14 }} />
-      {loading ? <p>লোড হচ্ছে…</p> : filtered.length === 0 ? <p>কোনো শিক্ষক পাওয়া যায়নি।</p> : (
+      {loading ? <p>Loading…</p> : filtered.length === 0 ? <p>No teachers found.</p> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {filtered.map(t => (
             <div key={t.id} onClick={() => setSel(t)}
@@ -23457,12 +23427,12 @@ function AllTeachersView({ user, courses }) {
             </div>
             <table style={{ width: "100%", fontSize: 14, borderCollapse: "collapse" }}>
               {[
-                ["আইডি", sel.username],
-                ["বিষয়", sel.sub_title],
-                ["ফোন", sel.phone],
-                ["ইমেইল", sel.email],
-                ["বেতন", sel.monthly_salary ? `৳${sel.monthly_salary}` : "—"],
-                isDir && sel.plain_password ? ["পাসওয়ার্ড", sel.plain_password] : null,
+                ["ID", sel.username],
+                ["Subject", sel.sub_title],
+                ["Phone", sel.phone],
+                ["Email", sel.email],
+                ["Salary", sel.monthly_salary ? `৳${sel.monthly_salary}` : "—"],
+                isDir && sel.plain_password ? ["Password", sel.plain_password] : null,
               ].filter(Boolean).map(([k, v]) => (
                 <tr key={k} style={{ borderBottom: "1px solid #eee" }}>
                   <td style={{ padding: "7px 0", color: "#6b7c73", width: "40%" }}>{k}</td>
@@ -23472,8 +23442,8 @@ function AllTeachersView({ user, courses }) {
             </table>
             {isDir && (
               <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
-                <Btn sm onClick={() => { setEdit(toEdit(sel)); setSel(null); }}>সম্পাদনা</Btn>
-                <Btn sm kind="danger" onClick={() => delTeacher(sel.id)}>মুছুন</Btn>
+                <Btn sm onClick={() => { setEdit(toEdit(sel)); setSel(null); }}>Edit</Btn>
+                <Btn sm kind="danger" onClick={() => delTeacher(sel.id)}>Delete</Btn>
               </div>
             )}
           </div>
@@ -23487,17 +23457,17 @@ function AllTeachersView({ user, courses }) {
           <div onClick={e => e.stopPropagation()}
             style={{ background: "#fff", borderRadius: 14, padding: 24, width: "min(95vw,480px)", maxHeight: "85vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>{edit.id ? "শিক্ষক সম্পাদনা" : "নতুন শিক্ষক"}</h3>
+              <h3 style={{ margin: 0 }}>{edit.id ? "Edit teacher" : "New teacher"}</h3>
               <button onClick={() => setEdit(null)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer" }}>✕</button>
             </div>
             {[
-              ["নাম", "name", "text", "বাংলায় পুরো নাম"],
-              ["লগইন আইডি", "user", "text", "username"],
-              ["পাসওয়ার্ড", "pass", "text", "খালি রাখলে বদলাবে না"],
-              ["ফোন", "phone", "text", "+880XXXXXXXXX"],
-              ["ইমেইল", "email", "email", ""],
-              ["বিষয়/পরিচিতি", "sub", "text", "যেমন: কুরআন ও তাজবীদ"],
-              ["মাসিক বেতন (৳)", "salary", "number", "0"],
+              ["Name", "name", "text", "Full name in Bengali"],
+              ["Login ID", "user", "text", "username"],
+              ["Password", "pass", "text", "Leave blank to keep unchanged"],
+              ["Phone", "phone", "text", "+880XXXXXXXXX"],
+              ["Email", "email", "email", ""],
+              ["Subject/Title", "sub", "text", "e.g. Quran & Tajweed"],
+              ["Monthly salary (৳)", "salary", "number", "0"],
             ].map(([lbl, key, type, ph]) => (
               <div key={key} style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: 13, display: "block", marginBottom: 4 }}>{lbl}</label>
@@ -23507,8 +23477,8 @@ function AllTeachersView({ user, courses }) {
               </div>
             ))}
             <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-              <Btn onClick={saveEdit} disabled={saving}>{saving ? "সংরক্ষণ হচ্ছে…" : "সংরক্ষণ করুন"}</Btn>
-              <Btn kind="soft" onClick={() => setEdit(null)}>বাতিল</Btn>
+              <Btn onClick={saveEdit} disabled={saving}>{saving ? "Saving…" : "Save"}</Btn>
+              <Btn kind="soft" onClick={() => setEdit(null)}>Cancel</Btn>
             </div>
           </div>
         </div>
@@ -23578,23 +23548,23 @@ function LoginSendView({ user }) {
     next();
   };
 
-  if (!isDir) return <p>কেবল পরিচালক ব্যবহার করতে পারবেন।</p>;
+  if (!isDir) return <p>Director only.</p>;
 
   return (
     <div>
-      <h2 style={{ marginTop: 0, marginBottom: 16 }}>লগইন তথ্য পাঠান</h2>
+      <h2 style={{ marginTop: 0, marginBottom: 16 }}>Send Login Info</h2>
       <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
         {["teachers", "students"].map(t => (
           <button key={t} onClick={() => setTab(t)}
             style={{ padding: "7px 20px", borderRadius: 20, border: "none", cursor: "pointer",
               background: tab === t ? "var(--clr-primary,#1a5c3a)" : "#e8f0eb",
               color: tab === t ? "#fff" : "#2d5438", fontWeight: tab === t ? 600 : 400 }}>
-            {t === "teachers" ? "শিক্ষক" : "শিক্ষার্থী"}
+            {t === "teachers" ? "Teacher" : "Student"}
           </button>
         ))}
       </div>
-      {loading ? <p>লোড হচ্ছে…</p> : eligible.length === 0 ? (
-        <p style={{ color: "#6b7c73" }}>পাঠানোর উপযুক্ত কাউকে পাওয়া যায়নি (ফোন বা পাসওয়ার্ড নেই)।</p>
+      {loading ? <p>Loading…</p> : eligible.length === 0 ? (
+        <p style={{ color: "#6b7c73" }}>No one eligible to send to (missing phone or password).</p>
       ) : (
         <>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -23627,7 +23597,7 @@ function LoginSendView({ user }) {
                   style={{ background: "#25d366", color: "#fff", border: "none",
                     borderRadius: 8, padding: "6px 12px", fontSize: 13, cursor: "pointer",
                     opacity: sending === u.id ? .6 : 1 }}>
-                  {sending === u.id ? "খুলছে…" : "📲 WhatsApp"}
+                  {sending === u.id ? "Opening…" : "📲 WhatsApp"}
                 </button>
               </div>
             ))}
@@ -23641,10 +23611,10 @@ function LoginSendView({ user }) {
 /* ═══════════════ দৈনিক আমল ═══════════════ */
 const AMAL_SCORE = { jamaat: 1, alone: 1, qaza: 0.5, missed: 0, done: 1, not_done: 0 };
 const PRAYER_OPTIONS = [
-  { v: "jamaat", label: "জামাত" },
-  { v: "alone", label: "একা" },
-  { v: "qaza", label: "কাজা" },
-  { v: "missed", label: "হয়নি" },
+  { v: "jamaat", label: "Jamaat" },
+  { v: "alone", label: "Alone" },
+  { v: "qaza", label: "Qaza" },
+  { v: "missed", label: "Missed" },
 ];
 
 function AmalView({ user }) {
@@ -23694,8 +23664,8 @@ function AmalView({ user }) {
     try {
       await api.saveAmalDay(null, selDate, values);
       await loadWeek();
-      notice("✔ সংরক্ষিত হয়েছে");
-    } catch { notice("সংরক্ষণ ব্যর্থ"); }
+      notice("✔ Saved");
+    } catch { notice("Could not save"); }
     setSaving(false);
   };
 
@@ -23704,17 +23674,17 @@ function AmalView({ user }) {
     if (!newItemName.trim()) return;
     try {
       await api.saveAmalItem({ name: newItemName.trim(), kind: newItemKind, order: items.length + 1 });
-      setNewItemName(""); await loadDay(selDate); notice("✔ যোগ হয়েছে");
-    } catch { notice("যোগ ব্যর্থ"); }
+      setNewItemName(""); await loadDay(selDate); notice("✔ Added");
+    } catch { notice("Could not add"); }
   };
 
   const delItem = async (id) => {
-    if (!window.confirm("এই আইটেমটি মুছবেন?")) return;
-    try { await api.deleteAmalItem(id); await loadDay(selDate); } catch { notice("মুছতে ব্যর্থ"); }
+    if (!window.confirm("Delete this item?")) return;
+    try { await api.deleteAmalItem(id); await loadDay(selDate); } catch { notice("Could not delete"); }
   };
 
   // ৭-দিনের ডেট লেবেল
-  const BN_DAYS = ["রবি", "সোম", "মঙ্গল", "বুধ", "বৃহ", "শুক্র", "শনি"];
+  const BN_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(Date.now() - (6 - i) * 86400000);
     return d.toISOString().slice(0, 10);
@@ -23723,9 +23693,9 @@ function AmalView({ user }) {
   return (
     <div style={{ maxWidth: 520, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>দৈনিক আমল</h2>
+        <h2 style={{ margin: 0 }}>Daily Amal</h2>
         {(user?.role === "director" || user?.role === "admin") && (
-          <Btn sm kind="soft" onClick={() => setAdminItems(!adminItems)}>⚙ আইটেম</Btn>
+          <Btn sm kind="soft" onClick={() => setAdminItems(!adminItems)}>⚙ Items</Btn>
         )}
       </div>
       {msg && <div style={{ background: "#e6f4ea", padding: "8px 12px", borderRadius: 8, marginBottom: 12, color: "#1a5c3a" }}>{msg}</div>}
@@ -23772,14 +23742,14 @@ function AmalView({ user }) {
 
       {/* তারিখ নির্বাচন */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-        <label style={{ fontSize: 13, color: "#6b7c73" }}>তারিখ:</label>
+        <label style={{ fontSize: 13, color: "#6b7c73" }}>Date:</label>
         <input type="date" value={selDate} max={today}
           onChange={e => setSelDate(e.target.value)}
           style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid #ccc", fontSize: 14 }} />
-        {!editable && <span style={{ fontSize: 12, color: "#c0392b" }}>দেখা হচ্ছে (সংরক্ষণ বন্ধ)</span>}
+        {!editable && <span style={{ fontSize: 12, color: "#c0392b" }}>Viewing (saving disabled)</span>}
       </div>
 
-      {loading ? <p>লোড হচ্ছে…</p> : (
+      {loading ? <p>Loading…</p> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {items.map(it => (
             <div key={it.id} style={{ background: "var(--clr-surface,#f8faf9)", border: "1px solid #dde8e2",
@@ -23818,7 +23788,7 @@ function AmalView({ user }) {
                     color: values[it.id] === "done" ? "#1a5c3a" : "#6b7c73",
                     cursor: editable ? "pointer" : "default", fontSize: 14, fontWeight: 600,
                   }}>
-                  {values[it.id] === "done" ? "✔ হয়েছে" : "হয়নি"}
+                  {values[it.id] === "done" ? "✔ Done" : "Missed"}
                 </button>
               )}
             </div>
@@ -23828,24 +23798,24 @@ function AmalView({ user }) {
 
       {editable && (
         <Btn style={{ width: "100%", marginTop: 16 }} onClick={save} disabled={saving}>
-          {saving ? "সংরক্ষণ হচ্ছে…" : "সংরক্ষণ করুন"}
+          {saving ? "Saving…" : "Save"}
         </Btn>
       )}
 
       {/* এডমিন: নতুন আইটেম যোগ */}
       {adminItems && (user?.role === "director" || user?.role === "admin") && (
         <div style={{ marginTop: 20, padding: 16, background: "#f0f4f1", borderRadius: 10 }}>
-          <h4 style={{ margin: "0 0 12px" }}>নতুন আইটেম যোগ করুন</h4>
+          <h4 style={{ margin: "0 0 12px" }}>Add a new item</h4>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <input value={newItemName} onChange={e => setNewItemName(e.target.value)}
-              placeholder="আইটেমের নাম"
+              placeholder="Item name"
               style={{ flex: 1, minWidth: 160, padding: "7px 10px", borderRadius: 7, border: "1px solid #ccc", fontSize: 14 }} />
             <select value={newItemKind} onChange={e => setNewItemKind(e.target.value)}
               style={{ padding: "7px 10px", borderRadius: 7, border: "1px solid #ccc", fontSize: 14 }}>
-              <option value="check">চেকবক্স</option>
-              <option value="prayer">নামাজ</option>
+              <option value="check">Checkbox</option>
+              <option value="prayer">Prayer</option>
             </select>
-            <Btn sm onClick={addItem}>যোগ করুন</Btn>
+            <Btn sm onClick={addItem}>Add</Btn>
           </div>
         </div>
       )}
@@ -23858,7 +23828,7 @@ const NAV = [
   {
     id: "overview",
     icon: "🏠",
-    label: "ড্যাশবোর্ড",
+    label: "Dashboard",
     labelEn: "Dashboard",
     // ট্রায়াল অতিথির জন্য এই একটিমাত্র পাতা — তাঁর সবকিছু এখানেই
     roles: ["director", "admin", "teacher", "student", "trial"],
@@ -23866,39 +23836,39 @@ const NAV = [
   {
     id: "classes",
     icon: "🎥",
-    label: "ক্লাস ও জুম জয়েন",
+    label: "Classes & Zoom Join",
     labelEn: "Classes & Zoom Join",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "instantclass",
     icon: "⚡",
-    label: "ইনস্ট্যান্ট ক্লাস",
+    label: "Instant Class",
     labelEn: "Instant Class",
     roles: ["director", "admin"],
   },
   {
     id: "postponed",
     icon: "⛔",
-    label: "স্থগিত ক্লাস",
+    label: "Postponed Classes",
     labelEn: "Postponed Classes",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "routine",
     icon: "📅",
-    label: "ক্লাস রুটিন",
+    label: "Class Routine",
     labelEn: "Class Routine",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
-    /* ⚠️ একই পাতা, দুই নামে। পরিচালক-উস্তাদের কাছে এটি "লেকচার প্ল্যান" —
+    /* ⚠️ একই পাতা, দুই নামে। পরিচালক-উস্তাদের কাছে এটি "Lecture Plan" —
        কী পড়ানো হবে তার পরিকল্পনা। শিক্ষার্থীর কাছে একই জিনিস "My
        Lessons" — সে যা শিখেছে, দেখে অনুশীলন করবে। কাজ একটাই, নাম
        দুটো; আলাদা কোনো পাতা নয়। */
     id: "lectures",
     icon: "📋",
-    label: "লেকচার প্ল্যান",
+    label: "Lecture Plan",
     labelEn: "Lecture Plan",
     studentIcon: "📗",
     studentLabelEn: "My Lessons",
@@ -23910,128 +23880,128 @@ const NAV = [
     // ধাপ ৫-এ আসবে, তখনও কেবল পর্দাটুকু, উস্তাদের স্ক্রিপ্ট নয়।
     id: "lessons",
     icon: "📗",
-    label: "দারস স্ক্রিপ্ট",
+    label: "Lesson Script",
     labelEn: "Lesson Script",
     roles: ["director", "admin", "teacher"],
   },
   {
     id: "syllabus",
     icon: "📜",
-    label: "সিলেবাস",
+    label: "Syllabus",
     labelEn: "Syllabus",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "attendance",
     icon: "🗓️",
-    label: "হাজিরা",
+    label: "Attendance",
     labelEn: "Attendance",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "assignments",
     icon: "📝",
-    label: "অ্যাসাইনমেন্ট",
+    label: "Assignments",
     labelEn: "Assignments",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "exams",
     icon: "🏅",
-    label: "পরীক্ষা ও ফলাফল",
+    label: "Exams & Results",
     labelEn: "Exams & Results",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "progress",
     icon: "📈",
-    label: "অগ্রগতি ও ফি রিপোর্ট",
+    label: "Progress & Fee Report",
     labelEn: "Progress & Fee Report",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "payments",
     icon: "💳",
-    label: "পেমেন্ট",
+    label: "Payments",
     labelEn: "Payments",
     roles: ["student"],
   },
   {
     id: "studentpayments",
     icon: "💵",
-    label: "স্টুডেন্ট পেমেন্ট",
+    label: "Student Payments",
     labelEn: "Student Payments",
     roles: ["director"],
   },
   {
     id: "waoutbox",
     icon: "📤",
-    label: "WhatsApp মেসেজ",
+    label: "WhatsApp Messages",
     labelEn: "WhatsApp Messages",
     roles: ["director", "admin"],
   },
   {
     id: "teacherreport",
     icon: "🌟",
-    label: "টিচার রিপোর্ট ও পেমেন্ট",
+    label: "Teacher Report & Payment",
     labelEn: "Teacher Report & Payment",
     roles: ["director", "admin", "teacher"],
   },
-  { id: "coursemgr", icon: "📖", label: "কোর্স", labelEn: "Courses", roles: ["director"] },
+  { id: "coursemgr", icon: "📖", label: "Course", labelEn: "Courses", roles: ["director"] },
   {
     id: "allstudents",
     icon: "👥",
-    label: "সকল স্টুডেন্ট",
+    label: "All Students",
     labelEn: "All Students",
     roles: ["director", "admin"],
   },
   {
     id: "allteachers",
     icon: "👨‍🏫",
-    label: "শিক্ষক তালিকা",
+    label: "Teachers",
     labelEn: "Teachers",
     roles: ["director", "admin"],
   },
   {
     id: "loginsend",
     icon: "📲",
-    label: "লগইন পাঠান",
+    label: "Send Login Info",
     labelEn: "Send Login Info",
     roles: ["director"],
   },
   {
     id: "amal",
     icon: "🌙",
-    label: "দৈনিক আমল",
+    label: "Daily Amal",
     labelEn: "Daily Amal",
     roles: ["director", "admin", "student"],
   },
   {
     id: "admissions",
     icon: "🎓",
-    label: "ভর্তি আবেদন",
+    label: "Admission Applications",
     labelEn: "Admission Applications",
     roles: ["director", "admin"],
   },
   {
     id: "trials",
     icon: "🌱",
-    label: "ট্রায়াল",
+    label: "Trial",
     labelEn: "Trial",
     roles: ["director", "admin"],
   },
-  { id: "accounts", icon: "🏦", label: "হিসাব-নিকাশ", labelEn: "Accounts", roles: ["director"] },
+  { id: "accounts", icon: "🏦", label: "Accounts", labelEn: "Accounts", roles: ["director"] },
   {
     id: "forms",
     icon: "📨",
-    label: "ফর্ম সাবমিশন",
+    label: "Form Submissions",
     labelEn: "Form Submissions",
     roles: ["director", "admin"],
   },
   {
     id: "books",
     icon: "📚",
-    label: "একাডেমিক বইসমূহ",
+    label: "Academic Books",
     labelEn: "Academic Books",
     roles: ["director", "admin", "teacher", "student"],
   },
@@ -24039,34 +24009,34 @@ const NAV = [
     // নামাজ শিক্ষা: বাস্তব শিশুর 3D মডেলে অজু ও নামাজ (কেবল লগইন করা ব্যবহারকারী; ট্রায়াল নয়)
     id: "salah",
     icon: "🕌",
-    label: "নামাজ শিক্ষা",
+    label: "Salah Learning",
     labelEn: "Learn Salah",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "myreceipts",
     icon: "🧾",
-    label: "ভাউচার/রিসিট",
+    label: "Vouchers/Receipts",
     labelEn: "Vouchers/Receipts",
     // স্টুডেন্টের পোর্টালে আলাদা রিসিট ফাইল দেখানো হয় না — শুধু পেমেন্ট হিস্টরি
-    // ("পেমেন্ট" মেনু); admin/teacher (নিজের বেতন-ভাউচার) এর জন্য এটা থেকে যায়
+    // ("Payments" মেনু); admin/teacher (নিজের বেতন-ভাউচার) এর জন্য এটা থেকে যায়
     roles: ["admin", "teacher"],
   },
   {
     id: "leaves",
     icon: "✉️",
-    label: "ছুটির আবেদন",
+    label: "Leave Application",
     labelEn: "Leave Application",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
     id: "notices",
     icon: "📌",
-    label: "নোটিশ বোর্ড",
+    label: "Notice Board",
     labelEn: "Notice Board",
     roles: ["director", "admin", "teacher", "student"],
   },
-  { id: "manage", icon: "⚙️", label: "ম্যানেজ সেটিংস", labelEn: "Settings", roles: ["director"] },
+  { id: "manage", icon: "⚙️", label: "Settings", labelEn: "Settings", roles: ["director"] },
 ];
 
 /* ═══════════════ নতুন সংস্করণ এসেছে কিনা জানানো ═══════════════
@@ -24223,12 +24193,12 @@ function NewNotifToast({ user, notifs }) {
               : "New message from the Academy"
             : items.length > 1
               ? `${bn(items.length)}টি নতুন বার্তা`
-              : "একাডেমি থেকে নতুন বার্তা"}
+              : "New message from the Academy"}
         </span>
         <button
           onClick={() => setItems([])}
-          title={en ? "Close" : "বন্ধ করুন"}
-          aria-label={en ? "Close" : "বন্ধ করুন"}
+          title={en ? "Close" : "Close"}
+          aria-label={en ? "Close" : "Close"}
           style={{
             border: "none",
             background: "none",
@@ -24276,7 +24246,7 @@ function RejoinBlockPopup({ k, user, onRejoin, onLater }) {
       title={
         en
           ? "Your teacher has opened a new meeting"
-          : "উস্তাদ নতুন মিটিং খুলেছেন"
+          : "The teacher has opened a new meeting"
       }
       footer={
         <div style={{ display: "grid", gap: 8 }}>
@@ -24300,7 +24270,7 @@ function RejoinBlockPopup({ k, user, onRejoin, onLater }) {
               boxSizing: "border-box",
             }}
           >
-            {en ? "🔁 Rejoin now — Zoom will open" : "🔁 এখনই রিজয়েন করুন"}
+            {en ? "🔁 Rejoin now — Zoom will open" : "🔁 Rejoin now"}
           </a>
           {/* দ্বিতীয় পথ — এটা ছাড়া কেউ রিজয়েন করতে না চাইলে (যেমন ক্লাস
               শেষ হয়ে গেছে) পোর্টালে আটকে থাকতেন */}
@@ -24309,7 +24279,7 @@ function RejoinBlockPopup({ k, user, onRejoin, onLater }) {
             style={{ width: "100%", justifyContent: "center" }}
             onClick={onLater}
           >
-            {en ? "I'll join later" : "পরে জয়েন করছি"}
+            {en ? "I'll join later" : "I'll join later"}
           </Btn>
         </div>
       }
@@ -24324,7 +24294,7 @@ function RejoinBlockPopup({ k, user, onRejoin, onLater }) {
         </>
       ) : (
         <>
-          আপনার উস্তাদ <b>নতুন একটি জুম মিটিংয়ে</b> সরে গেছেন। আগের মিটিংটি আর
+          আপনার উস্তাদ <b>in a new Zoom meeting</b> সরে গেছেন। আগের মিটিংটি আর
           ব্যবহার হচ্ছে না — নিচের বাটনে চেপে তাঁর সাথে যোগ দিন।
           <br />
           <br />
@@ -24338,12 +24308,12 @@ function RejoinBlockPopup({ k, user, onRejoin, onLater }) {
 /* ═══════════ অ্যাপ ইনস্টল করার পপআপ (যাঁদের ইনস্টল করা নেই) ═══════════
    পুরো পর্দা ঢেকে দেখায়, "📲 ইনস্টল করুন" চাপলে ব্রাউজারের আসল ইনস্টল
    পপআপ খোলে।
-   ⚠️ "পরে" বাটনটা কেন রাখতেই হলো: আইফোন/আইপ্যাডের সাফারিতে ওয়েবসাইট থেকে
+   ⚠️ "Later" বাটনটা কেন রাখতেই হলো: আইফোন/আইপ্যাডের সাফারিতে ওয়েবসাইট থেকে
    ইনস্টল করানোর কোনো উপায়ই নেই (অ্যাপলের সীমাবদ্ধতা) — সেখানে বাটন দিয়ে
    ইনস্টল হয় না, নিজে হাতে "Add to Home Screen" করতে হয়। ফায়ারফক্স ও কিছু
    ব্রাউজারেও একই। তাই বের হওয়ার পথ না রাখলে ওই ব্যবহারকারীরা অ্যাপে চিরকাল
    আটকে যেতেন, কিছুই করতে পারতেন না।
-   তবে উপেক্ষা করা যায় না — "পরে" শুধু এইবারের জন্য, অ্যাপ আবার খুললেই
+   তবে উপেক্ষা করা যায় না — "Later" শুধু এইবারের জন্য, অ্যাপ আবার খুললেই
    পপআপটা আবার আসবে, যতক্ষণ না সত্যিই ইনস্টল করা হয়। */
 function InstallPopup({ user }) {
   const en = true;
@@ -24392,7 +24362,7 @@ function InstallPopup({ user }) {
     <BlockingPopup
       icon="📲"
       zIndex={295}
-      title={en ? "Install the app" : "অ্যাপটি ইনস্টল করে নিন"}
+      title={en ? "Install the app" : "Install the app"}
       footer={
         <div style={{ display: "grid", gap: 8 }}>
           {!isIOS && (
@@ -24401,7 +24371,7 @@ function InstallPopup({ user }) {
               style={{ width: "100%", justifyContent: "center" }}
               onClick={install}
             >
-              {en ? "📲 Install now" : "📲 এখনই ইনস্টল করুন"}
+              {en ? "📲 Install now" : "📲 Install now"}
             </Btn>
           )}
           <Btn
@@ -24409,7 +24379,7 @@ function InstallPopup({ user }) {
             style={{ width: "100%", justifyContent: "center" }}
             onClick={later}
           >
-            {en ? "Later" : "পরে"}
+            {en ? "Later" : "Later"}
           </Btn>
         </div>
       }
@@ -24423,7 +24393,7 @@ function InstallPopup({ user }) {
           </>
         ) : (
           <>
-            নিচের <b>Share</b> মেনু খুলে <b>“Add to Home Screen”</b> বেছে নিন।
+            নিচের <b>Share</b> open the menu and <b>“Add to Home Screen”</b> বেছে নিন।
             তাহলে হোম স্ক্রিন থেকেই অ্যাপটি খুলবে — দ্রুত চলবে, আর
             নোটিফিকেশনও পাবেন।
           </>
@@ -24454,7 +24424,7 @@ function InstallPopup({ user }) {
    • লগইনের আগে ও পরে — দুই অবস্থাতেই আসে, কারণ overlays দুই জায়গাতেই থাকে।
      (প্রায় সবাই লগইন করাই থাকেন, তাই কেবল লগইন-পর্দায় দেখালে বেশিরভাগের
      কাছে কখনো পৌঁছাত না।)
-   • একবার "বুঝেছি" চাপলে আর আসে না।
+   • একবার "Got it" চাপলে আর আসে না।
    🔧 ভবিষ্যতে আবার এমন বদল করলে নিচের NOTICE_ID-টা বদলে দিলেই যথেষ্ট —
       তখন সবার কাছে (আগে যাঁরা দেখেছেন তাঁদের কাছেও) আবার একবার করে যাবে। */
 const REINSTALL_NOTICE_ID = "2026-08-icon-and-name";
@@ -24520,7 +24490,7 @@ function ReinstallNotice({ lang }) {
         >
           {en
             ? "Please reinstall the app once"
-            : "অ্যাপটি একবার নতুন করে ইনস্টল করুন"}
+            : "Please reinstall the app once"}
         </div>
         <div
           style={{
@@ -24544,7 +24514,7 @@ function ReinstallNotice({ lang }) {
           ) : (
             <>
               অ্যাপের লোগো ও নাম নতুন করা হয়েছে। ইনস্টল করা অ্যাপ পুরনো
-              লোগো-নামই ধরে রাখে, তাই একবার <b>আনইনস্টল করে আবার ইনস্টল</b>{" "}
+              লোগো-নামই ধরে রাখে, তাই একবার <b>Uninstall and reinstall</b>{" "}
               করে নিন — শুধু এইবারের জন্য।
               <br />
               <br />
@@ -24557,7 +24527,7 @@ function ReinstallNotice({ lang }) {
           style={{ width: "100%", justifyContent: "center" }}
           onClick={done}
         >
-          {en ? "Got it" : "বুঝেছি"}
+          {en ? "Got it" : "Got it"}
         </Btn>
       </div>
     </div>
@@ -24664,7 +24634,7 @@ function UpdateBanner({ lang }) {
             marginTop: 6,
           }}
         >
-          {en ? "A new update has arrived" : "নতুন আপডেট এসেছে"}
+          {en ? "A new update has arrived" : "A new update has arrived"}
         </div>
         <div
           style={{
@@ -24676,7 +24646,7 @@ function UpdateBanner({ lang }) {
         >
           {en
             ? "The page will refresh on its own — nothing for you to press. Your work is saved."
-            : "পাতাটি নিজে থেকেই রিফ্রেশ হবে — আপনাকে কিছু চাপতে হবে না। আপনার কাজ সংরক্ষিত আছে।"}
+            : "The page will refresh on its own — nothing for you to press. Your work is saved."}
         </div>
         <div style={{ fontSize: 13, fontWeight: 800, color: C.gold }}>
           {left > 0
@@ -24685,7 +24655,7 @@ function UpdateBanner({ lang }) {
               : `${bn(left)} সেকেন্ড পর রিফ্রেশ হচ্ছে…`
             : en
               ? "Finishing your save first…"
-              : "আপনার সেভ শেষ হওয়ার অপেক্ষায়…"}
+              : "Finishing your save first…"}
         </div>
       </div>
     </div>
@@ -24897,7 +24867,7 @@ export default function App() {
   const [livePopup, setLivePopup] = useState(null);
   // কোন ক্লাসের রিজয়েন শিক্ষার্থী ইতিমধ্যে সেরে ফেলেছেন (আবার যেন না দেখায়)
   const [rejoinDone, setRejoinDone] = useState(null);
-  // যে ক্লাসগুলোর লাইভ-পপআপে ইতিমধ্যে সাড়া দেওয়া হয়েছে (জয়েন বা "পরে")।
+  // যে ক্লাসগুলোর লাইভ-পপআপে ইতিমধ্যে সাড়া দেওয়া হয়েছে (জয়েন বা "Later")।
   // ⚠️ ছাড়া এটা: checkLive প্রতি ৬০ সেকেন্ডে livePopup আবার বসিয়ে দিত, ফলে
   // জয়েন করার পরও ক্লাসের পুরো সময় জুড়ে প্রতি মিনিটে ফুল-পেজ পপআপ ফিরে
   // আসত। রিজয়েনের পপআপ এই তালিকা মানে না — উস্তাদ নতুন লিংকে গেলে সেটা
@@ -25018,7 +24988,7 @@ export default function App() {
                 style={{ flex: 1, justifyContent: "center" }}
                 onClick={() => setConfirmReq(null)}
               >
-                {confirmReq.no || "না, থাক"}
+                {confirmReq.no || "No, cancel"}
               </Btn>
               <Btn
                 kind="danger"
@@ -25029,7 +24999,7 @@ export default function App() {
                   fn();
                 }}
               >
-                {confirmReq.yes || "হ্যাঁ, নিশ্চিত"}
+                {confirmReq.yes || "Yes, confirm"}
               </Btn>
             </div>
           </div>
@@ -25153,10 +25123,10 @@ export default function App() {
         <div style={{ textAlign: "center" }}>
           <img
             src="/brand/logo-green.png"
-            alt="তারবিয়াতুল কুরআন একাডেমি"
+            alt="Tarbiyatul Quran Academy"
             style={{ width: 56, height: 56, borderRadius: 14 }}
           />
-          <div style={{ marginTop: 10, fontWeight: 700 }}>লোড হচ্ছে…</div>
+          <div style={{ marginTop: 10, fontWeight: 700 }}>Loading…</div>
         </div>
       </div>
     );
@@ -25206,11 +25176,11 @@ export default function App() {
   };
   const roleLabel =
     user.role === "director"
-      ? "পরিচালক"
+      ? "Director"
       : user.role === "admin"
-        ? "এডমিন"
+        ? "Admin"
         : user.role === "teacher"
-          ? "উস্তাদ/উস্তাদা"
+          ? "Ustadh / Ustadha"
           : // ট্রায়াল অতিথি ভর্তি হওয়া শিক্ষার্থী নন — তাঁর পাশে "Student"
             // লেখা থাকলে বিভ্রান্তিকর হতো
             user.role === "trial"
