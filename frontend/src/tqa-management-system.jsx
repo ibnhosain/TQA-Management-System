@@ -25593,7 +25593,7 @@ export default function App() {
           {view === "routine" && <RoutineView {...props} />}
           {view === "lectures" && <LecturePlan {...props} />}
           {view === "approvals" && (user.role === "director" || user.role === "admin") && (
-            <Suspense fallback={<div style={{ padding: 20 }}>Loading…</div>}><ApprovalsView /></Suspense>
+            <Suspense fallback={<div style={{ padding: 20 }}>Loading…</div>}><ApprovalsView courses={courses} /></Suspense>
           )}
           {view === "settings" && (user.role === "director" || user.role === "admin") && (
             <Suspense fallback={<div style={{ padding: 20 }}>Loading…</div>}><SettingsView user={user} /></Suspense>
