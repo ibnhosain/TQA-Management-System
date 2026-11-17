@@ -70,3 +70,38 @@ def is_released(user, course, no):
     if getattr(user, "role", None) in ADMINS or no is None or not flag("lecture_approval"):
         return True
     return no <= (course.lectures_released or 0)
+
+
+def _done_lectures(course, sid, cache=None):
+    """এই শিক্ষার্থীর কোন লেকচারগুলো এখনো পুরো টিক হয়নি (ফেরত দেয় অসম্পূর্ণগুলো) ("Lecture N"-এর সব টপিক ✔ বা ✘)। cache: একই অনুরোধে বারবার না গোনা।"""
+    from .models import LectureTopic, TopicCoverage
+    key = (course.id, sid)
+    if cache is not None and key in cache:
+        return cache[key]
+    rows = {}
+    for t in LectureTopic.objects.filter(section__course=course, section__is_trial=False).select_related("section"):
+        n = lecture_no(t.section.name)
+        if n is not None:
+            rows.setdefault(n, []).append(t)
+    marked = dict(TopicCoverage.objects.filter(topic__section__course=course, student_id=sid).values_list("topic_id", "covered")) if sid else {}
+    done = {n for n, ts in rows.items() if all(marked.get(t.id, t.covered) in ("covered", "missed") for t in ts)}
+    pending = set(rows) - done          # প্ল্যানে আছে কিন্তু পুরো টিক হয়নি — টপিকই নেই এমন লেকচার আটকায় না
+    if cache is not None:
+        cache[key] = pending
+    return pending
+
+
+def lecture_lock(user, course, no, student_id=None, cache=None):
+    """তালার কারণ (লেখা) বা None। পরিচালক/এডমিনের জন্য কখনো তালা নেই।
+    ১) লেকচার অনুমোদন চালু আর no > অনুমোদিত সংখ্যা → এখনো খোলা হয়নি।
+    ২) ধারাবাহিক তালা চালু আর আগের লেকচারের সব টপিক এই শিক্ষার্থীর জন্য টিক হয়নি → আগেরটা শেষ করো।"""
+    from .app_flags import flag
+    if getattr(user, "role", None) in ADMINS or no is None:
+        return None
+    if flag("lecture_approval") and no > (course.lectures_released or 0):
+        return f"Lecture {no} is not open yet"
+    if no > 1 and flag("sequential_unlock"):
+        sid = user.id if user.role == "student" else student_id
+        if sid and (no - 1) in _done_lectures(course, sid, cache):
+            return f"Finish Lecture {no - 1} first — tick all its topics"
+    return None

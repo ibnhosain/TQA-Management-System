@@ -17,7 +17,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .app_flags import flag
-from .app_settings_views import is_released
+from .app_settings_views import lecture_lock
 from .models import Course, DeckTaught, LectureDeck, LectureTopic, LessonSection, TopicCoverage, User
 
 ADMINS = ("director", "admin")
@@ -110,8 +110,9 @@ class LectureDeckViewSet(viewsets.ViewSet):
         d = LectureDeck.objects.defer("data").filter(pk=pk).select_related("course").first()
         if not d or not (_can_see(request.user, d.course_id) or self._student_ok(request.user, d)):
             return Response({"error": "Permission denied"}, status=403)
-        if not is_released(request.user, d.course, d.no):
-            return Response({"error": f"Lecture {d.no} is not open yet"}, status=403)
+        why = lecture_lock(request.user, d.course, d.no)
+        if why:
+            return Response({"error": why}, status=403)
         if request.user.role == "student" and not flag("student_slides"):
             return Response({"error": "Practice slides are turned off"}, status=403)
         d = LectureDeck.objects.get(pk=pk)
@@ -160,8 +161,13 @@ class LectureDeckViewSet(viewsets.ViewSet):
             aud = "teacher"
         else:
             return Response({"error": "Permission denied"}, status=403)
-        if not is_released(u, Course.objects.get(pk=course_id), no):
-            return Response({"error": f"Lecture {no} is not open yet"}, status=403)
+        try:
+            sid = int(request.query_params.get("student") or 0) or None
+        except ValueError:
+            sid = None
+        why = lecture_lock(u, Course.objects.get(pk=course_id), no, sid)
+        if why:
+            return Response({"error": why}, status=403)
         d = LectureDeck.objects.defer("data").filter(course_id=course_id, no=no, audience=aud).first()
         if not d:
             return Response({"error": f"No slides yet for Lecture {no}"}, status=404)

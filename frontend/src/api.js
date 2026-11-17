@@ -613,7 +613,7 @@ export const deckApi = {
   cover: (id) => request(`/decks/${id}/cover/`),
   saveCover: (id, body) => request(`/decks/${id}/cover/`, { method: "POST", body }),
   notes: () => request("/decks/notes/"),
-  find: (course, no) => request(`/decks/find/?course=${course}&no=${no}`),   // Lesson Plan-এ টপিকে ক্লিক
+  find: (course, no, student) => request(`/decks/find/?course=${course}&no=${no}${student ? `&student=${student}` : ""}`),   // Lesson Plan-এ টপিকে ক্লিক (উস্তাদ: কার জন্য — তালা তার কভার ধরে)
 };
 
 /* পরিচালকের Settings — চালু/বন্ধ বোতাম আর কোর্সপ্রতি অনুমোদিত লেকচার */

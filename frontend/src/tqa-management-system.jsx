@@ -5181,6 +5181,7 @@ function LecturePlan({ db, courses, user, refresh }) {
   const partOf = (tp) => DECK_PART[(tp.text || "").split(" — ")[0].trim()];
   const [play, setPlay] = useState(null);   // { no, part, topicId }
   const playLecture = (sec, tp) => {
+    if (sec.lock) return notice("🔒 " + sec.lock);
     const m = /lecture\s*(\d+)/i.exec(sec.name || "");
     if (!m || trialTab) return notice("No slides for this heading.");
     const key = partOf(tp);
@@ -5675,7 +5676,10 @@ function LecturePlan({ db, courses, user, refresh }) {
               }}
             >
               <span style={{ fontWeight: 800, fontSize: 15, flex: 1, minWidth: 140 }}>
-                {sec.name}
+                {sec.lock ? "🔒 " : ""}{sec.name}
+                {sec.lock && (
+                  <span style={{ fontWeight: 600, fontSize: 12, opacity: 0.85, marginLeft: 8 }}>{sec.lock}</span>
+                )}
               </span>
               <span
                 style={{
@@ -5725,7 +5729,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                     <div key={tp.id}>
                       <div
                         onClick={() => playLecture(sec, tp)}
-                        title="Play the slides"
+                        title={sec.lock ? "🔒 " + sec.lock : "Play the slides"}
                         style={{
                           cursor: "pointer",
                           display: "flex",
@@ -5733,6 +5737,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                           gap: 10,
                           padding: "9px 12px",
                           borderRadius: 10,
+                          opacity: sec.lock ? 0.55 : 1,
                           flexWrap: "wrap",
                           // todayPlanMode চালু থাকলে আজকের পাঠ হলে সোনালি, কভার হলে সবুজ, বাদ পড়লে লাল, বাকি থাকলে সাদা
                           background: todayPlanMode && isToday ? C.amberBg : isDone ? C.greenBg : isMissed ? C.redBg : "#fff",
@@ -5741,7 +5746,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                           }`,
                         }}
                       >
-                        <span style={{ color: C.emerald, fontWeight: 800, fontSize: 13, width: 14 }}>▶</span>
+                        <span style={{ color: C.emerald, fontWeight: 800, fontSize: 13, width: 14 }}>{sec.lock ? "🔒" : "▶"}</span>
                         <span
                           style={{
                             width: 22,
@@ -5772,7 +5777,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                         >
                           {tp.text}
                         </span>
-                        {(canMark || isAdmin) && (
+                        {(canMark || isAdmin) && !sec.lock && (
                           <span
                             onClick={(e) => e.stopPropagation()}
                             style={{ display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "flex-end" }}
@@ -5834,7 +5839,7 @@ function LecturePlan({ db, courses, user, refresh }) {
 
       {play && (
         <Suspense fallback={null}>
-          <PlanPlayer course={sel} no={play.no} part={play.part} topicId={play.topicId} student={user.role === "student"} onClose={() => { setPlay(null); load(); }} />
+          <PlanPlayer course={sel} no={play.no} part={play.part} topicId={play.topicId} student={user.role === "student"} forStudent={forStudent?.id} onClose={() => { setPlay(null); load(); }} />
         </Suspense>
       )}
       {/* ── টপিক সম্পাদনার মডাল ── */}

@@ -618,13 +618,13 @@ class LessonSectionViewSet(viewsets.ModelViewSet):
             # ⚠️ ভর্তি হওয়া শিক্ষার্থী সবসময় নিয়মিত পরিকল্পনাই দেখেন। ?is_trial=1
             # চেয়েও পাবেন না — ট্রায়ালের পরিকল্পনা অতিথিদের জন্য সাজানো
             # (একাডেমির প্রথম পরিচয়), নিয়মিত পাঠ্যসূচি নয়।
-            return _hide_unreleased(qs.filter(is_trial=False, course__students=u).distinct(), u)
+            return qs.filter(is_trial=False, course__students=u).distinct()
         if list_only:
             qs = qs.filter(is_trial=want_trial)
         if u.role == "teacher":
-            return _hide_unreleased(qs.filter(
+            return qs.filter(
                 Q(course__teacher=u) | Q(course__students__teacher=u)
-            ).distinct(), u)
+            ).distinct()
         return qs
 
     def _student_id(self):
@@ -812,6 +812,11 @@ class LectureViewSet(viewsets.ModelViewSet):
             # ⚠️ উস্তাদ কেবল নিজের শিক্ষার্থীর জন্যই টিক দিতে পারবেন। এক
             # কোর্সে একাধিক উস্তাদ থাকায় এটা না থাকলে একজন উস্তাদ অন্যজনের
             # শিক্ষার্থীর হিসাবে টিক দিয়ে ফেলতে পারতেন।
+            from .app_settings_views import lecture_lock, lecture_no
+            if topic.section_id and not topic.section.is_trial:
+                why = lecture_lock(u, topic.section.course, lecture_no(topic.section.name), sid)
+                if why:
+                    return Response({"detail": why}, status=403)
             if u.role not in ("director", "admin") and not _is_own_student(u, sid, topic.lecture.course):
                 return Response(
                     {"detail": "This student does not study with you"}, status=403)
@@ -1017,14 +1022,6 @@ def _q_course_teacher_or_own_lesson(u):
     """ধাপ → দারস → কোর্স — উস্তাদ নিজের কোর্সের ধাপগুলোই দেখেন।"""
     return (Q(lesson__course__teacher=u)
             | Q(lesson__course__students__teacher=u))
-
-
-def _hide_unreleased(qs, u):
-    """🔒 লেকচার অনুমোদন চালু থাকলে উস্তাদ/শিক্ষার্থী অনুমোদন-না-পাওয়া "Lecture N" হেডিং দেখেন না।"""
-    from .app_settings_views import is_released, lecture_no
-    hide = [sid for sid, name, course in ((x.id, x.name, x.course) for x in qs.select_related("course"))
-            if not is_released(u, course, lecture_no(name))]
-    return qs.exclude(pk__in=hide) if hide else qs
 
 
 def _is_own_student(u, student, course=None):

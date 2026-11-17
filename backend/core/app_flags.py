@@ -2,6 +2,8 @@
 FLAGS = {
     "lecture_approval": (True, "Lecture approval",
                          "Teachers and students see only the approved lectures (Lesson Plan headings and slides). Directors and admins always see all."),
+    "sequential_unlock": (True, "Next lecture unlocks after the previous one is covered",
+                          "All lectures are shown, but each one stays locked (🔒) until every topic of the previous lecture is ticked for that student."),
     "student_slides": (True, "Student practice slides",
                        "Students can open their practice slides by clicking a topic in the Lesson Plan."),
     "homework_notes": (True, "Homework notes",

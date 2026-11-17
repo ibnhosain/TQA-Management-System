@@ -5,14 +5,14 @@ import { deckApi, fetchBinary, settingsApi } from "../api";
 import DeckPlayer from "./DeckPlayer.jsx";
 import CoverPanel from "./CoverPanel.jsx";
 
-export default function PlanPlayer({ course, no, part, topicId, student, onClose }) {
+export default function PlanPlayer({ course, no, part, topicId, student, forStudent, onClose }) {
   const [play, setPlay] = useState(null);
   const [err, setErr] = useState("");
   useEffect(() => {
     let live = true;
     (async () => {
       try {
-        const d = await deckApi.find(course, no);
+        const d = await deckApi.find(course, no, forStudent);
         const buffer = await fetchBinary(`/decks/${d.id}/`);
         let auto = true;
         try { auto = (await settingsApi.get()).flags.auto_cover_panel !== false; } catch { /* ডিফল্ট চালু */ }
