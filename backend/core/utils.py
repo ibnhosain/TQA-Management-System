@@ -23,4 +23,4 @@ def make_trial_username(User):
         if not User.objects.filter(username__iexact=name).exists():
             return name
         n += 1
-    raise RuntimeError("ট্রায়াল আইডি তৈরি করা যায়নি")
+    raise RuntimeError("Could not generate a trial ID")

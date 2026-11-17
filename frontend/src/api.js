@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TQA-MS — ফ্রন্টএন্ড API ক্লায়েন্ট (mock useState → আসল ব্যাকএন্ড)
  * ব্যবহার: import { api, login } from "./api";
  * .env (Vite): VITE_API_URL=http://localhost:8000/api
@@ -179,7 +179,7 @@ async function request(path, { method = "GET", body, isForm, timeoutMs } = {}) {
       // ৪০১ = টোকেন মেয়াদোত্তীর্ণ/অবৈধ (উপরে রিফ্রেশের চেষ্টাও ব্যর্থ হয়েছে) —
       // DRF-এর ইংরেজি বার্তার বদলে স্পষ্ট বাংলা নির্দেশনা দিই
       (res.status === 401
-        ? "সেশনের মেয়াদ শেষ — একবার লগআউট করে আবার লগইন করুন।"
+        ? "Your session has expired — please log out and log in again."
         : null) ||
       data.error ||
       data.detail ||
@@ -578,11 +578,11 @@ export async function downloadBackup() {
     // AbortController টাইমআউটে ব্রাউজারের raw বার্তা ("signal is aborted
     // without reason") সরাসরি দেখানোর বদলে বোধগম্য বাংলা মেসেজ দেখাই
     if (e?.name === "AbortError" || /aborted/i.test(e?.message || "")) {
-      throw new Error("ব্যাকআপ তৈরি করতে সময় বেশি লাগছে — একটু পরে আবার চেষ্টা করুন।");
+      throw new Error("The backup is taking longer than expected — please try again shortly.");
     }
-    throw new Error("ব্যাকআপ নামাতে ব্যর্থ হয়েছে — সার্ভার সংযোগ যাচাই করুন।");
+    throw new Error("Backup download failed — please check your server connection.");
   }
-  if (!res.ok) throw new Error("ব্যাকআপ নামাতে ব্যর্থ হয়েছে");
+  if (!res.ok) throw new Error("Backup download failed");
   const blob = await res.blob();
   const today = new Date().toISOString().slice(0, 10);
   const a = document.createElement("a");
@@ -603,10 +603,9 @@ export async function fetchBinary(path) {
     });
     if (r.ok) { saveTokens((await r.json()).access, refresh); res = await go(); }
   }
-  if (!res.ok) throw new Error(res.status === 403 ? "অনুমতি নেই" : "ফাইল আনা যায়নি");
+  if (!res.ok) throw new Error(res.status === 403 ? "Permission denied" : "Could not load the file");
   return res.arrayBuffer();
 }
-
 
 /* লেকচারের স্লাইড — নোট, টপিক আর স্লাইড শেষে কভার-টিক */
 export const deckApi = {

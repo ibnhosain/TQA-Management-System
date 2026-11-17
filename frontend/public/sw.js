@@ -1,4 +1,4 @@
-/* তারবিয়াতুল কুরআন একাডেমি — Service Worker
+﻿/* Tarbiyatul Quran Academy — Service Worker
    কাজ: (১) PWA ইনস্টলযোগ্য করা (২) ব্রাউজার/ট্যাব বন্ধ থাকলেও Web Push নোটিফিকেশন দেখানো */
 
 self.addEventListener("install", () => {
@@ -11,7 +11,7 @@ self.addEventListener("activate", (event) => {
 
 // সার্ভার থেকে পুশ এলে সিস্টেম নোটিফিকেশন দেখানো — অ্যাপ/ট্যাব বন্ধ থাকলেও কাজ করে
 self.addEventListener("push", (event) => {
-  let data = { title: "তারবিয়াতুল কুরআন একাডেমি", body: "", url: "/" };
+  let data = { title: "Tarbiyatul Quran Academy", body: "", url: "/" };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {

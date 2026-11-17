@@ -1,4 +1,4 @@
-"""TQA-MS — DRF Serializers (অ্যাপ: core)"""
+﻿"""TQA-MS — DRF Serializers (অ্যাপ: core)"""
 from rest_framework import serializers
 from django.utils import timezone
 from .safe_html import clean_html
@@ -508,11 +508,11 @@ class LectureSerializer(serializers.ModelSerializer):
 
     def validate_topic_blocks(self, v):
         if len(v) > 100:
-            raise serializers.ValidationError("একটি দারসে সর্বোচ্চ ১০০টি টপিক রাখা যাবে")
+            raise serializers.ValidationError("A lesson can hold at most 100 topics")
         out = []
         for b in v:
             if not isinstance(b, dict):
-                raise serializers.ValidationError("প্রতিটি টপিক একটি অবজেক্ট হতে হবে")
+                raise serializers.ValidationError("Each topic must be an object")
             text = str(b.get("text") or "").strip()[:300]
             if not text:
                 continue  # শিরোনামহীন টগল রাখার মানে নেই
@@ -873,23 +873,23 @@ class CourseSyllabusSheetSerializer(serializers.ModelSerializer):
 
     def _clean(self, value, name):
         if not isinstance(value, list):
-            raise serializers.ValidationError({name: "তালিকা হতে হবে"})
+            raise serializers.ValidationError({name: "Must be a list"})
         return value
 
     def validate_headers(self, v):
         v = self._clean(v, "headers")
         if len(v) > 12:
-            raise serializers.ValidationError("সর্বোচ্চ ১২টি কলাম রাখা যাবে")
+            raise serializers.ValidationError("A maximum of 12 columns is allowed")
         return [str(x)[:120] for x in v]
 
     def validate_rows(self, v):
         v = self._clean(v, "rows")
         if len(v) > 300:
-            raise serializers.ValidationError("সর্বোচ্চ ৩০০টি সারি রাখা যাবে")
+            raise serializers.ValidationError("A maximum of 300 rows is allowed")
         out = []
         for r in v:
             if not isinstance(r, list):
-                raise serializers.ValidationError("প্রতিটি সারি একটি তালিকা হতে হবে")
+                raise serializers.ValidationError("Each row must be a list")
             out.append([str(c)[:2000] for c in r[:12]])
         return out
 

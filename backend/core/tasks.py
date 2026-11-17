@@ -103,21 +103,20 @@ def queue_class_reminders():
         mins_left = int((start - now).total_seconds() // 60)
         if not (0 <= mins_left <= REMINDER_WINDOW_MINUTES):
             continue  # জানালার বাইরে
-        mins_bn = str(mins_left).translate(BN_DIGITS)
         students = list(s.students.all())
         # ইন-অ্যাপ নোটিফিকেশন
         n = Notification.objects.create(
-            text=f"⏰ {s.course.name} ক্লাস {s.time.strftime('%H:%M')}-এ শুরু হচ্ছে (আর {mins_bn} মিনিটের মধ্যে)! "
-                 f"ড্যাশবোর্ড থেকে জয়েন করুন।")
+            text=f"⏰ {s.course.name} class starts at {s.time.strftime('%H:%M')} (in {mins_left} minutes)! "
+                 f"Join from the dashboard.")
         n.recipients.set(students + ([s.teacher] if s.teacher else []))
         # অভিভাবকের WhatsApp
         for st in students:
             if not st.phone:
                 continue
-            text = (f"আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম {st.guardian or 'অভিভাবক'}, "
-                    f"{st.name_bn}-এর \"{s.course.name}\" ক্লাস আজ {s.time.strftime('%H:%M')}-এ "
-                    f"(আর {mins_bn} মিনিটের মধ্যে) শুরু হচ্ছে ইনশাআল্লাহ। অনুগ্রহ করে ক্লাসে যুক্ত হতে সহায়তা করুন। "
-                    f"জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি")
+            text = (f"Assalamu Alaikum wa Rahmatullah. Respected {st.guardian or 'Guardian'}, "
+                    f"{st.name_bn}'s \"{s.course.name}\" class starts today at {s.time.strftime('%H:%M')} "
+                    f"(in {mins_left} minutes), insha'Allah. Please help them join the class. "
+                    f"Jazakumullahu Khairan. — Tarbiyatul Quran Academy")
             m = WaMessage.objects.create(to_name=st.guardian or st.name_bn, student=st,
                                          phone=st.phone, text=text, reason="reminder")
             dispatch_whatsapp(m.id)
@@ -126,9 +125,15 @@ def queue_class_reminders():
 
 
 # ─────────────────── মাসিক বকেয়া অটো-জেনারেশন (১ তারিখ) ───────────────────
-BN_MONTHS = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
-             "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"]
-BN_DIGITS = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
+MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
+               "July", "August", "September", "October", "November", "December"]
+
+
+def month_label_for(d):
+    """month_label — ফি/বেতনের রেকর্ডে সংরক্ষিত কী। বদলালে migration 0053-এর
+    মতো পুরনো রেকর্ডও একসাথে রূপান্তর করতে হবে, নইলে একই মাসের বকেয়া দুবার
+    তৈরি হয়ে যাবে।"""
+    return f"{MONTH_NAMES[d.month - 1]} {d.year}"
 
 
 @shared_task
@@ -143,7 +148,7 @@ def generate_monthly_dues(roles=None):
     # date.today() সার্ভারের (UTC) তারিখ দেয়, বাংলাদেশ সময়ের নয় — মাসের শুরুর
     # দিকে মধ্যরাত-থেকে-ভোর৬টার মধ্যে চললে ভুল মাসও ধরে ফেলতে পারত
     t = timezone.localtime().date()
-    label = f"{BN_MONTHS[t.month - 1]} {str(t.year).translate(BN_DIGITS)}"
+    label = month_label_for(t)
 
     # ⚠️ যাঁরা এই মাসের টাকা আগেই দিয়ে ফেলেছেন তাঁদের বকেয়া বানানো যাবে না।
     # অনেক অভিভাবক ১-২ মাসের ফি অগ্রিম দিয়ে দেন — আগে সেটা দেখা হতো না,

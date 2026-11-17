@@ -1,4 +1,4 @@
-"""TQA-MS — DRF ViewSets ও workflow actions (অ্যাপ: core)"""
+﻿"""TQA-MS — DRF ViewSets ও workflow actions (অ্যাপ: core)"""
 import json
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q, Avg, Count, Sum
@@ -62,11 +62,11 @@ class UserViewSet(viewsets.ModelViewSet):
         # করতে পারবেন না (যোগ/মুছা/পাসওয়ার্ড — কেবল পরিচালকের এখতিয়ার) —
         # রিকভারি করতে তখন সার্ভারে ম্যানুয়ালি কমান্ড চালাতে হতো
         if instance.id == self.request.user.id:
-            raise PermissionDenied("নিজের অ্যাকাউন্ট নিজে মুছে ফেলা যাবে না")
+            raise PermissionDenied("You cannot delete your own account")
         if instance.role == "director" and User.objects.filter(
             role="director"
         ).exclude(pk=instance.pk).count() == 0:
-            raise PermissionDenied("শেষ পরিচালকের অ্যাকাউন্ট মুছে ফেলা যাবে না")
+            raise PermissionDenied("The last director's account cannot be deleted")
         instance.delete()
 
     @action(detail=False, permission_classes=[IsAuthenticated])
@@ -108,14 +108,14 @@ class UserViewSet(viewsets.ModelViewSet):
     def switch_sibling(self, request, pk=None):
         """অভিভাবকের অন্য সন্তানের পোর্টালে যাওয়ার জন্য নতুন JWT"""
         if request.user.role != "student":
-            raise PermissionDenied("কেবল শিক্ষার্থীরাই ব্যবহার করতে পারবেন")
+            raise PermissionDenied("Students only")
         target = self.get_object()
         if target.role != "student":
-            raise PermissionDenied("লক্ষ্য ব্যবহারকারী শিক্ষার্থী নন")
+            raise PermissionDenied("The target user is not a student")
         my_phone = (request.user.guardian_phone or "").strip()
         their_phone = (target.guardian_phone or "").strip()
         if not my_phone or my_phone != their_phone:
-            raise PermissionDenied("এই শিক্ষার্থী আপনার পরিবারভুক্ত নন")
+            raise PermissionDenied("This student is not part of your family")
         from rest_framework_simplejwt.tokens import RefreshToken
         refresh = RefreshToken.for_user(target)
         return Response({"access": str(refresh.access_token), "refresh": str(refresh)})
@@ -153,11 +153,11 @@ class AcademicBookViewSet(viewsets.ModelViewSet):
         import os, traceback as tb
         name = request.data.get("name", "").strip()
         if not name:
-            return Response({"error": "নাম দিন"}, status=400)
+            return Response({"error": "Please enter a name"}, status=400)
         link = (request.data.get("link") or "").strip()
         uploaded = request.FILES.get("file")
         if not uploaded and not link:
-            return Response({"error": "বইয়ের ফাইল যুক্ত করুন অথবা একটি লিংক দিন"}, status=400)
+            return Response({"error": "Attach a book file or provide a link"}, status=400)
         # লিংক দিলে সরাসরি সেটাই সংরক্ষণ — Cloudinary-র সাইজ সীমা লাগে না, ফাইল রিস্টার্টে হারায় না
         file_url = link
         if uploaded:
@@ -353,7 +353,7 @@ class CourseViewSet(viewsets.ModelViewSet):
                     sheet.save(update_fields=["headers", "rows"])
             return Response(CourseSyllabusSheetSerializer(sheet).data)
         if request.user.role != "director":
-            raise PermissionDenied("কেবল পরিচালক সিলেবাস টেবিল বদলাতে পারবেন")
+            raise PermissionDenied("Only the director can change the syllabus table")
         ser = CourseSyllabusSheetSerializer(sheet, data=request.data, partial=True)
         ser.is_valid(raise_exception=True)
         ser.save()
@@ -402,16 +402,16 @@ class LessonMediaView(APIView):
 
         f = request.FILES.get("file")
         if not f:
-            return Response({"error": "ফাইল দিন"}, status=400)
+            return Response({"error": "Please provide a file"}, status=400)
         ctype = (getattr(f, "content_type", "") or "").lower()
         if ctype not in _IMG_TYPES | _DOC_TYPES:
             return Response(
-                {"error": "কেবল ছবি (JPG/PNG/GIF/WebP) বা PDF দেওয়া যাবে"},
+                {"error": "Only images (JPG/PNG/GIF/WebP) or PDFs are allowed"},
                 status=400,
             )
         if f.size > _MAX_UPLOAD_MB * 1024 * 1024:
             return Response(
-                {"error": f"ফাইলটি {_MAX_UPLOAD_MB} MB-র বেশি বড়"}, status=400
+                {"error": f"The file is larger than {_MAX_UPLOAD_MB} MB"}, status=400
             )
         is_image = ctype in _IMG_TYPES
         cloud = os.environ.get("CLOUDINARY_URL", "")
@@ -562,18 +562,18 @@ class PptxConvertView(APIView):
         import traceback as tb
         f = request.FILES.get("file")
         if not f:
-            return Response({"error": "ফাইল দিন"}, status=400)
+            return Response({"error": "Please provide a file"}, status=400)
         if not (f.name or "").lower().endswith(".pptx"):
-            return Response({"error": "শুধু .pptx ফাইল গ্রহণযোগ্য"}, status=400)
+            return Response({"error": "Only .pptx files are accepted"}, status=400)
         if f.size > 50 * 1024 * 1024:
-            return Response({"error": "ফাইলটি ৫০ MB-এর বেশি"}, status=400)
+            return Response({"error": "The file is larger than 50 MB"}, status=400)
         try:
             urls = _pptx_to_images(f, request)
         except ImportError:
-            return Response({"error": "সার্ভারে python-pptx নেই — admin জানান"}, status=500)
+            return Response({"error": "python-pptx is not installed on the server — please inform the admin"}, status=500)
         except Exception as e:
             tb.print_exc()
-            return Response({"error": f"রূপান্তর ব্যর্থ: {e}"}, status=500)
+            return Response({"error": f"Conversion failed: {e}"}, status=500)
         return Response({"urls": urls, "count": len(urls)}, status=201)
 
 
@@ -649,7 +649,7 @@ class LessonSectionViewSet(viewsets.ModelViewSet):
         """একটি টপিকের 'আজকের পাঠ' টিক টগল করা — True↔False (কেবল এডমিন/পরিচালক)।"""
         topic = _by_pk(LectureTopic, request.data.get("topic_id"))
         if not topic:
-            return Response({"detail": "টপিকটি পাওয়া যায়নি"}, status=404)
+            return Response({"detail": "Topic not found"}, status=404)
         topic.today_plan = not topic.today_plan
         topic.save(update_fields=["today_plan"])
         return Response({"id": topic.id, "today_plan": topic.today_plan})
@@ -664,7 +664,7 @@ class LessonSectionViewSet(viewsets.ModelViewSet):
         cid = request.data.get("course")
         course = Course.objects.filter(pk=cid).first()
         if not course:
-            return Response({"error": "কোর্স খুঁজে পাওয়া যায়নি"}, status=400)
+            return Response({"error": "Course not found"}, status=400)
         # নিয়মিত ও ট্রায়াল — দুটোর হেডিং আলাদাভাবে গোনা হয়, তাই একটির
         # হেডিং থাকলেও অন্যটির ডিফল্টগুলো ঠিকই তৈরি হবে
         trial = bool(request.data.get("is_trial"))
@@ -692,9 +692,9 @@ class LessonSectionViewSet(viewsets.ModelViewSet):
         section = self.get_object()
         blocks = request.data.get("topics")
         if not isinstance(blocks, list):
-            return Response({"error": "topics তালিকা দিন"}, status=400)
+            return Response({"error": "Please provide a topics list"}, status=400)
         if len(blocks) > 200:
-            return Response({"error": "একটি হেডিংয়ে সর্বোচ্চ ২০০টি টপিক"},
+            return Response({"error": "A heading can hold at most 200 topics"},
                             status=400)
 
         holder = Lecture.objects.filter(course=section.course).order_by("id").first()
@@ -795,20 +795,20 @@ class LectureViewSet(viewsets.ModelViewSet):
         """
         topic = _by_pk(LectureTopic, request.data.get("topic_id"))
         if not topic:
-            return Response({"detail": "টপিকটি পাওয়া যায়নি — হয়তো ইতিমধ্যে "
-                                       "মুছে ফেলা হয়েছে। পাতাটি একবার "
-                                       "রিফ্রেশ করে নিন।"}, status=404)
+            return Response({"detail": "Topic not found — it may already have been "
+                                       "deleted. Please refresh the page "
+                                       "once."}, status=404)
         new = request.data.get("covered")  # covered | missed | pending
         valid = [c[0] for c in LectureTopic.Covered.choices]
         if new not in valid:  # boolean/অবৈধ মান CharField-এ সেভ হয়ে ডেটা নষ্ট হওয়া ঠেকাতে
-            return Response({"detail": "covered মান অবৈধ — covered/missed/pending হতে হবে।"}, status=400)
+            return Response({"detail": "Invalid 'covered' value — must be covered/missed/pending."}, status=400)
         u = request.user
         is_admin = u.role in ("director", "admin") or u.can_fix_cross
         is_course_teacher = topic.lecture.course.teacher_id == u.id
         # কোর্সের উস্তাদ না হয়েও এই কোর্সে নিজের শিক্ষার্থী থাকলে টিক দিতে পারেন
         has_own_student = topic.lecture.course.students.filter(teacher=u).exists()
         if not (is_admin or is_course_teacher or has_own_student):
-            return Response({"detail": "অনুমতি নেই"}, status=403)
+            return Response({"detail": "Permission denied"}, status=403)
 
         # ── কোন শিক্ষার্থীর জন্য? ──
         # student_id দিলে টিকটা কেবল সেই শিক্ষার্থীর জন্য বসে — অন্য কারও
@@ -819,10 +819,10 @@ class LectureViewSet(viewsets.ModelViewSet):
             try:
                 sid = int(sid)
             except (TypeError, ValueError):
-                return Response({"detail": "student_id অবৈধ"}, status=400)
+                return Response({"detail": "Invalid student_id"}, status=400)
             if not topic.lecture.course.students.filter(pk=sid).exists():
                 return Response(
-                    {"detail": "এই শিক্ষার্থী এই কোর্সে নেই"}, status=400)
+                    {"detail": "This student is not in this course"}, status=400)
             # ⚠️ উস্তাদ কেবল নিজের শিক্ষার্থীর জন্যই টিক দিতে পারবেন। এক
             # কোর্সে একাধিক উস্তাদ থাকায় এটা না থাকলে একজন উস্তাদ অন্যজনের
             # শিক্ষার্থীর হিসাবে টিক দিয়ে ফেলতে পারতেন।
@@ -830,11 +830,11 @@ class LectureViewSet(viewsets.ModelViewSet):
                 pk=sid, teacher_id=u.id
             ).exists():
                 return Response(
-                    {"detail": "এই শিক্ষার্থী আপনার কাছে পড়ে না"}, status=403)
+                    {"detail": "This student does not study with you"}, status=403)
             row, _ = TopicCoverage.objects.get_or_create(topic=topic, student_id=sid)
             if row.covered == "missed" and not is_admin:
                 return Response(
-                    {"detail": "লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করতে পারবেন।"},
+                    {"detail": "Only an admin or director can clear the red cross."},
                     status=403)
             row.covered = new
             row.marked_by = u
@@ -846,7 +846,7 @@ class LectureViewSet(viewsets.ModelViewSet):
                 LectureTopicSerializer(topic, context={"student_id": sid}).data)
 
         if topic.covered == "missed" and not is_admin:
-            return Response({"detail": "লাল ক্রস কেবল এডমিন/পরিচালক ঠিক করতে পারবেন।"}, status=403)
+            return Response({"detail": "Only an admin or director can clear the red cross."}, status=403)
         topic.covered = new
         topic.marked_by = u
         topic.marked_at = timezone.now()
@@ -1056,16 +1056,16 @@ def _assert_session_participant(s, user):
         # নিজের কোনো শিক্ষার্থী এই ক্লাসে থাকলেও তিনি এই ক্লাসের উস্তাদ —
         # এক কোর্সে একাধিক উস্তাদ থাকলে এটাই আসল সূত্র
         if user.id not in allowed and not s.students.filter(teacher=user).exists():
-            raise PermissionDenied("এই ক্লাসের উস্তাদ আপনি নন")
+            raise PermissionDenied("You are not the teacher of this class")
     elif user.role in ("student", "trial"):
         if user.role == "trial" and user.trial_expired:
-            raise PermissionDenied("আপনার ট্রায়ালের মেয়াদ শেষ হয়েছে")
+            raise PermissionDenied("Your trial period has ended")
         # ট্রায়াল অতিথিও ঠিক শিক্ষার্থীর মতোই — এই ক্লাসের তালিকায় থাকলে
         # জয়েন করতে পারবেন, না থাকলে নয়
         if not s.students.filter(pk=user.id).exists():
-            raise PermissionDenied("এই ক্লাসে আপনি যুক্ত নন")
+            raise PermissionDenied("You are not enrolled in this class")
     else:
-        raise PermissionDenied("শুধু ক্লাসের উস্তাদ বা শিক্ষার্থীই জয়েন করতে পারবেন")
+        raise PermissionDenied("Only the class teacher or its students can join")
 
 
 # হাজিরার হিসাবে যাঁদের "শিক্ষার্থী" ধরা হয়। ট্রায়াল অতিথিও ক্লাসে বসেন,
@@ -1190,7 +1190,7 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         if "status" in self.request.data and self.request.user.role != "director":
             is_today = serializer.instance.date == timezone.localtime().date()
             if not is_today:
-                raise PermissionDenied("আজকের ক্লাস ছাড়া অন্য কোনো ক্লাসের স্ট্যাটাস বদলানো কেবল পরিচালকের এখতিয়ার")
+                raise PermissionDenied("Only the director may change the status of a class other than today's")
         was = serializer.instance.status
         obj = serializer.save()
         # "সম্পন্ন" চিহ্নিত করাও ক্লাস শেষ করার সমান — উস্তাদ "ক্লাস শেষ করুন"
@@ -1263,7 +1263,7 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         try:
             att.minutes += max(0, int(add))
         except (TypeError, ValueError):
-            return Response({"error": "minutes আবশ্যক"}, status=400)
+            return Response({"error": "'minutes' is required"}, status=400)
         att.save(update_fields=["minutes"])
         return Response(AttendanceSerializer(att).data)
 
@@ -1329,7 +1329,7 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         marked_present=True দিয়ে Attendance তৈরি হয়, তাই মাসিক ক্লাস গণনায় ওঠে।"""
         s = self.get_object()
         if s.status != "postponed":
-            return Response({"error": "শুধু স্থগিত ক্লাসই এভাবে সম্পন্ন করা যাবে।"}, status=400)
+            return Response({"error": "Only a postponed class can be completed this way."}, status=400)
         s.status = "done"
         s.save(update_fields=["status"])
         teacher_name = s.teacher.name_bn if s.teacher_id and s.teacher else ""
@@ -1360,7 +1360,7 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         s = self.get_object()
         mode = request.data.get("mode")
         if mode not in dict(ClassSession.JOIN_MODES):
-            return Response({"error": "mode হতে হবে auto/join/rejoin"}, status=400)
+            return Response({"error": "'mode' must be auto/join/rejoin"}, status=400)
         s.join_mode_override = mode
         s.save(update_fields=["join_mode_override"])
         return Response({"join_mode_override": s.join_mode_override})
@@ -1401,7 +1401,7 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
             and u.id not in allowed
             and not s_obj.students.filter(teacher=u).exists()
         ):
-            raise PermissionDenied("কেবল এই ক্লাসের উস্তাদ ক্লাস শেষ করতে পারবেন")
+            raise PermissionDenied("Only this class's teacher can end the class")
         # রিজয়েন খোলা আছে কিনা — এটাই বলে দেয় আমরা কোন পর্বে আছি
         first_part = s_obj.join_mode_override != "rejoin"
         # উস্তাদের বাটন কখনোই ক্লাসকে "সম্পন্ন" করে না — সেটা কর্তৃপক্ষের কাজ
@@ -1433,7 +1433,7 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
             and u.id not in allowed_teachers
             and not s.students.filter(teacher=u).exists()
         ):
-            raise PermissionDenied("কেবল এই ক্লাসের উস্তাদ রিজয়েন চালু করতে পারবেন")
+            raise PermissionDenied("Only this class's teacher can enable rejoin")
         s.join_mode_override = "rejoin"
         s.save(update_fields=["join_mode_override"])
         return Response({"rejoin_active": True})
@@ -1498,7 +1498,7 @@ class AssignmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         if self.request.user.role == "student":
-            raise PermissionDenied("স্টুডেন্ট অ্যাসাইনমেন্ট বানাতে পারে না")
+            raise PermissionDenied("Students cannot create assignments")
         serializer.save(teacher=self.request.user)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
@@ -1651,11 +1651,11 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
         amount = request.data.get("amount")
         method = request.data.get("method", "cash")  # FeePayment.METHODS কোড ("bkash"/"nagad"/"bank"/"cash"/"other")
         if not student_id or not month_label or not amount:
-            return Response({"error": "student_id, month_label, amount আবশ্যক"}, status=400)
+            return Response({"error": "'student_id', 'month_label' and 'amount' are required"}, status=400)
         try:
             student = User.objects.get(pk=student_id, role="student")
         except User.DoesNotExist:
-            return Response({"error": "স্টুডেন্ট পাওয়া যায়নি"}, status=404)
+            return Response({"error": "Student not found"}, status=404)
         pay = FeePayment.objects.create(
             student=student, amount=amount, month_label=month_label,
             method=method, status="verified",
@@ -1669,7 +1669,7 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
         user_id = request.data.get("user_id")
         month_label = request.data.get("month_label")
         if not user_id or not month_label:
-            return Response({"error": "user_id ও month_label আবশ্যক"}, status=400)
+            return Response({"error": "'user_id' and 'month_label' are required"}, status=400)
         # ⚠️ আগে .delete() করা হতো — রেকর্ডটাই মুছে যেত। ফলে পরে বোঝার কোনো
         # উপায় থাকত না কেন বকেয়া নেই, আর পর্দায় "পরিশোধিত ✔" দেখাত, যদিও
         # টাকা আসেনি। এখন চিহ্নিত করে রাখা হয় — "মওকুফ" ও "পরিশোধিত"
@@ -1872,20 +1872,20 @@ class LessonProgressViewSet(viewsets.ModelViewSet):
         অন্য উস্তাদের শিক্ষার্থীর নামে সারি বানিয়ে ফেলতে পারতেন।"""
         d = serializer.validated_data
         if not self._may_mark(self.request.user, d["lesson"], d["student"]):
-            raise PermissionDenied("এটি আপনার দারস বা শিক্ষার্থী নয়")
+            raise PermissionDenied("This is not your lesson or student")
         serializer.save(updated_by=self.request.user)
 
     def perform_update(self, serializer):
         # সরাসরি PATCH করেও যেন অন্যের রেকর্ড বদলানো না যায়
         row = serializer.instance
         if not self._may_mark(self.request.user, row.lesson, row.student):
-            raise PermissionDenied("এটি আপনার দারস বা শিক্ষার্থী নয়")
+            raise PermissionDenied("This is not your lesson or student")
         serializer.save(updated_by=self.request.user)
 
     def perform_destroy(self, instance):
         if not self._may_mark(self.request.user, instance.lesson,
                               instance.student):
-            raise PermissionDenied("এটি আপনার দারস বা শিক্ষার্থী নয়")
+            raise PermissionDenied("This is not your lesson or student")
         instance.delete()
 
     @action(detail=False, methods=["post"])
@@ -1898,16 +1898,16 @@ class LessonProgressViewSet(viewsets.ModelViewSet):
         lesson = _by_pk(Lesson, request.data.get("lesson"))
         student = _by_pk(User, request.data.get("student"))
         if not lesson or not student:
-            return Response({"error": "শিক্ষার্থী বা দারসটি পাওয়া যায়নি"},
+            return Response({"error": "Student or lesson not found"},
                             status=400)
         u = request.user
         if not self._may_mark(u, lesson, student):
-            raise PermissionDenied("এটি আপনার দারস বা শিক্ষার্থী নয়")
+            raise PermissionDenied("This is not your lesson or student")
 
         status_in = request.data.get("status")
         valid = dict(LessonProgress.Status.choices)
         if status_in and status_in not in valid:
-            return Response({"error": "অবস্থাটি চেনা গেল না"}, status=400)
+            return Response({"error": "Unrecognised status"}, status=400)
 
         row, made = LessonProgress.objects.get_or_create(
             student=student, lesson=lesson)
@@ -1923,7 +1923,7 @@ class LessonProgressViewSet(viewsets.ModelViewSet):
             try:
                 row.last_step = max(0, int(request.data.get("last_step") or 0))
             except (TypeError, ValueError):
-                return Response({"error": "ধাপের নম্বরটি সংখ্যা হতে হবে"},
+                return Response({"error": "The step number must be a number"},
                                 status=400)
         if "note" in request.data:
             row.note = str(request.data.get("note") or "")[:2000]
@@ -2027,26 +2027,26 @@ class LessonViewSet(viewsets.ModelViewSet):
         key = str(request.data.get("which") or "").strip()
         if key not in SAMPLES:
             return Response(
-                {"error": "কোন নমুনা তা বেছে দিন: " + ", ".join(SAMPLES)},
+                {"error": "Please choose which sample:" + ", ".join(SAMPLES)},
                 status=400)
         course = _by_pk(Course, request.data.get("course"))
         if not course:
-            return Response({"error": "কোর্সটি পাওয়া যায়নি"}, status=400)
+            return Response({"error": "Course not found"}, status=400)
         # replace=True হলে পুরনো ধাপগুলো মুছে নতুন লেখা বসে; দারসের সারিটি
         # থেকেই যায়, তাই শিক্ষার্থীদের অগ্রগতি হারায় না
         # topic দিলে নমুনাটি ওই টপিকের স্ক্রিপ্ট হিসেবেই বসে
         topic = _by_pk(LectureTopic, request.data.get("topic"))
         if request.data.get("topic") and not topic:
-            return Response({"error": "টপিকটি পাওয়া যায়নি"}, status=400)
+            return Response({"error": "Topic not found"}, status=400)
         if topic and topic.lecture.course_id != course.id:
-            return Response({"error": "টপিকটি এই কোর্সের নয়"}, status=400)
+            return Response({"error": "This topic does not belong to this course"}, status=400)
         # lesson দিলে ঠিক ওই স্ক্রিপ্টটির উপরেই নতুন লেখা বসে — পরিচালক
         # শিরোনাম বদলে থাকলেও যেন বদলানোর বদলে নকল তৈরি না হয়
         target = _by_pk(Lesson, request.data.get("lesson"))
         if request.data.get("lesson") and not target:
-            return Response({"error": "স্ক্রিপ্টটি পাওয়া যায়নি"}, status=404)
+            return Response({"error": "Script not found"}, status=404)
         if target and target.course_id != course.id:
-            return Response({"error": "স্ক্রিপ্টটি এই কোর্সের নয়"}, status=400)
+            return Response({"error": "This script does not belong to this course"}, status=400)
         lesson, existed = create_sample(
             Lesson, LessonStep, StepSlide, course, key,
             replace=bool(request.data.get("replace")), topic=topic,
@@ -2080,13 +2080,13 @@ class LessonViewSet(viewsets.ModelViewSet):
         lesson = self.get_object()
         if not lesson.topic_id:
             return Response(
-                {"error": "এই স্ক্রিপ্টটি দারস পরিকল্পনার কোনো টপিকের সাথে "
-                          "যুক্ত নয় — আগে টপিক বেছে দিন।"}, status=400)
+                {"error": "This script is not linked to any lecture-plan "
+                          "topic — please choose a topic first."}, status=400)
         html = summary_html(lesson)
         if not html:
             return Response(
-                {"error": "স্লাইডে দেখানোর মতো কিছু নেই — আগে ধাপগুলোর "
-                          "পর্দা সাজিয়ে নিন।"}, status=400)
+                {"error": "There is nothing to show on the slides — please "
+                          "set up the step screens first."}, status=400)
         topic = lesson.topic
         had = bool((topic.content or "").strip())
         topic.content = html
@@ -2119,7 +2119,7 @@ class LessonViewSet(viewsets.ModelViewSet):
         age_from = age("age_from", src.age_from)
         age_to = age("age_to", src.age_to)
         if age_from is None or age_to is None or age_from > age_to:
-            return Response({"error": "বয়সসীমাটি ঠিক নেই (৩ থেকে ২৫)"},
+            return Response({"error": "The age range is invalid (3 to 25)"},
                             status=400)
 
         title = str(request.data.get("title") or "").strip()[:200]
@@ -2200,22 +2200,22 @@ class LessonStepViewSet(viewsets.ModelViewSet):
         """
         ids = request.data.get("ids")
         if not isinstance(ids, list) or not ids:
-            return Response({"error": "ধাপের তালিকা পাঠানো হয়নি"}, status=400)
+            return Response({"error": "No step list was sent"}, status=400)
         if len(set(ids)) != len(ids):
-            return Response({"error": "একই ধাপ একাধিকবার এসেছে"}, status=400)
+            return Response({"error": "The same step appears more than once"}, status=400)
 
         rows = {x.id: x for x in LessonStep.objects.filter(id__in=ids)}
         if len(rows) != len(ids):
-            return Response({"error": "কিছু ধাপ পাওয়া যায়নি"}, status=400)
+            return Response({"error": "Some steps were not found"}, status=400)
 
         lessons = {x.lesson_id for x in rows.values()}
         if len(lessons) != 1:
-            return Response({"error": "সব ধাপ একই দারসের হতে হবে"}, status=400)
+            return Response({"error": "All steps must belong to the same lesson"}, status=400)
 
         others = list(LessonStep.objects.filter(lesson_id=lessons.pop())
                       .exclude(id__in=ids).order_by("order", "id"))
         if any(x.is_active for x in others):
-            return Response({"error": "দারসের সব ধাপ তালিকায় থাকতে হবে"},
+            return Response({"error": "Every step of the lesson must be in the list"},
                             status=400)
 
         changed = []
@@ -2365,16 +2365,16 @@ class TrialReportViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         student = serializer.validated_data.get("student")
         if not student or student.role != "trial":
-            raise PermissionDenied("রিপোর্ট কেবল ট্রায়াল অতিথির জন্য")
+            raise PermissionDenied("Reports are only for trial guests")
         if not self._may_write(student):
-            raise PermissionDenied("এই অতিথির উস্তাদ আপনি নন")
+            raise PermissionDenied("You are not this guest's teacher")
         serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):
         obj = serializer.instance
         u = self.request.user
         if not self._may_write(obj.student):
-            raise PermissionDenied("এই রিপোর্ট সম্পাদনার অনুমতি নেই")
+            raise PermissionDenied("You do not have permission to edit this report")
         # যাচাই হয়ে যাওয়ার পর উস্তাদ আর বদলাতে পারবেন না — কর্তৃপক্ষ পারবেন
         if obj.reviewed_at and u.role not in ("director", "admin"):
             raise PermissionDenied(
@@ -2383,7 +2383,7 @@ class TrialReportViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         if self.request.user.role != "director":
-            raise PermissionDenied("রিপোর্ট মোছা কেবল পরিচালকের এখতিয়ার")
+            raise PermissionDenied("Only the director may delete reports")
         instance.delete()
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdminLevel])
@@ -2401,7 +2401,7 @@ class TrialReportViewSet(viewsets.ModelViewSet):
         r = self.get_object()
         if not r.reviewed_at:
             return Response(
-                {"error": "আগে যাচাই করুন — যাচাই ছাড়া রিপোর্ট পাঠানো যাবে না"},
+                {"error": "Please verify first — a report cannot be sent unverified"},
                 status=400)
         if not r.sent_at:
             r.sent_at = timezone.now()
@@ -2418,10 +2418,10 @@ class TrialReportViewSet(viewsets.ModelViewSet):
         r = self.get_object()
         if not r.reviewed_at:
             return Response(
-                {"error": "আগে মূল্যায়ন যাচাই করুন — যাচাই ছাড়া প্রস্তাব যাবে না"},
+                {"error": "Please verify the evaluation first — no offer can be sent unverified"},
                 status=400)
         if not r.recommended_course_id:
-            return Response({"error": "প্রস্তাবে কোন কোর্স তা বেছে দিন"}, status=400)
+            return Response({"error": "Please choose which course the offer is for"}, status=400)
         if not r.offered_at:
             r.offered_at = timezone.now()
             r.save(update_fields=["offered_at"])
@@ -2438,9 +2438,9 @@ class TrialReportViewSet(viewsets.ModelViewSet):
         r = self.get_object()
         u = request.user
         if u.role != "trial" or r.student_id != u.id:
-            raise PermissionDenied("এটি আপনার প্রস্তাব নয়")
+            raise PermissionDenied("This is not your offer")
         if not r.offered_at:
-            return Response({"error": "এখনো কোনো প্রস্তাব পাঠানো হয়নি"}, status=400)
+            return Response({"error": "No offer has been sent yet"}, status=400)
         if r.accepted_at:
             return Response(self.get_serializer(r).data)  # দুবার চাপলেও একটাই আবেদন
         g = r.student
@@ -2487,10 +2487,10 @@ class TrialViewSet(viewsets.ModelViewSet):
         if d.get("admission"):
             adm = Admission.objects.filter(pk=d.get("admission")).first()
             if not adm:
-                return Response({"error": "আবেদনটি পাওয়া যায়নি"}, status=400)
+                return Response({"error": "Application not found"}, status=400)
         name = str(d.get("name") or d.get("name_bn") or (adm.name if adm else "")).strip()
         if not name:
-            return Response({"error": "নাম দিতে হবে"}, status=400)
+            return Response({"error": "A name is required"}, status=400)
 
         # কোর্স ও উস্তাদ — দেওয়া থাকলে সত্যিই আছে কিনা যাচাই করে নিই, নইলে
         # ভুল আইডিতে অ্যাকাউন্ট তৈরি হয়ে পরে খালি পর্দা দেখাত
@@ -2498,12 +2498,12 @@ class TrialViewSet(viewsets.ModelViewSet):
         if d.get("course"):
             course = Course.objects.filter(pk=d.get("course")).first()
             if not course:
-                return Response({"error": "কোর্সটি পাওয়া যায়নি"}, status=400)
+                return Response({"error": "Course not found"}, status=400)
         teacher = None
         if d.get("teacher"):
             teacher = User.objects.filter(pk=d.get("teacher"), role="teacher").first()
             if not teacher:
-                return Response({"error": "উস্তাদকে পাওয়া যায়নি"}, status=400)
+                return Response({"error": "Teacher not found"}, status=400)
 
         until = d.get("trial_until") or None
         if not until:
@@ -2554,11 +2554,11 @@ class TrialViewSet(viewsets.ModelViewSet):
         """
         u = self.get_object()
         if u.role != "trial":
-            return Response({"error": "ইনি ট্রায়াল অতিথি নন"}, status=400)
+            return Response({"error": "This person is not a trial guest"}, status=400)
         course = Course.objects.filter(pk=request.data.get("course")).first() \
             or u.trial_course
         if not course:
-            return Response({"error": "কোন কোর্সে ভর্তি হবেন তা বেছে দিন"}, status=400)
+            return Response({"error": "Please choose which course they will be admitted to"}, status=400)
         _convert_trial_to_student(u, course, request.data.get("fee"))
         # তাঁর ট্রায়াল থেকে আসা আবেদনটিও (থাকলে) গৃহীত হিসেবে বন্ধ করে দিই,
         # নইলে "ভর্তি আবেদন" পর্দায় ঝুলে থেকে দ্বিতীয়বার গ্রহণের সুযোগ দিত
@@ -2580,21 +2580,21 @@ class TrialViewSet(viewsets.ModelViewSet):
         if raw_name is not None:
             name = str(raw_name).strip()
             if not name:
-                return Response({"error": "আইডি খালি রাখা যাবে না"}, status=400)
+                return Response({"error": "The ID cannot be empty"}, status=400)
             if len(name) > 150:
-                return Response({"error": "আইডি অনেক লম্বা হয়ে গেছে"}, status=400)
+                return Response({"error": "The ID is too long"}, status=400)
             # ⚠️ বড়-ছোট হাতের অক্ষর আলাদা করে দেখা হয় না — নইলে "ayesha" ও
             # "Ayesha" দুটো আলাদা অ্যাকাউন্ট হয়ে লগইনে গোলমাল বাধত
             if User.objects.filter(username__iexact=name).exclude(pk=u.pk).exists():
-                return Response({"error": "এই আইডিতে আগে থেকেই একটি অ্যাকাউন্ট আছে"},
+                return Response({"error": "An account with this ID already exists"},
                                 status=400)
             try:
                 for v in User._meta.get_field("username").validators:
                     v(name)
             except DjangoValidationError:
                 return Response(
-                    {"error": "আইডিতে ফাঁকা জায়গা বা বিশেষ চিহ্ন চলবে না — "
-                              "অক্ষর, সংখ্যা এবং @ . + - _ ব্যবহার করুন"},
+                    {"error": "The ID cannot contain spaces or special characters — "
+                              "use letters, digits and @ . + - _"},
                     status=400)
             u.username = name
             fields.append("username")
@@ -2603,14 +2603,14 @@ class TrialViewSet(viewsets.ModelViewSet):
         if raw_pw is not None:
             pw = str(raw_pw).strip()
             if len(pw) < 4:
-                return Response({"error": "পাসওয়ার্ড অন্তত ৪ অক্ষরের হতে হবে"},
+                return Response({"error": "The password must be at least 4 characters"},
                                 status=400)
             u.set_password(pw)
             u.plain_password = pw  # পরিচালক পরিবারকে জানাবেন
             fields += ["password", "plain_password"]
 
         if not fields:
-            return Response({"error": "আইডি বা পাসওয়ার্ড — অন্তত একটি দিন"},
+            return Response({"error": "Provide at least one of ID or password"},
                             status=400)
         u.save(update_fields=fields)
         return Response(self.get_serializer(u).data)
@@ -2624,7 +2624,7 @@ class TrialViewSet(viewsets.ModelViewSet):
         সংযোগটি খালি হয়ে যায়।
         """
         if request.user.role != "director":
-            raise PermissionDenied("ট্রায়াল অ্যাকাউন্ট মোছা কেবল পরিচালকের এখতিয়ার")
+            raise PermissionDenied("Only the director may delete a trial account")
         return super().destroy(request, *args, **kwargs)
 
 
@@ -2664,7 +2664,7 @@ class AdmissionViewSet(viewsets.ModelViewSet):
         a = self.get_object()
         phone = "".join(ch for ch in a.contact if ch.isdigit())
         if len(phone) < 8:
-            return Response({"error": "এই আবেদনে বৈধ WhatsApp নম্বর নেই"}, status=400)
+            return Response({"error": "This application has no valid WhatsApp number"}, status=400)
         if a.kind == "trial":
             text = (f"আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম, তারবিয়াতুল কুরআন একাডেমিতে "
                     f"\"{a.course_name or 'কুরআন'}\" কোর্সের ফ্রি ট্রায়াল ক্লাসের জন্য {a.name}-এর অনুরোধটি "
@@ -2701,7 +2701,7 @@ class AdmissionViewSet(viewsets.ModelViewSet):
             # ডাবল-ক্লিক/দুইবার রিকোয়েস্ট গেলে দ্বিতীয়বার আরেকটা ডুপ্লিকেট
             # স্টুডেন্ট অ্যাকাউন্ট তৈরি হওয়া ঠেকাতে — একবার গ্রহণ হয়ে গেলে
             # আর দ্বিতীয়বার গ্রহণ করা যাবে না
-            return Response({"error": "এই আবেদনটি ইতিমধ্যে সিদ্ধান্ত নেওয়া হয়ে গেছে"}, status=400)
+            return Response({"error": "This application has already been decided"}, status=400)
         # ট্রায়াল থেকে আসা আবেদন — ওই অতিথিকেই ভর্তি করা হয়, নতুন অ্যাকাউন্ট
         # নয়। তাই তাঁর আইডি-পাসওয়ার্ড আগেরটাই থাকে এবং ট্রায়ালের হাজিরা ও
         # রিপোর্ট হারায় না।
@@ -2865,7 +2865,7 @@ class StudentRemarkViewSet(viewsets.ModelViewSet):
         if u.role == "teacher":
             student = serializer.validated_data.get("student")
             if not Course.objects.filter(teacher=u, students=student).exists():
-                raise PermissionDenied("আপনি এই স্টুডেন্টের টিচার নন")
+                raise PermissionDenied("You are not this student's teacher")
         serializer.save(teacher=u)
 
 
@@ -2988,9 +2988,9 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         """
         text = (request.data.get("text") or "").strip()
         if not text:
-            return Response({"error": "বার্তা লিখুন"}, status=400)
+            return Response({"error": "Please write a message"}, status=400)
         if len(text) > 500:
-            return Response({"error": "বার্তা ৫০০ অক্ষরের মধ্যে রাখুন"}, status=400)
+            return Response({"error": "Please keep the message within 500 characters"}, status=400)
         # নিষ্ক্রিয় (ছেড়ে যাওয়া) ব্যবহারকারীদের বাদ — তাঁদের পাঠিয়ে লাভ নেই
         users = list(User.objects.filter(is_active=True))
         notify(text, users)
@@ -3010,7 +3010,7 @@ class PushSubscriptionViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         endpoint = request.data.get("endpoint")
         if not endpoint:
-            return Response({"error": "endpoint আবশ্যক"}, status=400)
+            return Response({"error": "'endpoint' is required"}, status=400)
         sub, _ = PushSubscription.objects.update_or_create(
             endpoint=endpoint,
             defaults={
@@ -3075,11 +3075,11 @@ class DailyAmalDayView(APIView):
         student_id = request.query_params.get("student") or request.data.get("student_id")
         if request.user.role in ("director", "admin", "teacher"):
             if not student_id:
-                return None, Response({"error": "student আইডি দিন"}, status=400)
+                return None, Response({"error": "Please provide a student ID"}, status=400)
             try:
                 return User.objects.get(id=student_id, role="student"), None
             except User.DoesNotExist:
-                return None, Response({"error": "শিক্ষার্থী পাওয়া যায়নি"}, status=404)
+                return None, Response({"error": "Student not found"}, status=404)
         return request.user, None
 
     def get(self, request):
@@ -3105,7 +3105,7 @@ class DailyAmalDayView(APIView):
             return err
         date_str = request.data.get("date")
         if not date_str:
-            return Response({"error": "date দিন"}, status=400)
+            return Response({"error": "Please provide a date"}, status=400)
         # শিক্ষার্থী কেবল আজ বা গত ৭ দিন সংরক্ষণ করতে পারবেন
         if request.user.role == "student":
             from datetime import date as dt, timedelta
@@ -3113,9 +3113,9 @@ class DailyAmalDayView(APIView):
             try:
                 entry_date = dt.fromisoformat(date_str)
             except ValueError:
-                return Response({"error": "তারিখ বৈধ নয়"}, status=400)
+                return Response({"error": "Invalid date"}, status=400)
             if entry_date > today or entry_date < today - timedelta(days=7):
-                return Response({"error": "কেবল আজ ও গত ৭ দিনের আমল সংরক্ষণ করা যাবে"}, status=400)
+                return Response({"error": "Only today's and the last 7 days' deeds can be saved"}, status=400)
         entries = request.data.get("entries", {})  # {item_id: value}
         for item_id, value in entries.items():
             try:
@@ -3137,11 +3137,11 @@ class DailyAmalWeekView(APIView):
         student_id = request.query_params.get("student")
         if request.user.role in ("director", "admin", "teacher"):
             if not student_id:
-                return Response({"error": "student আইডি দিন"}, status=400)
+                return Response({"error": "Please provide a student ID"}, status=400)
             try:
                 student = User.objects.get(id=student_id, role="student")
             except User.DoesNotExist:
-                return Response({"error": "শিক্ষার্থী পাওয়া যায়নি"}, status=404)
+                return Response({"error": "Student not found"}, status=404)
         else:
             student = request.user
 
@@ -3226,12 +3226,12 @@ class Salah3DModelView(APIView):
         import os
         from django.http import FileResponse
         if getattr(request.user, "role", "") not in ("director", "admin", "teacher", "student"):
-            return Response({"error": "অনুমতি নেই"}, status=403)
+            return Response({"error": "Permission denied"}, status=403)
         if kind not in ("boy", "girl"):
-            return Response({"error": "পাওয়া যায়নি"}, status=404)
+            return Response({"error": "Not found"}, status=404)
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "salah3d", f"{kind}.glb")
         if not os.path.exists(path):
-            return Response({"error": "মডেল এখনো রাখা হয়নি"}, status=404)
+            return Response({"error": "The model has not been stored yet"}, status=404)
         res = FileResponse(open(path, "rb"), content_type="model/gltf-binary")
         res["Cache-Control"] = "private, max-age=86400"
         res["Content-Disposition"] = "inline"
@@ -3249,12 +3249,12 @@ class Salah3DTurnView(APIView):
         import os, re
         from django.http import FileResponse
         if getattr(request.user, "role", "") not in ("director", "admin", "teacher", "student"):
-            return Response({"error": "অনুমতি নেই"}, status=403)
+            return Response({"error": "Permission denied"}, status=403)
         if not re.fullmatch(r"[a-z0-9-]{3,40}", key or ""):
-            return Response({"error": "পাওয়া যায়নি"}, status=404)
+            return Response({"error": "Not found"}, status=404)
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "salah3d", self.folder, f"{key}.jpg")
         if not os.path.exists(path):
-            return Response({"error": "পাওয়া যায়নি"}, status=404)
+            return Response({"error": "Not found"}, status=404)
         res = FileResponse(open(path, "rb"), content_type="image/jpeg")
         res["Cache-Control"] = "private, max-age=86400"
         return res
@@ -3290,20 +3290,20 @@ class LectureDeckViewSet(viewsets.ViewSet):
     def create(self, request):
         from .models import LectureDeck, Course
         if request.user.role != "director":
-            return Response({"error": "শুধু পরিচালক আপলোড করতে পারেন"}, status=403)
+            return Response({"error": "Only the director can upload"}, status=403)
         f = request.FILES.get("file")
         if not f or not (f.name or "").lower().endswith(".pptx"):
-            return Response({"error": "একটি .pptx ফাইল দিন"}, status=400)
+            return Response({"error": "Please provide a .pptx file"}, status=400)
         if f.size > 40 * 1024 * 1024:
-            return Response({"error": "ফাইলটি ৪০ MB-এর বেশি"}, status=400)
+            return Response({"error": "The file is larger than 40 MB"}, status=400)
         blob = f.read()
         if blob[:2] != b"PK":
-            return Response({"error": "ফাইলটি সঠিক .pptx নয়"}, status=400)
+            return Response({"error": "The file is not a valid .pptx"}, status=400)
         try:
             course = Course.objects.get(id=request.data.get("course"))
             no = int(request.data.get("no") or 1)
         except Exception:
-            return Response({"error": "কোর্স ও লেকচার নম্বর দিন"}, status=400)
+            return Response({"error": "Please provide a course and lecture number"}, status=400)
         title = (request.data.get("title") or "").strip()[:200]
         d, _ = LectureDeck.objects.update_or_create(
             course=course, no=no,
@@ -3314,11 +3314,11 @@ class LectureDeckViewSet(viewsets.ViewSet):
         from django.http import HttpResponse
         from .models import LectureDeck
         if request.user.role not in self.STAFF:
-            return Response({"error": "অনুমতি নেই"}, status=403)
+            return Response({"error": "Permission denied"}, status=403)
         try:
             d = LectureDeck.objects.get(pk=pk)
         except LectureDeck.DoesNotExist:
-            return Response({"error": "পাওয়া যায়নি"}, status=404)
+            return Response({"error": "Not found"}, status=404)
         res = HttpResponse(bytes(d.data), content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation")
         res["Cache-Control"] = "private, no-store"
         return res
@@ -3326,6 +3326,6 @@ class LectureDeckViewSet(viewsets.ViewSet):
     def destroy(self, request, pk=None):
         from .models import LectureDeck
         if request.user.role != "director":
-            return Response({"error": "শুধু পরিচালক মুছতে পারেন"}, status=403)
+            return Response({"error": "Only the director can delete"}, status=403)
         LectureDeck.objects.filter(pk=pk).delete()
         return Response(status=204)
