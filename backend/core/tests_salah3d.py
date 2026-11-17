@@ -149,8 +149,11 @@ class LectureDeckFindTests(TestCase):
         from .models import Course, LectureDeck
         mk = lambda n, r, **k: User.objects.create_user(username=n, password="x12345678", role=r, name_bn=n, **k)
         t, s, x = mk("t", "teacher"), mk("s", "student"), mk("x", "student")
-        c = Course.objects.create(name="Easy Noorani Qaida", teacher=t, lectures_released=99)
+        c = Course.objects.create(name="Easy Noorani Qaida", teacher=t)
         c.students.add(s)
+        from .models import LectureApproval
+        for n in (1, 2):
+            LectureApproval.objects.create(course=c, student=s, no=n)
         td = LectureDeck.objects.create(course=c, no=3, data=b"PKT")
         sd = LectureDeck.objects.create(course=c, no=3, data=b"PKS", audience="student")
         a = APIClient()
@@ -200,13 +203,13 @@ class TeacherSeesOnlyOwnStudentsTests(TestCase):
 
 
 class LectureApprovalSettingsTests(TestCase):
-    """সব লেকচার দেখা যায় কিন্তু তালা: অনুমোদনের বাইরে, আর আগের লেকচার পুরো টিক না হলে। পরিচালক/এডমিনের তালা নেই।"""
-    def test_locks(self):
-        from .models import Course, Lecture, LectureTopic, LessonSection, LectureDeck
+    """সব লেকচার দেখা যায়; লেকচার ১ খোলা; উস্তাদ সব টপিক টিক দিলে এডমিনের অপেক্ষা-তালিকায়; অনুমোদন দিলে তবেই পরেরটা খোলে।"""
+    def test_flow(self):
+        from .models import Course, Lecture, LectureTopic, LessonSection, LectureDeck, DeckPlay
         mk = lambda n, r, **k: User.objects.create_user(username=n, password="x12345678", role=r, name_bn=n, **k)
         d, a, t = mk("d", "director"), mk("a", "admin"), mk("t", "teacher")
         s = mk("s", "student", teacher=t)
-        c = Course.objects.create(name="Easy Noorani Qaida", teacher=t, lectures_released=2)
+        c = Course.objects.create(name="Easy Noorani Qaida", teacher=t)
         c.students.add(s)
         lec = Lecture.objects.create(course=c, no=1, title="h")
         tops = {}
@@ -218,27 +221,27 @@ class LectureApprovalSettingsTests(TestCase):
         locks = lambda q="": {x["name"]: x["lock"] for x in api.get(f"/api/lesson-sections/?course={c.id}{q}").json()}
         api.force_authenticate(s)
         L = locks()
-        self.assertEqual(sorted(L), ["Lecture 1", "Lecture 2", "Lecture 3"])          # সব দেখা যায়
-        self.assertIsNone(L["Lecture 1"])
-        self.assertIn("Finish Lecture 1", L["Lecture 2"])
-        self.assertIn("not open yet", L["Lecture 3"])
-        self.assertEqual(api.get(f"/api/decks/find/?course={c.id}&no=2").status_code, 403)
+        self.assertEqual(sorted(L), ["Lecture 1", "Lecture 2", "Lecture 3"])
+        self.assertIsNone(L["Lecture 1"]); self.assertIsNotNone(L["Lecture 2"]); self.assertIsNotNone(L["Lecture 3"])
         api.force_authenticate(t)
+        play = api.post("/api/deck-plays/", {"course": c.id, "no": 1, "part": "Qaida", "student": s.id}, format="json").json()["id"]
+        self.assertEqual(api.patch("/api/deck-plays/", {"id": play, "seconds": 600}, format="json").status_code, 200)
         self.assertEqual(api.post("/api/lectures/mark_topic/", {"topic_id": tops[2].id, "covered": "covered", "student_id": s.id}, format="json").status_code, 403)
         self.assertEqual(api.post("/api/lectures/mark_topic/", {"topic_id": tops[1].id, "covered": "covered", "student_id": s.id}, format="json").status_code, 200)
-        self.assertIsNone(locks(f"&student={s.id}")["Lecture 2"])                       # আগেরটা টিক → খুলে গেল
-        self.assertEqual(api.get(f"/api/decks/find/?course={c.id}&no=2&student={s.id}").status_code, 200)
-        api.force_authenticate(s)
-        self.assertEqual(api.get(f"/api/decks/find/?course={c.id}&no=2").status_code, 200)
+        self.assertIsNotNone(locks(f"&student={s.id}")["Lecture 2"])             # টিক দিলেও অনুমোদন ছাড়া খোলে না
+        self.assertEqual(api.get("/api/lecture-approvals/").status_code, 403)
         api.force_authenticate(a)
+        p = api.get("/api/lecture-approvals/").json()["pending"]
+        self.assertEqual((len(p), p[0]["no"], p[0]["slides_total_min"]), (1, 1, 10.0))
+        self.assertEqual(api.post("/api/lecture-approvals/", {"course": c.id, "student": s.id, "no": 1}, format="json").status_code, 200)
+        self.assertEqual(api.get("/api/lecture-approvals/").json()["pending"], [])
+        api.force_authenticate(s)
+        L = locks()
+        self.assertIsNone(L["Lecture 2"]); self.assertIsNotNone(L["Lecture 3"])
+        self.assertEqual(api.get(f"/api/decks/find/?course={c.id}&no=2").status_code, 200)
+        self.assertEqual(api.get(f"/api/decks/find/?course={c.id}&no=3").status_code, 403)
+        api.force_authenticate(d)
         self.assertTrue(all(v is None for v in locks().values()))
-        self.assertEqual(api.post("/api/app-settings/", {"key": "sequential_unlock", "enabled": False}, format="json").status_code, 403)
-        self.assertEqual(api.post("/api/app-settings/lectures/", {"course": c.id, "released": 3}, format="json").status_code, 200)
-        api.force_authenticate(d)
-        api.post("/api/app-settings/", {"key": "sequential_unlock", "enabled": False}, format="json")
+        api.post("/api/app-settings/", {"key": "lecture_lock", "enabled": False}, format="json")
         api.force_authenticate(s)
-        self.assertIsNone(locks()["Lecture 3"])                                          # ধারাবাহিক তালা বন্ধ + অনুমোদিত
-        api.force_authenticate(d)
-        api.post("/api/app-settings/", {"key": "student_slides", "enabled": False}, format="json")
-        api.force_authenticate(s)
-        self.assertEqual(api.get(f"/api/decks/find/?course={c.id}&no=1").status_code, 403)
+        self.assertIsNone(locks()["Lecture 3"])

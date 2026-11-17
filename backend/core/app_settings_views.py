@@ -1,15 +1,27 @@
-"""পরিচালকের Settings পাতা: চালু/বন্ধ বোতাম (শুধু পরিচালক বদলান) আর কোর্সপ্রতি অনুমোদিত লেকচার (পরিচালক ও এডমিন)।"""
+"""পরিচালকের Settings (চালু/বন্ধ), লেকচারের তালা, এডমিনের লেকচার অনুমোদন আর স্লাইড চালানোর সময়।
+
+তালার নিয়ম (মালিকের নির্দেশ, ২০২৬-১১-১৭): সব লেকচার উস্তাদ ও শিক্ষার্থীর সামনে থাকে, লেকচার ১ খোলা, বাকিগুলো 🔒।
+লেকচার N খোলে শুধু যখন পরিচালক/এডমিন এই শিক্ষার্থীর লেকচার N-1 অনুমোদন দেন (LectureApproval)। অনুমোদনের আগে
+তাঁরা দেখেন — উস্তাদ সব টপিক টিক দিয়েছেন কিনা, সেই দিনগুলোর ক্লাসে কে কত মিনিট ছিলেন, স্লাইড কত মিনিট চলেছে।
+পরিচালক/এডমিনের জন্য কোনো তালা নেই।
+"""
 import re
 
-from django.db.models import Max
+from django.db.models import Sum
+from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .app_flags import FLAGS, all_flags
-from .models import AppSetting, Course, LectureDeck, LessonSection
+from .app_flags import FLAGS, all_flags, flag
+from .models import (AppSetting, Attendance, Course, DeckPlay, LectureApproval, LectureTopic, TopicCoverage, User)
 
 ADMINS = ("director", "admin")
+
+
+def lecture_no(name):
+    m = re.match(r"^\s*Lecture\s*(\d+)", name or "", re.I)
+    return int(m.group(1)) if m else None
 
 
 class AppSettingsView(APIView):
@@ -30,78 +42,124 @@ class AppSettingsView(APIView):
         return self.get(request)
 
 
-class LectureReleaseView(APIView):
-    """কোর্সপ্রতি কয়টা লেকচার খোলা — পরিচালক ও এডমিন দেখেন ও বদলান।"""
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        if request.user.role not in ADMINS:
-            return Response({"error": "Permission denied"}, status=403)
-        pat = re.compile(r"^\s*Lecture\s*(\d+)", re.I)
-        rows = []
-        for c in Course.objects.filter(is_active=True).order_by("name"):
-            plan = [int(m.group(1)) for n in LessonSection.objects.filter(course=c, is_trial=False).values_list("name", flat=True) if (m := pat.match(n))]
-            decks = LectureDeck.objects.filter(course=c).aggregate(m=Max("no"))["m"] or 0
-            rows.append({"id": c.id, "name": c.name, "released": c.lectures_released,
-                         "plan_lectures": max(plan) if plan else 0, "slides_up_to": decks})
-        return Response(rows)
-
-    def post(self, request):
-        if request.user.role not in ADMINS:
-            return Response({"error": "Permission denied"}, status=403)
-        try:
-            c = Course.objects.get(pk=request.data.get("course"))
-            n = max(0, int(request.data.get("released")))
-        except Exception:
-            return Response({"error": "Please give a course and a number"}, status=400)
-        c.lectures_released = n
-        c.save(update_fields=["lectures_released"])
-        return self.get(request)
-
-
-def lecture_no(name):
-    m = re.match(r"^\s*Lecture\s*(\d+)", name or "", re.I)
-    return int(m.group(1)) if m else None
-
-
-def is_released(user, course, no):
-    """এই ব্যবহারকারী কি এই কোর্সের লেকচার no দেখতে পারেন? (লেকচার অনুমোদন চালু থাকলে)"""
-    from .app_flags import flag
-    if getattr(user, "role", None) in ADMINS or no is None or not flag("lecture_approval"):
-        return True
-    return no <= (course.lectures_released or 0)
-
-
-def _done_lectures(course, sid, cache=None):
-    """এই শিক্ষার্থীর কোন লেকচারগুলো এখনো পুরো টিক হয়নি (ফেরত দেয় অসম্পূর্ণগুলো) ("Lecture N"-এর সব টপিক ✔ বা ✘)। cache: একই অনুরোধে বারবার না গোনা।"""
-    from .models import LectureTopic, TopicCoverage
-    key = (course.id, sid)
+def _approved(course, sid, cache=None):
+    """এই শিক্ষার্থীর কোন লেকচারগুলো অনুমোদিত (সেট)।"""
+    key = ("ok", course.id, sid)
     if cache is not None and key in cache:
         return cache[key]
+    s = set(LectureApproval.objects.filter(course=course, student_id=sid).values_list("no", flat=True)) if sid else set()
+    if cache is not None:
+        cache[key] = s
+    return s
+
+
+def lecture_lock(user, course, no, student_id=None, cache=None):
+    """তালার কারণ (লেখা) বা None।"""
+    if getattr(user, "role", None) in ADMINS or no is None or no <= 1 or not flag("lecture_lock"):
+        return None
+    sid = user.id if user.role == "student" else student_id
+    if not sid:
+        return None   # উস্তাদ কোনো শিক্ষার্থী বাছাই করেননি — তালা শিক্ষার্থী ধরে, তাই এখানে আটকানো হয় না
+    if (no - 1) in _approved(course, sid, cache):
+        return None
+    return f"Lecture {no - 1} must be finished and approved first"
+
+
+def _lecture_topics(course):
     rows = {}
     for t in LectureTopic.objects.filter(section__course=course, section__is_trial=False).select_related("section"):
         n = lecture_no(t.section.name)
         if n is not None:
             rows.setdefault(n, []).append(t)
-    marked = dict(TopicCoverage.objects.filter(topic__section__course=course, student_id=sid).values_list("topic_id", "covered")) if sid else {}
-    done = {n for n, ts in rows.items() if all(marked.get(t.id, t.covered) in ("covered", "missed") for t in ts)}
-    pending = set(rows) - done          # প্ল্যানে আছে কিন্তু পুরো টিক হয়নি — টপিকই নেই এমন লেকচার আটকায় না
-    if cache is not None:
-        cache[key] = pending
-    return pending
+    return rows
 
 
-def lecture_lock(user, course, no, student_id=None, cache=None):
-    """তালার কারণ (লেখা) বা None। পরিচালক/এডমিনের জন্য কখনো তালা নেই।
-    ১) লেকচার অনুমোদন চালু আর no > অনুমোদিত সংখ্যা → এখনো খোলা হয়নি।
-    ২) ধারাবাহিক তালা চালু আর আগের লেকচারের সব টপিক এই শিক্ষার্থীর জন্য টিক হয়নি → আগেরটা শেষ করো।"""
-    from .app_flags import flag
-    if getattr(user, "role", None) in ADMINS or no is None:
-        return None
-    if flag("lecture_approval") and no > (course.lectures_released or 0):
-        return f"Lecture {no} is not open yet"
-    if no > 1 and flag("sequential_unlock"):
-        sid = user.id if user.role == "student" else student_id
-        if sid and (no - 1) in _done_lectures(course, sid, cache):
-            return f"Finish Lecture {no - 1} first — tick all its topics"
-    return None
+class LectureApprovalsView(APIView):
+    """অনুমোদনের অপেক্ষায় থাকা লেকচার (উস্তাদ সব টপিক টিক দিয়েছেন, এখনো অনুমোদন হয়নি) আর সাম্প্রতিক অনুমোদন।"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role not in ADMINS:
+            return Response({"error": "Permission denied"}, status=403)
+        pending = []
+        for course in Course.objects.filter(is_active=True).order_by("name"):
+            lect = _lecture_topics(course)
+            if not lect:
+                continue
+            for st in course.students.filter(role="student", is_active=True).select_related("teacher").order_by("name_bn"):
+                ok = _approved(course, st.id)
+                marks = {r["topic_id"]: r for r in TopicCoverage.objects.filter(topic__section__course=course, student=st)
+                         .values("topic_id", "covered", "marked_at", "marked_by__name_bn")}
+                for n in sorted(lect):
+                    if n in ok or (n > 1 and (n - 1) not in ok):
+                        continue          # অনুমোদিত, বা এখনো খোলেইনি
+                    ts = lect[n]
+                    status = [(marks.get(t.id) or {}).get("covered", t.covered) for t in ts]
+                    if not all(x in ("covered", "missed") for x in status):
+                        break             # এই শিক্ষার্থী এখনো এই লেকচার শেষ করেনি
+                    days = sorted({timezone.localtime(m["marked_at"]).date() for t in ts if (m := marks.get(t.id)) and m.get("marked_at")})
+                    classes = []
+                    for a in Attendance.objects.filter(user=st, class_date__in=days).select_related("session").order_by("class_date"):
+                        tmin = None
+                        if a.session_id and a.session.teacher_id:
+                            tmin = Attendance.objects.filter(session_id=a.session_id, user_id=a.session.teacher_id).aggregate(m=Sum("minutes"))["m"]
+                        classes.append({"date": a.class_date, "student_min": a.minutes, "teacher_min": tmin,
+                                        "planned_min": a.session.duration_min if a.session_id else None})
+                    plays = list(DeckPlay.objects.filter(course=course, no=n, student=st).values("part")
+                                 .annotate(sec=Sum("seconds")).order_by("part"))
+                    teacher = st.teacher if st.teacher_id else course.teacher
+                    pending.append({
+                        "course": course.id, "course_name": course.name, "student": st.id, "student_name": st.name_bn,
+                        "teacher_name": getattr(teacher, "name_bn", ""),
+                        "no": n, "topics": [{"text": t.text, "covered": s} for t, s in zip(ts, status)],
+                        "ticked_by": sorted({m.get("marked_by__name_bn") for t in ts if (m := marks.get(t.id)) and m.get("marked_by__name_bn")}),
+                        "days": days, "classes": classes,
+                        "slides": [{"part": p["part"] or "—", "minutes": round(p["sec"] / 60, 1)} for p in plays],
+                        "slides_total_min": round(sum(p["sec"] for p in plays) / 60, 1),
+                    })
+                    break
+        recent = [{"course_name": a.course.name, "student_name": a.student.name_bn, "no": a.no, "by": getattr(a.approved_by, "name_bn", ""),
+                   "at": a.approved_at} for a in LectureApproval.objects.select_related("course", "student", "approved_by")[:30]]
+        return Response({"pending": pending, "recent": recent})
+
+    def post(self, request):
+        if request.user.role not in ADMINS:
+            return Response({"error": "Permission denied"}, status=403)
+        try:
+            course = Course.objects.get(pk=request.data.get("course"))
+            st = course.students.get(pk=request.data.get("student"))
+            no = int(request.data.get("no"))
+        except Exception:
+            return Response({"error": "Please give the course, student and lecture"}, status=400)
+        LectureApproval.objects.get_or_create(course=course, student=st, no=no, defaults={"approved_by": request.user})
+        return self.get(request)
+
+
+class DeckPlayView(APIView):
+    """উস্তাদ/এডমিন স্লাইড চালালে সময় রাখা: POST শুরু → {id}; PATCH {id, seconds} প্রতি আধা মিনিটে ও বন্ধ করলে।"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        u = request.user
+        if u.role not in ("director", "admin", "teacher"):
+            return Response({"id": None})
+        try:
+            course = Course.objects.get(pk=request.data.get("course"))
+            no = int(request.data.get("no"))
+        except Exception:
+            return Response({"error": "Bad request"}, status=400)
+        sid = request.data.get("student")
+        st = User.objects.filter(pk=sid, role="student").first() if sid else None
+        p = DeckPlay.objects.create(course=course, no=no, part=str(request.data.get("part") or "")[:40], teacher=u, student=st)
+        return Response({"id": p.id}, status=201)
+
+    def patch(self, request):
+        p = DeckPlay.objects.filter(pk=request.data.get("id"), teacher=request.user).first()
+        if not p:
+            return Response({"error": "Not found"}, status=404)
+        try:
+            p.seconds = max(p.seconds, min(int(request.data.get("seconds") or 0), 4 * 3600))
+        except (TypeError, ValueError):
+            return Response({"error": "Bad seconds"}, status=400)
+        p.save(update_fields=["seconds"])
+        return Response({"ok": True})

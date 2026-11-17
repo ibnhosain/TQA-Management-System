@@ -620,6 +620,12 @@ export const deckApi = {
 export const settingsApi = {
   get: () => request("/app-settings/"),
   set: (key, enabled) => request("/app-settings/", { method: "POST", body: { key, enabled } }),
-  lectures: () => request("/app-settings/lectures/"),
-  release: (course, released) => request("/app-settings/lectures/", { method: "POST", body: { course, released } }),
+};
+
+/* এডমিনের লেকচার অনুমোদন আর স্লাইড চালানোর সময় */
+export const approvalsApi = {
+  list: () => request("/lecture-approvals/"),
+  approve: (course, student, no) => request("/lecture-approvals/", { method: "POST", body: { course, student, no } }),
+  playStart: (course, no, part, student) => request("/deck-plays/", { method: "POST", body: { course, no, part, student } }),
+  playTick: (id, seconds) => request("/deck-plays/", { method: "PATCH", body: { id, seconds } }),
 };

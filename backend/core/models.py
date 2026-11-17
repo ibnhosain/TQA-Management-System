@@ -120,6 +120,33 @@ class Course(models.Model):
         return self.name
 
 
+class DeckPlay(models.Model):
+    """উস্তাদ কোন লেকচারের কোন অংশের স্লাইড কতক্ষণ চালালেন (কার জন্য) — এডমিন অনুমোদনের আগে দেখেন।"""
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="deck_plays")
+    no = models.PositiveIntegerField()
+    part = models.CharField(max_length=40, blank=True, default="")      # Qaida / Surah / … (টপিকের বই)
+    teacher = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="deck_plays")
+    student = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    started_at = models.DateTimeField(auto_now_add=True)
+    seconds = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["-started_at"]
+
+
+class LectureApproval(models.Model):
+    """এডমিন/পরিচালক দেখে অনুমোদন দিলেন: এই শিক্ষার্থীর লেকচার no ঠিকমতো শেষ — তাই লেকচার no+1 খোলে।"""
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="lecture_approvals")
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="lecture_approvals")
+    no = models.PositiveIntegerField()
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="+")
+    approved_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("course", "student", "no")]
+        ordering = ["-approved_at"]
+
+
 class AppSetting(models.Model):
     """পরিচালকের Settings পাতার চালু/বন্ধ বোতাম। কী-গুলোর তালিকা ও ডিফল্ট: core/app_flags.py"""
     key = models.CharField(max_length=60, unique=True)

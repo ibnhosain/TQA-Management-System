@@ -4,7 +4,8 @@ import { createPortal } from "react-dom";
 import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
 // লেকচারের স্লাইড — Lesson Plan-এ টপিকে ক্লিক করলে চলে (আলাদা মেনু নেই; মালিকের নির্দেশ ২০২৬-১১-১৭)
 const PlanPlayer = lazy(() => import("./decks/PlanPlayer.jsx"));
-const SettingsView = lazy(() => import("./decks/SettingsView.jsx"));   // পরিচালকের Settings — চালু/বন্ধ, লেকচার অনুমোদন
+const SettingsView = lazy(() => import("./decks/SettingsView.jsx"));   // পরিচালকের Settings — চালু/বন্ধ
+const ApprovalsView = lazy(() => import("./decks/ApprovalsView.jsx")); // এডমিন দেখে অনুমোদন দিলে পরের লেকচার খোলে
 const HomeworkNotes = lazy(() => import("./decks/HomeworkNotes.jsx"));  // শিক্ষার্থীর Homework — স্লাইডের নোট
 
 
@@ -23868,7 +23869,15 @@ const NAV = [
     roles: ["director", "admin", "teacher", "student"],
   },
   {
-    // পরিচালকের Settings: চালু/বন্ধ বোতাম (শুধু পরিচালক) আর লেকচার অনুমোদন (পরিচালক ও এডমিন)
+    // উস্তাদ সব টপিক টিক দিলে এখানে আসে; ক্লাস ও স্লাইডের সময় দেখে অনুমোদন দিলে পরের লেকচার খোলে
+    id: "approvals",
+    icon: "✅",
+    label: "Lecture Approvals",
+    labelEn: "Lecture Approvals",
+    roles: ["director", "admin"],
+  },
+  {
+    // পরিচালকের Settings: চালু/বন্ধ বোতাম (শুধু পরিচালক বদলান)
     id: "settings",
     icon: "⚙️",
     label: "Settings",
@@ -25583,6 +25592,9 @@ export default function App() {
           {view === "postponed" && <PostponedClassesView user={user} />}
           {view === "routine" && <RoutineView {...props} />}
           {view === "lectures" && <LecturePlan {...props} />}
+          {view === "approvals" && (user.role === "director" || user.role === "admin") && (
+            <Suspense fallback={<div style={{ padding: 20 }}>Loading…</div>}><ApprovalsView /></Suspense>
+          )}
           {view === "settings" && (user.role === "director" || user.role === "admin") && (
             <Suspense fallback={<div style={{ padding: 20 }}>Loading…</div>}><SettingsView user={user} /></Suspense>
           )}

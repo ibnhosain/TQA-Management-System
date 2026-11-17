@@ -199,7 +199,7 @@ class LectureDeckViewSet(viewsets.ViewSet):
         except (TypeError, ValueError):
             return Response({"error": "Invalid data"}, status=400)
         texts = [str(x).strip()[:300] for x in request.data.get("deck_topics") or [] if str(x).strip()]
-        sids = [s for s in sids if s in allowed]
+        sids = [s for s in sids if s in allowed and not lecture_lock(u, d.course, d.no, s)]   # তালা দেওয়া লেকচারে টিক নয়
         if not sids:
             return Response({"error": "Please choose at least one student"}, status=400)
         chosen = [t for t in plan if t.id in tids]
