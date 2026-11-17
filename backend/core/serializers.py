@@ -366,9 +366,30 @@ class AcademicBookSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+def _own_student_ids(context, course):
+    """🔒 এই অনুরোধকারী কোন শিক্ষার্থীদের তথ্য দেখতে পারেন — None = সবাই (পরিচালক/এডমিন)।
+    উস্তাদ: নিজের শিক্ষার্থী (উস্তাদ বসানো নেই এমন হলে কোর্সের উস্তাদের); শিক্ষার্থী: কেবল নিজে।"""
+    u = getattr((context or {}).get("request"), "user", None)
+    role = getattr(u, "role", None)
+    if role in ("director", "admin") or u is None:
+        return None
+    if role == "teacher":
+        mine_course = course is not None and course.teacher_id == u.id
+        return {s.id for s in course.students.all() if s.teacher_id == u.id or (s.teacher_id is None and mine_course)} if course is not None else set()
+    return {u.id}
+
+
 class CourseSerializer(serializers.ModelSerializer):
     teacher_name = serializers.CharField(source="teacher.name_bn", read_only=True)
     student_count = serializers.SerializerMethodField()
+
+    def to_representation(self, obj):
+        d = super().to_representation(obj)
+        ids = _own_student_ids(self.context, obj)
+        if ids is not None:
+            d["students"] = [x for x in d.get("students") or [] if x in ids]
+            d["student_count"] = len(d["students"])
+        return d
 
     class Meta:
         model = Course
@@ -747,6 +768,13 @@ class AssignmentSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, required=False)
     submissions = SubmissionSerializer(many=True, read_only=True)
 
+    def to_representation(self, obj):   # 🔒 অন্য উস্তাদের শিক্ষার্থীর জমা দেখা যায় না
+        d = super().to_representation(obj)
+        ids = _own_student_ids(self.context, getattr(obj, "course", None))
+        if ids is not None:
+            d["submissions"] = [x for x in d.get("submissions") or [] if x.get("student") in ids]
+        return d
+
     class Meta:
         model = Assignment
         fields = "__all__"
@@ -763,6 +791,14 @@ class ExamSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, required=False)
     submissions = SubmissionSerializer(many=True, read_only=True)
     results = serializers.SerializerMethodField()
+
+    def to_representation(self, obj):   # 🔒 অন্য উস্তাদের শিক্ষার্থীর জমা ও নম্বর দেখা যায় না
+        d = super().to_representation(obj)
+        ids = _own_student_ids(self.context, getattr(obj, "course", None))
+        if ids is not None:
+            d["submissions"] = [x for x in d.get("submissions") or [] if x.get("student") in ids]
+            d["results"] = {k: v for k, v in (d.get("results") or {}).items() if int(k) in ids}
+        return d
 
     class Meta:
         model = Exam

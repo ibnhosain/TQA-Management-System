@@ -628,15 +628,8 @@ class LessonSectionViewSet(viewsets.ModelViewSet):
         return qs
 
     def _student_id(self):
-        """কোন শিক্ষার্থীর টিক দেখানো হবে — LectureViewSet-এর মতোই নিয়ম।"""
-        u = self.request.user
-        if u.role == "student":
-            return u.id
-        raw = self.request.query_params.get("student")
-        try:
-            return int(raw) if raw else None
-        except (TypeError, ValueError):
-            return None
+        """কোন শিক্ষার্থীর টিক দেখানো হবে — উস্তাদ শুধু নিজের শিক্ষার্থীর।"""
+        return _teacher_student_param(self)
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -767,14 +760,7 @@ class LectureViewSet(viewsets.ModelViewSet):
         শিক্ষার্থী নিজে দেখলে সবসময় নিজেরটাই — অন্য কারও টিক সে দেখতে
         পাবে না। উস্তাদ/এডমিন ?student=<id> দিয়ে বেছে নেন।
         """
-        u = self.request.user
-        if u.role == "student":
-            return u.id
-        raw = self.request.query_params.get("student")
-        try:
-            return int(raw) if raw else None
-        except (TypeError, ValueError):
-            return None
+        return _teacher_student_param(self)
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -826,9 +812,7 @@ class LectureViewSet(viewsets.ModelViewSet):
             # ⚠️ উস্তাদ কেবল নিজের শিক্ষার্থীর জন্যই টিক দিতে পারবেন। এক
             # কোর্সে একাধিক উস্তাদ থাকায় এটা না থাকলে একজন উস্তাদ অন্যজনের
             # শিক্ষার্থীর হিসাবে টিক দিয়ে ফেলতে পারতেন।
-            if not is_admin and not User.objects.filter(
-                pk=sid, teacher_id=u.id
-            ).exists():
+            if u.role not in ("director", "admin") and not _is_own_student(u, sid, topic.lecture.course):
                 return Response(
                     {"detail": "This student does not study with you"}, status=403)
             row, _ = TopicCoverage.objects.get_or_create(topic=topic, student_id=sid)
@@ -845,8 +829,9 @@ class LectureViewSet(viewsets.ModelViewSet):
             return Response(
                 LectureTopicSerializer(topic, context={"student_id": sid}).data)
 
-        if topic.covered == "missed" and not is_admin:
-            return Response({"detail": "Only an admin or director can clear the red cross."}, status=403)
+        # 🔒 সবার জন্য একসাথে টিক কেবল এডমিন-লেভেল — উস্তাদ শুধু নিজের শিক্ষার্থী বেছে টিক দেন
+        if not is_admin:
+            return Response({"detail": "Please choose your student first."}, status=400)
         topic.covered = new
         topic.marked_by = u
         topic.marked_at = timezone.now()
@@ -1032,6 +1017,40 @@ def _q_course_teacher_or_own_lesson(u):
     """ধাপ → দারস → কোর্স — উস্তাদ নিজের কোর্সের ধাপগুলোই দেখেন।"""
     return (Q(lesson__course__teacher=u)
             | Q(lesson__course__students__teacher=u))
+
+
+def _is_own_student(u, student, course=None):
+    """🔒 এই শিক্ষার্থী কি এই উস্তাদের কাছে পড়ে? (মালিকের নিয়ম, ২০২৬-১১-১৭: উস্তাদ নিজের শিক্ষার্থী ছাড়া
+    একই কোর্সের অন্য কারও কোনো তথ্য দেখবেন না, টিক/নম্বরও দেবেন না।)
+    কারও উস্তাদ বসানো না থাকলে তিনি কোর্সের উস্তাদের — কোর্সের শিক্ষার্থী-তালিকার নিয়মের সাথে মিল রেখে।"""
+    if u.role in ("director", "admin"):
+        return True
+    if u.role != "teacher" or student is None:
+        return False
+    sid = getattr(student, "pk", student)
+    st = User.objects.filter(pk=sid).values("teacher_id").first()
+    if not st:
+        return False
+    if st["teacher_id"] == u.id:
+        return True
+    return st["teacher_id"] is None and course is not None and course.teacher_id == u.id
+
+
+def _teacher_student_param(view):
+    """?student=<id> — উস্তাদ কেবল নিজের শিক্ষার্থীর জন্য; অন্য কারও আইডি দিলে কারও নিজস্ব টিক দেখানো হয় না (-1)।"""
+    u = view.request.user
+    if u.role == "student":
+        return u.id
+    raw = view.request.query_params.get("student")
+    try:
+        sid = int(raw) if raw else None
+    except (TypeError, ValueError):
+        return None
+    if sid and u.role == "teacher":
+        course = Course.objects.filter(pk=view.request.query_params.get("course") or 0).first()
+        if not _is_own_student(u, sid, course):
+            return -1
+    return sid
 
 
 def _q_course_teacher_or_own(u):
@@ -1512,6 +1531,8 @@ class AssignmentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], permission_classes=[IsTeacherOrAdminLevel])
     def grade(self, request, pk=None):  # মার্ক দিলেই স্টুডেন্ট পোর্টালে
         sub = Submission.objects.get(pk=request.data["submission_id"], assignment=self.get_object())
+        if not _is_own_student(request.user, sub.student, sub.assignment.course):
+            raise PermissionDenied("This student does not study with you")
         sub.mark = min(int(request.data["mark"]), self.get_object().total_marks)
         sub.marked_by = request.user
         sub.save()
@@ -1555,6 +1576,8 @@ class ExamViewSet(viewsets.ModelViewSet):
     def grade(self, request, pk=None):  # জমা মূল্যায়ন → ফলাফলেও অটো
         exam = self.get_object()
         sub = Submission.objects.get(pk=request.data["submission_id"], exam=exam)
+        if not _is_own_student(request.user, sub.student, exam.course):
+            raise PermissionDenied("This student does not study with you")
         sub.mark = min(int(request.data["mark"]), exam.total_marks)
         sub.marked_by = request.user
         sub.save()
@@ -1566,6 +1589,8 @@ class ExamViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], permission_classes=[IsTeacherOrAdminLevel])
     def direct_mark(self, request, pk=None):  # লাইভ টেস্টের সরাসরি মার্ক এন্ট্রি
         exam = self.get_object()
+        if not _is_own_student(request.user, request.data.get("student_id"), exam.course):
+            raise PermissionDenied("This student does not study with you")
         r, _ = ExamResult.objects.update_or_create(
             exam=exam, student_id=request.data["student_id"],
             defaults={"mark": min(int(request.data["mark"]), exam.total_marks)})
@@ -3076,6 +3101,8 @@ class DailyAmalDayView(APIView):
         if request.user.role in ("director", "admin", "teacher"):
             if not student_id:
                 return None, Response({"error": "Please provide a student ID"}, status=400)
+            if request.user.role == "teacher" and not User.objects.filter(pk=student_id, teacher=request.user).exists():
+                return None, Response({"error": "This student does not study with you"}, status=403)
             try:
                 return User.objects.get(id=student_id, role="student"), None
             except User.DoesNotExist:
@@ -3138,6 +3165,8 @@ class DailyAmalWeekView(APIView):
         if request.user.role in ("director", "admin", "teacher"):
             if not student_id:
                 return Response({"error": "Please provide a student ID"}, status=400)
+            if request.user.role == "teacher" and not User.objects.filter(pk=student_id, teacher=request.user).exists():
+                return Response({"error": "This student does not study with you"}, status=403)
             try:
                 student = User.objects.get(id=student_id, role="student")
             except User.DoesNotExist:

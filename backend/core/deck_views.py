@@ -37,9 +37,11 @@ def _can_see(u, course_id):
 
 def _students_for(u, course):
     """স্লাইড শেষে কার জন্য টিক দেওয়া যাবে — এডমিন-লেভেল: কোর্সের সবাই; উস্তাদ: নিজের শিক্ষার্থী।"""
+    from django.db.models import Q
     qs = course.students.filter(role="student", is_active=True)
-    if u.role not in ADMINS and not getattr(u, "can_fix_cross", False):
-        qs = qs.filter(teacher=u)
+    if u.role not in ADMINS:   # 🔒 উস্তাদ শুধু নিজের শিক্ষার্থী (উস্তাদ বসানো নেই এমন হলে কোর্সের উস্তাদের)
+        own = Q(teacher=u) | (Q(teacher__isnull=True) if course.teacher_id == u.id else Q(pk__in=[]))
+        qs = qs.filter(own)
     return qs.order_by("name_bn")
 
 
@@ -185,7 +187,7 @@ class LectureDeckViewSet(viewsets.ViewSet):
         if not sids:
             return Response({"error": "Please choose at least one student"}, status=400)
         chosen = [t for t in plan if t.id in tids]
-        is_admin = u.role in ADMINS or getattr(u, "can_fix_cross", False)
+        is_admin = u.role in ADMINS or getattr(u, "can_fix_cross", False)   # লাল ক্রস সরানোর অনুমতি
         for sid in sids:
             for t in chosen:
                 row, _ = TopicCoverage.objects.get_or_create(topic=t, student_id=sid)

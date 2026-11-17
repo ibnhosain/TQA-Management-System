@@ -165,3 +165,35 @@ class LectureDeckFindTests(TestCase):
         a.force_authenticate(x)
         self.assertEqual(a.get(f"/api/decks/find/?course={c.id}&no=3").status_code, 403)
         self.assertEqual(a.get(f"/api/decks/{sd.id}/").status_code, 403)
+
+
+class TeacherSeesOnlyOwnStudentsTests(TestCase):
+    """🔒 একই কোর্সে দুই উস্তাদ: একজন অন্যজনের শিক্ষার্থীর কোনো তথ্য দেখেন না, টিক বা নম্বরও দেন না।"""
+    def test_privacy(self):
+        from .models import Course, Lecture, LectureTopic, LessonSection, Exam, ExamResult, TopicCoverage
+        mk = lambda n, r, **k: User.objects.create_user(username=n, password="x12345678", role=r, name_bn=n, **k)
+        t1, t2 = mk("t1", "teacher"), mk("t2", "teacher")
+        a1, a2, b1 = mk("a1", "student", teacher=t1), mk("a2", "student", teacher=t1), mk("b1", "student", teacher=t2)
+        c = Course.objects.create(name="Easy Noorani Qaida", teacher=t1)
+        c.students.add(a1, a2, b1)
+        lec = Lecture.objects.create(course=c, no=1, title="h")
+        tp = LectureTopic.objects.create(lecture=lec, section=LessonSection.objects.create(course=c, name="Lecture 1"), text="x")
+        import datetime
+        ex = Exam.objects.create(course=c, title="E", total_marks=10, date=datetime.date(2026, 11, 20))
+        ExamResult.objects.create(exam=ex, student=b1, mark=7)
+        api = APIClient()
+        api.force_authenticate(t2)
+        self.assertEqual(sorted(api.get(f"/api/courses/{c.id}/").json()["students"]), [b1.id])
+        self.assertEqual([r["id"] for r in api.get(f"/api/courses/{c.id}/students/").json()], [b1.id])
+        self.assertEqual(api.post("/api/lectures/mark_topic/", {"topic_id": tp.id, "covered": "covered", "student_id": a1.id}, format="json").status_code, 403)
+        self.assertEqual(api.post("/api/lectures/mark_topic/", {"topic_id": tp.id, "covered": "covered"}, format="json").status_code, 400)
+        self.assertEqual(api.post("/api/lectures/mark_topic/", {"topic_id": tp.id, "covered": "covered", "student_id": b1.id}, format="json").status_code, 200)
+        self.assertEqual(api.post(f"/api/exams/{ex.id}/direct_mark/", {"student_id": a1.id, "mark": 5}, format="json").status_code, 403)
+        api.force_authenticate(t1)
+        self.assertEqual(sorted(api.get(f"/api/courses/{c.id}/").json()["students"]), sorted([a1.id, a2.id]))
+        self.assertEqual(api.get(f"/api/exams/{ex.id}/").json()["results"], {})
+        TopicCoverage.objects.filter(student=b1).update(covered="covered")
+        rows = api.get(f"/api/lesson-sections/?course={c.id}&student={b1.id}").json()
+        self.assertTrue(all(t["covered"] != "covered" for s in rows for t in s["topics"]))
+        for s in (a1, a2):
+            self.assertEqual(api.post("/api/lectures/mark_topic/", {"topic_id": tp.id, "covered": "covered", "student_id": s.id}, format="json").status_code, 200)
