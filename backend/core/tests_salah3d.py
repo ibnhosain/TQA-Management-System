@@ -141,3 +141,27 @@ class EasyQaidaPlanSeedTests(TestCase):
         self.assertEqual(secs.count(), 67)
         self.assertEqual(LectureTopic.objects.filter(section__name="Lecture 1").count(), 5)
         self.assertEqual(len(CourseSyllabusSheet.objects.get(course=c).rows), 67)
+
+
+class LectureDeckFindTests(TestCase):
+    """টপিকে ক্লিক: উস্তাদ পান উস্তাদের স্লাইড, শিক্ষার্থী পায় নিজের স্লাইড; অন্য কোর্সের শিক্ষার্থী কিছুই পায় না।"""
+    def test_find(self):
+        from .models import Course, LectureDeck
+        mk = lambda n, r, **k: User.objects.create_user(username=n, password="x12345678", role=r, name_bn=n, **k)
+        t, s, x = mk("t", "teacher"), mk("s", "student"), mk("x", "student")
+        c = Course.objects.create(name="Easy Noorani Qaida", teacher=t)
+        c.students.add(s)
+        td = LectureDeck.objects.create(course=c, no=3, data=b"PKT")
+        sd = LectureDeck.objects.create(course=c, no=3, data=b"PKS", audience="student")
+        a = APIClient()
+        a.force_authenticate(t)
+        self.assertEqual(a.get(f"/api/decks/find/?course={c.id}&no=3").json()["id"], td.id)
+        self.assertEqual(a.get(f"/api/decks/find/?course={c.id}&no=4").status_code, 404)
+        a.force_authenticate(s)
+        r = a.get(f"/api/decks/find/?course={c.id}&no=3").json()
+        self.assertEqual(r["id"], sd.id)
+        self.assertEqual(a.get(f"/api/decks/{sd.id}/").content, b"PKS")
+        self.assertEqual(a.get(f"/api/decks/{td.id}/").status_code, 403)
+        a.force_authenticate(x)
+        self.assertEqual(a.get(f"/api/decks/find/?course={c.id}&no=3").status_code, 403)
+        self.assertEqual(a.get(f"/api/decks/{sd.id}/").status_code, 403)

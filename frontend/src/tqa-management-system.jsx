@@ -2,8 +2,8 @@
 // ভাসমান পর্দাটি উস্তাদের উইন্ডোর ভেতর থেকেই আঁকা হয় — তাই portal
 import { createPortal } from "react-dom";
 import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
-// লেকচারের স্লাইড — আলাদা অংশে, কেবল মেনু খুললে লোড হয়
-const DecksView = lazy(() => import("./decks/DecksView.jsx"));
+// লেকচারের স্লাইড — Lesson Plan-এ টপিকে ক্লিক করলে চলে (আলাদা মেনু নেই; মালিকের নির্দেশ ২০২৬-১১-১৭)
+const PlanPlayer = lazy(() => import("./decks/PlanPlayer.jsx"));
 const HomeworkNotes = lazy(() => import("./decks/HomeworkNotes.jsx"));  // শিক্ষার্থীর Homework — স্লাইডের নোট
 
 
@@ -5173,8 +5173,19 @@ function LecturePlan({ db, courses, user, refresh }) {
   const [trialTab, setTrialTab] = useState(false);
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [openTopics, setOpenTopics] = useState({});
-  const toggleOpen = (id) => setOpenTopics((o) => ({ ...o, [id]: !o[id] }));
+  // টপিকে ক্লিক → সেই হেডিংয়ের লেকচারের স্লাইড ("Lecture N")। টগল আর নেই।
+  // প্রতিটি টপিক স্লাইডের নিজের বইয়ের অংশটুকু চালায় (PowerPoint section) — টপিক ১ শেষে থামে, বাকিটা টপিক ২-এ …
+  const DECK_PART = { "Easy Noorani Qaida": "Qaida", "My First Surahs": "Surah", "Duas & Manners": "Duas & Manners",
+                      "My Salah Duas": "Salah Duas", "Arabic Writing": "Writing" };
+  const partOf = (tp) => DECK_PART[(tp.text || "").split(" — ")[0].trim()];
+  const [play, setPlay] = useState(null);   // { no, part, topicId }
+  const playLecture = (sec, tp) => {
+    const m = /lecture\s*(\d+)/i.exec(sec.name || "");
+    if (!m || trialTab) return notice("No slides for this heading.");
+    const key = partOf(tp);
+    setPlay({ no: Number(m[1]), topicId: tp.id,
+              part: key ? { key, label: (tp.text || "").split(" — ")[0], keys: (sec.topics || []).map(partOf).filter(Boolean) } : null });
+  };
 
   /* কার জন্য টিক দেওয়া/দেখা হচ্ছে। উস্তাদ ভুল করে একজনের হিসাবে অন্যজনের
      টপিকে টিক না দিয়ে ফেলেন — সেজন্য ঢোকার সাথে সাথেই পর্দা ঢেকে বাছাই। */
@@ -5712,15 +5723,15 @@ function LecturePlan({ db, courses, user, refresh }) {
                   return (
                     <div key={tp.id}>
                       <div
-                        onClick={() => toggleOpen(tp.id)}
-                        title={openTopics[tp.id] ? "Close" : "Open and read"}
+                        onClick={() => playLecture(sec, tp)}
+                        title="Play the slides"
                         style={{
                           cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
                           gap: 10,
                           padding: "9px 12px",
-                          borderRadius: openTopics[tp.id] ? "10px 10px 0 0" : 10,
+                          borderRadius: 10,
                           flexWrap: "wrap",
                           // todayPlanMode চালু থাকলে আজকের পাঠ হলে সোনালি, কভার হলে সবুজ, বাদ পড়লে লাল, বাকি থাকলে সাদা
                           background: todayPlanMode && isToday ? C.amberBg : isDone ? C.greenBg : isMissed ? C.redBg : "#fff",
@@ -5729,9 +5740,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                           }`,
                         }}
                       >
-                        <span style={{ color: C.emerald, fontWeight: 800, fontSize: 12, width: 12 }}>
-                          {openTopics[tp.id] ? "▾" : "▸"}
-                        </span>
+                        <span style={{ color: C.emerald, fontWeight: 800, fontSize: 13, width: 14 }}>▶</span>
                         <span
                           style={{
                             width: 22,
@@ -5813,36 +5822,6 @@ function LecturePlan({ db, courses, user, refresh }) {
                           </span>
                         )}
                       </div>
-                      {openTopics[tp.id] && (
-                        <div
-                          style={{
-                            border: `1px solid ${C.line}`,
-                            borderTop: "none",
-                            borderRadius: "0 0 10px 10px",
-                            padding: "10px 12px",
-                            fontSize: 13.5,
-                            lineHeight: 1.9,
-                            wordWrap: "break-word",
-                            background: "#fff",
-                          }}
-                        >
-                          {tp.content ? (
-                            /* সার্ভারে ঢোকার মুখেই ছেঁকে নেওয়া (safe_html) */
-                            <div
-                              className="tqaLessonBody"
-                              style={{ whiteSpace: /<[a-z]/i.test(tp.content) ? "normal" : "pre-wrap" }}
-                              dangerouslySetInnerHTML={{ __html: tp.content }}
-                            />
-                          ) : (
-                            <span style={{ color: C.muted, fontSize: 12.5 }}>
-                              {T(
-                                "— এই টপিকের ভেতরে এখনো কিছু লেখা হয়নি —",
-                                "— nothing has been written inside this topic yet —",
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      )}
                     </div>
                   );
                 })
@@ -5852,6 +5831,11 @@ function LecturePlan({ db, courses, user, refresh }) {
         ))}
       </div>
 
+      {play && (
+        <Suspense fallback={null}>
+          <PlanPlayer course={sel} no={play.no} part={play.part} topicId={play.topicId} student={user.role === "student"} onClose={() => { setPlay(null); load(); }} />
+        </Suspense>
+      )}
       {/* ── টপিক সম্পাদনার মডাল ── */}
       {edit && (
         <Modal title={`✏️ ${edit.name} — টপিক`} onClose={() => setEdit(null)} wide>
@@ -23878,17 +23862,6 @@ const NAV = [
     roles: ["director", "admin", "teacher", "student"],
   },
   {
-    // দারস স্ক্রিপ্ট — লেকচার প্ল্যানের পাশেই, কারণ দুটো একসাথে কাজে লাগে।
-    // শিক্ষার্থী ও ট্রায়াল অতিথি এখনো নয় — ক্লাসের পর নিজে দেখার ব্যবস্থা
-    // ধাপ ৫-এ আসবে, তখনও কেবল পর্দাটুকু, উস্তাদের স্ক্রিপ্ট নয়।
-    // মালিকের নির্দেশ (২০২৬-১১-১৭): পুরনো দারস স্ক্রিপ্ট বাদ — শুধু .pptx আপলোড ও অ্যাপের ভেতরে চালানো
-    id: "lessons",
-    icon: "🎞️",
-    label: "Lecture Slides",
-    labelEn: "Lecture Slides",
-    roles: ["director", "admin", "teacher"],
-  },
-  {
     id: "syllabus",
     icon: "📜",
     label: "Syllabus",
@@ -25596,9 +25569,6 @@ export default function App() {
           {view === "postponed" && <PostponedClassesView user={user} />}
           {view === "routine" && <RoutineView {...props} />}
           {view === "lectures" && <LecturePlan {...props} />}
-          {view === "lessons" && user.role !== "student" && user.role !== "trial" && (
-            <Suspense fallback={<div style={{ padding: 20 }}>Loading…</div>}><DecksView user={user} courses={courses} /></Suspense>
-          )}
           {view === "syllabus" && <SyllabusView {...props} />}
           {view === "attendance" && <AttendanceView {...props} />}
           {view === "assignments" && <AssignmentsView {...props} />}

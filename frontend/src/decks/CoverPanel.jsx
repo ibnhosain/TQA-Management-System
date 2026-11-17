@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { deckApi } from "../api";
 
-export default function CoverPanel({ deck, onBack, onDone }) {
+export default function CoverPanel({ deck, preselect, onBack, onDone }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
   const [studs, setStuds] = useState({});
@@ -15,6 +15,7 @@ export default function CoverPanel({ deck, onBack, onDone }) {
     deckApi.cover(deck.id).then((d) => {
       setData(d);
       setStuds(Object.fromEntries(d.students.map((s) => [s.id, true])));
+      if (preselect && d.plan_topics.some((t) => t.id === preselect)) setTops({ ["p" + preselect]: true });   // এইমাত্র চালানো টপিক
     }).catch((e) => setErr(e?.data?.error || e?.message || "Could not load"));
   }, [deck.id]);
 
@@ -46,7 +47,7 @@ export default function CoverPanel({ deck, onBack, onDone }) {
   return (
     <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", inset: 0, background: "rgba(5,20,12,.72)", display: "grid", placeItems: "center", zIndex: 5 }}>
       <div style={box}>
-        <h2 style={{ margin: "0 0 4px", color: "#1A5C3A" }}>🎉 Lecture {deck.no} finished</h2>
+        <h2 style={{ margin: "0 0 4px", color: "#1A5C3A" }}>🎉 {preselect ? "This part is finished" : `Lecture ${deck.no} finished`}</h2>
         <div style={{ color: "#5B6B62", marginBottom: 14 }}>Tick the topics you covered today.</div>
         {!data && !err && <div>Loading…</div>}
         {data && (

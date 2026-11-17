@@ -613,4 +613,5 @@ export const deckApi = {
   cover: (id) => request(`/decks/${id}/cover/`),
   saveCover: (id, body) => request(`/decks/${id}/cover/`, { method: "POST", body }),
   notes: () => request("/decks/notes/"),
+  find: (course, no) => request(`/decks/find/?course=${course}&no=${no}`),   // Lesson Plan-এ টপিকে ক্লিক
 };

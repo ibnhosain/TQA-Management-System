@@ -85,6 +85,14 @@ export async function loadPptx(buffer) {
   // slide order
   const order = deepAll(pres, "sldId").map((s) => presRels[attr(s, "r:id") || s.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id")]?.target).filter(Boolean);
 
+  // PowerPoint sections (p14:section) → [{ name, start }] — Lesson Plan-এর প্রতিটি টপিক তার বইয়ের অংশটুকুই চালায়
+  const R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const mainIds = deepAll(pres, "sldId").filter((s) => attr(s, "r:id") || s.getAttributeNS(R_NS, "id")).map((s) => attr(s, "id"));
+  const sections = deepAll(pres, "section").map((sec) => {
+    const first = deepAll(sec, "sldId")[0];
+    return { name: attr(sec, "name", ""), start: first ? mainIds.indexOf(attr(first, "id")) : -1 };
+  }).filter((x) => x.start >= 0);
+
   const parts = {};
   async function part(p) {
     if (!parts[p]) parts[p] = { doc: parse(await read(p)), rels: await rels(p), path: p };
@@ -160,7 +168,7 @@ export async function loadPptx(buffer) {
 
     slides.push({ bg, items, notes, steps: timing(sp.doc), transition: transitionOf(sp.doc) });
   }
-  return { W, H, slides, dispose: () => Object.values(media).forEach((u) => URL.revokeObjectURL(u)) };
+  return { W, H, slides, sections, dispose: () => Object.values(media).forEach((u) => URL.revokeObjectURL(u)) };
 }
 
 function xfrmOf(el) {

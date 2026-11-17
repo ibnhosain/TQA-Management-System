@@ -123,7 +123,19 @@ function Item({ it, s, anim, hidden }) {
   return <div style={box}>{shapeEl}<Text tx={it.text} s={s} /></div>;
 }
 
-export default function DeckPlayer({ buffer, title, onClose, finish }) {
+function rangeOf(deck, part) {
+  const all = [0, deck.slides.length];
+  const secs = deck.sections || [];
+  if (!part?.key) return all;
+  const me = secs.find((s) => s.name === part.key);
+  if (!me) return all;
+  const mine = secs.filter((s) => (part.keys || []).includes(s.name)).sort((a, b) => a.start - b.start);
+  const from = mine[0] === me ? 0 : me.start;
+  const nxt = mine.find((s) => s.start > me.start);
+  return [from, nxt ? nxt.start : deck.slides.length];
+}
+
+export default function DeckPlayer({ buffer, title, onClose, finish, part }) {
   const [done, setDone] = useState(false);   // শেষ স্লাইডের পর — কভার-টিকের প্যানেল নিজে থেকে আসে
   const [deck, setDeck] = useState(null);
   const [err, setErr] = useState("");
@@ -135,7 +147,7 @@ export default function DeckPlayer({ buffer, title, onClose, finish }) {
 
   useEffect(() => {
     let d;
-    loadPptx(buffer).then((x) => { d = x; setDeck(x); }).catch((e) => setErr(String(e?.message || e)));
+    loadPptx(buffer).then((x) => { d = x; setDeck(x); setN(rangeOf(x, part)[0]); setStep(0); }).catch((e) => setErr(String(e?.message || e)));
     if (!document.getElementById("dk-css")) { const st = document.createElement("style"); st.id = "dk-css"; st.textContent = CSS; document.head.appendChild(st); }
     if (!document.getElementById("dk-amiri")) { const l = document.createElement("link"); l.id = "dk-amiri"; l.rel = "stylesheet";
       l.href = "https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap"; document.head.appendChild(l); }
@@ -144,10 +156,12 @@ export default function DeckPlayer({ buffer, title, onClose, finish }) {
     return () => { window.removeEventListener("resize", r); d && d.dispose(); };
   }, [buffer]);
 
+  // part = { key, keys }: শুধু এই টপিকের বইয়ের অংশ (PowerPoint section) চলে, পরের টপিকের অংশ এলে থামে
+  const [from, to] = deck ? rangeOf(deck, part) : [0, 0];
   const slide = deck?.slides[n];
   const clicks = slide?.steps.clicks.length || 0;
-  const next = () => { if (!deck) return; if (step < clicks) setStep(step + 1); else if (n < deck.slides.length - 1) { setN(n + 1); setStep(0); } else if (finish) setDone(true); };
-  const prev = () => { if (!deck) return; if (step > 0) setStep(step - 1); else if (n > 0) { const p = deck.slides[n - 1]; setN(n - 1); setStep(p.steps.clicks.length); } };
+  const next = () => { if (!deck) return; if (step < clicks) setStep(step + 1); else if (n < to - 1) { setN(n + 1); setStep(0); } else if (finish) setDone(true); };
+  const prev = () => { if (!deck) return; if (step > 0) setStep(step - 1); else if (n > from) { const p = deck.slides[n - 1]; setN(n - 1); setStep(p.steps.clicks.length); } };
 
   useEffect(() => {
     const k = (e) => {
@@ -183,7 +197,7 @@ export default function DeckPlayer({ buffer, title, onClose, finish }) {
     <div ref={wrap} onContextMenu={(e) => e.preventDefault()} style={{ position: "fixed", inset: 0, background: "#0d1f16", zIndex: 2000, display: "flex", flexDirection: "column", userSelect: "none" }}>
       <div style={{ height: barH, display: "flex", alignItems: "center", gap: 8, padding: "0 12px", color: "#fff" }}>
         <b style={{ flex: 1, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{title}</b>
-        {deck && <span style={{ opacity: 0.8, fontSize: 14 }}>{n + 1} / {deck.slides.length}</span>}
+        {deck && <span style={{ opacity: 0.8, fontSize: 14 }}>{n - from + 1} / {to - from}</span>}
         <button style={btn} onClick={prev}>‹</button>
         <button style={btn} onClick={next}>›</button>
         <button style={btn} onClick={() => setNotes((v) => !v)}>{notes ? "Hide notes" : "Notes"}</button>

@@ -56,8 +56,8 @@ class LectureDeckViewSet(viewsets.ViewSet):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def _row(self, d, full=False):
-        r = {"id": d.id, "course": d.course_id, "no": d.no, "title": d.title, "filename": d.filename,
-             "size": d.size, "uploaded_at": d.uploaded_at}
+        r = {"id": d.id, "course": d.course_id, "no": d.no, "audience": d.audience, "title": d.title,
+             "filename": d.filename, "size": d.size, "uploaded_at": d.uploaded_at}
         if full:
             r.update(note=d.note, topics=d.topics)
         return r
@@ -92,13 +92,19 @@ class LectureDeckViewSet(viewsets.ViewSet):
         except Exception:
             return Response({"error": "Please provide a course and lecture number"}, status=400)
         title = (request.data.get("title") or "").strip()[:200]
+        audience = "student" if request.data.get("audience") == "student" else "teacher"
         d, _ = LectureDeck.objects.update_or_create(
-            course=course, no=no,
+            course=course, no=no, audience=audience,
             defaults={"title": title, "filename": f.name[:255], "size": len(blob), "data": blob, "uploaded_by": request.user})
         return Response(self._row(d, full=True), status=201)
 
+    def _student_ok(self, u, d):
+        """শিক্ষার্থী শুধু নিজের কোর্সের শিক্ষার্থী-স্লাইড পায়।"""
+        return u.role == "student" and d.audience == "student" and d.course.students.filter(pk=u.pk).exists()
+
     def retrieve(self, request, pk=None):
-        if not self._get(request, pk):
+        d = LectureDeck.objects.defer("data").filter(pk=pk).select_related("course").first()
+        if not d or not (_can_see(request.user, d.course_id) or self._student_ok(request.user, d)):
             return Response({"error": "Permission denied"}, status=403)
         d = LectureDeck.objects.get(pk=pk)
         res = HttpResponse(bytes(d.data), content_type="application/vnd.openxmlformats-officedocument.presentationml.presentation")
@@ -126,6 +132,28 @@ class LectureDeckViewSet(viewsets.ViewSet):
             return Response({"error": "Only the director can delete"}, status=403)
         LectureDeck.objects.filter(pk=pk).delete()
         return Response(status=204)
+
+    @action(detail=False, methods=["get"])
+    def find(self, request):
+        """Lesson Plan-এ টপিকে ক্লিক: এই কোর্সের লেকচার N-এর স্লাইড — উস্তাদ/এডমিন/পরিচালক পান উস্তাদের স্লাইড,
+        শিক্ষার্থী পায় তার পড়া-প্র্যাকটিসের স্লাইড।"""
+        u = request.user
+        try:
+            course_id, no = int(request.query_params.get("course")), int(request.query_params.get("no"))
+        except (TypeError, ValueError):
+            return Response({"error": "Please provide a course and lecture number"}, status=400)
+        if u.role == "student":
+            if not Course.objects.filter(pk=course_id, students=u).exists():
+                return Response({"error": "Permission denied"}, status=403)
+            aud = "student"
+        elif _can_see(u, course_id):
+            aud = "teacher"
+        else:
+            return Response({"error": "Permission denied"}, status=403)
+        d = LectureDeck.objects.defer("data").filter(course_id=course_id, no=no, audience=aud).first()
+        if not d:
+            return Response({"error": f"No slides yet for Lecture {no}"}, status=404)
+        return Response(self._row(d))
 
     @action(detail=True, methods=["get", "post"])
     def cover(self, request, pk=None):

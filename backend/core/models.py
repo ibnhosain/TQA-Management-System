@@ -944,6 +944,9 @@ class LectureDeck(models.Model):
     data = models.BinaryField()
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     uploaded_at = models.DateTimeField(auto_now=True)
+    # কার স্লাইড: teacher = ক্লাসে উস্তাদ চালান; student = শিক্ষার্থীর পড়া ও প্র্যাকটিসের স্লাইড
+    audience = models.CharField(max_length=8, default="teacher",
+                                choices=[("teacher", "উস্তাদের স্লাইড"), ("student", "শিক্ষার্থীর স্লাইড")])
     # শিক্ষার্থীর নোট — স্লাইড পড়ানো হলে শিক্ষার্থী তার Homework অংশে এটা দেখে
     note = models.TextField("শিক্ষার্থীর নোট", blank=True, default="")
     # Lecture Plan-এ এই লেকচারের টপিক না থাকলে স্লাইড শেষে এই তালিকা থেকে টিক দেওয়া হয় (প্রতি লাইনে একটি)
