@@ -944,9 +944,27 @@ class LectureDeck(models.Model):
     data = models.BinaryField()
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     uploaded_at = models.DateTimeField(auto_now=True)
+    # শিক্ষার্থীর নোট — স্লাইড পড়ানো হলে শিক্ষার্থী তার Homework অংশে এটা দেখে
+    note = models.TextField("শিক্ষার্থীর নোট", blank=True, default="")
+    # Lecture Plan-এ এই লেকচারের টপিক না থাকলে স্লাইড শেষে এই তালিকা থেকে টিক দেওয়া হয় (প্রতি লাইনে একটি)
+    topics = models.TextField("স্লাইডের টপিক", blank=True, default="")
 
     class Meta:
         ordering = ["course", "no", "id"]
 
     def __str__(self):
         return f"{self.course.name} — Lecture {self.no}"
+
+
+class DeckTaught(models.Model):
+    """কোন শিক্ষার্থীকে কোন লেকচারের স্লাইড পড়ানো হয়েছে — স্লাইড শেষে উস্তাদ টিক দিলে তৈরি হয়।
+    এটা থাকলেই শিক্ষার্থী Homework অংশে ওই লেকচারের নোট দেখে; topics = কভার হওয়া টপিকের নাম।"""
+    deck = models.ForeignKey(LectureDeck, on_delete=models.CASCADE, related_name="taught")
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="decks_taught")
+    topics = models.JSONField(default=list, blank=True)
+    taught_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    taught_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("deck", "student")]
+        ordering = ["-taught_at"]

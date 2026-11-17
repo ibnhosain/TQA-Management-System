@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
 // লেকচারের স্লাইড — আলাদা অংশে, কেবল মেনু খুললে লোড হয়
 const DecksView = lazy(() => import("./decks/DecksView.jsx"));
+const HomeworkNotes = lazy(() => import("./decks/HomeworkNotes.jsx"));  // শিক্ষার্থীর Homework — স্লাইডের নোট
 
 
 /* ═══════════════════════════════════════════════════════════
@@ -23909,6 +23910,13 @@ const NAV = [
     roles: ["director", "admin", "teacher", "student"],
   },
   {
+    id: "homework",
+    icon: "📚",
+    label: "Homework",
+    labelEn: "Homework",
+    roles: ["student"],
+  },
+  {
     id: "exams",
     icon: "🏅",
     label: "Exams & Results",
@@ -25594,6 +25602,9 @@ export default function App() {
           {view === "syllabus" && <SyllabusView {...props} />}
           {view === "attendance" && <AttendanceView {...props} />}
           {view === "assignments" && <AssignmentsView {...props} />}
+          {view === "homework" && user.role === "student" && (
+            <Suspense fallback={<div style={{ padding: 20 }}>Loading…</div>}><HomeworkNotes /></Suspense>
+          )}
           {view === "exams" && <ExamsView {...props} />}
           {view === "progress" && <ProgressView {...props} />}
           {view === "payments" && user.role === "student" && (

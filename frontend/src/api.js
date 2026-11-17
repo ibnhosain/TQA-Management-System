@@ -606,3 +606,12 @@ export async function fetchBinary(path) {
   if (!res.ok) throw new Error(res.status === 403 ? "অনুমতি নেই" : "ফাইল আনা যায়নি");
   return res.arrayBuffer();
 }
+
+
+/* লেকচারের স্লাইড — নোট, টপিক আর স্লাইড শেষে কভার-টিক */
+export const deckApi = {
+  edit: (id, d) => request(`/decks/${id}/`, { method: "PATCH", body: d }),
+  cover: (id) => request(`/decks/${id}/cover/`),
+  saveCover: (id, body) => request(`/decks/${id}/cover/`, { method: "POST", body }),
+  notes: () => request("/decks/notes/"),
+};

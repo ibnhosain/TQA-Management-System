@@ -75,3 +75,46 @@ class LectureDeckTests(TestCase):
         c.force_authenticate(User.objects.create_user(username="s1", password="x12345678", role="student"))
         self.assertEqual(c.get(f"/api/decks/{did}/").status_code, 403)
         self.assertEqual(c.get(f"/api/decks/?course={course.id}").json(), [])
+
+
+class LectureDeckAccessNotesCoverTests(TestCase):
+    """উস্তাদ শুধু নিজের কোর্স; শিক্ষার্থী স্লাইড পায় না, পড়ানো হলে নোট পায়; স্লাইড শেষে টপিক টিক।"""
+    def test_flow(self):
+        from .models import Course, LectureDeck, Lecture, LectureTopic, LessonSection, TopicCoverage
+        mk = lambda n, r, **k: User.objects.create_user(username=n, password="x12345678", role=r, name_bn=n, **k)
+        d, t1, t2 = mk("dir", "director"), mk("t1", "teacher"), mk("t2", "teacher")
+        s1, s2 = mk("s1", "student", teacher=t1), mk("s2", "student", teacher=t2)
+        mine, other = Course.objects.create(name="Easy Noorani Qaida", teacher=t1), Course.objects.create(name="Other")
+        mine.students.add(s1, s2)
+        a = LectureDeck.objects.create(course=mine, no=1, data=b"PK1", note="Note one", topics="Topic A\nTopic B")
+        b = LectureDeck.objects.create(course=other, no=1, data=b"PK2")
+        c = APIClient()
+        c.force_authenticate(t1)
+        self.assertEqual([x["id"] for x in c.get("/api/decks/").json()], [a.id])
+        self.assertEqual(c.get(f"/api/decks/{b.id}/").status_code, 403)
+        self.assertEqual(c.get(f"/api/decks/{a.id}/").content, b"PK1")
+        self.assertEqual(c.patch(f"/api/decks/{a.id}/", {"note": "x"}, format="json").status_code, 403)
+        # কোনো Lecture Plan নেই → স্লাইডের নিজের টপিক; উস্তাদ শুধু নিজের শিক্ষার্থী পান
+        g = c.get(f"/api/decks/{a.id}/cover/").json()
+        self.assertEqual(g["deck_topics"], ["Topic A", "Topic B"])
+        self.assertEqual([s["id"] for s in g["students"]], [s1.id])
+        r = c.post(f"/api/decks/{a.id}/cover/", {"student_ids": [s1.id, s2.id], "deck_topics": ["Topic A"]}, format="json")
+        self.assertEqual(r.json()["students"], 1)
+        c.force_authenticate(s1)
+        self.assertEqual(c.get(f"/api/decks/{a.id}/").status_code, 403)
+        self.assertEqual(c.get("/api/decks/").json(), [])
+        n = c.get("/api/decks/notes/").json()
+        self.assertEqual((n[0]["note"], n[0]["topics"]), ("Note one", ["Topic A"]))
+        c.force_authenticate(s2)
+        self.assertEqual(c.get("/api/decks/notes/").json(), [])
+        # Lecture Plan-এর টপিক থাকলে সেখানেই কভার বসে
+        lec = Lecture.objects.create(course=mine, no=1, title="Daras 1")
+        sec = LessonSection.objects.create(course=mine, name="Qaida")
+        tp = LectureTopic.objects.create(lecture=lec, section=sec, text="Alif to Jeem")
+        c.force_authenticate(d)
+        self.assertEqual(c.get(f"/api/decks/{b.id}/").content, b"PK2")
+        g = c.get(f"/api/decks/{a.id}/cover/").json()
+        self.assertEqual((g["plan_topics"][0]["id"], g["deck_topics"], len(g["students"])), (tp.id, [], 2))
+        c.post(f"/api/decks/{a.id}/cover/", {"student_ids": [s2.id], "topic_ids": [tp.id]}, format="json")
+        self.assertEqual(TopicCoverage.objects.get(topic=tp, student=s2).covered, "covered")
+        self.assertEqual(c.patch(f"/api/decks/{a.id}/", {"note": "New"}, format="json").json()["note"], "New")

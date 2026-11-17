@@ -123,7 +123,8 @@ function Item({ it, s, anim, hidden }) {
   return <div style={box}>{shapeEl}<Text tx={it.text} s={s} /></div>;
 }
 
-export default function DeckPlayer({ buffer, title, onClose }) {
+export default function DeckPlayer({ buffer, title, onClose, finish }) {
+  const [done, setDone] = useState(false);   // শেষ স্লাইডের পর — কভার-টিকের প্যানেল নিজে থেকে আসে
   const [deck, setDeck] = useState(null);
   const [err, setErr] = useState("");
   const [n, setN] = useState(0);
@@ -145,11 +146,12 @@ export default function DeckPlayer({ buffer, title, onClose }) {
 
   const slide = deck?.slides[n];
   const clicks = slide?.steps.clicks.length || 0;
-  const next = () => { if (!deck) return; if (step < clicks) setStep(step + 1); else if (n < deck.slides.length - 1) { setN(n + 1); setStep(0); } };
+  const next = () => { if (!deck) return; if (step < clicks) setStep(step + 1); else if (n < deck.slides.length - 1) { setN(n + 1); setStep(0); } else if (finish) setDone(true); };
   const prev = () => { if (!deck) return; if (step > 0) setStep(step - 1); else if (n > 0) { const p = deck.slides[n - 1]; setN(n - 1); setStep(p.steps.clicks.length); } };
 
   useEffect(() => {
     const k = (e) => {
+      if (done) return;
       if (["ArrowRight", "ArrowDown", "PageDown", " ", "Enter"].includes(e.key)) { e.preventDefault(); next(); }
       else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); prev(); }
       else if (e.key === "Escape") onClose && onClose();
@@ -186,6 +188,7 @@ export default function DeckPlayer({ buffer, title, onClose }) {
         <button style={btn} onClick={next}>›</button>
         <button style={btn} onClick={() => setNotes((v) => !v)}>{notes ? "Hide notes" : "Notes"}</button>
         <button style={btn} onClick={() => (document.fullscreenElement ? document.exitFullscreen() : wrap.current.requestFullscreen?.())}>⛶</button>
+        {finish && <button style={btn} onClick={() => setDone(true)}>✓ Topics</button>}
         <button style={btn} onClick={onClose}>✕</button>
       </div>
       <div onClick={next} style={{ flex: 1, display: "grid", placeItems: "center", overflow: "hidden", cursor: "pointer" }}>
@@ -201,6 +204,7 @@ export default function DeckPlayer({ buffer, title, onClose }) {
           </div>
         )}
       </div>
+      {done && finish && finish(() => setDone(false))}
       {notes && slide && (
         <div style={{ height: notesH, overflow: "auto", background: "#fff8e6", color: "#1f2a24", padding: "10px 16px", whiteSpace: "pre-wrap", fontSize: 15, borderTop: "3px solid #c9962a" }}>
           {slide.notes || "—"}

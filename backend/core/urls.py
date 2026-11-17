@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from . import views
+from . import deck_views
 from .auth import FlexTokenObtainPairView
 from . import cron
 from . import push
@@ -42,7 +43,7 @@ router.register("library-books", views.LibraryBookViewSet)
 router.register("lesson-sections", views.LessonSectionViewSet, basename="lesson-sections")
 router.register("push-subscriptions", views.PushSubscriptionViewSet, basename="push-subscriptions")
 router.register("amal-items", views.DailyAmalItemViewSet, basename="amal-items")
-router.register("decks", views.LectureDeckViewSet, basename="decks")  # লেকচারের .pptx স্লাইড
+router.register("decks", deck_views.LectureDeckViewSet, basename="decks")  # লেকচারের .pptx স্লাইড
 
 def _version(request):
     """সার্ভারে কোন মাইগ্রেশন পর্যন্ত চলেছে — নির্ণয়ের জন্য।
