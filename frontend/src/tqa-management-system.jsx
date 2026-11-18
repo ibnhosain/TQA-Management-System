@@ -545,7 +545,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
               تربية القرآن
             </div>
             <div style={{ fontSize: 19, fontWeight: 800, margin: "4px 0 2px" }}>
-              তারবিয়াতুল কুরআন একাডেমি
+              Tarbiyatul Quran Academy
             </div>
             <div style={{ fontSize: 11.5, color: "#cfe6d8" }}>
               tarbiyatulquran.org · WhatsApp: +880 140 249 9027
@@ -668,7 +668,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
             style={{ flex: 1, justifyContent: "center" }}
             onClick={onClose}
           >
-            বন্ধ করুন
+            Close
           </Btn>
         </div>
         <div
@@ -679,8 +679,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
             marginTop: 8,
           }}
         >
-          ⬇️ ডাউনলোড করলে রিসিটটি ছবি (PNG) হিসেবে সেভ হবে — সরাসরি WhatsApp-এ
-          পাঠানো যাবে
+          ⬇️ Downloading saves the receipt as an image (PNG) — ready to send straight on WhatsApp
         </div>
       </div>
       {ask && (
@@ -713,8 +712,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
             </div>
             <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 16 }}>
               Download, or send to{" "}
-              {person.name ? <b>{person.name}</b> : "the recipient's"}-এর পোর্টালে
-              পাঠাবেন?
+              {person.name ? <b>{person.name}</b> : "the recipient"}'s portal?
             </div>
             <div style={{ display: "grid", gap: 8 }}>
               <Btn style={{ justifyContent: "center" }} onClick={doDownload}>
@@ -770,11 +768,11 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
           >
             <div style={{ fontSize: 40 }}>✅</div>
             <div style={{ fontWeight: 800, fontSize: 16, margin: "8px 0 4px" }}>
-              সেন্ড হয়েছে!
+              Sent!
             </div>
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>
-              রিসিটটি <b>{person.name}</b>-এর পোর্টালের "🧾 Vouchers/Receipts" মেনুতে
-              যোগ হয়েছে এবং নোটিফিকেশন পাঠানো হয়েছে।
+              The receipt has been added to <b>{person.name}</b>'s "🧾 Vouchers/Receipts"
+              menu and a notification has been sent.
             </div>
             <Btn
               style={{ width: "100%", justifyContent: "center" }}
@@ -2809,7 +2807,7 @@ function AttnMarkModal({ k, nameOf, onClose }) {
               <Tag>Present ✔</Tag>
             ) : (
               <Tag color={C.muted} bg="#fff">
-                অনুপস্থিত
+                Absent
               </Tag>
             )}
             <Btn
@@ -3074,7 +3072,7 @@ function ClassesView({
         i * 400,
       );
     });
-    notice(`✔ ${bn(targets.length)} জনকে WhatsApp পাঠানো হচ্ছে`);
+    notice(`✔ Sending WhatsApp to ${bn(targets.length)} recipient(s)`);
   };
   // প্যানেল থেকে বেরোলে (Leave & Save / End Class) — স্টুডেন্ট হলে রেটিং পপআপ
   const onPanelExit = async (finished) => {
@@ -3213,7 +3211,7 @@ function ClassesView({
           {
             id: uid(),
             for: [f.teacherId, ...students, "admin1", "dir1"],
-            text: `✏️ [${f.kind}] ক্লাসটি আপডেট হয়েছে: ${c.name} — ${fmtDate(f.date)} ${f.time}।`,
+            text: `✏️ [${f.kind}] Class updated: ${c.name} — ${fmtDate(f.date)} ${f.time}.`,
             date: todayISO(),
             read: false,
           },
@@ -3257,7 +3255,7 @@ function ClassesView({
       const whole = c.studentIds || [];
       const names = whole.map((sid) => nameOf(sid)).join(", ") || "Nobody";
       askConfirm(
-        `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "of this course"}" কোর্সে ভর্তি সবাই (${names}) এই ক্লাসে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
+        `You have not selected any specific student — so everyone enrolled in the "${c.name || "selected"}" course (${names}) will be added to this class. Proceed?`,
         () => saveClass(whole),
       );
       return;
@@ -3406,7 +3404,7 @@ function ClassesView({
           </div>
           {user.role !== "student" && (
             <div style={{ fontSize: 12, color: C.muted }}>
-              👥 শিক্ষার্থী:{" "}
+              👥 Students:{" "}
               {(k.studentNames && k.studentNames.length
                 ? k.studentNames
                 : kStudents.map((s) => nameOf(s))
@@ -3415,7 +3413,7 @@ function ClassesView({
           )}
           {k.req && user.role !== "student" && (
             <div style={{ fontSize: 12, color: "#a16207", marginTop: 2 }}>
-              📌 অভিভাবকের রিকোয়ারমেন্ট: {k.req}
+              📌 Guardian's requirement: {k.req}
             </div>
           )}
           {k.status === "postponed" && (
@@ -3452,10 +3450,10 @@ function ClassesView({
                 display: "inline-block",
               }}
             >
-              🔴 ক্লাস চলছে — {teacherLive ? "Teacher is in" : "No teacher"}
+              🔴 Class in progress — {teacherLive ? "Teacher is in" : "No teacher"}
               {" · "}
               {liveStudentCount > 0
-                ? `${bn(liveStudentCount)} জন স্টুডেন্ট আছে`
+                ? `${bn(liveStudentCount)} student(s) present`
                 : "No students"}
             </div>
           )}
@@ -3564,11 +3562,11 @@ function ClassesView({
           {isAdm(user) && k.status !== "postponed" && k.zoom && (
             <>
               <Btn sm kind="soft" onClick={() => watchClass(k.zoom)}>
-                👁️ ১ম লিংকে ঢুকুন
+                👁️ Open the 1st link
               </Btn>
               {k.zoom2 && (
                 <Btn sm kind="soft" onClick={() => watchClass(k.zoom2)}>
-                  👁️ ২য় লিংকে ঢুকুন
+                  👁️ Open the 2nd link
                 </Btn>
               )}
             </>
@@ -3595,7 +3593,7 @@ function ClassesView({
                   })
                 }
               >
-                📋 মূল্যায়ন
+                📋 Evaluation
               </Btn>
             )}
           {isToday && isAdm(user) && k.status !== "postponed" && (
@@ -3604,7 +3602,7 @@ function ClassesView({
               kind="soft"
               onClick={() => notifyAll(k, c, kStudents)}
             >
-              📨 টিচার ও স্টুডেন্টকে জানান
+              📨 Notify the teacher and student
             </Btn>
           )}
           {isToday && isAdm(user) && k.status !== "postponed" && (
@@ -3619,14 +3617,14 @@ function ClassesView({
                 kind={k.joinModeOverride === "join" ? "gold" : "soft"}
                 onClick={() => setJoinMode(k, "join")}
               >
-                {k.joinModeOverride === "join" ? "✓ " : ""}🎥 জয়েন লিংক জোর করে চালু
+                {k.joinModeOverride === "join" ? "✓ " : ""}🎥 Force join link on
               </Btn>
               <Btn
                 sm
                 kind={k.joinModeOverride === "rejoin" ? "gold" : "soft"}
                 onClick={() => setJoinMode(k, "rejoin")}
               >
-                {k.joinModeOverride === "rejoin" ? "✓ " : ""}🔁 রিজয়েন লিংক জোর করে চালু
+                {k.joinModeOverride === "rejoin" ? "✓ " : ""}🔁 Force rejoin link on
               </Btn>
               {/* "স্বয়ংক্রিয়ে ফিরিয়ে দিন" কেবল একটা আনডু — জোর করে চালু করা
                   অবস্থাটা এই ক্লাসের জন্যই বাতিল করে। পরের দিনের ক্লাসের জন্য
@@ -3635,19 +3633,19 @@ function ClassesView({
                   মডেলের ডিফল্ট "auto"-ই বসে — নতুন দিন নিজে থেকেই স্বয়ংক্রিয় */}
               {k.joinModeOverride !== "auto" && (
                 <Btn sm kind="soft" onClick={() => setJoinMode(k, "auto")}>
-                  ↩️ স্বয়ংক্রিয়ে ফিরিয়ে দিন
+                  ↩️ Revert to automatic
                 </Btn>
               )}
             </>
           )}
           {isDir(user) && !isJoined && (
             <Btn sm kind="soft" onClick={() => setAttnMark(k)}>
-              ✋ হাজিরা
+              ✋ Attendance
             </Btn>
           )}
           {isAdm(user) && (
             <Btn sm kind="soft" onClick={() => startEdit(k)}>
-              ✏️ এডিট
+              ✏️ Edit
             </Btn>
           )}
           {isDir(user) && (
@@ -3657,7 +3655,7 @@ function ClassesView({
           )}
           {k.status === "upcoming" && isAdm(user) && (
             <Btn sm kind="danger" onClick={() => postponeOne(k)}>
-              ⛔ স্থগিত করুন
+              ⛔ Postpone
             </Btn>
           )}
           {k.status === "postponed" && (
@@ -3866,9 +3864,7 @@ function ClassesView({
               marginBottom: 12,
             }}
           >
-            💡 অসুস্থতা বা অন্য কারণে ক্লাস ছুটে গেলে এখান থেকে
-            মেকআপ/সাপোর্ট/রিকভারি/ট্রায়াল ক্লাস বানিয়ে দিন — তারিখ-সময়
-            অনুযায়ী স্টুডেন্ট ও উস্তাদের পোর্টালে জয়েন অপশন অটো চলে যাবে।
+            💡 If a class is missed through illness or any other reason, create a make-up / support / recovery / trial class from here — the join option reaches the student's and teacher's portals automatically at the scheduled date and time.
           </div>
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
@@ -3923,8 +3919,8 @@ function ClassesView({
           </div>
           <div style={{ marginTop: 10 }}>
             <label style={S.label}>
-              শিক্ষার্থী বাছাই করুন — এক এক করে ({bn(f.studentIds.length)} জন
-              নির্বাচিত; কাউকে না বাছলে কোর্সের সবাই)
+              Select students — one by one ({bn(f.studentIds.length)} selected;
+              if none are chosen, everyone in the course)
             </label>
             <StudentPicker
               selected={f.studentIds}
@@ -4094,7 +4090,7 @@ function InstantClassView({ courses, user }) {
         whole.map((sid) => students.find((s) => String(s.id) === String(sid))?.name || sid).join(", ") ||
         "Nobody";
       askConfirm(
-        `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "of this course"}" কোর্সে ভর্তি সবাই (${names}) এই ক্লাসে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
+        `You have not selected any specific student — so everyone enrolled in the "${c.name || "selected"}" course (${names}) will be added to this class. Proceed?`,
         () => doCreate(whole),
       );
       return;
@@ -4123,7 +4119,7 @@ function InstantClassView({ courses, user }) {
         i * 400,
       );
     });
-    notice(`✔ ${bn(targets.length)} জনকে WhatsApp পাঠানো হচ্ছে`);
+    notice(`✔ Sending WhatsApp to ${bn(targets.length)} recipient(s)`);
   };
 
   return (
@@ -4178,8 +4174,8 @@ function InstantClassView({ courses, user }) {
       </div>
       <div style={{ marginTop: 10 }}>
         <label style={S.label}>
-          শিক্ষার্থী বাছাই করুন — এক এক করে ({bn(f.studentIds.length)} জন নির্বাচিত;
-          কাউকে না বাছলে কোর্সের সবাই)
+          Select students — one by one ({bn(f.studentIds.length)} selected;
+          if none are chosen, everyone in the course)
         </label>
         <StudentPicker
           selected={f.studentIds}
@@ -4249,7 +4245,7 @@ function InstantClassView({ courses, user }) {
         </select>
         {preview && (
           <div style={{ marginTop: 6, fontSize: 12.5, color: C.muted }}>
-            {allZones.find((z) => z.zone === previewZone)?.label}-এর সময় অনুযায়ী:{" "}
+            In {allZones.find((z) => z.zone === previewZone)?.label} time:{" "}
             <b>{fmtDate(preview.date)} · {preview.time}</b>
           </div>
         )}
@@ -4298,11 +4294,11 @@ function InstantClassView({ courses, user }) {
           }}
         >
           <div style={{ fontWeight: 800, marginBottom: 6 }}>
-            ✔ তৈরি হয়েছে — {created.courseName} · {fmtDate(created.date)} ·{" "}
+            ✔ Created — {created.courseName} · {fmtDate(created.date)} ·{" "}
             {(created.time || "").slice(0, 5)}
           </div>
           <Btn kind="gold" onClick={notifyCreated}>
-            📨 টিচার ও স্টুডেন্টকে এখনই WhatsApp-এ জানান
+            📨 Notify the teacher and student on WhatsApp now
           </Btn>
         </div>
       )}
@@ -4388,7 +4384,7 @@ function PostponedClassesView({ user }) {
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }); // BOM — Excel-এ বাংলা যেন না ভাঙে
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `স্থগিত-ক্লাস-${month || "All"}.csv`;
+    a.download = `postponed-classes-${month || "All"}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -4764,7 +4760,7 @@ function RichText({ value, onChange, placeholder }) {
       "insertHTML",
       `<div style="border: 1.5px solid ${b.border}; background-color: ${b.bg}; ` +
         `border-radius: 10px; padding: 10px 14px; margin: 10px 0">` +
-        `এখানে লিখুন…</div><p><br /></p>`,
+        `Write here…</div><p><br /></p>`,
     );
   };
 
@@ -5057,7 +5053,7 @@ function RichText({ value, onChange, placeholder }) {
           style={tool}
           onClick={() => setDir(true)}
         >
-          ↤ ডান→বাঁ
+          ↤ Right→Left
         </button>
         <button
           type="button" onMouseDown={noBlur}
@@ -5065,7 +5061,7 @@ function RichText({ value, onChange, placeholder }) {
           style={tool}
           onClick={() => setDir(false)}
         >
-          বাঁ→ডান ↦
+          Left→Right ↦
         </button>
         <button
           type="button" onMouseDown={noBlur}
@@ -5102,7 +5098,7 @@ function RichText({ value, onChange, placeholder }) {
           }}
         >
           <span style={{ fontSize: 12, fontWeight: 700, color: C.gold, marginRight: 4 }}>
-            🖼️ ছবি {bn(imgPct)}%
+            🖼️ Image {bn(imgPct)}%
           </span>
           {/* ⚠️ onMouseDown-এ preventDefault — নইলে বাটনে চাপা মাত্র লেখার ঘর
               ফোকাস হারাত, আর কোনো কোনো ব্রাউজারে নির্বাচিত ছবিটাও ছুটে যেত */}
@@ -5112,7 +5108,7 @@ function RichText({ value, onChange, placeholder }) {
             <button
               key={z}
               type="button"
-              title={`ছবিটি ${z}% চওড়া করুন`}
+              title={`Set image width to ${z}%`}
               style={{ ...tool, fontWeight: imgPct === z ? 800 : 400 }}
               onMouseDown={noBlur}
               onClick={() => setImgWidth(z)}
@@ -5130,7 +5126,7 @@ function RichText({ value, onChange, placeholder }) {
             onMouseDown={noBlur}
             onClick={removeImg}
           >
-            🗑️ মুছুন
+            🗑️ Delete
           </button>
         </div>
       )}
@@ -5314,9 +5310,9 @@ function LecturePlan({ db, courses, user, refresh }) {
   };
   const delSection = (sec) =>
     askConfirm(
-      `"${sec.name}" হেডিংটি মুছে ফেলবেন?` +
+      `Delete the heading "${sec.name}"?` +
         (sec.topics.length
-          ? `\n\nএর নিচের ${bn(sec.topics.length)}টি টপিক ও সেগুলোর কভার-টিকও মুছে যাবে।`
+          ? `\n\nThe ${bn(sec.topics.length)} topic(s) under it and their coverage ticks will be deleted too.`
           : ""),
       () =>
         api
@@ -5417,14 +5413,14 @@ function LecturePlan({ db, courses, user, refresh }) {
               kind={trialTab ? "soft" : "primary"}
               onClick={() => setTrialTab(false)}
             >
-              নিয়মিত দারস পরিকল্পনা
+              Regular lesson plan
             </Btn>
             <Btn
               sm
               kind={trialTab ? "gold" : "soft"}
               onClick={() => setTrialTab(true)}
             >
-              🌱 ট্রায়াল দারস পরিকল্পনা
+              🌱 Trial lesson plan
             </Btn>
             {!trialTab && (
               <Btn
@@ -5451,8 +5447,7 @@ function LecturePlan({ db, courses, user, refresh }) {
               }}
             >
               <b style={{ color: C.gold }}>📋 Today's-lesson mode is on.</b>{" "}
-              প্রতিটি টপিকে <b style={{ color: C.gold }}>📌</b> বোতাম চেপে আজকের ক্লাসে কী পড়ানো হবে চিহ্নিত করুন।
-              চিহ্নিত টপিকগুলোই কেবল উস্তাদের পোর্টালে দেখাবে — শিক্ষার্থীরা সব দেখবেন।
+              Press the <b style={{ color: C.gold }}>📌</b> button on each topic to mark what will be taught in today's class. Only the marked topics show in the teacher's portal — students see everything.
             </div>
           )}
           {trialTab && (
@@ -5469,9 +5464,9 @@ function LecturePlan({ db, courses, user, refresh }) {
               }}
             >
               <b style={{ color: C.gold }}>Only trial guests will see this.</b>{" "}
-              নিয়মিত শিক্ষার্থীদের পরিকল্পনায় এর কোনো প্রভাব নেই — দুটি
-              সম্পূর্ণ আলাদা, টপিক বা কভারের টিক কখনো মেশে না। একবার সাজিয়ে
-              রাখলেই এই কোর্সের সব ট্রায়াল অতিথি এটাই পাবেন।
+              It has no effect on the regular students' plan — the two are
+              completely separate, and topics or coverage ticks never mix. Set it
+              up once and every trial guest on this course gets it.
             </div>
           )}
         </div>
@@ -5502,10 +5497,10 @@ function LecturePlan({ db, courses, user, refresh }) {
             color: C.text,
           }}
         >
-          📋 <b style={{ color: C.gold }}>Today's class topics</b> — পরিচালক আজকের জন্য যে টপিকগুলো নির্ধারণ করেছেন সেগুলো দেখাচ্ছে।
+          📋 <b style={{ color: C.gold }}>Today's class topics</b> — showing the topics the director has set for today.
           {allTopics.length === 0 && (
             <span style={{ color: C.muted, marginLeft: 6 }}>
-              (এখনো কোনো টপিক নির্ধারিত হয়নি)
+              (no topic assigned yet)
             </span>
           )}
         </div>
@@ -5572,7 +5567,7 @@ function LecturePlan({ db, courses, user, refresh }) {
           )}
           <div style={{ flex: 1 }} />
           <Btn sm kind="soft" onClick={() => setPickOpen(true)}>
-            🔄 অন্য শিক্ষার্থী
+            🔄 Another student
           </Btn>
         </div>
       )}
@@ -5591,7 +5586,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                 style={{ width: "100%", justifyContent: "center" }}
                 onClick={() => setPickOpen(false)}
               >
-                বাতিল — {forStudent.name} রেখেই চালিয়ে যাই
+                Cancel — keep {forStudent.name} and carry on
               </Btn>
             ) : courseStudents.length === 0 || isAdm(user) ? (
               <Btn
@@ -5607,13 +5602,12 @@ function LecturePlan({ db, courses, user, refresh }) {
           }
         >
           <div style={{ marginBottom: 10 }}>
-            যাঁর টপিকে টিক দেবেন তাঁকে বেছে নিন। টিক কেবল{" "}
-            <b>in their own portal</b> দেখাবে, অন্য কারও নয়।
+            Choose whose topics you are ticking. Only that student{" "}
+            <b>in their own portal</b> will see it, nobody else.
           </div>
           {courseStudents.length === 0 ? (
             <div style={{ color: C.muted }}>
-              আপনার কোনো শিক্ষার্থী এই কোর্সে নেই — পরিচালক যুক্ত করলে এখানে
-              দেখা যাবে।
+              You have no students in this course — they will appear here once the director adds them.
             </div>
           ) : (
             <div style={{ display: "grid", gap: 6, maxHeight: "46vh", overflowY: "auto" }}>
@@ -5696,7 +5690,7 @@ function LecturePlan({ db, courses, user, refresh }) {
               {isDir(user) && (
                 <>
                   <Btn sm kind="soft" onClick={() => openTopicEditor(sec)}>
-                    ✏️ টপিক
+                    ✏️ Topics
                   </Btn>
                   <Btn sm kind="soft" onClick={() => renameSection(sec)}>
                     Name
@@ -5718,7 +5712,7 @@ function LecturePlan({ db, courses, user, refresh }) {
               {(sec.topics || []).length === 0 ? (
                 <div style={{ color: C.muted, fontSize: 12.5, textAlign: "center", padding: 8 }}>
                   {isDir(user)
-                    ? '"✏️ Topics" চেপে এই হেডিংয়ের নিচে টপিক যোগ করুন'
+                    ? 'Press "✏️ Topics" to add topics under this heading'
                     : "—"}
                 </div>
               ) : (
@@ -5808,7 +5802,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                               }}
                               onClick={() => mark(tp, true)}
                             >
-                              ✔ কভার
+                              ✔ Covered
                             </Btn>
                             <Btn
                               sm
@@ -5819,11 +5813,11 @@ function LecturePlan({ db, courses, user, refresh }) {
                               }}
                               onClick={() => mark(tp, false)}
                             >
-                              ✘ বাদ
+                              ✘ Reject
                             </Btn>
                             {isAdmin && (
                               <Btn sm kind="soft" onClick={() => mark(tp, null)}>
-                                রিসেট
+                                Reset
                               </Btn>
                             )}
                           </span>
@@ -5845,7 +5839,7 @@ function LecturePlan({ db, courses, user, refresh }) {
       )}
       {/* ── টপিক সম্পাদনার মডাল ── */}
       {edit && (
-        <Modal title={`✏️ ${edit.name} — টপিক`} onClose={() => setEdit(null)} wide>
+        <Modal title={`✏️ ${edit.name} — Topics`} onClose={() => setEdit(null)} wide>
           <div style={{ display: "grid", gap: 10 }}>
             {(edit.blocks || []).map((b, i) => (
               <div
@@ -5885,7 +5879,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                   <input
                     value={b.text}
                     onChange={(e) => setBlock(i, { text: e.target.value })}
-                    placeholder={`টপিক ${bn(i + 1)} — যেমন: সূরা ইখলাস`}
+                    placeholder={`Topic ${bn(i + 1)} — e.g. Surah Al-Ikhlas`}
                     style={{
                       ...S.input,
                       flex: 1,
@@ -5906,7 +5900,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                   <button
                     type="button"
                     onClick={() =>
-                      askConfirm(`"${b.text || "Untitled"}" টপিকটি সরাবেন?`, () => delBlock(i))
+                      askConfirm(`Remove the topic "${b.text || "Untitled"}"?`, () => delBlock(i))
                     }
                     title="Move"
                     style={{ border: "none", background: "none", cursor: "pointer", color: C.red, fontSize: 14 }}
@@ -5928,7 +5922,7 @@ function LecturePlan({ db, courses, user, refresh }) {
             ))}
           </div>
           <Btn sm kind="soft" onClick={addBlock} style={{ marginTop: 10 }}>
-            ➕ টপিক যোগ করুন
+            ➕ Add topic
           </Btn>
           <Btn
             style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: saving ? 0.7 : 1 }}
@@ -5973,7 +5967,7 @@ function AttendanceView({ user }) {
     }
   };
   const remove = (a) => {
-    askConfirm(`${a.user_name || "this student's"}-এর এই হাজিরা রেকর্ডটি মুছে ফেলবেন?`, async () => {
+    askConfirm(`Delete this attendance record for ${a.user_name || "this student"}?`, async () => {
       try {
         await api.deleteAttendance(a.id);
         await load();
@@ -6013,7 +6007,7 @@ function AttendanceView({ user }) {
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `হাজিরা-রিপোর্ট-${month}.csv`;
+    a.download = `attendance-report-${month}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -6030,9 +6024,9 @@ function AttendanceView({ user }) {
           `<tr><td>${esc(r.user_name)}</td><td>${esc(r.course_name)}</td><td>${esc(r.teacher_name)}</td><td>${r.class_date ? fmtDate(r.class_date) : "—"}</td>${showMinutes ? `<td>${bn(r.minutes ?? 0)}</td>` : ""}<td>${r.present ? "Present ✔" : "Absent ✘"}</td></tr>`,
       )
       .join("");
-    const html = `<!doctype html><html lang="bn"><head><meta charset="utf-8"><title>হাজিরা রিপোর্ট — ${monthLabel}</title>
+    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Attendance Report — ${monthLabel}</title>
 <style>
-body{font-family:'Noto Sans Bengali',Arial,sans-serif;padding:24px;color:#1f2a24}
+body{font-family:Arial,sans-serif;padding:24px;color:#1f2a24}
 h1{font-size:18px;text-align:center;margin:0 0 4px}
 .s{text-align:center;font-size:12px;color:#6b7280;margin-bottom:18px}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -6046,18 +6040,18 @@ th{background:#eef5f0}
 <table><tr><th>Name</th><th>Course</th><th>Teacher</th><th>Date</th>${showMinutes ? "<th>Minutes</th>" : ""}<th>Status</th></tr>${body}</table>
 <button class="pr" onclick="window.print()">🖨️ Print / Save as PDF</button>
 </body></html>`;
-    openPrintDoc(html, `হাজিরা-রিপোর্ট-${month}.html`);
+    openPrintDoc(html, `attendance-report-${month}.html`);
   };
 
   const sendWhatsApp = () => {
     if (!rows || !rows.length) return notice("No attendance records for this month.");
     const present = rows.filter((r) => r.present).length;
     const text =
-      `📊 হাজিরা রিপোর্ট — ${monthLabel}\n` +
-      `মোট রেকর্ড: ${bn(rows.length)}\n` +
-      `উপস্থিত: ${bn(present)}\n` +
-      `অনুপস্থিত: ${bn(rows.length - present)}\n\n` +
-      `— তারবিয়াতুল কুরআন একাডেমী`;
+      `📊 Attendance Report — ${monthLabel}\n` +
+      `Total records: ${bn(rows.length)}\n` +
+      `Present: ${bn(present)}\n` +
+      `Absent: ${bn(rows.length - present)}\n\n` +
+      `— Tarbiyatul Quran Academy`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
@@ -6201,7 +6195,7 @@ function QBuilder({ qs, setQs, allowMcq }) {
                   <input
                     style={{ ...S.input, padding: "7px 10px", fontSize: 13 }}
                     value={op}
-                    placeholder={`অপশন ${bn(oi + 1)}`}
+                    placeholder={`Option ${bn(oi + 1)}`}
                     onChange={(e) =>
                       upd(q.id, {
                         options: q.options.map((o, j) =>
@@ -6213,8 +6207,7 @@ function QBuilder({ qs, setQs, allowMcq }) {
                 </div>
               ))}
               <div style={{ gridColumn: "1/-1", fontSize: 11, color: C.muted }}>
-                ⭕ রেডিও বাটনে সঠিক উত্তর নির্বাচন করুন — মূল্যায়নের সময়
-                অটো-হিসাব দেখাবে
+                ⭕ Select the correct answer with the radio button — it is scored automatically during evaluation
               </div>
             </div>
           )}
@@ -6226,7 +6219,7 @@ function QBuilder({ qs, setQs, allowMcq }) {
           kind="ghost"
           onClick={() => setQs([...qs, { id: uid(), q: "", type: "text" }])}
         >
-          + লিখিত প্রশ্ন
+          + Written question
         </Btn>
         {allowMcq && (
           <Btn
@@ -6245,7 +6238,7 @@ function QBuilder({ qs, setQs, allowMcq }) {
               ])
             }
           >
-            + MCQ প্রশ্ন
+            + MCQ question
           </Btn>
         )}
       </div>
@@ -6429,13 +6422,13 @@ function EvalWork({ item, onClose, onMark }) {
   };
   return (
     <Modal
-      title={`মূল্যায়ন — ${item.title} (পূর্ণমান ${bn(item.total)})`}
+      title={`Evaluation — ${item.title} (total ${bn(item.total)})`}
       onClose={onClose}
       wide
     >
       {item.subs.length === 0 && (
         <div style={{ textAlign: "center", color: C.muted, padding: 16 }}>
-          এখনো কেউ জমা দেয়নি।
+          Nobody has submitted yet.
         </div>
       )}
       {item.subs.map((sub) => {
@@ -6471,11 +6464,11 @@ function EvalWork({ item, onClose, onMark }) {
               </span>
               {sub.mark != null ? (
                 <Tag>
-                  মার্ক: {bn(sub.mark)}/{bn(item.total)} ✔
+                  Marks: {bn(sub.mark)}/{bn(item.total)} ✔
                 </Tag>
               ) : (
                 <Tag color={C.gold} bg={C.amberBg}>
-                  মূল্যায়ন বাকি
+                  Evaluation pending
                 </Tag>
               )}
               <span style={{ fontSize: 13 }}>
@@ -6501,7 +6494,7 @@ function EvalWork({ item, onClose, onMark }) {
                         </div>
                         {q.type === "mcq" ? (
                           <div style={{ fontSize: 13, marginTop: 3 }}>
-                            উত্তর:{" "}
+                            Answer:{" "}
                             <b
                               style={{
                                 color:
@@ -6516,7 +6509,7 @@ function EvalWork({ item, onClose, onMark }) {
                             {sub.answers[q.id] !== q.correct && (
                               <span style={{ color: C.muted }}>
                                 {" "}
-                                · সঠিক: {q.options[q.correct]}
+                                · Correct: {q.options[q.correct]}
                               </span>
                             )}
                           </div>
@@ -6541,7 +6534,7 @@ function EvalWork({ item, onClose, onMark }) {
                           color: C.blue,
                         }}
                       >
-                        🤖 MCQ অটো-হিসাব: {bn(auto.ok)}/{bn(auto.total)} সঠিক
+                        🤖 MCQ auto-score: {bn(auto.ok)}/{bn(auto.total)} correct
                       </div>
                     )}
                   </div>
@@ -6564,7 +6557,7 @@ function EvalWork({ item, onClose, onMark }) {
                           fontSize: 13.5,
                         }}
                       >
-                        📄 {sub.image.name} — খুলুন/ডাউনলোড
+                        📄 {sub.image.name} — open/download
                       </a>
                     ) : (
                       <a href={sub.image.data} target="_blank" rel="noreferrer">
@@ -6585,14 +6578,14 @@ function EvalWork({ item, onClose, onMark }) {
                   <div
                     style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}
                   >
-                    📎 ফাইল সংযুক্ত নেই (পুরোনো/ডেমো জমা)
+                    📎 No file attached (old/demo submission)
                   </div>
                 )}
                 {sub.note && (
                   <div
                     style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}
                   >
-                    💬 স্টুডেন্টের মন্তব্য: “{sub.note}”
+                    💬 Student’s note: “{sub.note}”
                   </div>
                 )}
                 <div
@@ -6606,7 +6599,7 @@ function EvalWork({ item, onClose, onMark }) {
                   }}
                 >
                   <label style={{ fontSize: 13, fontWeight: 700 }}>
-                    মার্ক দিন:
+                    Enter marks:
                   </label>
                   <input
                     type="number"
@@ -6625,10 +6618,10 @@ function EvalWork({ item, onClose, onMark }) {
                       onMark(sub, Math.min(+v, item.total));
                     }}
                   >
-                    ✔ মার্ক জমা দিন
+                    ✔ Submit marks
                   </Btn>
                   <span style={{ fontSize: 11.5, color: C.muted }}>
-                    মার্ক দিলেই সাথে সাথে স্টুডেন্ট পোর্টালে চলে যাবে
+                    Marks go to the student portal immediately
                   </span>
                 </div>
               </div>
@@ -6841,7 +6834,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
                     {canCreate && pendingEval > 0 && (
                       <span style={{ color: C.red }}>
                         {" "}
-                        · মূল্যায়ন বাকি: {bn(pendingEval)}
+                        · Pending evaluation: {bn(pendingEval)}
                       </span>
                     )}
                   </div>
@@ -6874,7 +6867,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
                     ))}
                   {canCreate && (
                     <Btn sm kind="ghost" onClick={() => setEvalFor(a)}>
-                      🔍 মূল্যায়ন করুন ({bn(a.subs.length)})
+                      🔍 Evaluate ({bn(a.subs.length)})
                     </Btn>
                   )}
                   {isAdm(user) && (
@@ -6975,7 +6968,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
                   background: f.mode === "form" ? C.greenBg : "#fff",
                 }}
               >
-                📋 ফরম — প্রশ্ন বানিয়ে দিন
+                📋 Form — build the questions
               </button>
               <button
                 onClick={() => setF({ ...f, mode: "photo" })}
@@ -6990,7 +6983,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
                   background: f.mode === "photo" ? C.greenBg : "#fff",
                 }}
               >
-                📷 ছবি/PDF জমা
+                📷 Photo/PDF submission
               </button>
             </div>
           </div>
@@ -7010,7 +7003,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
             style={{ marginTop: 16, width: "100%", justifyContent: "center" }}
             onClick={add}
           >
-            প্রকাশ করুন
+            Publish
           </Btn>
         </Modal>
       )}
@@ -7216,7 +7209,7 @@ function ExamsView({ db, setDb, courses, user }) {
                     {canCreate && pendingEval > 0 && (
                       <span style={{ color: C.red }}>
                         {" "}
-                        · মূল্যায়ন বাকি: {bn(pendingEval)}
+                        · Pending evaluation: {bn(pendingEval)}
                       </span>
                     )}
                   </div>
@@ -7266,12 +7259,12 @@ function ExamsView({ db, setDb, courses, user }) {
                     ))}
                   {canCreate && (
                     <Btn sm kind="ghost" onClick={() => setEvalFor(ex)}>
-                      🔍 মূল্যায়ন ({bn((ex.subs || []).length)})
+                      🔍 Evaluate ({bn((ex.subs || []).length)})
                     </Btn>
                   )}
                   {canCreate && (
                     <Btn sm kind="soft" onClick={() => setMarksFor(ex)}>
-                      সরাসরি মার্ক এন্ট্রি
+                      Direct mark entry
                     </Btn>
                   )}
                   {isDir(user) && (
@@ -7391,7 +7384,7 @@ function ExamsView({ db, setDb, courses, user }) {
                   background: f.mode === "form" ? C.greenBg : "#fff",
                 }}
               >
-                📋 ফরম — MCQ/লিখিত প্রশ্ন বানান
+                📋 Form — build MCQ/written questions
               </button>
               <button
                 onClick={() => setF({ ...f, mode: "photo" })}
@@ -7406,7 +7399,7 @@ function ExamsView({ db, setDb, courses, user }) {
                   background: f.mode === "photo" ? C.greenBg : "#fff",
                 }}
               >
-                📷 খাতার ছবি/PDF জমা
+                📷 Notebook photo/PDF submission
               </button>
             </div>
           </div>
@@ -7417,18 +7410,17 @@ function ExamsView({ db, setDb, courses, user }) {
             style={{ marginTop: 16, width: "100%", justifyContent: "center" }}
             onClick={add}
           >
-            তৈরি করুন
+            Create
           </Btn>
         </Modal>
       )}
       {marksFor && (
         <Modal
-          title={`সরাসরি মার্ক এন্ট্রি — ${marksFor.title}`}
+          title={`Direct mark entry — ${marksFor.title}`}
           onClose={() => setMarksFor(null)}
         >
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>
-            লাইভ টেস্টের মতো জমা ছাড়া পরীক্ষার জন্য — মার্ক দিলেই স্টুডেন্ট
-            পোর্টালে দেখাবে।
+            For exams without submissions, like a live test — marks show in the student portal as soon as you enter them.
           </div>
           {courseById(courses, marksFor.courseId).studentIds.map((sid) => (
             <div
@@ -7460,7 +7452,7 @@ function ExamsView({ db, setDb, courses, user }) {
             </div>
           ))}
           <div style={{ fontSize: 12, color: C.muted }}>
-            ঘর থেকে বের হলেই মার্ক সংরক্ষিত হবে।
+            Marks are saved as soon as you leave the field.
           </div>
         </Modal>
       )}
@@ -7624,7 +7616,7 @@ function ProgressView({ db, setDb, courses, user }) {
         method: "Cash received (office)",
       });
       await loadData();
-      notice(`✔ ${month} মাসের ফি পরিশোধ রেকর্ড করা হয়েছে।`);
+      notice(`✔ Fee payment for ${month} has been recorded.`);
     } catch (e) {
       notice(
         "Could not record payment —" +
@@ -7643,7 +7635,7 @@ function ProgressView({ db, setDb, courses, user }) {
         trx_id: pf.trx,
       });
       await loadData();
-      notice(`✔ ${month} মাসের ফি জমা হয়েছে — ভেরিফাই বাকি।`);
+      notice(`✔ Fee for ${month} submitted — pending verification.`);
     } catch (e) {
       notice(
         "Could not submit fee —" +
@@ -7685,7 +7677,7 @@ function ProgressView({ db, setDb, courses, user }) {
       action={
         isAdm(user) && (
           <Btn kind="gold" sm onClick={() => setMaker(true)}>
-            🧾 রিসিট বানান
+            🧾 Create receipt
           </Btn>
         )
       }
@@ -7806,7 +7798,7 @@ function ProgressView({ db, setDb, courses, user }) {
               )}
               {isAdm(user) && due > 0 && (
                 <Btn sm kind="gold" onClick={recordPay}>
-                  + এক মাসের পেমেন্ট রেকর্ড করুন
+                  + Record one month's payment
                 </Btn>
               )}
             </span>
@@ -7824,7 +7816,7 @@ function ProgressView({ db, setDb, courses, user }) {
               p.status === "pending" ? (
                 isDir(user) ? (
                   <Btn key="v" sm kind="gold" onClick={() => verifyPay(p.id)}>
-                    ✔ ভেরিফাই করুন
+                    ✔ Verify
                   </Btn>
                 ) : (
                   <Tag key="t" color={C.gold} bg={C.amberBg}>
@@ -7857,8 +7849,7 @@ function ProgressView({ db, setDb, courses, user }) {
               >
                 {T(
                   <>
-                    পরিমাণ: <b>{(st?.fee_currency || "BDT") === "USD" ? "$" : "৳"}{bn((st.fee || 0).toLocaleString("en"))}</b> ·
-                    পরিশোধের পর এডমিন যাচাই করলে নিশ্চিত হবে।
+                    Amount: <b>{(st?.fee_currency || "BDT") === "USD" ? "$" : "৳"}{bn((st.fee || 0).toLocaleString("en"))}</b> · Confirmed once an admin verifies the payment.
                   </>,
                   <>
                     Amount: <b>{(st?.fee_currency || "BDT") === "USD" ? "$" : "৳"}{(st.fee || 0).toLocaleString("en")}</b> · Once
@@ -8079,7 +8070,7 @@ function AccountsView({ db }) {
     setGenDuesBusy(true);
     try {
       const r = await api.generateMonthlyDues();
-      notice(`✔ চলতি মাসের বকেয়া তৈরি হয়েছে — ${bn(r.created)}টি নতুন যোগ হলো`);
+      notice(`✔ This month’s dues created — ${bn(r.created)} new added`);
       await loadData();
     } catch (e) {
       notice("Could not create dues —" + (e?.message || "Verify"));
@@ -8149,7 +8140,7 @@ function AccountsView({ db }) {
       {loading && <Loader text="Loading accounts" />}
       <div style={{ ...S.card, marginBottom: 14, display: loading ? "none" : undefined }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          👳 উস্তাদদের বেতন
+          👳 Teacher salaries
         </div>
         <Table
           head={["Name", "Monthly salary", "Dues months"]}
@@ -8177,7 +8168,7 @@ function AccountsView({ db }) {
                 <Tag key="d">Paid ✔</Tag>
               ) : (
                 <Tag key="d" color={C.red} bg={C.redBg}>
-                  এখনো কোনো বেতন দেওয়া হয়নি
+                  No salary has been paid yet
                 </Tag>
               ),
             ];
@@ -8186,7 +8177,7 @@ function AccountsView({ db }) {
       </div>
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          📤 বেতন পরিশোধের ইতিহাস
+          📤 Salary payment history
         </div>
         <Table
           head={["Teacher", "Month", "Amount", "Date", "Method", "Status"]}
@@ -8206,7 +8197,7 @@ function AccountsView({ db }) {
               p.method,
               remaining > 0 ? (
                 <Tag key="s" color={C.gold} bg={C.amberBg}>
-                  ⚠️ আংশিক — ৳{bn(remaining.toLocaleString("en"))} বাকি
+                  ⚠️ Partial — ৳{bn(remaining.toLocaleString("en"))} remaining
                 </Tag>
               ) : (
                 <Tag key="s">✅ Verified</Tag>
@@ -8219,7 +8210,7 @@ function AccountsView({ db }) {
       </div>
       <div style={{ ...S.card, display: loading ? "none" : undefined }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          📥 স্টুডেন্ট ফি বকেয়া
+          📥 Student fee dues
         </div>
         <Table
           head={["Student", "Monthly fee", "Dues months", "Dues amount"]}
@@ -8332,7 +8323,7 @@ function FormsView({ db, setDb }) {
                 </Tag>{" "}
                 {f.status === "new" && (
                   <Tag color={C.gold} bg={C.amberBg}>
-                    নতুন
+                    New
                   </Tag>
                 )}
               </div>
@@ -8497,7 +8488,7 @@ function BooksView({ db, user }) {
                           textDecoration: "none",
                         }}
                       >
-                        ⬇ ডাউনলোড
+                        ⬇ Download
                       </a>
                       {isDir(user) && (
                         <Btn sm kind="danger" onClick={() => del(b)}>
@@ -8649,7 +8640,7 @@ function NoticesView({ db, setDb, user }) {
               setShow(true);
             }}
           >
-            + নোটিশ দিন
+            + Post a notice
           </Btn>
         )
       }
@@ -8676,7 +8667,7 @@ function NoticesView({ db, setDb, user }) {
               {isDir(user) && (
                 <span style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                   <Btn sm kind="soft" onClick={() => openEdit(n)}>
-                    ✏️ এডিট
+                    ✏️ Edit
                   </Btn>
                   <Btn sm kind="danger" onClick={() => remove(n.id)}>
                     Delete
@@ -8713,8 +8704,7 @@ function NoticesView({ db, setDb, user }) {
           </div>
           {editId && (
             <div style={{ fontSize: 11.5, color: C.muted, marginTop: 10, lineHeight: 1.6 }}>
-              সংশোধন করলে নতুন করে কারও ঘণ্টা বাজবে না — কেবল আগে পাঠানো
-              বার্তাটির লেখা মিলিয়ে দেওয়া হবে।
+              Editing will not ring anyone's bell again — it only updates the text of the message already sent.
             </div>
           )}
           <Btn
@@ -9049,7 +9039,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
         isAdm(user) && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Btn kind="soft" onClick={() => setMaker(true)}>
-              🧾 রিসিট বানান
+              🧾 Create receipt
             </Btn>
             <Btn
               kind="gold"
@@ -9058,7 +9048,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
                 setPayModal(true);
               }}
             >
-              💵 পেমেন্ট সম্পন্ন করুন
+              💵 Complete payment
             </Btn>
           </div>
         )
@@ -9176,7 +9166,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
         <div style={{ flex: 1, minWidth: 180 }}>
           <div style={{ fontWeight: 800, fontSize: 16 }}>{t.name}</div>
           <div style={S.sub}>
-            {t.sub} · কোর্স: {tCourses.map((c) => c.name).join(", ") || "—"}
+            {t.sub} · Courses: {tCourses.map((c) => c.name).join(", ") || "—"}
           </div>
         </div>
         <div style={{ textAlign: "center" }}>
@@ -9184,7 +9174,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
             {ratingCount ? "★ " + bn(avg.toFixed(1)) : "★ —"}
           </div>
           <Tag color={quality[1]} bg={quality[2]}>
-            ক্লাসের মান: {quality[0]}
+            Class quality: {quality[0]}
           </Tag>
         </div>
       </div>
@@ -9220,7 +9210,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
       <div style={{ display: "grid", gap: 14 }}>
         <div style={{ ...S.card }}>
           <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            🌟 ক্লাসের মান — স্টুডেন্ট মূল্যায়ন
+            🌟 Class quality — student evaluation
           </div>
           {dist.map(({ n, c }) => (
             <div
@@ -9266,7 +9256,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
                   marginBottom: 6,
                 }}
               >
-                কে কী মূল্যায়ন করেছে (কেবল এডমিন/পরিচালক দেখছেন):
+                Who evaluated what (visible to admin/director only):
               </div>
               <Table
                 head={["Student", "Course", "Rating", "Remarks", "Date"]}
@@ -9296,14 +9286,13 @@ function TeacherReportView({ db, setDb, courses, user }) {
                 color: C.muted,
               }}
             >
-              🔒 কোন স্টুডেন্ট কী মূল্যায়ন বা মন্তব্য করেছে তা গোপন — কেবল
-              এডমিন দেখতে পারেন। আপনি শুধু সামগ্রিক রিপোর্ট দেখছেন।
+              🔒 Which student gave which rating or comment is private — only admins can see it. You are seeing the overall report only.
             </div>
           )}
         </div>
         <div style={{ ...S.card }}>
           <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            🗓️ আমার উপস্থিতি রেকর্ড
+            🗓️ My attendance record
           </div>
           <Table
             head={[
@@ -9317,12 +9306,12 @@ function TeacherReportView({ db, setDb, courses, user }) {
               return [
                 a.course_name || "—",
                 a.class_date ? fmtDate(a.class_date) : "—",
-                ...(isDir(user) ? [`${bn(a.minutes)} মিনিট`] : []),
+                ...(isDir(user) ? [`${bn(a.minutes)} min`] : []),
                 (a.present ?? a.minutes >= 20) ? (
                   <Tag key="t">Present ✔</Tag>
                 ) : (
                   <Tag key="t" color={C.red} bg={C.redBg}>
-                    অসম্পূর্ণ ✘
+                    Incomplete ✘
                   </Tag>
                 ),
               ];
@@ -9343,11 +9332,11 @@ function TeacherReportView({ db, setDb, courses, user }) {
           >
             <div style={{ fontWeight: 800 }}>💰 My Salary & Payments</div>
             <div style={{ fontSize: 13 }}>
-              মাসিক বেতন:{" "}
+              Monthly salary:{" "}
               <b>
                 ৳{bn((t.monthly_salary || t.salary || 0).toLocaleString("en"))}
               </b>{" "}
-              · বকেয়া:{" "}
+              · Dues:{" "}
               {dues.length ? (
                 <Tag color={C.red} bg={C.redBg}>
                   {dues.join(", ")}
@@ -9373,7 +9362,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
                 p.method,
                 remaining > 0 ? (
                   <Tag key="s" color={C.gold} bg={C.amberBg}>
-                    ⚠️ আংশিক — ৳{bn(remaining.toLocaleString("en"))} বাকি
+                    ⚠️ Partial — ৳{bn(remaining.toLocaleString("en"))} remaining
                   </Tag>
                 ) : (
                   <Tag key="s">✅ Verified</Tag>
@@ -9429,7 +9418,7 @@ function AdmissionsView({ db, setDb, user, refresh }) {
      আবেদনের কাগজটিই সরবে — নইলে ভুল বুঝে কেউ চাপতে ভয় পেতেন। */
   const removeAdmission = (a) =>
     askConfirm(
-      `${a.name}-এর এই আবেদনটি চিরতরে মুছে ফেলা হবে।` +
+      `This application from ${a.name} will be permanently deleted.` +
         "\n\n" +
         (a.status === "accepted"
           ? "They are already admitted — their account, attendance and all data stay intact; only the application record is removed."
@@ -9460,8 +9449,8 @@ function AdmissionsView({ db, setDb, user, refresh }) {
           res.converted
             ? // ট্রায়াল অতিথিকে ভর্তি করা হলো — নতুন অ্যাকাউন্ট তৈরি হয়নি,
               // তাই নতুন পাসওয়ার্ডও নেই; পুরনোটাই চলবে
-              `✔ ভর্তি সম্পন্ন — ট্রায়ালের আইডি ${res.username} দিয়েই চলবে, পাসওয়ার্ড আগেরটাই`
-            : `✔ ভর্তি সম্পন্ন — লগইন: ${res.username} · পাস: ${res.password}`,
+              `✔ Admission complete — the trial ID ${res.username} still works, password unchanged`
+            : `✔ Admission complete — login: ${res.username} · password: ${res.password}`,
         );
       if (refresh) refresh();
     } catch (e) {
@@ -9523,20 +9512,20 @@ function AdmissionsView({ db, setDb, user, refresh }) {
       >
         <div style={{ flex: 1, minWidth: 220 }}>
           <div style={{ fontWeight: 800 }}>
-            {a.name}, {bn(a.age)} বছর{" "}
+            {a.name}, {bn(a.age)} yrs{" "}
             <Tag color={C.blue} bg={C.blueBg}>
               {a.course}
             </Tag>
           </div>
           <div style={{ fontSize: 12.5, color: C.muted, margin: "3px 0" }}>
-            অভিভাবক: {a.guardian} · {a.country} · 📞 {a.contact} ·{" "}
+            Guardian: {a.guardian} · {a.country} · 📞 {a.contact} ·{" "}
             {fmtDate(a.date)}
           </div>
           <div style={{ fontSize: 13 }}>{a.msg}</div>
           {a.status === "accepted" && (
             <div style={{ fontSize: 12, color: C.green, marginTop: 4 }}>
-              ✔ গৃহীত — লগইন আইডি: <b>{a.newLogin}</b> · পাসওয়ার্ড:{" "}
-              <b>{a.newPass}</b> (পরিচালক/এডমিন অভিভাবককে জানিয়ে দেবেন)
+              ✔ Accepted — login ID: <b>{a.newLogin}</b> · password:{" "}
+              <b>{a.newPass}</b> (the director/admin will inform the guardian)
             </div>
           )}
         </div>
@@ -9552,7 +9541,7 @@ function AdmissionsView({ db, setDb, user, refresh }) {
             >
               {a.forwarded && (
                 <Tag color={C.blue} bg={C.blueBg}>
-                  📤 এডমিন পাঠিয়েছেন
+                  📤 Sent by admin
                 </Tag>
               )}
               <div style={{ display: "flex", gap: 6 }}>
@@ -9564,24 +9553,24 @@ function AdmissionsView({ db, setDb, user, refresh }) {
                   {acceptingId === a.id ? "..." : "✔ Accept"}
                 </Btn>
                 <Btn sm kind="danger" onClick={() => reject(a)}>
-                  ✘ বাতিল
+                  ✘ Cancel
                 </Btn>
               </div>
             </div>
           ) : a.forwarded ? (
             <Tag color={C.blue} bg={C.blueBg}>
-              পরিচালকের কাছে পাঠানো হয়েছে ✔
+              Sent to the director ✔
             </Tag>
           ) : (
             <Btn sm kind="gold" onClick={() => forward(a)}>
-              📤 পরিচালক বরাবর পাঠান
+              📤 Send to the director
             </Btn>
           )
         ) : a.status === "accepted" ? (
           <Tag>Accepted ✔</Tag>
         ) : (
           <Tag color={C.red} bg={C.redBg}>
-            বাতিল ✘
+            Cancelled ✘
           </Tag>
         )}
         {/* যেকোনো অবস্থার আবেদনই মোছা যায় — অপেক্ষমাণ, গৃহীত বা বাতিল */}
@@ -9612,14 +9601,14 @@ function AdmissionsView({ db, setDb, user, refresh }) {
           color: C.gold,
         }}
       >
-        ⏳ অপেক্ষমাণ ({bn(pending.length)})
+        ⏳ Pending ({bn(pending.length)})
       </div>
       <div style={{ display: "grid", gap: 10, marginBottom: 18 }}>
         {loading ? (
           <Loader text="Loading applications" />
         ) : pending.length === 0 ? (
           <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
-            নতুন আবেদন নেই
+            No new applications
           </div>
         ) : (
           pending.map(Card)
@@ -9633,7 +9622,7 @@ function AdmissionsView({ db, setDb, user, refresh }) {
           color: C.muted,
         }}
       >
-        সিদ্ধান্ত হয়েছে
+        Decided
       </div>
       <div style={{ display: "grid", gap: 10 }}>{decided.map(Card)}</div>
     </Section>
@@ -9656,14 +9645,14 @@ function BroadcastCard({ user }) {
     const msg = text.trim();
     if (!msg) return notice("Please write a message.");
     askConfirm(
-      `এই বার্তাটি একাডেমির সবাইকে পাঠানো হবে — পরিচালক, এডমিন, উস্তাদ ও সব শিক্ষার্থীকে।
+      `This message will be sent to everyone at the academy — the director, admins, teachers and all students.
 
 "${msg}"`,
       async () => {
         setBusy(true);
         try {
           const r = await api.broadcastNotification(msg);
-          notice(`পাঠানো হয়েছে — ${bn(r?.sent ?? 0)} জনের কাছে।`);
+          notice(`Sent — to ${bn(r?.sent ?? 0)} recipient(s).`);
           setText("");
         } catch (e) {
           notice("Could not send —" + (e?.data?.error || e?.message || "Please try again"));
@@ -9677,8 +9666,7 @@ function BroadcastCard({ user }) {
     <div style={{ ...S.card, border: `1.5px solid ${C.emerald}`, marginBottom: 14 }}>
       <div style={{ fontWeight: 800, marginBottom: 4 }}>📢 Notify everyone</div>
       <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
-        একাডেমির সবার পোর্টালের নোটিফিকেশন ঘণ্টায় বার্তাটি চলে যাবে। যাঁরা
-        ফোনে নোটিফিকেশন চালু করেছেন, তাঁদের কাছে অ্যাপ বন্ধ থাকলেও পৌঁছাবে।
+        The message goes to the notification bell in everyone's portal. Those who enabled phone notifications will receive it even when the app is closed.
       </div>
       <textarea
         value={text}
@@ -9690,7 +9678,7 @@ function BroadcastCard({ user }) {
       />
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Btn sm kind="soft" onClick={() => setText(READY_MADE)}>
-          📲 অ্যাপ নতুন করে ইনস্টলের বার্তা বসান
+          📲 Post the reinstall notice
         </Btn>
         <Btn kind="gold" onClick={send} style={{ opacity: busy ? 0.7 : 1 }}>
           {busy ? "Sending…" : "📢 Send to everyone"}
@@ -9730,8 +9718,7 @@ function BackupCard() {
     >
       <div style={{ fontWeight: 800, marginBottom: 4 }}>💾 Data Backup</div>
       <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
-        সকল ডেটা (ব্যবহারকারী, কোর্স, ফি, ভর্তি, বই, উপস্থিতি ইত্যাদি) JSON
-        ফাইলে ডাউনলোড করুন। যেকোনো সময় সার্ভার পরিবর্তন করলেও ডেটা কাছে থাকবে।
+        Download all data (users, courses, fees, admissions, books, attendance, etc.) as a JSON file. Your data stays with you even if you change servers.
       </div>
       <Btn
         kind="soft"
@@ -9751,7 +9738,7 @@ function BackupCard() {
             fontWeight: 600,
           }}
         >
-          ✔ ডাউনলোড সম্পন্ন হয়েছে — ফাইলটি নিরাপদ জায়গায় রাখুন।
+          ✔ Download complete — keep the file somewhere safe.
         </div>
       )}
       {err && (
@@ -9790,17 +9777,17 @@ function TimezoneManagerCard() {
     <div style={{ ...S.card, marginBottom: 14 }}>
       <div style={{ fontWeight: 800, marginBottom: 4 }}>🌍 Manage timezones</div>
       <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
-        ক্লাস শিডিউল ফর্মে নতুন দেশের সময় দেখাতে এখানে যোগ করুন।
-        টাইমজোন আইডি খুঁজুন:{" "}
+        Add a timezone here to show a new country’s time in the class schedule form.
+        Find timezone IDs:{" "}
         <a href="https://en.wikipedia.org/wiki/List_of_tz_database_time_zones" target="_blank" rel="noreferrer" style={{ color: C.blue }}>
           Wikipedia tz list
         </a>{" "}
-        — "TZ identifier" কলামের মান ব্যবহার করুন (যেমন: <code>Europe/Rome</code>)।
+        — use the value from the "TZ identifier" column (e.g. <code>Europe/Rome</code>).
       </div>
       {custom.length > 0 && (
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 6 }}>
-            আপনার যোগ করা টাইমজোন:
+            Timezones you added:
           </div>
           {custom.map((z) => (
             <div key={z.zone} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5, background: C.cream, borderRadius: 8, padding: "6px 10px" }}>
@@ -10049,18 +10036,18 @@ function ManageView({ db, setDb, user, refresh }) {
 
   const delUser = (u) =>
     askConfirm(
-      `${u.name}-কে মুছে ফেলবেন? এটি ফিরিয়ে আনা যাবে না।`,
+      `Delete ${u.name}? This cannot be undone.`,
       async () => {
         try {
           await api.deleteUser(u.id);
           await loadUsers();
-          notice(`✔ ${u.name}-কে মুছে ফেলা হয়েছে।`);
+          notice(`✔ ${u.name} has been deleted.`);
         } catch (e) {
           // আগে ব্যর্থ হলেও তালিকা থেকে সরিয়ে "মুছে গেছে" দেখানো হতো — আসল
           // অ্যাকাউন্টটা সার্ভারে ঠিকই লগইন-সক্ষম থেকে যেত, শুধু স্ক্রিনে ভুল
           // ধারণা হতো যে অ্যাক্সেস বাতিল হয়ে গেছে। এখন স্পষ্ট এরর দেখাচ্ছে।
           notice(
-            `${u.name}-কে মুছতে ব্যর্থ — ` +
+            `Could not delete ${u.name} — ` +
               (e?.data?.error || e?.message || "Please check your server connection and try again"),
           );
         }
@@ -10125,7 +10112,7 @@ function ManageView({ db, setDb, user, refresh }) {
         : rCourses.filter((c) => (c.students || []).some((x) => String(x) === uid2));
     return (
       <Modal
-        title={`বিস্তারিত রিপোর্ট — ${u.name}`}
+        title={`Detailed report — ${u.name}`}
         onClose={() => setReport(null)}
         wide
       >
@@ -10145,7 +10132,7 @@ function ManageView({ db, setDb, user, refresh }) {
               borderRadius: 10,
             }}
           >
-            ভূমিকা: <b>{roleBn[u.role]}</b>
+            Role: <b>{roleBn[u.role]}</b>
           </div>
           <div
             style={{
@@ -10154,7 +10141,7 @@ function ManageView({ db, setDb, user, refresh }) {
               borderRadius: 10,
             }}
           >
-            লগইন: <b>{u.user}</b> · Pass: <b>{u.pass}</b>
+            Login: <b>{u.user}</b> · Pass: <b>{u.pass}</b>
           </div>
           {u.role !== "admin" && u.role !== "director" && (
             <div
@@ -10164,7 +10151,7 @@ function ManageView({ db, setDb, user, refresh }) {
                 borderRadius: 10,
               }}
             >
-              কোর্স: <b>{cs.map((c) => c.name).join(", ") || "—"}</b>
+              Course: <b>{cs.map((c) => c.name).join(", ") || "—"}</b>
             </div>
           )}
           {u.role === "student" && (
@@ -10175,7 +10162,7 @@ function ManageView({ db, setDb, user, refresh }) {
                 borderRadius: 10,
               }}
             >
-              অভিভাবক: <b>{u.guardian || "—"}</b> · {u.country || ""}
+              Guardian: <b>{u.guardian || "—"}</b> · {u.country || ""}
             </div>
           )}
         </div>
@@ -10201,7 +10188,7 @@ function ManageView({ db, setDb, user, refresh }) {
                 label="Class quality"
                 value={avg ? `★ ${bn(avg)}` : "—"}
                 accent={C.gold}
-                note={`${bn(ratingsGot.length)}টি মূল্যায়ন`}
+                note={`${bn(ratingsGot.length)} evaluations`}
               />
             )}
             {u.role === "student" && (
@@ -10224,7 +10211,7 @@ function ManageView({ db, setDb, user, refresh }) {
         {u.role === "student" && exams.length > 0 && (
           <>
             <div style={{ fontWeight: 800, fontSize: 13.5, margin: "6px 0" }}>
-              📝 পরীক্ষার ফল
+              📝 Exam results
             </div>
             <Table
               head={["Exams", "Marks"]}
@@ -10240,7 +10227,7 @@ function ManageView({ db, setDb, user, refresh }) {
             <div
               style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}
             >
-              🌟 সে যেসব মূল্যায়ন করেছে (কেবল পরিচালক/এডমিন দেখেন)
+              🌟 Evaluations they submitted (visible to director/admin only)
             </div>
             <Table
               head={["Teacher", "Rating", "Remarks", "Date"]}
@@ -10258,7 +10245,7 @@ function ManageView({ db, setDb, user, refresh }) {
             <div
               style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}
             >
-              🌟 তার সম্পর্কে স্টুডেন্টদের মূল্যায়ন (নাম-মন্তব্যসহ)
+              🌟 Student evaluations about them (with names and comments)
             </div>
             <Table
               head={["Student", "Rating", "Remarks", "Date"]}
@@ -10276,7 +10263,7 @@ function ManageView({ db, setDb, user, refresh }) {
             <div
               style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}
             >
-              💰 বেতন পরিশোধ
+              💰 Salary payment
             </div>
             <Table
               head={["Month", "Amount", "Date"]}
@@ -10295,7 +10282,7 @@ function ManageView({ db, setDb, user, refresh }) {
             <div
               style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}
             >
-              💳 ফি পরিশোধ
+              💳 Fee payment
             </div>
             <Table
               head={["Month", "Amount", "Method", "Status"]}
@@ -10351,14 +10338,14 @@ function ManageView({ db, setDb, user, refresh }) {
             setShow(true);
           }}
         >
-          + নতুন ব্যবহারকারী
+          + New user
         </Btn>
       }
     >
       {loading && <Loader text="Loading user list" />}
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          👥 সকল ব্যবহারকারী — আইডি, পাসওয়ার্ড ও রিপোর্টসহ
+          👥 All users — with IDs, passwords and reports
         </div>
         <Table
           head={[
@@ -10399,11 +10386,11 @@ function ManageView({ db, setDb, user, refresh }) {
               {u.pass}
             </code>,
             <Btn key="rep" sm kind="ghost" onClick={() => setReport(u)}>
-              📊 বিস্তারিত
+              📊 Details
             </Btn>,
             <span key="a" style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
               <Btn sm kind="soft" onClick={() => openEdit(u)}>
-                ✏️ এডিট
+                ✏️ Edit
               </Btn>
               {u.role !== "director" && (
                 <Btn sm kind="danger" onClick={() => delUser(u)}>
@@ -10416,11 +10403,10 @@ function ManageView({ db, setDb, user, refresh }) {
       </div>
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 4 }}>
-          🔑 বিশেষ অনুমতি — ভুল সংশোধন
+          🔑 Special permission — correcting mistakes
         </div>
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
-          সাধারণত লাল ক্রস (✘) কেবল এডমিন/পরিচালক ঠিক করতে পারেন। কোনো উস্তাদের
-          ভুল হলে তাকে সাময়িক এডিটের সুযোগ দিন:
+          Normally only an admin/director can clear a red cross (✘). If a teacher made a mistake, grant them temporary edit access:
         </div>
         {allUsers
           .filter((u) => u.role === "teacher")
@@ -10452,7 +10438,7 @@ function ManageView({ db, setDb, user, refresh }) {
                 <Tag>Permission granted ✔</Tag>
               ) : (
                 <Tag color={C.muted} bg={"#fff"}>
-                  বন্ধ
+                  Off
                 </Tag>
               )}
               <Btn
@@ -10470,11 +10456,10 @@ function ManageView({ db, setDb, user, refresh }) {
       <TimezoneManagerCard />
       <div style={{ ...S.card, border: `1.5px solid #f3c9b8` }}>
         <div style={{ fontWeight: 800, marginBottom: 4, color: C.red }}>
-          ⚠️ ডেঞ্জার জোন
+          ⚠️ Danger zone
         </div>
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
-          ক্লাস, পরীক্ষা, নোটিশ, বই — প্রতিটি পেজে পরিচালকের জন্য আলাদা "Delete"
-          বাটন চালু আছে। এছাড়া:
+          Classes, exams, notices, books — every page has a separate "Delete" button for the director. In addition:
         </div>
         <Btn
           kind="danger"
@@ -10485,7 +10470,7 @@ function ManageView({ db, setDb, user, refresh }) {
             )
           }
         >
-          সব নোটিফিকেশন মুছুন
+          Clear all notifications
         </Btn>
       </div>
       {report && userReport({ u: report })}
@@ -10525,7 +10510,7 @@ function ManageView({ db, setDb, user, refresh }) {
           </div>
           <div style={{ marginTop: 10 }}>
             <label style={S.label}>
-              পাসওয়ার্ড — অক্ষর ও সংখ্যা মিশ্রিত
+              Password — letters and digits mixed
               {editId ? " (leave blank to keep unchanged)" : ""}
             </label>
             <div style={{ display: "flex", gap: 8 }}>
@@ -10536,7 +10521,7 @@ function ManageView({ db, setDb, user, refresh }) {
                 placeholder={editId ? "Entering a new password will change it" : ""}
               />
               <Btn kind="soft" onClick={() => setF({ ...f, pass: genPass() })}>
-                🎲 বানিয়ে দিন
+                🎲 Generate
               </Btn>
             </div>
           </div>
@@ -10931,13 +10916,13 @@ function StudentPaymentsView({ db, setDb, user }) {
     setDuaMsg(true);
   };
   const acct = {
-    বিকাশ: {
+    bKash: {
       icon: "📱",
       name: "bKash",
       line1: "bKash Personal (Send Money)",
       line2: "Number: 01402-499027",
     },
-    নগদ: {
+    Nagad: {
       icon: "🟠",
       name: "Nagad",
       line1: "Nagad Personal (Send Money)",
@@ -11439,7 +11424,7 @@ function ReceiptMaker({ onClose, user }) {
         style={{ marginTop: 16, width: "100%", justifyContent: "center" }}
         onClick={make}
       >
-        🧾 PDF রিসিট তৈরি করুন
+        🧾 Create PDF receipt
       </Btn>
       <div
         style={{
@@ -11449,7 +11434,7 @@ function ReceiptMaker({ onClose, user }) {
           marginTop: 8,
         }}
       >
-        রিসিট প্রিভিউ খুলবে — সেখান থেকে ⬇️ ডাউনলোড বা 📨 সেন্ড করা যাবে
+        A receipt preview opens — from there you can ⬇️ download or 📨 send it
       </div>
     </Modal>
   );
@@ -11564,7 +11549,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
           .replace("Nagad", "nagad")
           .replace("Bank transfer", "bank"),
       });
-      notice(`✔ ${st.name}-এর "${label}" মাসের পেমেন্ট পরিশোধিত হিসেবে সেভ হয়েছে।`);
+      notice(`✔ Payment for ${st.name} for "${label}" saved as paid.`);
       setMp((prev) => ({ ...prev, month: "" }));
       await loadData();
     } catch (e) {
@@ -11578,7 +11563,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
     try {
       await api.waiveDue(studentId, monthLabel, reason);
       await loadData();
-      notice(`✔ "${monthLabel}" মাসের বকেয়া মওকুফ করা হয়েছে।`);
+      notice(`✔ Dues for "${monthLabel}" have been waived.`);
     } catch (e) {
       notice(
         "Could not waive —" +
@@ -11610,7 +11595,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
     setGenDuesBusy(true);
     try {
       const r = await api.generateMonthlyDues("student");
-      notice(`✔ চলতি মাসের স্টুডেন্ট বকেয়া তৈরি হয়েছে — ${bn(r.created)}টি নতুন যোগ হলো`);
+      notice(`✔ This month’s student dues created — ${bn(r.created)} new added`);
       await loadData();
     } catch (e) {
       notice("Could not create dues —" + (e?.message || "Verify"));
@@ -11631,7 +11616,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
             {genDuesBusy ? "⏳ Creating…" : "🔄 Create this month's dues"}
           </Btn>
           <Btn kind="gold" onClick={() => setMaker(true)}>
-            🧾 রিসিট বানান
+            🧾 Create receipt
           </Btn>
         </div>
       }
@@ -11655,7 +11640,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
         <Stat
           icon="📵"
           label="Has dues"
-          value={`${bn(dueStudents.length)} জন`}
+          value={`${bn(dueStudents.length)}`}
           accent={C.red}
         />
       </div>
@@ -11667,12 +11652,10 @@ function DirectorPaymentsView({ db, setDb, user }) {
         }}
       >
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          ✅ যেকোনো মাসের পেমেন্ট সরাসরি সম্পন্ন করুন
+          ✅ Complete any month's payment directly
         </div>
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
-          স্টুডেন্ট নিজে জমা না দিলেও, যেকোনো (সামনের বা পিছনের) মাসের পেমেন্ট
-          এখান থেকে সরাসরি "Paid" হিসেবে সেভ করতে পারবেন — সেই মাসের বকেয়া
-          থাকলে তা অটো সরে যাবে।
+          Even if the student has not submitted anything, you can save any month's payment (past or future) directly as "Paid" from here — any dues for that month are cleared automatically.
         </div>
         <div
           style={{
@@ -11736,7 +11719,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
         }}
       >
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          ⏳ ভেরিফাইয়ের অপেক্ষায় — মিলিয়ে দেখে ক্লিক করুন
+          ⏳ Awaiting verification — check and click
         </div>
         {loading && <Loader text="Loading payments" />}
         {!loading && pending.length === 0 && (
@@ -11748,7 +11731,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
               padding: 8,
             }}
           >
-            কোনো পেন্ডিং পেমেন্ট নেই, আলহামদুলিল্লাহ।
+            No pending payments, Alhamdulillah.
           </div>
         )}
         {pending.map((p) => {
@@ -11776,7 +11759,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
               </div>
               {p.shot && (
                 <Btn sm kind="soft" onClick={() => setViewShot(p.shot)}>
-                  🖼️ স্ক্রিনশট
+                  🖼️ Screenshot
                 </Btn>
               )}
               <span
@@ -11790,10 +11773,10 @@ function DirectorPaymentsView({ db, setDb, user }) {
                   borderRadius: 99,
                 }}
               >
-                ⏳ পেন্ডিং
+                ⏳ Pending
               </span>
               <Btn sm onClick={() => verify(p.id)}>
-                ✔ ভেরিফাই করুন
+                ✔ Verify
               </Btn>
             </div>
           );
@@ -11817,11 +11800,11 @@ function DirectorPaymentsView({ db, setDb, user }) {
           }}
         >
           <div style={{ fontWeight: 800 }}>
-            📵 যাদের ফি বাকি — WhatsApp রিমাইন্ডার
+            📵 Students with outstanding fees — WhatsApp reminder
           </div>
           {dueStudents.length > 0 && (
             <Btn sm kind="gold" onClick={sendAll}>
-              📋 সবাইকে একসাথে (মেসেজ কপি)
+              📋 Everyone at once (copy message)
             </Btn>
           )}
         </div>
@@ -11834,7 +11817,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
               padding: 8,
             }}
           >
-            কারো বকেয়া নেই, আলহামদুলিল্লাহ।
+            Nobody has dues, Alhamdulillah.
           </div>
         )}
         {dueStudents.map((s) => (
@@ -11854,13 +11837,13 @@ function DirectorPaymentsView({ db, setDb, user }) {
             <div style={{ flex: 1, minWidth: 200 }}>
               <b style={{ fontSize: 14 }}>{s.name}</b>
               <div style={{ fontSize: 12, color: C.muted }}>
-                বকেয়া: {(s.dueMonths || []).join(", ")} — {(s.fee_currency || "BDT") === "USD" ? "$" : "৳"}
+                Dues: {(s.dueMonths || []).join(", ")} — {(s.fee_currency || "BDT") === "USD" ? "$" : "৳"}
                 {bn(
                   ((s.dueMonths || []).length * (s.fee || 0)).toLocaleString(
                     "en",
                   ),
                 )}{" "}
-                · অভিভাবক: {s.guardian || "—"}
+                · Guardian: {s.guardian || "—"}
               </div>
             </div>
             {s.phone ? (
@@ -11871,12 +11854,12 @@ function DirectorPaymentsView({ db, setDb, user }) {
                 style={{ textDecoration: "none" }}
               >
                 <Btn sm style={{ background: "#25D366", color: "#fff" }}>
-                  📱 WhatsApp রিমাইন্ডার
+                  📱 WhatsApp reminder
                 </Btn>
               </a>
             ) : (
               <Tag color={C.muted} bg={C.cream}>
-                নম্বর নেই
+                No number
               </Tag>
             )}
             {/* ছুটি বা অন্য কারণে যাঁর কাছ থেকে ফি নেওয়া হবে না — এখান
@@ -11888,17 +11871,17 @@ function DirectorPaymentsView({ db, setDb, user }) {
                   key={m}
                   sm
                   kind="soft"
-                  title={`${m} মাসের বকেয়া মওকুফ করুন`}
+                  title={`Waive dues for ${m}`}
                   onClick={() =>
                     askConfirm(
-                      `${s.name}-এর "${m}" মাসের বকেয়া মওকুফ করবেন?\n\n` +
-                        `ছুটিতে থাকলে বা অন্য কারণে ফি না নিলে এটা করুন। ` +
-                        `বকেয়াটি তালিকা থেকে সরে যাবে।`,
+                      `Waive ${s.name}'s dues for "${m}"?\n\n` +
+                        `Do this when they are on leave or the fee is not being collected for some other reason. ` +
+                        `The due will be removed from the list.`,
                       () => waiveDueHere(s.id, m, "Leave/Waiver"),
                     )
                   }
                 >
-                  🏝️ {m} মওকুফ
+                  🏝️ Waive {m}
                 </Btn>
               ))}
           </div>
@@ -11906,7 +11889,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
       </div>
       <div style={{ ...S.card }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          ✅ ভেরিফাইড পেমেন্টসমূহ
+          ✅ Verified payments
         </div>
         <Table
           head={["Student", "Month", "Amount", "Method", "Date", "Status", ""]}
@@ -11925,7 +11908,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
                 kind="danger"
                 onClick={() =>
                   askConfirm(
-                    `${p.studentName || s.name}-এর "${p.month}" মাসের এই পেমেন্ট রেকর্ডটা মুছে ফেলবেন? ভুল/ডুপ্লিকেট এন্ট্রি হলেই শুধু মুছুন — অন্য কোনো ভেরিফাইড পেমেন্ট না থাকলে ওই মাসের বকেয়া আবার ফিরে আসবে।`,
+                    `Delete this payment record for ${p.studentName || s.name} for "${p.month}"? Only delete wrong or duplicate entries — if there is no other verified payment, that month’s due will come back.`,
                     async () => {
                       try {
                         await api.deleteFee(p.id);
@@ -11940,7 +11923,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
                   )
                 }
               >
-                🗑️ মুছুন
+                🗑️ Delete
               </Btn>,
             ];
           })}
@@ -12097,7 +12080,7 @@ function RemarkBox({ studentId, studentName }) {
         💬
       </button>
       {open && (
-        <Modal title={`💬 মন্তব্য — ${studentName}`} onClose={() => setOpen(false)}>
+        <Modal title={`💬 Remarks — ${studentName}`} onClose={() => setOpen(false)}>
           {list.length > 0 && (
             <div style={{ marginBottom: 10, display: "grid", gap: 6 }}>
               {list.map((r) => (
@@ -12168,7 +12151,7 @@ function RoutineView({ db, setDb, courses, user }) {
     try {
       const r = await api.generateRoutineClasses();
       notice(
-        `✔ ${bn(r?.created || 0)}টি নতুন ক্লাস তৈরি হয়েছে — উস্তাদ ও শিক্ষার্থীর পোর্টালে (রিফ্রেশ করলে) দেখা যাবে।`,
+        `✔ ${bn(r?.created || 0)} new class(es) created — they appear in the teacher’s and student’s portals after a refresh.`,
       );
     } catch {
       notice("Class creation failed — please check your server connection.");
@@ -12323,7 +12306,7 @@ function RoutineView({ db, setDb, courses, user }) {
         const whole = c.studentIds || [];
         const names = whole.map((sid) => nameOf(sid)).join(", ") || "Nobody";
         askConfirm(
-          `আপনি কোনো নির্দিষ্ট স্টুডেন্ট বাছাই করেননি — তাই "${c.name || "of this course"}" কোর্সে ভর্তি সবাই (${names}) এই রুটিনে যুক্ত হয়ে যাবে। এগিয়ে যাবেন?`,
+          `You have not selected any specific student — so everyone enrolled in the "${c.name || "selected"}" course (${names}) will be added to this routine. Proceed?`,
           () => saveRoutine(whole),
         );
         return;
@@ -12341,7 +12324,7 @@ function RoutineView({ db, setDb, courses, user }) {
         )
         .join(" · ");
       askConfirm(
-        `⚠️ ${nameOf(f.teacherId)} এই বারে-সময়ে ইতিমধ্যে অন্য রুটিনে ব্যস্ত: ${details} — একই সময়ে দুইটা ক্লাসে "Book" হয়ে যাবেন। তবুও এগিয়ে যাবেন?`,
+        `⚠️ ${nameOf(f.teacherId)} is already booked on another routine at this day and time: ${details} — they would be booked for two classes at once. Proceed anyway?`,
         afterConflictCheck,
       );
       return;
@@ -12568,9 +12551,7 @@ function RoutineView({ db, setDb, courses, user }) {
               marginBottom: 12,
             }}
           >
-            💡 কোন স্টুডেন্ট কোন উস্তাদের কাছে সপ্তাহের কোন বারে, কোন সময়ে, কোন
-            কোর্সে পড়বে — সব সময়ের জন্য রুটিন। ছুটে যাওয়া ক্লাসের
-            মেকআপ/সাপোর্টের জন্য "Classes & Zoom Join" পেজের শিডিউল ব্যবহার করুন।
+            💡 Which student studies which course with which teacher, on which day and at what time — a permanent routine. For make-up or support classes after a missed class, use the schedule on the "Classes & Zoom Join" page.
           </div>
           <div>
             <label style={S.label}>Course</label>
@@ -12588,7 +12569,7 @@ function RoutineView({ db, setDb, courses, user }) {
             >
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} — {c.studentIds.length}জন শিক্ষার্থী
+                  {c.name} — {c.studentIds.length} students
                 </option>
               ))}
             </select>
@@ -12609,8 +12590,8 @@ function RoutineView({ db, setDb, courses, user }) {
           </div>
           <div style={{ marginTop: 10 }}>
             <label style={S.label}>
-              শিক্ষার্থী বাছাই করুন — এক এক করে ({bn(f.studentIds.length)} জন
-              নির্বাচিত; কাউকে না বাছলে কোর্সের সবাই)
+              Select students — one by one ({bn(f.studentIds.length)} selected;
+              if none are chosen, everyone in the course)
             </label>
             <StudentPicker
               selected={f.studentIds}
@@ -12683,7 +12664,7 @@ function RoutineView({ db, setDb, courses, user }) {
           {f.studentIds.length > 0 && (
             <div style={{ marginTop: 14 }}>
               <label style={S.label}>
-                🎓 শিক্ষার্থীদের নিজস্ব সময় (ঐচ্ছিক — বিদেশে থাকা কারো জন্য আলাদা বার/সময়)
+                🎓 Students' own times (optional — a different day/time for someone abroad)
               </label>
               <div style={{ display: "grid", gap: 8 }}>
                 {f.studentIds.map((sid) => {
@@ -12817,7 +12798,7 @@ function RoutineView({ db, setDb, courses, user }) {
 const LEAVE_TYPE_EN = {
   অসুস্থতা: "Sickness",
   সফর: "Travel",
-  "Family need": "Family Reasons",
+  "পারিবারিক প্রয়োজন": "Family Reasons",
   পরীক্ষা: "Exam",
   অন্যান্য: "Other",
 };
@@ -12997,7 +12978,7 @@ function LeaveView({ db, setDb, user }) {
                 {stTag(l.status)}
                 {user.role === "admin" && l.status === "pending_admin" && (
                   <Btn sm kind="gold" onClick={() => forward(l)}>
-                    📤 পরিচালক বরাবর পাঠান
+                    📤 Send to the director
                   </Btn>
                 )}
                 {isDir(user) &&
@@ -13005,10 +12986,10 @@ function LeaveView({ db, setDb, user }) {
                     l.status === "forwarded") && (
                     <span style={{ display: "flex", gap: 6 }}>
                       <Btn sm onClick={() => decide(l, true)}>
-                        ✔ মঞ্জুর
+                        ✔ Approved
                       </Btn>
                       <Btn sm kind="danger" onClick={() => decide(l, false)}>
-                        ✘ নামঞ্জুর
+                        ✘ Reject
                       </Btn>
                     </span>
                   )}
@@ -13052,31 +13033,32 @@ function LeaveView({ db, setDb, user }) {
                   </>
                 ) : (
                   <>
-                    <div>তারিখ: {fmtDate(l.date)}</div>
+                    <div>Date: {fmtDate(l.date)}</div>
                     <div>
-                      বরাবর,
+                      To,
                       <br />
-                      পরিচালক মহোদয়,
+                      Respected Director,
                       <br />
-                      তারবিয়াতুল কুরআন একাডেমি
+                      Tarbiyatul Quran Academy
                     </div>
                     <div style={{ margin: "6px 0" }}>
-                      <b>বিষয়: ছুটির আবেদন ({l.type})।</b>
+                      <b>Subject: Application for Leave ({LEAVE_TYPE_EN[l.type] || l.type}).</b>
                     </div>
                     <div>
-                      জনাব,
+                      Dear Sir,
                       <br />
-                      সবিনয় নিবেদন এই যে, আমি {apName}, আপনার প্রতিষ্ঠানের একজন{" "}
+                      I respectfully submit that I, {apName}, am a{" "}
                       {apRole === "student"
                         ? "Student"
                         : apRole === "teacher"
                           ? "Teacher"
-                          : "Admin"}
-                      । {l.reason} এমতাবস্থায়, {fmtDate(l.from)} থেকে{" "}
-                      {fmtDate(l.to)} পর্যন্ত ছুটি মঞ্জুর করতে আপনার সদয় মর্জি হয়।
+                          : "Admin"}{" "}
+                      of your institution. {l.reason} In these circumstances, I humbly
+                      request that you kindly grant me leave from {fmtDate(l.from)} to{" "}
+                      {fmtDate(l.to)}.
                     </div>
                     <div style={{ marginTop: 6 }}>
-                      নিবেদক,
+                      Sincerely,
                       <br />
                       <b>{apName}</b>
                     </div>
@@ -13170,15 +13152,15 @@ function LeaveView({ db, setDb, user }) {
               </>
             ) : (
               <>
-                বরাবর, পরিচালক মহোদয়, তারবিয়াতুল কুরআন একাডেমি
+                To the Respected Director, Tarbiyatul Quran Academy
                 <br />
-                <b>বিষয়: ছুটির আবেদন ({f.type})।</b>
+                <b>Subject: Application for Leave ({LEAVE_TYPE_EN[f.type] || f.type}).</b>
                 <br />
-                জনাব, সবিনয় নিবেদন এই যে, আমি {user.name}। {f.reason || "..."}{" "}
-                এমতাবস্থায়, {fmtDate(f.from)} থেকে {fmtDate(f.to)} পর্যন্ত ছুটি
-                মঞ্জুর করতে আপনার সদয় মর্জি হয়।
+                Dear Sir, I respectfully submit that I am {user.name}. {f.reason || "..."}{" "}
+                In these circumstances, I humbly request that you kindly grant me
+                leave from {fmtDate(f.from)} to {fmtDate(f.to)}.
                 <br />
-                নিবেদক, <b>{user.name}</b>
+                Sincerely, <b>{user.name}</b>
               </>
             )}
           </div>
@@ -13457,7 +13439,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   // পরিচালক কোনো নির্দিষ্ট মাসের বকেয়া মওকুফ করে বকেয়া তালিকা থেকে সরিয়ে দিতে পারেন
   const waiveDue = (studentId, monthLabel) =>
     askConfirm(
-      `"${monthLabel}" মাসের বকেয়া মওকুফ করবেন? এটা বকেয়ার তালিকা থেকে সরে যাবে।`,
+      `Waive the dues for "${monthLabel}"? It will be removed from the dues list.`,
       async () => {
         try {
           await api.waiveDue(studentId, monthLabel);
@@ -13475,7 +13457,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             ? { ...prev, dues: strip(prev.dues) }
             : prev,
         );
-        notice(`✔ "${monthLabel}" মাসের বকেয়া মওকুফ করা হয়েছে।`);
+        notice(`✔ Dues for "${monthLabel}" have been waived.`);
       },
     );
 
@@ -13488,7 +13470,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
       await loadStudents();
       notice(
         r?.created
-          ? `✔ ${bn(r.created)} জন স্টুডেন্টের আইডি তৈরি হয়েছে।`
+          ? `✔ IDs created for ${bn(r.created)} student(s).`
           : "Every student already has an ID.",
       );
     } catch (e) {
@@ -13569,7 +13551,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             courseMoved = true;
           } catch (e) {
             notice(
-              `"${c.name}" কোর্স থেকে সরানো যায়নি — ` +
+              `Could not remove from the "${c.name}" course — ` +
                 (e?.data?.error || e?.message || "Please try again"),
             );
           }
@@ -13584,7 +13566,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             courseMoved = true;
           } catch (e) {
             notice(
-              `"${target.name}" কোর্সে যুক্ত করা যায়নি — ` +
+              `Could not add to the "${target.name}" course — ` +
                 (e?.data?.error || e?.message || "Please try again"),
             );
           }
@@ -13640,14 +13622,14 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   };
 
   const delStudent = (s) =>
-    askConfirm(`${s.name}-কে মুছে ফেলবেন?`, async () => {
+    askConfirm(`Delete ${s.name}?`, async () => {
       try {
         await api.deleteUser(s.id);
         await loadStudents();
-        notice(`✔ ${s.name}-কে মুছে ফেলা হয়েছে।`);
+        notice(`✔ ${s.name} has been deleted.`);
       } catch (e) {
         notice(
-          `${s.name}-কে মুছতে ব্যর্থ — ` +
+          `Could not delete ${s.name} — ` +
             (e?.data?.error || e?.message || "Please check your server connection and try again"),
         );
       }
@@ -13702,7 +13684,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
     );
     return (
       <Modal
-        title={`বিস্তারিত — ${s.name}`}
+        title={`Details — ${s.name}`}
         onClose={() => setDetail(null)}
         wide
       >
@@ -13725,7 +13707,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 fontSize: 13,
               }}
             >
-              ইমেইল:{" "}
+              Email:{" "}
               <a
                 href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(s.email)}`}
                 target="_blank"
@@ -13752,7 +13734,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               fontSize: 13,
             }}
           >
-            ফি স্টেটাস:{" "}
+            Fee status:{" "}
             {dues.length ? (
               <span
                 style={{
@@ -13764,7 +13746,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               >
                 {dues.map((m) => (
                   <Tag key={m} color={C.red} bg={C.redBg}>
-                    বকেয়া: {m}
+                    Due: {m}
                     {isDir(user) && (
                       <button
                         onClick={() => waiveDue(s.id, m)}
@@ -13787,30 +13769,30 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               </span>
             ) : myPays === null ? (
               <Tag color={C.muted} bg={C.cream}>
-                দেখা হচ্ছে…
+                Viewing…
               </Tag>
             ) : myPays.length > 0 ? (
-              <Tag>পরিশোধিত ✔ — সর্বশেষ {myPays[0].month_label}</Tag>
+              <Tag>Paid ✔ — latest {myPays[0].month_label}</Tag>
             ) : myWaived.length > 0 ? (
               /* মওকুফ ≠ পরিশোধিত — টাকা আসেনি, নেওয়া হবেও না।
                  তাই আলাদা রঙে, আলাদা কথায়। */
               <Tag color={C.gold} bg={C.amberBg}>
-                বকেয়া নেই — মওকুফ করা হয়েছে
+                No dues — waived
               </Tag>
             ) : (
               /* কোনো পেমেন্টও নেই, মওকুফও নেই */
               <Tag color={C.red} bg={C.redBg}>
-                এখনো কোনো পেমেন্ট নেই
+                No payments yet
               </Tag>
             )}
             {myPays && myPays.length > 0 && (
               <div style={{ fontSize: 11.5, color: C.muted, marginTop: 4 }}>
-                মোট {bn(myPays.length)}টি পেমেন্ট যাচাই করা হয়েছে
+                {bn(myPays.length)} payment(s) verified in total
               </div>
             )}
             {myWaived.length > 0 && (
               <div style={{ fontSize: 11.5, color: "#8a5a00", marginTop: 4 }}>
-                🏝️ মওকুফ:{" "}
+                🏝️ Waived:{" "}
                 {myWaived
                   .map(
                     (w) =>
@@ -13823,11 +13805,11 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           </div>
         </div>
         <div style={{ fontWeight: 800, fontSize: 13.5, margin: "8px 0 6px" }}>
-          📚 কী পড়ে, কার কাছে পড়ে
+          📚 What they study, who they study with
         </div>
         {cs.length === 0 && (
           <div style={{ fontSize: 13, color: C.muted }}>
-            কোনো কোর্সে যুক্ত নেই
+            Not enrolled in any course
           </div>
         )}
         {cs.map((c) => (
@@ -13841,16 +13823,16 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               fontSize: 13,
             }}
           >
-            <b style={{ color: c.color || C.emerald }}>{c.name}</b> · উস্তাদ:{" "}
+            <b style={{ color: c.color || C.emerald }}>{c.name}</b> · Teacher:{" "}
             <b>{c.teacherName || teacherNameOf(c.teacherId) || "—"}</b>
           </div>
         ))}
         <div style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}>
-          📅 সপ্তাহে কয়দিন, কী কী বারে, কোন সময়ে
+          📅 How many days a week, which days, what times
         </div>
         {routines.length === 0 && (
           <div style={{ fontSize: 13, color: C.muted }}>
-            এখনো রুটিন তৈরি হয়নি
+            No routine created yet
           </div>
         )}
         {routines.map((r) => {
@@ -13866,9 +13848,9 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 fontSize: 13,
               }}
             >
-              <b>{c.name}</b> — সপ্তাহে {bn(r.days.length)} দিন:{" "}
+              <b>{c.name}</b> — {bn(r.days.length)} day(s)/week:{" "}
               <b>{r.days.map((i) => DAY_BN[i]).join(", ")}</b> · 🕐 {r.time} (
-              {bn(r.dur)} মি) · উস্তাদ:{" "}
+              {bn(r.dur)} min) · Teacher:{" "}
               {userById(r.teacherId || c.teacherId).name}
             </div>
           );
@@ -13915,7 +13897,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 })
               }
             >
-              + নতুন স্টুডেন্ট
+              + New student
             </Btn>
           </div>
         )
@@ -13994,13 +13976,13 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                     fontWeight: 800,
                   }}
                 >
-                  💬 মেসেজ
+                  💬 Message
                 </span>
               </a>
             )}
           </span>,
           <Btn key="d" sm kind="ghost" onClick={() => setDetail(s)}>
-            📋 বিস্তারিত
+            📋 Details
           </Btn>,
           ...(isDir(user)
             ? [
@@ -14050,7 +14032,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         <Modal
           title={
             edit.id
-              ? `✏️ এডিট — ${edit.name}`
+              ? `✏️ Edit — ${edit.name}`
               : "+ Add new student (director only)"
           }
           onClose={() => setEdit(null)}
@@ -14077,9 +14059,9 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={S.label}>
-                স্টুডেন্ট আইডি{" "}
+                Student ID{" "}
                 <span style={{ fontWeight: 400, color: C.muted }}>
-                  — খালি রাখলে নাম·বাবার নাম·দেশ·সিরিয়াল মিলিয়ে নিজে থেকেই তৈরি হবে
+                  — leave blank and it is generated automatically from name · father's name · country · serial
                 </span>
               </label>
               <input
@@ -14131,7 +14113,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 placeholder="Number (without code, e.g. 1712345678)"
               />
               <div style={{ fontSize: 11.5, color: C.muted, marginTop: 4 }}>
-                পূর্ণ নম্বর:{" "}
+                Full number:{" "}
                 <b style={{ color: C.emerald }}>
                   +{joinPhone(edit.phoneIso, edit.phone) || "—"}
                 </b>
@@ -14183,7 +14165,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           {/* সপ্তাহে কোন কোন বার পড়বে — দিন-সংখ্যা ফি ও রুটিনে ব্যবহৃত */}
           <div style={{ marginTop: 10 }}>
             <label style={S.label}>
-              সপ্তাহে কোন কোন বার পড়বে ({bn((edit.days || []).length)} দিন)
+              Which days of the week ({bn((edit.days || []).length)} day(s))
             </label>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {WEEK_ORDER.map((wd) => {
@@ -14218,7 +14200,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               })}
             </div>
             <div style={{ fontSize: 11.5, color: C.muted, marginTop: 5 }}>
-              💡 দিনের সংখ্যা অনুযায়ী ফি নির্ধারণ ও রুটিন তৈরিতে কাজে লাগবে।
+              💡 Useful for setting fees by number of days and for building the routine.
             </div>
           </div>
           {/* ⚠️ আগে এখানে শর্ত ছিল {!edit.id && …} — অর্থাৎ কোর্স ও উস্তাদের
@@ -14264,12 +14246,12 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               </div>
               <div>
                 <label style={S.label}>
-                  👳 কার কাছে পড়ে (উস্তাদ/উস্তাদা)
+                  👳 Who they study with (teacher)
                   <span
                     style={{ color: C.muted, fontWeight: 600, fontSize: 11.5 }}
                   >
                     {" "}
-                    — কেবল এই শিক্ষার্থীর
+                    — for this student only
                   </span>
                 </label>
                 <select
@@ -14307,11 +14289,8 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                         color: "#8a5a00",
                       }}
                     >
-                      ⚠️ এই উস্তাদ বাছাই করা কোর্সটির সাথে যুক্ত নন। এভাবে
-                      সংরক্ষণ করলে <b>তিনি এই শিক্ষার্থীকে নিজের তালিকায়
-                      দেখতে পাবেন</b> (কারণ শিক্ষার্থী তাঁর কাছেই পড়ে), তবে{" "}
-                      <b>Other teachers of the course will not see it</b>। ইচ্ছা করে এমন
-                      চাইলে ঠিক আছে।
+                      ⚠️ This teacher is not linked to the selected course. If you save it this way, <b>they will see this student in their own list</b> (because the student studies with them), but{" "}
+                      <b>Other teachers of the course will not see it</b>. That is fine if it is intentional.
                     </div>
                   )}
               </div>
@@ -14487,7 +14466,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
               {
                 id: uid(),
                 for: [tid, ...studs, "admin1", "dir1"],
-                text: `⛔ ${c.name} ক্লাসটি (${fmtDate(k.date)}, ${k.time}) স্থগিত করা হয়েছে।`,
+                text: `⛔ The ${c.name} class (${fmtDate(k.date)}, ${k.time}) has been postponed.`,
                 date: todayISO(),
                 read: false,
               },
@@ -14502,7 +14481,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
   return (
     <div style={{ ...S.card, marginBottom: 16 }}>
       <div style={{ fontWeight: 800, marginBottom: 10 }}>
-        👳 উস্তাদ-ভিত্তিক রুটিন ও ক্লাস
+        👳 Routine and classes by teacher
       </div>
       {user.role !== "teacher" && (
         <div
@@ -14533,12 +14512,12 @@ function TeacherWiseBoard({ db, setDb, user }) {
           color: C.emerald,
         }}
       >
-        📚 {t.name}-এর কাছে যারা পড়ে:
+        📚 Students who study with {t.name}:
       </div>
       {loading && <Loader text="Loading" />}
       {!loading && myRoutines.length === 0 && (
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 8 }}>
-          এখনো রুটিন নেই
+          No routine yet
         </div>
       )}
       {myRoutines.map((r) => {
@@ -14586,11 +14565,11 @@ function TeacherWiseBoard({ db, setDb, user }) {
           color: C.emerald,
         }}
       >
-        📅 সামনের ক্লাস:
+        📅 Next class:
       </div>
       {!loading && upcoming.length === 0 && (
         <div style={{ fontSize: 12.5, color: C.muted }}>
-          আসন্ন কোনো ক্লাস নেই
+          No upcoming classes
         </div>
       )}
       {upcoming.map((k) => {
@@ -14624,12 +14603,12 @@ function TeacherWiseBoard({ db, setDb, user }) {
             </span>
             {isAdm(user) && (
               <Btn sm kind="soft" onClick={() => startEditClass(k)}>
-                ✏️ এডিট
+                ✏️ Edit
               </Btn>
             )}
             {isAdm(user) && (
               <Btn sm kind="danger" onClick={() => postpone(k)}>
-                ⛔ স্থগিত করুন
+                ⛔ Postpone
               </Btn>
             )}
           </div>
@@ -14650,9 +14629,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
               marginBottom: 12,
             }}
           >
-            💡 এটা শুধু এই একটা দিনের ক্লাস বদলাবে — পুরো রুটিন অপরিবর্তিত
-            থাকবে। তবে পরে রুটিনের সময়/বার এডিট করলে এই পরিবর্তন রুটিনের
-            মান দিয়ে আবার বদলে যাবে।
+            💡 This changes only this one day's class — the whole routine stays unchanged. However, if you later edit the routine's time or day, this change is overwritten by the routine's values.
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
@@ -14772,13 +14749,10 @@ function WaOutboxView({ db, setDb, user }) {
           }}
         >
           <div style={{ fontWeight: 800, marginBottom: 4 }}>
-            ⚙️ WhatsApp Business API সংযোগ (Twilio / Meta)
+            ⚙️ WhatsApp Business API connection (Twilio / Meta)
           </div>
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>
-            সাথে দেওয়া ব্যাকএন্ড সার্ভারটি (whatsapp-server.js) ডেপ্লয় করে তার
-            URL এখানে দিন — তারপর অটো-সেন্ড চালু করলেই মেসেজ সরাসরি অভিভাবকের
-            WhatsApp-এ চলে যাবে। API কী/টোকেন ব্যাকএন্ডের .env ফাইলে থাকবে,
-            এখানে নয় (নিরাপত্তার জন্য)।
+            Deploy the bundled backend server (whatsapp-server.js) and enter its URL here — then turn on auto-send and messages go straight to the guardian's WhatsApp. The API key/token lives in the backend's .env file, not here (for security).
           </div>
           <div
             style={{
@@ -14792,7 +14766,7 @@ function WaOutboxView({ db, setDb, user }) {
               style={{ ...S.input, flex: 1, minWidth: 220 }}
               value={cfg.backendUrl}
               onChange={(e) => setCfg({ backendUrl: e.target.value })}
-              placeholder="ব্যাকএন্ড URL — যেমন: https://tqa-whatsapp.onrender.com"
+              placeholder="Backend URL — e.g. https://tqa-whatsapp.onrender.com"
             />
             <label
               style={{
@@ -14813,12 +14787,12 @@ function WaOutboxView({ db, setDb, user }) {
                 checked={cfg.autoSend}
                 onChange={(e) => setCfg({ autoSend: e.target.checked })}
               />
-              ⚡ অটো-সেন্ড {cfg.autoSend ? "Active" : "Off"}
+              ⚡ Auto-send {cfg.autoSend ? "Active" : "Off"}
             </label>
           </div>
           {cfg.autoSend && !cfg.backendUrl && (
             <div style={{ fontSize: 12, color: C.red, marginTop: 6 }}>
-              ⚠️ অটো-সেন্ড চালু কিন্তু ব্যাকএন্ড URL দেওয়া হয়নি।
+              ⚠️ Auto-send is on but no backend URL has been set.
             </div>
           )}
         </div>
@@ -14827,8 +14801,7 @@ function WaOutboxView({ db, setDb, user }) {
         {loading && <Loader text="Loading messages" />}
         {!loading && list.length === 0 && (
           <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
-            এখনো কোনো মেসেজ তৈরি হয়নি — ক্লাস শুরুর ৫ মিনিট আগে বা ক্লাস স্থগিত
-            করলে এখানে অটো চলে আসবে।
+            No messages yet — they appear here automatically 5 minutes before a class starts or when a class is postponed.
           </div>
         )}
         {list.map((m) => (
@@ -14858,21 +14831,21 @@ function WaOutboxView({ db, setDb, user }) {
                 </Tag>{" "}
                 {m.sent && (
                   <Tag>
-                    পাঠানো হয়েছে ✔{m.apiStatus === "sent" ? " (API)" : ""}
+                    Sent ✔{m.apiStatus === "sent" ? " (API)" : ""}
                   </Tag>
                 )}
                 {m.apiStatus === "sending" && (
                   <Tag color={C.blue} bg={C.blueBg}>
-                    ⏳ API দিয়ে যাচ্ছে...
+                    ⏳ Sending via API...
                   </Tag>
                 )}
                 {m.apiStatus === "failed" && (
                   <Tag color={C.red} bg={C.redBg}>
-                    API ব্যর্থ — সার্ভার/নম্বর যাচাই করুন
+                    API failed — check the server/number
                   </Tag>
                 )}
                 <div style={{ fontSize: 11.5, color: C.muted }}>
-                  শিক্ষার্থী: {m.student} · +{m.phone} · {fmtDate(m.date)}
+                  Student: {m.student} · +{m.phone} · {fmtDate(m.date)}
                 </div>
                 <div
                   style={{
@@ -14891,7 +14864,7 @@ function WaOutboxView({ db, setDb, user }) {
               >
                 {!m.sent && cfg.backendUrl && (
                   <Btn sm onClick={() => sendViaApi(m)}>
-                    🚀 API দিয়ে পাঠান
+                    🚀 Send via API
                   </Btn>
                 )}
                 <a
@@ -14902,7 +14875,7 @@ function WaOutboxView({ db, setDb, user }) {
                   style={{ textDecoration: "none" }}
                 >
                   <Btn sm style={{ background: "#25D366", color: "#fff" }}>
-                    📱 ম্যানুয়াল (wa.me)
+                    📱 Manual (wa.me)
                   </Btn>
                 </a>
               </span>
@@ -14920,10 +14893,7 @@ function WaOutboxView({ db, setDb, user }) {
           color: C.blue,
         }}
       >
-        ℹ️ API সংযুক্ত থাকলে (উপরের সেটিংস) মেসেজ তৈরি হওয়ামাত্র সার্ভার
-        Twilio/Meta-র মাধ্যমে সরাসরি অভিভাবকের WhatsApp-এ পাঠিয়ে দেয়। সেটআপ
-        গাইড: whatsapp-setup.md ফাইলটি দেখুন। API ছাড়া ম্যানুয়াল (wa.me) বাটন
-        তো আছেই।
+        ℹ️ When the API is connected (settings above), the server sends each message straight to the guardian's WhatsApp via Twilio/Meta as soon as it is created. Setup guide: see whatsapp-setup.md. Without the API, the manual (wa.me) buttons still work.
       </div>
     </Section>
   );
@@ -15070,12 +15040,12 @@ function CourseManagerView({ db, setDb, refresh }) {
 
   const del = (c) =>
     askConfirm(
-      `"${c.name}" কোর্সটি মুছে ফেলবেন? এর ক্লাস ও রুটিনও সরে যাবে এবং কোথাও আর দেখা যাবে না।`,
+      `Delete the "${c.name}" course? Its classes and routines will be removed too, and it will no longer appear anywhere.`,
       async () => {
         try {
           await api.deleteCourse(c.id);
           await loadCourses();
-          notice(`✔ "${c.name}" কোর্স মুছে ফেলা হয়েছে।`);
+          notice(`✔ The "${c.name}" course has been deleted.`);
           refresh();
         } catch (e) {
           notice(
@@ -15100,7 +15070,7 @@ function CourseManagerView({ db, setDb, refresh }) {
             })
           }
         >
-          + নতুন কোর্স
+          + New course
         </Btn>
       }
     >
@@ -15122,14 +15092,14 @@ function CourseManagerView({ db, setDb, refresh }) {
             <div style={{ flex: 1, minWidth: 220 }}>
               <div style={{ fontWeight: 800, fontSize: 15 }}>{c.name}</div>
               <div style={{ fontSize: 12.5, color: C.muted }}>
-                উস্তাদ: {c.teacherName || userById(c.teacherId).name || "—"} ·
-                শিক্ষার্থী:{" "}
+                Teacher: {c.teacherName || userById(c.teacherId).name || "—"} ·
+                Students:{" "}
                 {bn(
                   c.studentCount != null
                     ? c.studentCount
                     : c.studentIds?.length || 0,
                 )}{" "}
-                জন · বই: {bn((c.books || []).length)}টি
+                 · Books: {bn((c.books || []).length)}
                 {/* "লেকচার: Nটি" সরানো হলো — দারস এখন কেবল লুকানো ধারক
                     (কোর্স-প্রতি একটিই), তাই সংখ্যাটা সবসময় ১ দেখাত এবং
                     কিছুই বোঝাত না। টপিকের হিসাব দারস পরিকল্পনা পাতাতেই আছে। */}
@@ -15149,10 +15119,10 @@ function CourseManagerView({ db, setDb, refresh }) {
                   })
                 }
               >
-                ✏️ এডিট
+                ✏️ Edit
               </Btn>
               <Btn sm kind="danger" onClick={() => del(c)}>
-                🗑 বাদ দিন
+                🗑 Remove
               </Btn>
             </div>
           </div>
@@ -15161,7 +15131,7 @@ function CourseManagerView({ db, setDb, refresh }) {
       {edit && (
         <Modal
           title={
-            edit.id ? `✏️ কোর্স এডিট — ${edit.name}` : "+ Add new course"
+            edit.id ? `✏️ Edit course — ${edit.name}` : "+ Add new course"
           }
           onClose={() => {
             setEdit(null);
@@ -15231,7 +15201,7 @@ function CourseManagerView({ db, setDb, refresh }) {
               }}
             >
               <label style={{ ...S.label, marginBottom: 0 }}>
-                📚 কোর্সের বই ({bn((edit.books || []).length)}টি নির্বাচিত)
+                📚 Course books ({bn((edit.books || []).length)} selected)
               </label>
               {!bookForm && (
                 <Btn
@@ -15241,7 +15211,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                     setBookForm({ name: "", fileObj: null, file: null })
                   }
                 >
-                  + নতুন বই যোগ
+                  + Add new book
                 </Btn>
               )}
             </div>
@@ -15265,7 +15235,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                     color: "#92400e",
                   }}
                 >
-                  📤 নতুন বই আপলোড করুন
+                  📤 Upload a new book
                 </div>
                 <input
                   style={S.input}
@@ -15317,7 +15287,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                     style={{ flex: 1, justifyContent: "center" }}
                     onClick={saveNewBook}
                   >
-                    আপলোড ও নির্বাচন করুন
+                    Upload and select
                   </Btn>
                   <Btn sm kind="soft" onClick={() => setBookForm(null)}>
                     Cancel
@@ -15338,8 +15308,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                   border: `1px dashed ${C.line}`,
                 }}
               >
-                📭 কোনো একাডেমিক বই নেই — উপরের "+ Add new book" বাটনে ক্লিক করে
-                সরাসরি এখানেই বই আপলোড ও নির্বাচন করুন।
+                📭 No academic books — click "+ Add new book" above to upload and select a book right here.
               </div>
             ) : (
               <div
@@ -15493,7 +15462,7 @@ function SyllabusView({ db, setDb, courses, user }) {
         const why =
           e?.data?.error ||
           e?.data?.detail ||
-          (e?.status ? `সার্ভার সাড়া দিয়েছে কোড ${e.status}` : null) ||
+          (e?.status ? `Server responded with code ${e.status}` : null) ||
           e?.message ||
           "Please try again";
         notice(
@@ -15543,7 +15512,7 @@ function SyllabusView({ db, setDb, courses, user }) {
     });
   const delCol = (i) =>
     askConfirm(
-      `"${headers[i] || "Untitled"}" কলামটি মুছে ফেলবেন? এই কলামের সব ঘরের লেখা চলে যাবে।`,
+      `Delete the "${headers[i] || "Untitled"}" column? All text in this column’s cells will be lost.`,
       () => {
         setHeaders((h) => h.filter((_, j) => j !== i));
         setRows((rs) => rs.map((r) => r.filter((_, j) => j !== i)));
@@ -15666,7 +15635,7 @@ function SyllabusView({ db, setDb, courses, user }) {
               <div style={{ flex: 1 }} />
               {canEdit && dirty && (
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.goldL }}>
-                  ● অসংরক্ষিত পরিবর্তন
+                  ● Unsaved changes
                 </span>
               )}
               {canEdit && (
@@ -15722,7 +15691,7 @@ function SyllabusView({ db, setDb, courses, user }) {
               <div
                 style={{ fontWeight: 800, fontSize: 21, margin: "4px 0 2px" }}
               >
-                তারবিয়াতুল কুরআন একাডেমী
+                Tarbiyatul Quran Academy
               </div>
               <div style={{ fontSize: 11.5, color: "#cfe6d8" }}>
                 tarbiyatulquran.org · WhatsApp: +880 140 249 9027
@@ -15740,7 +15709,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                 letterSpacing: 1,
               }}
             >
-              কোর্স সিলেবাস
+              Course Syllabus
             </div>
             {/* কোর্সের নাম — বড়, মোটা, মাঝবরাবর */}
             <div
@@ -15883,7 +15852,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                                   marginTop: 2,
                                 }}
                               >
-                                ✕ কলাম
+                                ✕ Column
                               </button>
                             </>
                           ) : (
@@ -15997,10 +15966,10 @@ function SyllabusView({ db, setDb, courses, user }) {
                 }}
               >
                 <Btn sm kind="soft" onClick={addRow}>
-                  ➕ সারি যোগ করুন
+                  ➕ Add row
                 </Btn>
                 <Btn sm kind="soft" onClick={addCol}>
-                  ➕ কলাম যোগ করুন
+                  ➕ Add column
                 </Btn>
                 <div style={{ flex: 1 }} />
                 <Btn
@@ -16126,7 +16095,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     if (!f) return;
     if (f.size > MAX_UPLOAD)
       notice(
-        `⚠️ ফাইলটি ${(f.size / 1048576).toFixed(1)} MB — ফ্রি সীমা ১০ MB। PDF ছোট করুন অথবা উপরের "🔗 Add by link" ব্যবহার করুন।`,
+        `⚠️ The file is ${(f.size / 1048576).toFixed(1)} MB — the free limit is 10 MB. Shrink the PDF or use "🔗 Add by link" above.`,
       );
     setForm((x) => ({
       ...x,
@@ -16156,7 +16125,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
         return notice("Attach the book file from your device.");
       if (form.fileObj.size > MAX_UPLOAD)
         return notice(
-          'ফাইলটি ১০ MB-র বেশি — "🔗 Add by link" ব্যবহার করুন অথবা PDF ছোট করুন।',
+          'The file is larger than 10 MB — use "🔗 Add by link" or shrink the PDF.',
         );
     }
     try {
@@ -16181,12 +16150,12 @@ function AcademicBooksView({ db, setDb, user, courses }) {
       setForm(null);
     } catch (e) {
       const msg = e?.data?.error || e?.message || "Unknown error";
-      notice(`বই যোগ ব্যর্থ: ${msg}`);
+      notice(`Could not add book: ${msg}`);
     }
   };
   const del = (b) =>
     askConfirm(
-      `"${b.name}" বইটি মুছে ফেলবেন? কোর্সগুলো থেকেও সরে যাবে।`,
+      `Delete the book "${b.name}"? It will be removed from courses too.`,
       async () => {
         try {
           await api.deleteBook(b.id);
@@ -16215,7 +16184,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
       await api.updateBookName(b.id, newName);
       await loadData();
     } catch (e) {
-      notice(`নাম বদলাতে ব্যর্থ: ${e?.data?.error || e?.message || "Unknown error"}`);
+      notice(`Could not rename: ${e?.data?.error || e?.message || "Unknown error"}`);
     }
     setEditingId(null);
   };
@@ -16396,12 +16365,12 @@ function AcademicBooksView({ db, setDb, user, courses }) {
             </>
           )}
           {user.role !== "student" && (
-            <> · যোগ: {fmtDate(b.date)}</>
+            <> · Added: {fmtDate(b.date)}</>
           )}
           {isAdm(user) && (
             <span>
               {" "}
-              · কোর্স:{" "}
+              · Courses:{" "}
               {bookCourses(b.id)
                 .map((c) => c.name)
                 .join(", ") || "Not enrolled in any course"}
@@ -16452,7 +16421,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
         >
           📚{" "}
           {isAdm(user)
-            ? 'এখনো কোনো বই যোগ হয়নি — "+ Add book" দিয়ে শুরু করুন।'
+            ? 'No books added yet — start with "+ Add book".'
             : T(
                 "আপনার কোর্সে এখনো কোনো বই নির্ধারিত হয়নি।",
                 "No books have been assigned to your course yet.",
@@ -16500,7 +16469,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
               style={{ flex: 1, justifyContent: "center" }}
               onClick={() => setForm((x) => ({ ...x, mode: "file" }))}
             >
-              📁 ফাইল আপলোড
+              📁 File upload
             </Btn>
             <Btn
               sm
@@ -16508,13 +16477,13 @@ function AcademicBooksView({ db, setDb, user, courses }) {
               style={{ flex: 1, justifyContent: "center" }}
               onClick={() => setForm((x) => ({ ...x, mode: "link" }))}
             >
-              🔗 লিংক দিয়ে যোগ
+              🔗 Add by link
             </Btn>
           </div>
           {form.mode === "link" ? (
             <div style={{ marginTop: 12 }}>
               <label style={S.label}>
-                বইয়ের লিংক (Google Drive / Dropbox / যেকোনো URL) — সাইজ সীমা নেই
+                Book link (Google Drive / Dropbox / any URL) — no size limit
               </label>
               <input
                 style={S.input}
@@ -16525,14 +16494,13 @@ function AcademicBooksView({ db, setDb, user, courses }) {
                 placeholder="https://drive.google.com/..."
               />
               <div style={{ fontSize: 11.5, color: C.muted, marginTop: 5 }}>
-                💡 Google Drive-এ বইটি রেখে "Anyone with the link" শেয়ার করে
-                লিংকটি এখানে বসান — বড় বইও কোনো সীমা ছাড়া যোগ হবে।
+                💡 Put the book on Google Drive, share it as "Anyone with the link" and paste the link here — even large books are added with no size limit.
               </div>
             </div>
           ) : (
             <div style={{ marginTop: 12 }}>
               <label style={S.label}>
-                ফাইল যুক্ত করুন — যেকোনো ফরমেট (PDF, DOC, PNG, JPG...) · সর্বোচ্চ ১০ MB
+                Attach a file — any format (PDF, DOC, PNG, JPG...) · max 10 MB
               </label>
               <label
                 style={{
@@ -16566,8 +16534,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
           {allCourses.length > 0 && (
             <div style={{ marginTop: 14 }}>
               <label style={S.label}>
-                📖 কোন কোর্সে যোগ করবেন? (ঐচ্ছিক — পরেও কোর্স এডিট থেকে যোগ করা
-                যাবে)
+                📖 Which course to add it to? (optional — can also be added later from course edit)
               </label>
               <div
                 style={{
@@ -16616,7 +16583,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
                       <b>{c.name}</b>
                       {full && (
                         <span style={{ fontSize: 11, color: C.red }}>
-                          (৬টি পূর্ণ)
+                          (6 complete)
                         </span>
                       )}
                     </label>
@@ -16625,7 +16592,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
               </div>
               {(form.courseIds || []).length > 0 && (
                 <div style={{ fontSize: 11.5, color: C.emerald, marginTop: 4 }}>
-                  ✔ {bn((form.courseIds || []).length)}টি কোর্সে যোগ হবে
+                  ✔ Will be added to {bn((form.courseIds || []).length)} course(s)
                 </div>
               )}
             </div>
@@ -16635,7 +16602,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
             style={{ marginTop: 16, width: "100%", justifyContent: "center" }}
             onClick={save}
           >
-            + তালিকায় যোগ করুন
+            + Add to list
           </Btn>
         </Modal>
       )}
@@ -16745,9 +16712,9 @@ function Overview({ db, courses, user, goTo }) {
     user.role === "director"
       ? "Assalamu Alaikum, Director"
       : user.role === "admin"
-        ? `আসসালামু আলাইকুম, ${user.name} (এডমিন)`
+        ? `Assalamu Alaikum, ${user.name} (Admin)`
         : user.role === "teacher"
-          ? `আসসালামু আলাইকুম, ${user.name}`
+          ? `Assalamu Alaikum, ${user.name}`
           : `Assalamu Alaikum, ${user.name.split(" ")[0]}`;
   return (
     <>
@@ -16908,7 +16875,7 @@ function Overview({ db, courses, user, goTo }) {
             label="Class quality"
             value={`★ ${bn(teacherRating.count ? teacherRating.avg.toFixed(1) : "—")}`}
             accent={C.gold}
-            note={`${bn(teacherRating.count)}টি মূল্যায়ন`}
+            note={`${bn(teacherRating.count)} evaluations`}
           />
         )}
         {isAdm(user) && (
@@ -17233,13 +17200,13 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
       onSaved && onSaved();
       const phone = String(saved.phone || "").replace(/[^\d]/g, "");
       const text = [
-        `আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম ${saved.guardian || "Guardian"},`,
+        `Assalamu Alaikum wa Rahmatullah. Respected ${saved.guardian || "Guardian"},`,
         "",
-        `${saved.student_name}-এর ট্রায়াল ক্লাসের মূল্যায়ন রিপোর্ট প্রস্তুত হয়েছে। পোর্টালে লগইন করলেই দেখতে পাবেন ইনশাআল্লাহ:`,
+        `The trial class evaluation report for ${saved.student_name} is ready. Log in to the portal to view it, insha’Allah:`,
         "🔗 https://app.tarbiyatulquran.org",
         "",
         saved.recommended_course_name
-          ? `আমাদের পরামর্শ: ${saved.recommended_course_name}${saved.recommended_level ? " — " + saved.recommended_level : ""}`
+          ? `Our recommendation: ${saved.recommended_course_name}${saved.recommended_level ? " — " + saved.recommended_level : ""}`
           : "",
         "",
         "Jazakumullahu Khairan. — Tarbiyatul Quran Academy",
@@ -17266,7 +17233,7 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
         : "Sent to the family";
 
   return (
-    <Modal title={`📋 ট্রায়াল মূল্যায়ন — ${guest.name || guest.name_bn}`} onClose={onClose} wide>
+    <Modal title={`📋 Trial evaluation — ${guest.name || guest.name_bn}`} onClose={onClose} wide>
       {loading || !f ? (
         <Loader text="Loading evaluations" />
       ) : (
@@ -17280,7 +17247,7 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
             </Tag>
             {locked && (
               <span style={{ fontSize: 12, color: C.muted, marginLeft: 8 }}>
-                যাচাই হয়ে গেছে — বদলাতে হলে পরিচালককে বলুন
+                Already verified — ask the director to change it
               </span>
             )}
           </div>
@@ -17371,7 +17338,7 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
               }}
             >
               <div style={{ fontWeight: 800, color: C.gold, marginBottom: 8 }}>
-                ভর্তির প্রস্তাব
+                Admission offer
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
@@ -17409,11 +17376,11 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
                 />
               </div>
               <div style={{ fontSize: 11.5, color: C.muted, marginTop: 7, lineHeight: 1.6 }}>
-                সংরক্ষণ করার পর “🎁 প্রস্তাব পাঠান” চাপলে অতিথি নিজের পোর্টালে
-                এটি দেখতে পাবেন ও এক ক্লিকে ভর্তির আবেদন করতে পারবেন।
+                After saving, press “🎁 Send offer” and the guest will see it in
+                their own portal and can apply for admission in one click.
                 {rep?.accepted_at && (
                   <b style={{ color: C.green, display: "block", marginTop: 4 }}>
-                    ✅ পরিবার রাজি হয়েছেন — ভর্তি আবেদনে চলে এসেছে
+                    ✅ The family agreed — it has moved to admission applications
                   </b>
                 )}
               </div>
@@ -17436,12 +17403,12 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
                   )
                 }
               >
-                🖨️ রিপোর্ট দেখুন
+                🖨️ View report
               </Btn>
             )}
             {rep && canReview && !rep.reviewed_at && (
               <Btn kind="gold" onClick={doReview}>
-                ✅ যাচাই সম্পন্ন
+                ✅ Verified
               </Btn>
             )}
             {rep && canReview && rep.reviewed_at && (
@@ -17451,16 +17418,16 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
             )}
             {rep && canReview && rep.reviewed_at && !rep.offered_at && (
               <Btn kind="primary" onClick={doOffer}>
-                🎁 প্রস্তাব পাঠান
+                🎁 Send offer
               </Btn>
             )}
           </div>
 
           {rep && (
             <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.6 }}>
-              লিখেছেন {rep.written_by || "—"}
-              {rep.reviewed_by_name ? ` · যাচাই করেছেন ${rep.reviewed_by_name}` : ""}
-              {rep.sent_at ? ` · পাঠানো হয়েছে ${fmtDate(rep.sent_at.slice(0, 10))}` : ""}
+              Written by {rep.written_by || "—"}
+              {rep.reviewed_by_name ? ` · verified by ${rep.reviewed_by_name}` : ""}
+              {rep.sent_at ? ` · sent ${fmtDate(rep.sent_at.slice(0, 10))}` : ""}
             </div>
           )}
         </div>
@@ -17790,7 +17757,7 @@ function SlidePreview({ slide, small }) {
         <div
           style={{ color: "#ffffff66", fontSize: 13, position: "relative" }}
         >
-          এই ধাপে শিক্ষার্থীর পর্দা এখনো খালি
+          The student's screen is still empty for this step
         </div>
       ) : (
         // ⚠️ নকশাটি absolute, তাই লেখাকে relative করে উপরে তুলতে হয় —
@@ -17998,7 +17965,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
               }}
             >
               {slideKindLabel(sl.kind)}
-              {d.seconds ? ` · ${bn(d.seconds)} সেকেন্ড` : ""}
+              {d.seconds ? ` · ${bn(d.seconds)} sec` : ""}
               {d.teacher_says ? ` · ${d.teacher_says.slice(0, 40)}…` : ""}
             </span>
           </span>
@@ -18048,9 +18015,9 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
                 gap: 6,
               }}
             >
-              🧑‍🏫 উস্তাদ যা দেখবেন
+              🧑‍🏫 What the teacher sees
               <span style={{ fontWeight: 500, color: C.muted, fontSize: 11.5 }}>
-                — শিক্ষার্থীর পর্দায় এর কিছুই যায় না
+                — none of this reaches the student's screen
               </span>
             </div>
 
@@ -18080,8 +18047,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
 
             <div>
               <Lbl>
-                🗣️ উস্তাদ বলবেন — <b>These exact words</b> মুখে বলবেন
-                (ইংরেজিতে)
+                🗣️ The teacher says — <b>These exact words</b> Say aloud (in English)
               </Lbl>
               <Area
                 value={d.teacher_says}
@@ -18115,7 +18081,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
             </div>
             <div>
               <Lbl>
-                🔧 ভুল হলে — <b>Exactly what you will say</b> (ইংরেজিতে)
+                🔧 If they make a mistake — <b>Exactly what you will say</b> (in English)
               </Lbl>
               <Area
                 value={d.correction}
@@ -18127,7 +18093,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
             </div>
             <div>
               <Lbl>
-                📌 উস্তাদের টীকা (বাংলায়) — মাখরাজ, সূত্র, অভিভাবকের কথা
+                📌 Teacher's notes — makhraj, references, notes for the guardian
               </Lbl>
               <Area value={d.note} onChange={(v) => set("note", v)} disabled={!canEdit} />
             </div>
@@ -18372,15 +18338,15 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
 
       // পাওয়ারপয়েন্ট ফাইল — ব্যাকএন্ড রেন্ডার করে URL দেয়
       for (const pf of pptxFiles) {
-        setImporting(`${pf.name} রূপান্তর হচ্ছে…`);
+        setImporting(`Converting ${pf.name}…`);
         const { urls: slideUrls } = await api.convertPptx(pf);
         for (let k = 0; k < slideUrls.length; k++) {
           setImporting(
-            `পিপি স্লাইড ${bn(String(k + 1))}/${bn(String(slideUrls.length))} যোগ হচ্ছে…`,
+            `Adding PPT slide ${bn(String(k + 1))}/${bn(String(slideUrls.length))}…`,
           );
           await api.addLessonStep({
             lesson: lesson.id,
-            section: `পিপি স্লাইড ${bn(String(k + 1))}`,
+            section: `PPT slide ${bn(String(k + 1))}`,
             slide: { ...EMPTY_SLIDE, kind: "visual", image: slideUrls[k] },
           });
           done++;
@@ -18393,24 +18359,24 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
         const { images: imgs, dropped } = await filesToSlideImages(
           otherFiles,
           (i, n) =>
-            setImporting(`পাতা ${bn(String(i))}/${bn(String(n))} তৈরি হচ্ছে…`),
+            setImporting(`Rendering page ${bn(String(i))}/${bn(String(n))}…`),
         );
         /* ⚠️ নীরবে কাটা যাবে না — বাদ পড়লে আগেই জানানো হয়, নইলে
            পরিচালক ক্লাসের মাঝপথে টের পেতেন। */
         if (dropped)
           notice(
-            `একবারে সর্বোচ্চ ${bn(String(IMPORT_MAX))}টি স্লাইড নেওয়া যায়। ` +
-              `প্রথম ${bn(String(IMPORT_MAX))}টি নেওয়া হচ্ছে, ` +
-              `বাকি ${bn(String(dropped))}টি বাদ — সেগুলো আলাদা করে আনুন।`,
+            `At most ${bn(String(IMPORT_MAX))} slides can be imported at once. ` +
+              `Taking the first ${bn(String(IMPORT_MAX))}, ` +
+              `skipping the remaining ${bn(String(dropped))} — import those separately.`,
           );
         for (let k = 0; k < imgs.length; k++) {
           setImporting(
-            `স্লাইড ${bn(String(k + 1))}/${bn(String(imgs.length))} উঠছে…`,
+            `Uploading slide ${bn(String(k + 1))}/${bn(String(imgs.length))}…`,
           );
           const got = await api.uploadLessonMedia(imgs[k]);
           await api.addLessonStep({
             lesson: lesson.id,
-            section: `আনা স্লাইড ${bn(String(k + 1))}`,
+            section: `Imported slide ${bn(String(k + 1))}`,
             slide: { ...EMPTY_SLIDE, kind: "visual", image: got.url },
           });
           done++;
@@ -18419,12 +18385,12 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
 
       if (!done)
         notice("Nothing to run — please provide a PDF, image or PPTX.");
-      else notice(`✅ ${bn(String(done))}টি স্লাইড যোগ হয়েছে`);
+      else notice(`✅ ${bn(String(done))} slide(s) added`);
     } catch (e) {
       const why = e?.data?.error || e?.message || "";
       notice(
         done
-          ? `${bn(String(done))}টি বসেছে, তারপর আটকে গেছে — ${why}`
+          ? `${bn(String(done))} added, then it stopped — ${why}`
           : "Could not load —" + why,
       );
     } finally {
@@ -18438,7 +18404,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
 
   const delStep = (st, n) =>
     askConfirm(
-      `${bn(n)} নং ধাপ — "${st.section || "Untitled"}" মুছে ফেলা হবে।` +
+      `Step ${bn(n)} — "${st.section || "Untitled"}" will be deleted.` +
         "\n\n" +
         "The teacher's script and the student's screen will both be deleted together," +
         "This cannot be undone.",
@@ -18486,19 +18452,19 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
         }}
       >
         <Btn sm kind="soft" onClick={onClose}>
-          ← দারসের তালিকা
+          ← Lesson list
         </Btn>
         {onTeach && steps.length > 0 && (
           <Btn sm kind="gold" onClick={onTeach}>
-            ▶️ শিক্ষক মোড
+            ▶️ Teacher mode
           </Btn>
         )}
         <div style={{ flex: 1, minWidth: 160 }}>
           <div style={{ fontWeight: 800, fontSize: 16 }}>{lesson.title}</div>
           <div style={{ fontSize: 12, color: C.muted }}>
-            {lesson.course_name} · {bn(lesson.age_from)}–{bn(lesson.age_to)} বছর ·{" "}
-            {bn(steps.length)} ধাপ
-            {totalMin ? ` · আনুমানিক ${bn(totalMin)} মিনিট` : ""}
+            {lesson.course_name} · ages {bn(lesson.age_from)}–{bn(lesson.age_to)} ·{" "}
+            {bn(steps.length)} steps
+            {totalMin ? ` · approx. ${bn(totalMin)} min` : ""}
           </div>
         </div>
       </div>
@@ -18634,8 +18600,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
           </select>
           {sections.length === 0 && (
             <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
-              এই কোর্সে এখনো কোনো টপিক নেই — “📋 লেকচার প্ল্যান” পাতায়
-              সাজিয়ে নিলে এখানে চলে আসবে।
+              This course has no topics yet — set them up on the “📋 Lecture Plan” page and they will appear here.
             </div>
           )}
 
@@ -18643,20 +18608,17 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
           {canEdit && lesson.topic && (
             <div style={{ marginTop: 8 }}>
               <Btn sm kind="ghost" onClick={pushSummary} disabled={busy}>
-                📋 লেকচার প্ল্যানে সারাংশ বসান
+                📋 Insert summary into the lecture plan
               </Btn>
               <div style={{ fontSize: 12, color: C.muted, marginTop: 4, lineHeight: 1.7 }}>
-                ধাপগুলোর পর্দা থেকে “আজ কী কী পড়ানো হয়েছে” তৈরি হয়ে টপিকের
-                টগলে বসে যাবে — শিক্ষার্থী পরে দেখে রিভিশন দিতে পারবেন।
-                বসার পরেও আপনি লেকচার প্ল্যানে গিয়ে নিজের মতো বদলে নিতে
-                পারবেন।
+                A “what was taught today” summary is built from the step screens and placed in the topic toggle — the student can review it later. Even after it is placed, you can go to the lecture plan and change it as you like.
               </div>
             </div>
           )}
         </div>
 
         <label style={S.label}>
-          কাঙ্ক্ষিত ফল, মাপকাঠি ও পুনরাবৃত্তির পরিকল্পনা — কেবল উস্তাদ দেখবেন
+          Target outcome, criteria and revision plan — visible to the teacher only
         </label>
         {canEdit ? (
           <RichText
@@ -18708,7 +18670,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
         }}
       >
         <div style={{ fontWeight: 800, fontSize: 15 }}>
-          📋 পড়ানোর ধাপ ({bn(steps.length)})
+          📋 Teaching steps ({bn(steps.length)})
         </div>
         {canEdit && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -18740,8 +18702,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
       <div style={{ display: "grid", gap: 10 }}>
         {steps.length === 0 && (
           <div style={{ ...S.card, color: C.muted, fontSize: 14 }}>
-            এই দারসে এখনো কোনো ধাপ নেই। “📥 বাইরের স্লাইড আনুন” দিয়ে
-            একটি PDF বা PowerPoint (.pptx) দিন — প্রতিটি পাতা এক-একটি স্লাইড হয়ে বসে যাবে।
+            This lesson has no steps yet. Use “📥 Import external slides” to provide a PDF or PowerPoint (.pptx) — each page becomes one slide.
           </div>
         )}
         {steps.map((st, i) => (
@@ -18832,8 +18793,8 @@ function TeachFromClass({ courseId, label }) {
               >
                 <div style={{ fontWeight: 800, color: C.text }}>{l.title}</div>
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
-                  {bandLabel(l)} · {bn(l.step_count || 0)} ধাপ ·{" "}
-                  {bn(l.duration_min)} মিনিট
+                  {bandLabel(l)} · {bn(l.step_count || 0)} steps ·{" "}
+                  {bn(l.duration_min)} min
                 </div>
               </button>
             ))}
@@ -18925,7 +18886,7 @@ function TopicsEditor({ section, scripted, onClose, onSaved }) {
     const row = rows[i];
     const has = row.id && scripted.includes(row.id);
     askConfirm(
-      `“${row.text}” টপিকটি সরিয়ে ফেলা হবে।` +
+      `The topic “${row.text}” will be removed.` +
         (has
           ? "\n\n⚠️ This topic has a class script. It will not delete" +
             "no — but they will lose their link to the topic and move into the “outside topics” group" +
@@ -18953,16 +18914,15 @@ function TopicsEditor({ section, scripted, onClose, onSaved }) {
   };
 
   return (
-    <Modal title={`✏️ টপিক সাজান — ${section.name}`} onClose={onClose} wide>
+    <Modal title={`✏️ Arrange topics — ${section.name}`} onClose={onClose} wide>
       <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7, marginBottom: 10 }}>
-        এই তালিকাটি দারস পরিকল্পনার সাথে এক — এখানে বদলালে লেকচার প্ল্যানেও
-        বদলাবে। টগলের ভেতরের লেখা এখানে ছোঁয়া হয় না, আগের মতোই থাকে।
+        This list is the same as the lecture plan — changing it here changes it there too. The text inside the toggles is untouched here and stays as it was.
       </div>
 
       <div style={{ display: "grid", gap: 6, marginBottom: 12 }}>
         {rows.length === 0 && (
           <div style={{ color: C.muted, fontSize: 13 }}>
-            এখনো কোনো টপিক নেই — নিচে লিখে যোগ করুন।
+            No topics yet — add them below.
           </div>
         )}
         {rows.map((r, i) => (
@@ -18987,7 +18947,7 @@ function TopicsEditor({ section, scripted, onClose, onSaved }) {
             />
             {r.id && scripted.includes(r.id) && (
               <Tag color={C.green} bg={C.greenBg}>
-                স্ক্রিপ্ট আছে
+                Has a script
               </Tag>
             )}
             <Btn
@@ -19026,7 +18986,7 @@ function TopicsEditor({ section, scripted, onClose, onSaved }) {
           }}
         />
         <Btn sm kind="ghost" onClick={addOne}>
-          + যোগ
+          + Add
         </Btn>
       </div>
 
@@ -19081,12 +19041,12 @@ function SectionBlock({ section, lessons, prog, canEdit, rowProps, onNew,
           {section.name}
         </div>
         <span style={{ fontSize: 12, color: "#ffffffcc" }}>
-          {bn(done)}/{bn(topics.length)} টপিকে স্ক্রিপ্ট আছে
+          {bn(done)}/{bn(topics.length)} topics have a script
         </span>
         {canEdit && (
           <span style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
             <button style={hb} onClick={onTopics} title="Add/edit/reorder topics">
-              ✏️ টপিক
+              ✏️ Topics
             </button>
             <button style={hb} onClick={onRename} title="Rename heading">
               Name
@@ -19125,7 +19085,7 @@ function SectionBlock({ section, lessons, prog, canEdit, rowProps, onNew,
       >
         {topics.length === 0 && (
           <div style={{ color: C.muted, fontSize: 13, padding: "6px 4px" }}>
-            এই হেডিংয়ের নিচে এখনো কোনো টপিক নেই।
+            There are no topics under this heading yet.
           </div>
         )}
 
@@ -19159,12 +19119,12 @@ function SectionBlock({ section, lessons, prog, canEdit, rowProps, onNew,
               <div style={{ flex: 1, minWidth: 160 }}>
                 <div style={{ fontWeight: 700, color: C.text }}>{t.text}</div>
                 <div style={{ fontSize: 12, color: C.muted }}>
-                  এখনো স্ক্রিপ্ট লেখা হয়নি
+                  No script written yet
                 </div>
               </div>
               {canEdit && (
                 <Btn sm kind="ghost" onClick={() => onNew(t)}>
-                  ✍️ স্ক্রিপ্ট লিখুন
+                  ✍️ Write script
                 </Btn>
               )}
             </div>
@@ -19261,7 +19221,7 @@ function LessonsView({ user, courses }) {
 
   const duplicate = (l) =>
     askConfirm(
-      `"${l.title}" দারসটির একটি নকল তৈরি হবে — সব ধাপ ও পর্দাসহ।` +
+      `A copy of the lesson "${l.title}" will be created — with all steps and screens.` +
         "\n\n" +
         "This is the easy way to make an age-specific version of the same subject: duplicate it," +
         "change the age range and tune the language to suit that age. The copy starts as a draft" +
@@ -19281,7 +19241,7 @@ function LessonsView({ user, courses }) {
 
   const remove = (l) =>
     askConfirm(
-      `"${l.title}" স্ক্রিপ্টটি চিরতরে মুছে ফেলা হবে — এর ${bn(l.step_count || 0)}টি ` +
+      `The script "${l.title}" will be permanently deleted — along with its ${bn(l.step_count || 0)} ` +
         "steps, including the teacher's full script and all student screens." +
         "\n\n" +
         "The lecture-plan topic will not be deleted — only this script." +
@@ -19341,7 +19301,7 @@ function LessonsView({ user, courses }) {
   const dropSection = (sec) => {
     const n = (sec.topics || []).length;
     askConfirm(
-      `“${sec.name}” হেডিংটি মুছে ফেলা হবে।` +
+      `The heading “${sec.name}” will be deleted.` +
         (n
           ? "\n\n⚠️ The" + bn(n) + " topics will not be deleted — but" +
             "will become heading-less and move to the “Other” section of the lecture plan" +
@@ -19450,7 +19410,7 @@ function LessonsView({ user, courses }) {
       action={
         canEdit && courseId ? (
           <Btn sm onClick={create}>
-            + নতুন দারস
+            + New lesson
           </Btn>
         ) : null
       }
@@ -19483,11 +19443,9 @@ function LessonsView({ user, courses }) {
         <>
           {sections.length === 0 && loose.length === 0 && (
             <div style={{ ...S.card, color: C.muted, fontSize: 14, lineHeight: 1.8 }}>
-              এই কোর্সে এখনো দারস পরিকল্পনার কোনো হেডিং নেই।
+              This course has no lecture-plan headings yet.
               <br />
-              নিচের “➕ নতুন হেডিং” দিয়ে শুরু করুন — যেমন “Memorized Surah”।
-              তারপর তার নিচে টপিক যোগ করে প্রতিটির জন্য ক্লাস স্ক্রিপ্ট
-              লিখতে পারবেন। এই তালিকাটি “📋 লেকচার প্ল্যান” পাতার সাথে এক।
+              Start with “➕ New heading” below — for example “Memorized Surah”. Then add topics under it and write a class script for each. This list is the same as the “📋 Lecture Plan” page.
             </div>
           )}
 
@@ -19512,7 +19470,7 @@ function LessonsView({ user, courses }) {
           {canEdit && courseId && (
             <div style={{ textAlign: "center", marginTop: 4, marginBottom: 14 }}>
               <Btn sm kind="ghost" onClick={() => setNameFor({ sec: null })}>
-                ➕ নতুন হেডিং
+                ➕ New heading
               </Btn>
             </div>
           )}
@@ -19531,10 +19489,10 @@ function LessonsView({ user, courses }) {
                 }}
               >
                 <div style={{ fontWeight: 800, fontSize: 15, flex: 1 }}>
-                  টপিকের বাইরে
+                  Outside topics
                 </div>
                 <span style={{ fontSize: 12, color: "#ffffffcc" }}>
-                  {bn(loose.length)}টি
+                  {bn(loose.length)}
                 </span>
               </div>
               <div
@@ -19549,9 +19507,7 @@ function LessonsView({ user, courses }) {
                 }}
               >
                 <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
-                  এই স্ক্রিপ্টগুলো এখনো দারস পরিকল্পনার কোনো টপিকের সাথে
-                  যুক্ত নয়। স্ক্রিপ্ট খুলে ভেতরে টপিক বেছে দিলে সেটি উপরের
-                  নিজের হেডিংয়ে চলে যাবে।
+                  These scripts are not linked to any lecture-plan topic yet. Open a script and choose a topic inside, and it will move up under its own heading.
                 </div>
                 {loose.map((l) => (
                   <LessonRow
@@ -19585,7 +19541,7 @@ const AGE_BANDS = [
 
 const bandLabel = (l) => {
   const b = AGE_BANDS.find((x) => x[0] === l.age_from && x[1] === l.age_to);
-  return b ? b[2] : `${bn(l.age_from)}–${bn(l.age_to)} বছর`;
+  return b ? b[2] : `ages ${bn(l.age_from)}–${bn(l.age_to)}`;
 };
 
 /* নতুন বয়সের সংস্করণ বানানোর পাতা */
@@ -19604,7 +19560,7 @@ function AgeVersionModal({ lesson, existing, onClose, onDone }) {
         age_from: a,
         age_to: b,
       });
-      notice(`📄 ${label}-এর সংস্করণ তৈরি — এখন ভাষা ও ধরন সাজিয়ে নিন`);
+      notice(`📄 ${label} version created — now tune the language and style`);
       onDone(n);
     } catch (e) {
       notice("Could not create —" + (e?.data?.error || e?.message || ""));
@@ -19613,11 +19569,9 @@ function AgeVersionModal({ lesson, existing, onClose, onDone }) {
   };
 
   return (
-    <Modal title={`➕ বয়সের সংস্করণ — ${lesson.title}`} onClose={onClose}>
+    <Modal title={`➕ Age version — ${lesson.title}`} onClose={onClose}>
       <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.8, marginBottom: 12 }}>
-        এখনকার দারসটির হুবহু নকল হবে, কেবল বয়সসীমা বদলে। তারপর ওই বয়সের
-        উপযোগী করে ভাষা ও শেখানোর ধরনটা সাজিয়ে নেবেন — <b>শুধু শব্দ বদলালে
-        হবে না</b>, পড়ানোর কায়দাটাই বদলাতে হবে।
+        An exact copy of this lesson will be made, only with a different age range. Then you tune the language and teaching style to suit that age — <b>Changing the words alone is not enough</b>, the teaching approach itself needs to change.
       </div>
       <div style={{ display: "grid", gap: 8 }}>
         {AGE_BANDS.map(([a, b, label, how]) => {
@@ -19704,13 +19658,13 @@ function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
             {group.title} {statusTag(l.status)}
             {items.length > 1 && (
               <Tag color={C.blue} bg={C.blueBg}>
-                {bn(items.length)}টি বয়সের সংস্করণ
+                {bn(items.length)} age versions
               </Tag>
             )}
           </button>
           <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>
-            {bandLabel(l)} · {bn(l.step_count || 0)} ধাপ · {bn(l.duration_min)}{" "}
-            মিনিট ·{" "}
+            {bandLabel(l)} · {bn(l.step_count || 0)} steps · {bn(l.duration_min)}{" "}
+            min ·{" "}
             {kindLabel(l.kind)}{" "}
             <ProgressSummary lessonId={l.id} rows={prog} />
           </div>
@@ -19718,11 +19672,11 @@ function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {(l.step_count || 0) > 0 && (
             <Btn sm kind="gold" onClick={() => onTeach(l)}>
-              ▶️ শিক্ষক মোড
+              ▶️ Teacher mode
             </Btn>
           )}
           <Btn sm kind="soft" onClick={() => onProgress(l)}>
-            📈 অগ্রগতি
+            📈 Progress
           </Btn>
           <Btn sm kind="soft" onClick={() => onOpen(l)}>
             {canEdit ? "✏️ Open" : "👁️ View"}
@@ -19730,10 +19684,10 @@ function LessonRow({ group, canEdit, prog, onOpen, onTeach, onProgress,
           {canEdit && (
             <>
               <Btn sm kind="soft" onClick={() => onAgeVersion(l, items)}>
-                ➕ বয়সের সংস্করণ
+                ➕ Age version
               </Btn>
               <Btn sm kind="soft" onClick={() => onDuplicate(l)}>
-                📄 নকল
+                📄 Duplicate
               </Btn>
               <Btn sm kind="danger" onClick={() => onRemove(l)}>
                 🗑️
@@ -19902,21 +19856,19 @@ function ProgressPanel({ lesson, atStep, onClose }) {
   };
 
   return (
-    <Modal title={`📈 অগ্রগতি — ${lesson.title}`} onClose={onClose} wide>
+    <Modal title={`📈 Progress — ${lesson.title}`} onClose={onClose} wide>
       {loading && <Loader text="Loading list" />}
 
       {!loading && students.length === 0 && (
         <div style={{ color: C.muted, fontSize: 14 }}>
-          এই কোর্সে আপনার কোনো শিক্ষার্থী নেই।
+          You have no students in this course.
         </div>
       )}
 
       {!loading && students.length > 0 && (
         <div style={{ display: "grid", gap: 10 }}>
           <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
-            শিক্ষার্থী <b>Alone, in the right order</b>, এক শব্দের ইশারাতেই সামলে নিয়ে
-            পড়তে পারলে তবেই “মুখস্থ হয়েছে”। কয়েকবার আপনার সাথে বলতে পারা
-            এখনো মুখস্থ নয়।
+            Student <b>Alone, in the right order</b>, and can recover from a one-word prompt — only then is it “memorised”. Being able to recite along with you a few times is not memorisation yet.
           </div>
           {lesson.topic ? (
             <div
@@ -19929,16 +19881,12 @@ function ProgressPanel({ lesson, atStep, onClose }) {
                 lineHeight: 1.7,
               }}
             >
-              ✔ “কভার হয়েছে” চাপলে দারস পরিকল্পনার{" "}
-              <b>{lesson.topic_text || "this topic"}</b> টপিকটি ওই শিক্ষার্থীর
-              জন্য কভার হিসেবে বসে যাবে — লেকচার প্ল্যানেও তখনই দেখাবে।
-              প্রত্যেকের হিসাব আলাদা।
+              ✔ Press “Mark as covered” and the lecture-plan topic{" "}
+              <b>{lesson.topic_text || "this topic"}</b> is marked as covered for that student — it shows in the lecture plan at the same time. Each student is tracked separately.
             </div>
           ) : (
             <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
-              ⓘ এই স্ক্রিপ্টটি দারস পরিকল্পনার কোনো টপিকের সাথে যুক্ত নয়,
-              তাই এখান থেকে কভার চিহ্নিত করা যাচ্ছে না। স্ক্রিপ্ট খুলে
-              “দারস পরিকল্পনার টপিক” বেছে দিলে এখানে বোতামটি চলে আসবে।
+              ⓘ This script is not linked to any lecture-plan topic, so coverage cannot be marked from here. Open the script and choose a “Lecture plan topic”, and the button will appear here.
             </div>
           )}
 
@@ -19968,15 +19916,15 @@ function ProgressPanel({ lesson, atStep, onClose }) {
                       {s.name}
                       {s.is_trial && (
                         <Tag color={C.blue} bg={C.blueBg}>
-                          ট্রায়াল অতিথি
+                          Trial guest
                         </Tag>
                       )}
                     </div>
                     <div style={{ fontSize: 11.5, color: C.muted }}>
                       {r
-                        ? `${bn(r.times_taught)} দিন পড়ানো হয়েছে` +
-                          (r.last_taught ? ` · শেষ ${fmtDate(r.last_taught)}` : "") +
-                          (r.last_step ? ` · ধাপ ${bn(r.last_step + 1)} পর্যন্ত` : "")
+                        ? `Taught on ${bn(r.times_taught)} day(s)` +
+                          (r.last_taught ? ` · last ${fmtDate(r.last_taught)}` : "") +
+                          (r.last_step ? ` · up to step ${bn(r.last_step + 1)}` : "")
                         : "Not started yet"}
                     </div>
                   </div>
@@ -20012,16 +19960,15 @@ function ProgressPanel({ lesson, atStep, onClose }) {
                   >
                     {s.is_trial ? (
                       <span style={{ fontSize: 12, color: C.muted }}>
-                        ⓘ ট্রায়াল অতিথির দারস পরিকল্পনা আলাদা — কভারের টিক
-                        সেখানেই বসে
+                        ⓘ A trial guest's lesson plan is separate — coverage ticks are recorded there
                       </span>
                     ) : cover[s.id] === "missed" ? (
                       <>
                         <Tag color={C.red} bg={C.redBg}>
-                          বাদ ✘
+                          Rejected ✘
                         </Tag>
                         <span style={{ fontSize: 12, color: C.muted }}>
-                          লাল ক্রস কেবল পরিচালক ঠিক করতে পারেন
+                          Only the director can clear a red cross
                         </span>
                       </>
                     ) : cover[s.id] === "covered" ? (
@@ -20033,7 +19980,7 @@ function ProgressPanel({ lesson, atStep, onClose }) {
                           disabled={busy === s.id}
                           onClick={() => mark_cover(s.id, false)}
                         >
-                          ↩️ টিকটি ফিরিয়ে নিন
+                          ↩️ Undo the tick
                         </Btn>
                       </>
                     ) : (
@@ -20043,7 +19990,7 @@ function ProgressPanel({ lesson, atStep, onClose }) {
                         disabled={busy === s.id}
                         onClick={() => mark_cover(s.id, true)}
                       >
-                        ✔ কভার হয়েছে চিহ্নিত করুন
+                        ✔ Mark as covered
                       </Btn>
                     )}
                   </div>
@@ -20085,7 +20032,7 @@ function ProgressSummary({ lessonId, rows }) {
   if (!mine.length) return null;
   const n = (st) => mine.filter((r) => r.status === st).length;
   const bits = PROGRESS_STATUS.map(([v, label]) =>
-    n(v) ? `${bn(n(v))} জন ${label}` : null,
+    n(v) ? `${bn(n(v))} ${label}` : null,
   ).filter(Boolean);
   return (
     <span style={{ fontSize: 11.5, color: C.muted }}>· {bits.join(" · ")}</span>
@@ -20835,8 +20782,7 @@ export function PresentWindow() {
             maxWidth: "92vw",
           }}
         >
-          🖥️ জুমে <b>this window</b> শেয়ার করুন · দুই ক্লিকে পুরো পর্দা ·
-          এই পরামর্শটি নিজেই সরে যাবে
+          🖥️ In Zoom <b>this window</b> Share · full screen in two clicks · this tip disappears on its own
         </div>
       )}
     </div>
@@ -21122,7 +21068,7 @@ function TeacherMode({ id, onClose }) {
       <div style={{ ...shell, display: "grid", placeItems: "center", gap: 14 }}>
         <div style={{ fontSize: 16 }}>No steps have been written for this lesson yet.</div>
         <Btn kind="gold" onClick={onClose}>
-          ফিরে যান
+          Back
         </Btn>
       </div>
     );
@@ -21154,12 +21100,12 @@ function TeacherMode({ id, onClose }) {
         }}
       >
         <button style={barBtn} onClick={() => setDrawer((d) => !d)}>
-          ☰ ধাপ
+          ☰ Steps
         </button>
         <div style={{ flex: 1, minWidth: 120 }}>
           <div style={{ fontWeight: 800, fontSize: 14.5 }}>{lesson.title}</div>
           <div style={{ fontSize: 11.5, color: "#ffffff99" }}>
-            {lesson.course_name} · {bn(lesson.age_from)}–{bn(lesson.age_to)} বছর
+            {lesson.course_name} · ages {bn(lesson.age_from)}–{bn(lesson.age_to)}
           </div>
         </div>
 
@@ -21173,7 +21119,7 @@ function TeacherMode({ id, onClose }) {
             fontWeight: 800,
           }}
         >
-          ধাপ {bn(i + 1)} / {bn(steps.length)}
+          Step {bn(i + 1)} / {bn(steps.length)}
         </span>
 
         {/* এই ধাপে কত সময় গেল — পরিকল্পনার চেয়ে বেশি হলে রঙ বদলায় */}
@@ -21201,7 +21147,7 @@ function TeacherMode({ id, onClose }) {
           style={{ fontSize: 12, color: "#ffffff88", whiteSpace: "nowrap" }}
           title="Total time since class started"
         >
-          মোট {mmss(total)}
+          Total {mmss(total)}
         </span>
 
         <button style={barBtn} onClick={() => setRunning((r) => !r)}>
@@ -21258,7 +21204,7 @@ function TeacherMode({ id, onClose }) {
         )}
         {lesson.objectives && (
           <button style={barBtn} onClick={() => setGoal((g) => !g)}>
-            🎯 লক্ষ্য
+            🎯 Goal
           </button>
         )}
         <button
@@ -21270,7 +21216,7 @@ function TeacherMode({ id, onClose }) {
           onClick={openStage}
           title="Share this window in Zoom"
         >
-          {stageOk ? "🟢" : "🖥️"} উপস্থাপনা
+          {stageOk ? "🟢" : "🖥️"} Presentation
         </button>
         {/* ঢাকা পড়ে না, মিনিমাইজ লাগে না — তাই জুমের শেয়ার জমে যায় না */}
         <button
@@ -21286,16 +21232,16 @@ function TeacherMode({ id, onClose }) {
               : "Always-on-top floating window — never covered, so sharing stays clean"
           }
         >
-          {floatWin ? "🟢" : "🔝"} ভাসমান পর্দা
+          {floatWin ? "🟢" : "🔝"} Floating window
         </button>
         <button style={barBtn} onClick={() => setProg(true)}>
-          📈 অগ্রগতি
+          📈 Progress
         </button>
         <button
           style={{ ...barBtn, background: "#ffffff26" }}
           onClick={onClose}
         >
-          ✕ বন্ধ
+          ✕ Close
         </button>
       </div>
 
@@ -21320,8 +21266,7 @@ function TeacherMode({ id, onClose }) {
           }}
         >
           <span>
-            ⚠️ জুমে স্ক্রিন ঢাকা পড়েছে। স্টুডেন্ট দেখতে পাচ্ছে না — ভাসমান
-            স্ক্রিন ব্যবহার করুন।
+            ⚠️ The screen is covered in Zoom. Students cannot see it — use the floating window.
           </span>
           <button
             style={{
@@ -21331,7 +21276,7 @@ function TeacherMode({ id, onClose }) {
             }}
             onClick={openFloat}
           >
-            🔝 ভাসমান পর্দা খুলুন
+            🔝 Open floating window
           </button>
         </div>
       )}
@@ -21462,7 +21407,7 @@ function TeacherMode({ id, onClose }) {
                   fontStyle: "italic",
                 }}
               >
-                এই ধাপে বলার মতো কিছু লেখা নেই।
+                Nothing has been written to say for this step.
               </div>
             )}
 
@@ -21517,14 +21462,14 @@ function TeacherMode({ id, onClose }) {
                 marginBottom: 8,
               }}
             >
-              🖥️ শিক্ষার্থী এখন যা দেখছেন
+              🖥️ What the student is seeing now
               {stageOk ? (
                 <span style={{ color: "#4ade80", marginLeft: 6 }}>
-                  · উপস্থাপনা উইন্ডো সংযুক্ত
+                  · Presentation window attached
                 </span>
               ) : (
                 <span style={{ color: "#ffffff55", marginLeft: 6 }}>
-                  · উইন্ডো খোলা নেই
+                  · No window open
                 </span>
               )}
             </div>
@@ -21549,7 +21494,7 @@ function TeacherMode({ id, onClose }) {
                     marginBottom: 6,
                   }}
                 >
-                  ⏭️ এরপর — {steps[i + 1].section || "Untitled step"}
+                  ⏭️ Next — {steps[i + 1].section || "Untitled step"}
                 </div>
                 <div
                   style={{
@@ -21609,7 +21554,7 @@ function TeacherMode({ id, onClose }) {
           disabled={i === 0}
           onClick={() => go(i - 1)}
         >
-          ← আগের ধাপ
+          ← Previous step
         </button>
         <div
           style={{
@@ -21619,7 +21564,7 @@ function TeacherMode({ id, onClose }) {
             color: "#ffffff77",
           }}
         >
-          কীবোর্ড: ← → বা স্পেস · Esc বন্ধ
+          Keyboard: ← → or Space · Esc to close
         </div>
         {i === steps.length - 1 ? (
           <button
@@ -21632,7 +21577,7 @@ function TeacherMode({ id, onClose }) {
             }}
             onClick={() => setProg(true)}
           >
-            ✓ শেষ — অগ্রগতি ও কভার
+            ✓ Finish — progress and coverage
           </button>
         ) : (
           <button
@@ -21645,7 +21590,7 @@ function TeacherMode({ id, onClose }) {
             }}
             onClick={() => go(i + 1)}
           >
-            পরের ধাপ →
+            Next step →
           </button>
         )}
       </div>
@@ -21707,7 +21652,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
       await load();
       notice(
         r.added
-          ? `↩️ ${bn(r.added)}টি মাপকাঠি ফিরিয়ে আনা হয়েছে`
+          ? `↩️ ${bn(r.added)} criteria restored`
           : "All already exist — nothing was changed",
       );
     } catch (e) {
@@ -21760,7 +21705,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
 
   const removePoint = (pt) =>
     askConfirm(
-      `"${pt.label_bn}" মাপকাঠিটি সরিয়ে ফেলা হবে।` +
+      `The criterion "${pt.label_bn}" will be removed.` +
         "\n\n" +
         "From now on it will no longer appear in the teacher's form or reports. Previously entered" +
         "scores already in reports stay in the database, so the criterion" +
@@ -21891,7 +21836,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   /* মুছে ফেলা — কেবল পরিচালক, আর কী কী হারাবে তা স্পষ্ট বলে দিয়ে */
   const removeTrial = (t) =>
     askConfirm(
-      `${t.name || t.name_bn} (${t.username}) — এই ট্রায়াল অ্যাকাউন্টটি ` +
+      `The trial account ${t.name || t.name_bn} (${t.username}) ` +
         "will be permanently deleted." +
         "\n\n" +
         "Their trial attendance and evaluation reports will be deleted too." +
@@ -21934,7 +21879,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
     try {
       await api.editTrial(t.id, { trial_until: until });
       await load();
-      notice(`✅ মেয়াদ ${fmtDate(until)} পর্যন্ত বাড়ানো হলো`);
+      notice(`✅ Term extended to ${fmtDate(until)}`);
     } catch (e) {
       notice("Failed —" + (e?.data?.error || e?.message || ""));
     }
@@ -21995,7 +21940,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   };
 
   const copyCreds = (t) => {
-    const txt = `আইডি: ${t.username}\nপাসওয়ার্ড: ${t.plain_password || ""}`;
+    const txt = `ID: ${t.username}\nPassword: ${t.plain_password || ""}`;
     try {
       navigator.clipboard.writeText(txt);
       notice("📋 Copied");
@@ -22021,7 +21966,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
   /* অতিথিকে নিয়মিত শিক্ষার্থী বানানো — নতুন অ্যাকাউন্ট নয়, একই অ্যাকাউন্টেই */
   const convert = (t) =>
     askConfirm(
-      `${t.name || t.name_bn}-কে নিয়মিত শিক্ষার্থী হিসেবে ভর্তি করা হবে।` +
+      `${t.name || t.name_bn} will be admitted as a regular student.` +
         "\n\n" +
         "It stays the same account — so their ID and password remain unchanged, and" +
         "All trial attendance and reports stay with them.",
@@ -22042,17 +21987,17 @@ function TrialView({ db, setDb, user, courses, refresh }) {
     if (t.expired)
       return (
         <Tag color={C.red} bg={C.redBg}>
-          মেয়াদ শেষ
+          Expired
         </Tag>
       );
     if (t.days_left == null) return <Tag>No term</Tag>;
     if (t.days_left === 0)
       return (
         <Tag color={C.gold} bg={C.amberBg}>
-          আজ শেষ
+          Due today
         </Tag>
       );
-    return <Tag>{bn(t.days_left)} দিন বাকি</Tag>;
+    return <Tag>{bn(t.days_left)} day(s) left</Tag>;
   };
 
   return (
@@ -22061,7 +22006,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
         title="🎓 Trial"
         action={
           <Btn sm kind="soft" onClick={() => openForm(null)}>
-            + নতুন ট্রায়াল আইডি
+            + New trial ID
           </Btn>
         }
       >
@@ -22071,14 +22016,14 @@ function TrialView({ db, setDb, user, courses, refresh }) {
             kind={tab === "apps" ? "gold" : "soft"}
             onClick={() => setTab("apps")}
           >
-            📥 আবেদন ({bn(pendingApps.length)})
+            📥 Applications ({bn(pendingApps.length)})
           </Btn>
           <Btn
             sm
             kind={tab === "students" ? "gold" : "soft"}
             onClick={() => setTab("students")}
           >
-            👤 ট্রায়াল শিক্ষার্থী ({bn(trials.length)})
+            👤 Trial students ({bn(trials.length)})
           </Btn>
           {isDir(user) && (
             <Btn
@@ -22086,7 +22031,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               kind={tab === "points" ? "gold" : "soft"}
               onClick={() => setTab("points")}
             >
-              ⚙️ মূল্যায়নের মাপকাঠি ({bn(points.length)})
+              ⚙️ Evaluation criteria ({bn(points.length)})
             </Btn>
           )}
         </div>
@@ -22097,7 +22042,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
           <div style={{ display: "grid", gap: 8 }}>
             {pendingApps.length === 0 && (
               <div style={{ color: C.muted, fontSize: 14 }}>
-                আইডি বানানো বাকি এমন কোনো ট্রায়াল আবেদন নেই।
+                There are no trial applications still needing an ID.
               </div>
             )}
             {pendingApps.map((a) => (
@@ -22114,7 +22059,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                   </div>
                 </div>
                 <Btn sm kind="gold" onClick={() => openForm(a)}>
-                  → আইডি বানান
+                  → Create ID
                 </Btn>
               </div>
             ))}
@@ -22125,7 +22070,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
           <div style={{ display: "grid", gap: 8 }}>
             {trials.length === 0 && (
               <div style={{ color: C.muted, fontSize: 14 }}>
-                এখনো কোনো ট্রায়াল শিক্ষার্থী নেই।
+                There are no trial students yet.
               </div>
             )}
             {trials.map((t) => (
@@ -22153,7 +22098,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                       t.country,
                       t.course_name || courseName(t.trial_course),
                       t.teacher_name,
-                      t.trial_until ? `মেয়াদ ${fmtDate(t.trial_until)}` : "",
+                      t.trial_until ? `until ${fmtDate(t.trial_until)}` : "",
                     ]
                       .filter(Boolean)
                       .join(" · ")}
@@ -22161,19 +22106,19 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                 </div>
                 {statusTag(t)}
                 <Btn sm kind="soft" onClick={() => copyCreds(t)}>
-                  📋 আইডি-পাসওয়ার্ড
+                  📋 ID & password
                 </Btn>
                 <Btn sm kind="soft" onClick={() => setSendFor(t)}>
-                  📨 বার্তা
+                  📨 Message
                 </Btn>
                 <Btn sm kind="soft" onClick={() => openEdit(t)}>
-                  ✏️ এডিট
+                  ✏️ Edit
                 </Btn>
                 <Btn sm kind="soft" onClick={() => resetPass(t)}>
-                  🔄 পাসওয়ার্ড
+                  🔄 Password
                 </Btn>
                 <Btn sm kind="soft" onClick={() => extend(t, 7)}>
-                  ⏳ ৭ দিন বাড়ান
+                  ⏳ Extend by 7 days
                 </Btn>
                 {/* মূল্যায়নের ধাপটা বাটনেই দেখা যায় — কোনটায় হাত দিতে হবে
                     তা তালিকা দেখেই বোঝা যায় */}
@@ -22190,7 +22135,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                     একই অ্যাকাউন্টে, তাই হাজিরা-রিপোর্ট সব থেকে যায় */}
                 {isDir(user) && accepted(t.id) && (
                   <Btn sm kind="primary" onClick={() => convert(t)}>
-                    🎓 ভর্তি করুন
+                    🎓 Admit
                   </Btn>
                 )}
                 {isDir(user) && (
@@ -22207,9 +22152,9 @@ function TrialView({ db, setDb, user, courses, refresh }) {
       {!loading && tab === "points" && isDir(user) && (
         <div style={{ display: "grid", gap: 8 }}>
           <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.7 }}>
-            উস্তাদ ট্রায়াল শেষে এই মাপকাঠিগুলোতেই ১–৫ নম্বর দেন, আর পরিবার
-            রিপোর্টে ইংরেজি নামটি দেখেন। ইংরেজি ঘর খালি রাখলে বাংলা নামটাই
-            বসে যাবে। লেখা শেষ করে অন্য ঘরে গেলেই নিজে থেকে সংরক্ষিত হয়।
+            After a trial, teachers score 1–5 on these criteria, and the family
+            sees the English name in the report. If the English field is left blank,
+            the Bengali name is used. Changes save automatically when you leave the field.
             {points.length > 0 && points.length < 4 && (
               <>
                 {" "}
@@ -22222,10 +22167,10 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                     textDecoration: "underline",
                   }}
                 >
-                  ↩️ একাডেমির চারটি মূল মাপকাঠি ফিরিয়ে আনুন
+                  ↩️ Restore the academy's four core criteria
                 </span>{" "}
-                — যেগুলো নেই কেবল সেগুলোই যোগ হবে, আপনার নিজের যোগ করা বা
-                নাম-বদলানো কিছুই নষ্ট হবে না।
+                — only the missing ones are added; nothing you added or
+                renamed yourself is lost.
               </>
             )}
           </div>
@@ -22286,25 +22231,24 @@ function TrialView({ db, setDb, user, courses, refresh }) {
             >
               {pointsOk ? (
                 <>
-                  <b style={{ color: C.gold }}>The list is empty.</b> নিচ থেকে
-                  নতুন মাপকাঠি যোগ করুন, অথবা একাডেমির চারটি মূল মাপকাঠি
-                  ফিরিয়ে আনুন।
+                  <b style={{ color: C.gold }}>The list is empty.</b> Add a new criterion below, or restore the academy's four core criteria.
                 </>
               ) : (
                 <>
                   <b style={{ color: C.gold }}>
-                    তালিকাটি সার্ভার থেকে আনা যায়নি।
+                    The list could not be loaded from the server.
                   </b>{" "}
-                  কিছু মুছে যায়নি — সংযোগ ফিরে এলে আবার দেখা যাবে। উস্তাদের
-                  মূল্যায়নের ফরমে এখনো আগের চারটি মাপকাঠিই কাজ করছে।
+                  Nothing has been deleted — it will reappear once the connection
+                  returns. The previous four criteria still work in the teacher’s
+                  evaluation form.
                 </>
               )}
               <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <Btn sm kind="gold" onClick={restorePoints}>
-                  ↩️ আগের চারটি ফিরিয়ে আনুন
+                  ↩️ Restore the previous four
                 </Btn>
                 <Btn sm kind="soft" onClick={load}>
-                  🔄 আবার চেষ্টা করুন
+                  🔄 Try again
                 </Btn>
               </div>
             </div>
@@ -22429,7 +22373,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               >
                 {[3, 7, 14, 30].map((d) => (
                   <option key={d} value={d}>
-                    {bn(d)} দিন
+                    {bn(d)} days
                   </option>
                 ))}
               </select>
@@ -22559,9 +22503,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                   lineHeight: 1.6,
                 }}
               >
-                আইডি বা পাসওয়ার্ড বদলালে পুরনোটিতে আর লগইন হবে না — নতুনটি
-                পরিবারকে জানিয়ে দিতে ভুলবেন না। পাসওয়ার্ডের ঘর খালি রাখলে
-                পুরনোটাই থাকবে।
+                If you change the ID or password, the old one will no longer work — remember to tell the family the new one. Leave the password field blank to keep the existing one.
               </div>
             </div>
 
@@ -22580,13 +22522,12 @@ function TrialView({ db, setDb, user, courses, refresh }) {
           আর বার্তাটাও সেই অনুযায়ী তৈরি হয়ে বসে থাকে। */}
       {sendFor && (
         <Modal
-          title={`📨 স্বাগত বার্তা — ${sendFor.name || sendFor.name_bn}`}
+          title={`📨 Welcome message — ${sendFor.name || sendFor.name_bn}`}
           onClose={() => setSendFor(null)}
         >
           <div style={{ display: "grid", gap: 10 }}>
             <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
-              বার্তাটি ইংরেজিতে তৈরি হয়ে যাবে — আইডি, পাসওয়ার্ড, কোর্স,
-              উস্তাদ ও মেয়াদসহ। কোথায় পাঠাবেন বেছে নিন।
+              The message is composed in English — with ID, password, course, teacher and term. Choose where to send it.
             </div>
             <Btn
               kind="gold"
@@ -22603,7 +22544,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               📧 Gmail — {sendFor.email || "No email"}
             </Btn>
             <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.6 }}>
-              নম্বর বা ইমেইল না থাকলে “✏️ এডিট” থেকে যোগ করে নিন।
+              If there is no number or email, add one via “✏️ Edit”.
             </div>
           </div>
         </Modal>
@@ -22643,15 +22584,14 @@ function TrialView({ db, setDb, user, courses, refresh }) {
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
             <Btn kind="gold" onClick={() => setSendFor(made)}>
-              📨 স্বাগত বার্তা পাঠান
+              📨 Send welcome message
             </Btn>
             <Btn kind="soft" onClick={() => copyCreds(made)}>
-              📋 কপি করুন
+              📋 Copy
             </Btn>
           </div>
           <div style={{ fontSize: 12, color: C.muted, marginTop: 12, lineHeight: 1.6 }}>
-            পাসওয়ার্ডটি পরে আবার এই তালিকা থেকেই দেখা ও পাঠানো যাবে। হারিয়ে
-            গেলে “🔄 পাসওয়ার্ড” চাপলে নতুন একটি তৈরি হবে।
+            The password can be viewed and sent again from this list later. If it is lost, press “🔄 Password” to generate a new one.
           </div>
         </Modal>
       )}
@@ -23291,7 +23231,7 @@ function FamilySwitcherBar({ user }) {
       border: "1px solid var(--clr-border,#d0ddd5)",
     }}>
       <span style={{ fontSize: 13, color: "var(--clr-muted,#6b7c73)" }}>
-        এখন: <strong>{family.current?.name}</strong>
+        Now: <strong>{family.current?.name}</strong>
       </span>
       <span style={{ fontSize: 13, color: "var(--clr-muted,#6b7c73)" }}>Other child →</span>
       {family.siblings.map(s => (
@@ -23506,8 +23446,8 @@ function LoginSendView({ user }) {
   const msgFor = (u) => {
     const name = u.name_bn || u.username;
     return tab === "teachers"
-      ? `আস-সালামু আলাইকুম ${name} ভাই/আপু,\n\nতারবিয়াতুল কুরআন একাডেমিতে আপনার লগইন তথ্য:\nআইডি: ${u.username}\nপাসওয়ার্ড: ${u.plain_password}\n\nপোর্টাল: ${window.location.origin}`
-      : `আস-সালামু আলাইকুম ${u.guardian || name} ভাই/আপু,\n\n${name}-এর পোর্টালের লগইন তথ্য:\nআইডি: ${u.username}\nপাসওয়ার্ড: ${u.plain_password}\n\nপোর্টাল: ${window.location.origin}`;
+      ? `Assalamu Alaikum ${name},\n\nYour login details for Tarbiyatul Quran Academy:\nID: ${u.username}\nPassword: ${u.plain_password}\n\nPortal: ${window.location.origin}`
+      : `Assalamu Alaikum ${u.guardian || name},\n\nLogin details for ${name}'s portal:\nID: ${u.username}\nPassword: ${u.plain_password}\n\nPortal: ${window.location.origin}`;
   };
 
   const sendOne = (u) => {
@@ -23558,10 +23498,10 @@ function LoginSendView({ user }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14 }}>
               <input type="checkbox" checked={allSel} onChange={toggleAll} />
-              সবাই নির্বাচন করুন
+              Select all
             </label>
             <Btn sm onClick={sendAll} disabled={selected.size === 0}>
-              📤 নির্বাচিত সবাইকে পাঠান ({selected.size})
+              📤 Send to all selected ({selected.size})
             </Btn>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -23577,8 +23517,8 @@ function LoginSendView({ user }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{u.name_bn || u.username}</div>
                   <div style={{ fontSize: 12, color: "#6b7c73" }}>
-                    আইডি: {u.username} · পাস: {u.plain_password}
-                    {tab === "students" && u.guardian && ` · অভিভাবক: ${u.guardian}`}
+                    ID: {u.username} · Pass: {u.plain_password}
+                    {tab === "students" && u.guardian && ` · Guardian: ${u.guardian}`}
                   </div>
                 </div>
                 <button onClick={() => sendOne(u)} disabled={sending === u.id}
@@ -24193,7 +24133,7 @@ function NewNotifToast({ user, notifs }) {
               ? `${items.length} new messages`
               : "New message from the Academy"
             : items.length > 1
-              ? `${bn(items.length)}টি নতুন বার্তা`
+              ? `${bn(items.length)} new messages`
               : "New message from the Academy"}
         </span>
         <button
@@ -24295,11 +24235,10 @@ function RejoinBlockPopup({ k, user, onRejoin, onLater }) {
         </>
       ) : (
         <>
-          আপনার উস্তাদ <b>in a new Zoom meeting</b> সরে গেছেন। আগের মিটিংটি আর
-          ব্যবহার হচ্ছে না — নিচের বাটনে চেপে তাঁর সাথে যোগ দিন।
+          Your teacher <b>in a new Zoom meeting</b> has moved. The previous meeting is no longer in use — press the button below to join them.
           <br />
           <br />
-          আপনার হাজিরা ইতিমধ্যেই লেখা হয়ে গেছে, এতে কিছু হবে না।
+          Your attendance has already been recorded; this will not affect it.
         </>
       )}
     </BlockingPopup>
@@ -24394,9 +24333,7 @@ function InstallPopup({ user }) {
           </>
         ) : (
           <>
-            নিচের <b>Share</b> open the menu and <b>“Add to Home Screen”</b> বেছে নিন।
-            তাহলে হোম স্ক্রিন থেকেই অ্যাপটি খুলবে — দ্রুত চলবে, আর
-            নোটিফিকেশনও পাবেন।
+            Below <b>Share</b> open the menu and <b>“Add to Home Screen”</b> . The app will then open straight from your home screen — faster, and you will get notifications too.
           </>
         )
       ) : en ? (
@@ -24407,8 +24344,7 @@ function InstallPopup({ user }) {
         </>
       ) : (
         <>
-          এই ডিভাইসে একাডেমির অ্যাপটি ইনস্টল করে নিন। দ্রুত খুলবে, আসল অ্যাপের
-          মতো চলবে, আর অ্যাপ বন্ধ থাকলেও ক্লাস ও নোটিশের খবর পেয়ে যাবেন।
+          Install the Academy app on this device. It opens faster, works like a real app, and you will receive class and notice alerts even when it is closed.
         </>
       )}
     </BlockingPopup>
@@ -24514,12 +24450,11 @@ function ReinstallNotice({ lang }) {
             </>
           ) : (
             <>
-              অ্যাপের লোগো ও নাম নতুন করা হয়েছে। ইনস্টল করা অ্যাপ পুরনো
-              লোগো-নামই ধরে রাখে, তাই একবার <b>Uninstall and reinstall</b>{" "}
-              করে নিন — শুধু এইবারের জন্য।
+              The app's logo and name have been updated. An installed app keeps the old logo and name, so once <b>Uninstall and reinstall</b>{" "}
+              just this once.
               <br />
               <br />
-              আপনার কিছুই হারাবে না। অ্যাকাউন্ট ও সব তথ্য যেমন আছে তেমনই থাকবে।
+              You will lose nothing. Your account and all data stay exactly as they are.
             </>
           )}
         </div>
@@ -24653,7 +24588,7 @@ function UpdateBanner({ lang }) {
           {left > 0
             ? en
               ? `Refreshing in ${left}…`
-              : `${bn(left)} সেকেন্ড পর রিফ্রেশ হচ্ছে…`
+              : `Refreshing in ${bn(left)} seconds…`
             : en
               ? "Finishing your save first…"
               : "Finishing your save first…"}
@@ -25276,10 +25211,10 @@ export default function App() {
                 textOverflow: "ellipsis",
               }}
             >
-              তারবিয়াতুল কুরআন একাডেমি
+              Tarbiyatul Quran Academy
             </div>
             <div style={{ fontSize: 11, color: C.muted }}>
-              ম্যানেজমেন্ট সিস্টেম
+              Management System
             </div>
           </div>
         </div>
@@ -25548,7 +25483,7 @@ export default function App() {
           >
             ﴾وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا﴿
             <br />
-            “আর কুরআন তিলাওয়াত করো ধীরে, সুস্পষ্টভাবে।” — মুযযাম্মিল ৪
+            “And recite the Quran slowly and distinctly.” — Al-Muzzammil 4
           </div>
         </aside>
         {menu && (
