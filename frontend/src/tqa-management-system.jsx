@@ -16986,12 +16986,6 @@ function Overview({ db, courses, user, goTo }) {
                       )}
                     </div>
                   )}
-                  {lec?.topics?.length > 0 && (
-                    <div style={{ fontSize: 12, color: C.muted }}>
-                      {T("আজকের টপিক", "Today's topics")}:{" "}
-                      {lec.topics.map((t) => t.text).join(" · ")}
-                    </div>
-                  )}
                 </div>
                 <Btn kind="gold" onClick={() => goTo("classes")}>
                   {T("ক্লাসে যান →", "Go to class →")}
