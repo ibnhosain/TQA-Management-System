@@ -21,7 +21,7 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Do You Remember? — Step One revision",
      "items": [
-      "Do You Remember? (checklist)",
+      "Do You Remember?",
       "Questions from Step One"
      ]
     },
@@ -29,7 +29,7 @@
      "book": "My Surahs",
      "text": "My Surahs — My Memory Toolkit + Reading Surahs in Salah",
      "items": [
-      "My Memory Toolkit (8 tools)",
+      "My Memory Toolkit",
       "My Daily Memory Routine",
       "My Revision Plan",
       "Reading Surahs in Salah"
@@ -48,7 +48,7 @@
      "book": "Duas & Manners",
      "text": "Duas & Manners — Do You Remember? — the duas of Book 1",
      "items": [
-      "Do You Remember? (Book 1 checklist)"
+      "Do You Remember?"
      ]
     },
     {
@@ -80,7 +80,7 @@
      "text": "My Surahs — Step 1 · Surah Al-Lahab: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite"
      ]
     },
@@ -89,7 +89,10 @@
      "text": "Tajweed — Lesson 2 — The 5 big areas; Makhraj 1–4",
      "items": [
       "The 5 big areas",
-      "Makhraj 1–4: the mouth space and the throat"
+      "Makhraj 1 · The empty space of the mouth and throat",
+      "Makhraj 2 · The deepest part of the throat (near the chest)",
+      "Makhraj 3 · The middle of the throat",
+      "Makhraj 4 · The top of the throat (near the tongue)"
      ]
     },
     {
@@ -105,8 +108,8 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 1 · Ba, Ta, Tha: the 4 shapes",
      "items": [
-      "The 4 shapes: model and trace",
-      "Join them (three times)"
+      "its 4 shapes",
+      "Join them"
      ]
     }
    ]
@@ -118,7 +121,7 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 8 — The 10 kinds of Madd; Madd-e-Tabee'i",
      "items": [
-      "The 10 kinds of Madd (1, 3 and 4 Alif)",
+      "The 10 kinds of Madd",
       "1 · Madd-e-Tabee'i — 1 Alif"
      ]
     },
@@ -126,7 +129,7 @@
      "book": "My Surahs",
      "text": "My Surahs — Step 1 · Surah Al-Lahab: verses 5–5",
      "items": [
-      "Learn verse 5",
+      "Learn it in little pieces: Verse 5",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -139,7 +142,10 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 2 — Makhraj 5–8",
      "items": [
-      "Makhraj 5–8: the back, middle and side of the tongue"
+      "Makhraj 5 · The very back of the tongue, touching the soft roof above it",
+      "Makhraj 6 · The back of the tongue, a little forward, touching the roof",
+      "Makhraj 7 · The middle of the tongue, touching the roof above it",
+      "Makhraj 8 · The side edge of the tongue, touching the roots of the upper back teeth"
      ]
     },
     {
@@ -148,15 +154,14 @@
      "items": [
       "Iman Mujmal",
       "Iman Mufassal",
-      "Dua: To keep my Iman pure"
+      "Dua: A dua to keep my Iman pure"
      ]
     },
     {
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 1 · Ba, Ta, Tha: build words",
      "items": [
-      "Build words from letters",
-      "Read and say each word's meaning"
+      "Build words"
      ]
     }
    ]
@@ -176,7 +181,7 @@
      "text": "My Surahs — Step 1 · Surah Al-Ikhlas: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -189,7 +194,12 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 2 — Makhraj 9–14",
      "items": [
-      "Makhraj 9–14: the edge and tip of the tongue"
+      "Makhraj 9 · The front edge of the tongue",
+      "Makhraj 10 · The tip of the tongue",
+      "Makhraj 11 · The tip of the tongue with a little of its top",
+      "Makhraj 12 · The tip of the tongue, touching the roots of the two upper front teeth",
+      "Makhraj 13 · The tip of the tongue, near the tips of the two lower front teeth",
+      "Makhraj 14 · The tip of the tongue, touching the tips of the two upper front teeth"
      ]
     },
     {
@@ -205,8 +215,8 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 2 · Jeem, Haa, Kha: the 4 shapes",
      "items": [
-      "The 4 shapes: model and trace",
-      "Join them (three times)"
+      "its 4 shapes",
+      "Join them"
      ]
     }
    ]
@@ -228,7 +238,7 @@
      "text": "My Surahs — Step 1 · Surah Al-Falaq: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite"
      ]
     },
@@ -236,7 +246,9 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 2 — Makhraj 15–17",
      "items": [
-      "Makhraj 15–17: the lips and the nose",
+      "Makhraj 15 · The inside of the lower lip",
+      "Makhraj 16 · The two lips",
+      "Makhraj 17 · The nose",
       "Questions"
      ]
     },
@@ -253,8 +265,7 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 2 · Jeem, Haa, Kha: build words",
      "items": [
-      "Build words from letters",
-      "Read and say each word's meaning"
+      "Build words"
      ]
     }
    ]
@@ -273,7 +284,7 @@
      "book": "My Surahs",
      "text": "My Surahs — Step 1 · Surah Al-Falaq: verses 5–5",
      "items": [
-      "Learn verse 5",
+      "Learn it in little pieces: Verse 5",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -295,17 +306,17 @@
      "book": "Duas & Manners",
      "text": "Duas & Manners — Lesson 2 · What I Believe — The Prophets",
      "items": [
-      "The Prophets (25 names)",
+      "The Prophets",
       "My duty to the Prophet ﷺ",
-      "Dua: When I hear his name"
+      "Dua: When I hear the name of the Prophet ﷺ"
      ]
     },
     {
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 3 · Dal, Dhal, Ra, Zay: the 4 shapes",
      "items": [
-      "The 4 shapes: model and trace",
-      "Join them (three times)"
+      "its 4 shapes",
+      "Join them"
      ]
     }
    ]
@@ -325,7 +336,7 @@
      "text": "My Surahs — Step 1 · Surah An-Nas: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite"
      ]
     },
@@ -333,8 +344,8 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 4 — Sifat: pairs 1–2",
      "items": [
-      "Pair 1 · Hams and Jahr",
-      "Pair 2 · Shiddah, Tawassut, Rakhawah"
+      "Pair 1 · Breath flows — or breath stops",
+      "Pair 2 · Hard, middle or soft"
      ]
     },
     {
@@ -350,8 +361,7 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 3 · Dal, Dhal, Ra, Zay: build words",
      "items": [
-      "Build words from letters",
-      "Read and say each word's meaning"
+      "Build words"
      ]
     }
    ]
@@ -370,7 +380,7 @@
      "book": "My Surahs",
      "text": "My Surahs — Step 1 · Surah An-Nas: verses 5–6",
      "items": [
-      "Learn verses 5–6 in little pieces",
+      "Learn it in little pieces: Verse 5, Verse 6",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -383,9 +393,9 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 4 — Sifat: pairs 3–5",
      "items": [
-      "Pair 3 · Isti'la and Istifal",
-      "Pair 4 · Itbaq and Infitah",
-      "Pair 5 · Idhlaq and Ismat"
+      "Pair 3 · Heavy or light",
+      "Pair 4 · Covered or open",
+      "Pair 5 · Quick or careful"
      ]
     },
     {
@@ -400,8 +410,8 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 4 · Seen, Sheen, Sad, Dad: the 4 shapes",
      "items": [
-      "The 4 shapes: model and trace",
-      "Join them (three times)"
+      "its 4 shapes",
+      "Join them"
      ]
     }
    ]
@@ -421,8 +431,8 @@
      "book": "My Surahs",
      "text": "My Surahs — Step 1 review: recite in the order of the Quran",
      "items": [
-      "Recite the Step 1 Surahs in the order of the Quran",
-      "Use them in salah: the earlier Surah in the 1st rak'ah"
+      "Step 1 · 4 Surahs",
+      "Reading Surahs in Salah"
      ]
     },
     {
@@ -430,7 +440,6 @@
      "text": "Tajweed — Lesson 4 — The 8 special qualities",
      "items": [
       "8 special qualities (no opposites)",
-      "The memory words",
       "Questions"
      ]
     },
@@ -447,8 +456,7 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 4 · Seen, Sheen, Sad, Dad: build words",
      "items": [
-      "Build words from letters",
-      "Read and say each word's meaning"
+      "Build words"
      ]
     }
    ]
@@ -469,7 +477,7 @@
      "text": "My Surahs — Step 2 · Surah Al-Kawthar: verses 1–3",
      "items": [
       "About this Surah",
-      "Learn verses 1–3 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -482,15 +490,15 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 5 — Noon Sakin: Izhar and Iqlab",
      "items": [
-      "1 · Izhar — the 6 throat letters",
-      "2 · Iqlab"
+      "1 · Izhar — say it clearly",
+      "2 · Iqlab — change it"
      ]
     },
     {
      "book": "Duas & Manners",
      "text": "Duas & Manners — Lesson 3 · Allah Above All — Rabbana atina; content with halal",
      "items": [
-      "Dua: Rabbana atina …",
+      "Dua: The dua the Prophet ﷺ made most often",
       "Dua: To be content with what is halal"
      ]
     },
@@ -498,8 +506,8 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 5 · Toa, Zoa, Ain, Ghain: the 4 shapes",
      "items": [
-      "The 4 shapes: model and trace",
-      "Join them (three times)"
+      "its 4 shapes",
+      "Join them"
      ]
     }
    ]
@@ -511,8 +519,7 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 8 — Madd-e-Muttasil",
      "items": [
-      "10 · Madd-e-Muttasil — 4 Alif",
-      "Munfasil or Muttasil?"
+      "10 · Madd-e-Muttasil — 4 Alif"
      ]
     },
     {
@@ -520,7 +527,7 @@
      "text": "My Surahs — Step 2 · Surah Al-Kafirun: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite"
      ]
     },
@@ -528,8 +535,9 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 5 — Noon Sakin: Idgham",
      "items": [
-      "3 · Idgham with and without Ghunnah",
-      "The 4 words with no Idgham"
+      "3 · Idgham — join it",
+      "(a) Idgham with Ghunnah — 4 letters",
+      "(b) Idgham without Ghunnah — 2 letters"
      ]
     },
     {
@@ -545,8 +553,7 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 5 · Toa, Zoa, Ain, Ghain: build words",
      "items": [
-      "Build words from letters",
-      "Read and say each word's meaning"
+      "Build words"
      ]
     }
    ]
@@ -559,15 +566,14 @@
      "text": "Noorani Qaida — Lesson 8 — Reading practice + Questions",
      "items": [
       "Reading practice",
-      "Questions",
-      "Lesson 8 review"
+      "Questions"
      ]
     },
     {
      "book": "My Surahs",
      "text": "My Surahs — Step 2 · Surah Al-Kafirun: verses 5–6",
      "items": [
-      "Learn verses 5–6 in little pieces",
+      "Learn it in little pieces: Verse 5, Verse 6",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -580,7 +586,7 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 5 — Noon Sakin: Ikhfa",
      "items": [
-      "4 · Ikhfa — the 15 letters",
+      "4 · Ikhfa — hide it",
       "Questions"
      ]
     },
@@ -588,7 +594,7 @@
      "book": "Duas & Manners",
      "text": "Duas & Manners — Lesson 4 · My Shield — Morning and evening protection",
      "items": [
-      "Dua: Protection from all harm (3 times)",
+      "Dua: Protection from all harm",
       "Dua: Seeking refuge in Allah's perfect words"
      ]
     },
@@ -596,8 +602,8 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 6 · Fa, Qaf, Kaf, Lam: the 4 shapes",
      "items": [
-      "The 4 shapes: model and trace",
-      "Join them (three times)"
+      "its 4 shapes",
+      "Join them"
      ]
     }
    ]
@@ -609,8 +615,7 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 9 — Noon Sakin and Tanween",
      "items": [
-      "Noon Sakin and Tanween",
-      "A Noon Sakin is hidden in every Tanween"
+      "Lesson 9 · Noon Sakin and Tanween"
      ]
     },
     {
@@ -618,7 +623,7 @@
      "text": "My Surahs — Step 2 · Surah An-Nasr: verses 1–3",
      "items": [
       "About this Surah",
-      "Learn verses 1–3 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -647,8 +652,7 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 6 · Fa, Qaf, Kaf, Lam: build words",
      "items": [
-      "Build words from letters",
-      "Read and say each word's meaning"
+      "Build words"
      ]
     }
    ]
@@ -667,15 +671,17 @@
      "book": "My Surahs",
      "text": "My Surahs — Step 2 review: recite in the order of the Quran",
      "items": [
-      "Recite the Step 2 Surahs in the order of the Quran",
-      "Use them in salah: the earlier Surah in the 1st rak'ah"
+      "Step 2 · 3 Surahs",
+      "Reading Surahs in Salah"
      ]
     },
     {
      "book": "Tajweed",
      "text": "Tajweed — Lesson 7 — Meem Sakin",
      "items": [
-      "Ikhfa, Idgham and Izhar Shafawi",
+      "1 · Ikhfa (Shafawi) — hide it",
+      "2 · Idgham (Shafawi) — join it",
+      "3 · Izhar (Shafawi) — say it clearly",
       "Questions"
      ]
     },
@@ -684,15 +690,15 @@
      "text": "Duas & Manners — Lesson 4 · My Shield — Sayyidul Istighfar (the whole dua)",
      "items": [
       "Sayyidul Istighfar: lines 3–4",
-      "The whole dua"
+      "The best dua for forgiveness"
      ]
     },
     {
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 7 · Meem, Noon, Waw, Ha, Ya: the 4 shapes",
      "items": [
-      "The 4 shapes: model and trace",
-      "Join them (three times)"
+      "its 4 shapes",
+      "Join them"
      ]
     }
    ]
@@ -713,7 +719,7 @@
      "text": "My Surahs — Step 3 · Surah Al-Fil: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite"
      ]
     },
@@ -721,8 +727,8 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 8 — Idgham Mithlayn and Mutajanisayn",
      "items": [
-      "1 · Idgham Mithlayn",
-      "2 · Idgham Mutajanisayn"
+      "1 · Idgham Mithlayn — two same letters",
+      "2 · Idgham Mutajanisayn — letters from the same home"
      ]
     },
     {
@@ -736,8 +742,7 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Group 7 · Meem, Noon, Waw, Ha, Ya: build words",
      "items": [
-      "Build words from letters",
-      "Read and say each word's meaning"
+      "Build words"
      ]
     }
    ]
@@ -749,14 +754,14 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 9 — The 4 ways to read Noon Sakin and Tanween",
      "items": [
-      "The 4 ways: Iqlab, Idgham, Izhar, Ikhfa"
+      "The 4 Ways to Read Noon Sakin and Tanween"
      ]
     },
     {
      "book": "My Surahs",
      "text": "My Surahs — Step 3 · Surah Al-Fil: verses 5–5",
      "items": [
-      "Learn verse 5",
+      "Learn it in little pieces: Verse 5",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -769,7 +774,7 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 8 — Idgham Mutaqaribayn",
      "items": [
-      "3 · Idgham Mutaqaribayn",
+      "3 · Idgham Mutaqaribayn — letters from nearby homes",
       "Questions"
      ]
     },
@@ -786,8 +791,8 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Part 2 · Harakah",
      "items": [
-      "The signs",
-      "Harakah: Zabar, Zer, Pesh"
+      "Part 2 · The Signs: Harakah, Tanween, Sukun, Tashdeed",
+      "Harakah"
      ]
     }
    ]
@@ -807,7 +812,7 @@
      "text": "My Surahs — Step 3 · Surah Quraysh: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -820,7 +825,8 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 9 — The Lam of Allah",
      "items": [
-      "Pur and Barik",
+      "Pur — full and heavy",
+      "Barik — light and thin",
       "Questions"
      ]
     },
@@ -828,8 +834,8 @@
      "book": "Duas & Manners",
      "text": "Duas & Manners — Lesson 5 · The Adhan — The words of the adhan",
      "items": [
-      "The words of the Adhan",
-      "The 5 daily prayers"
+      "Lesson 5 · The Adhan and the 5 Prayers",
+      "The words of the Adhan"
      ]
     },
     {
@@ -856,7 +862,7 @@
      "text": "My Surahs — Step 3 · Surah Al-Ma'un: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite"
      ]
     },
@@ -892,15 +898,14 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 9 — Izhar Mutlaq: the 4 words",
      "items": [
-      "These 4 words have no Idgham — Izhar Mutlaq",
-      "Revise Iqlab and Idgham"
+      "These 4 words have no Idgham — Izhar Mutlaq"
      ]
     },
     {
      "book": "My Surahs",
      "text": "My Surahs — Step 3 · Surah Al-Ma'un: verses 5–7",
      "items": [
-      "Learn verses 5–7 in little pieces",
+      "Learn it in little pieces: Verse 5, Verse 6, Verse 7",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -951,18 +956,18 @@
      "book": "My Surahs",
      "text": "My Surahs — Step 3 review: recite in the order of the Quran",
      "items": [
-      "Recite the Step 3 Surahs in the order of the Quran",
-      "Use them in salah: the earlier Surah in the 1st rak'ah"
+      "Step 3 · 3 Surahs",
+      "Reading Surahs in Salah"
      ]
     },
     {
      "book": "Tajweed",
      "text": "Tajweed — Lesson 11 — Madd: Tabee'i, Muttasil, Munfasil",
      "items": [
-      "How long is 1 Alif?",
-      "1 · Madd-e-Tabee'i",
-      "2 · Madd-e-Muttasil",
-      "3 · Madd-e-Munfasil"
+      "The kinds of Madd",
+      "1 · Madd-e-Tabee'i (natural Madd) — 1 Alif",
+      "2 · Madd-e-Muttasil (joined Madd) — 4 Alif",
+      "3 · Madd-e-Munfasil (separated Madd) — 4 Alif is best"
      ]
     },
     {
@@ -998,7 +1003,7 @@
      "text": "My Surahs — Step 4 · Surah Al-Asr: verses 1–3",
      "items": [
       "About this Surah",
-      "Learn verses 1–3 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -1011,9 +1016,9 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 11 — Madd: Aridi, Leen, Badal",
      "items": [
-      "4 · Madd-e-Aridi",
-      "5 · Madd-e-Leen",
-      "6 · Madd-e-Badal",
+      "4 · Madd-e-Aridi (Madd because we stop)",
+      "5 · Madd-e-Leen (soft Madd)",
+      "6 · Madd-e-Badal (exchanged Madd) — 1 Alif",
       "Questions"
      ]
     },
@@ -1050,7 +1055,7 @@
      "text": "My Surahs — Step 4 · Surah Al-Humazah: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite"
      ]
     },
@@ -1058,7 +1063,10 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 12 — Madd-e-Lazim: the 4 kinds",
      "items": [
-      "Kalimi and Harfi, Muthaqqal and Mukhaffaf"
+      "1 · Kalimi Muthaqqal",
+      "2 · Harfi Muthaqqal",
+      "3 · Kalimi Mukhaffaf",
+      "4 · Harfi Mukhaffaf"
      ]
     },
     {
@@ -1085,15 +1093,14 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 9 — Ikhfa (part 2)",
      "items": [
-      "Ikhfa: the last 7 letters",
-      "Full and light Ghunnah of Ikhfa"
+      "5 · Ikhfa — hiding: the last 7 letters"
      ]
     },
     {
      "book": "My Surahs",
      "text": "My Surahs — Step 4 · Surah Al-Humazah: verses 5–8",
      "items": [
-      "Learn verses 5–8 in little pieces",
+      "Learn it in little pieces: Verse 5, Verse 6, Verse 7, Verse 8",
       "Cover and Recite"
      ]
     },
@@ -1101,7 +1108,7 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 12 — Which letters get Madd-e-Lazim?",
      "items": [
-      "Kam 'asal naqas — the 8 letters",
+      "Which letters get Madd-e-Lazim?",
       "Questions"
      ]
     },
@@ -1130,15 +1137,14 @@
      "text": "Noorani Qaida — Lesson 9 — Reading practice + Questions",
      "items": [
       "Reading practice",
-      "Questions",
-      "Lesson 9 review"
+      "Questions"
      ]
     },
     {
      "book": "My Surahs",
      "text": "My Surahs — Step 4 · Surah Al-Humazah: verses 9–9",
      "items": [
-      "Learn verse 9",
+      "Learn it in little pieces: Verse 9",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -1151,7 +1157,8 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 13 — Qalqalah",
      "items": [
-      "Small bounce and bigger bounce",
+      "1 · Small bounce — in the middle of a word",
+      "2 · Bigger bounce — when we stop",
       "Questions"
      ]
     },
@@ -1179,7 +1186,7 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 10 — Meem Sakin: Ikhfa Shafawi",
      "items": [
-      "Meem Sakin — 3 ways",
+      "Lesson 10 · Meem Sakin",
       "1 · Ikhfa Shafawi"
      ]
     },
@@ -1187,15 +1194,18 @@
      "book": "My Surahs",
      "text": "My Surahs — Step 4 review: recite in the order of the Quran",
      "items": [
-      "Recite the Step 4 Surahs in the order of the Quran",
-      "Use them in salah: the earlier Surah in the 1st rak'ah"
+      "Step 4 · 2 Surahs",
+      "Reading Surahs in Salah"
      ]
     },
     {
      "book": "Tajweed",
      "text": "Tajweed — Lesson 14 — Ha-e-Zameer",
      "items": [
-      "The 4 rules of Ha-e-Zameer",
+      "Rule 1 · Ha with Pesh after a harakah",
+      "Rule 2 · Ha with Zer after a Zer",
+      "Rule 3 · A Sakin letter before it — nothing added",
+      "Rule 4 · A Sakin letter after it — nothing added",
       "Questions"
      ]
     },
@@ -1230,7 +1240,7 @@
      "text": "My Surahs — Step 5 · Surah Al-Qari'ah: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite"
      ]
     },
@@ -1238,7 +1248,7 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 15 — Saktah",
      "items": [
-      "Saktah — the 4 places",
+      "Lesson 15 · Saktah — A Tiny Pause",
       "Questions"
      ]
     },
@@ -1269,15 +1279,14 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 10 — Izhar Shafawi",
      "items": [
-      "3 · Izhar Shafawi",
-      "Extra care before Waw and Fa"
+      "3 · Izhar Shafawi"
      ]
     },
     {
      "book": "My Surahs",
      "text": "My Surahs — Step 5 · Surah Al-Qari'ah: verses 5–8",
      "items": [
-      "Learn verses 5–8 in little pieces",
+      "Learn it in little pieces: Verse 5, Verse 6, Verse 7, Verse 8",
       "Cover and Recite"
      ]
     },
@@ -1285,7 +1294,11 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 16 — Special words 1–5",
      "items": [
-      "Special words 1–5"
+      "1 · Sad, but read as Seen",
+      "2 · Imalah",
+      "3 · Ishmam",
+      "4 · Ha with Pesh",
+      "5 · Written with one Noon, read with two"
      ]
     },
     {
@@ -1314,15 +1327,14 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 10 — Questions",
      "items": [
-      "Questions",
-      "Lesson 10 review"
+      "Questions"
      ]
     },
     {
      "book": "My Surahs",
      "text": "My Surahs — Step 5 · Surah Al-Qari'ah: verses 9–11",
      "items": [
-      "Learn verses 9–11 in little pieces",
+      "Learn it in little pieces: Verse 9, Verse 10, Verse 11",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -1335,7 +1347,10 @@
      "book": "Tajweed",
      "text": "Tajweed — Lesson 16 — Special words 6–9",
      "items": [
-      "Special words 6–9",
+      "6 · Ha with Jazm",
+      "7 · Ya with Zabar — or stopping",
+      "8 · Tas-heel — a soft Hamzah",
+      "9 · Sad or Seen — both allowed",
       "Questions"
      ]
     },
@@ -1352,7 +1367,7 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Part 5 · Talking: meeting my teacher",
      "items": [
-      "Conversation 1 · Meeting my teacher"
+      "1 · Meeting my teacher"
      ]
     }
    ]
@@ -1372,7 +1387,7 @@
      "text": "My Surahs — Step 5 · Surah At-Takathur: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite"
      ]
     },
@@ -1398,7 +1413,7 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Part 5 · Talking: two friends meet",
      "items": [
-      "Conversation 2 · Two friends meet"
+      "2 · Two friends meet"
      ]
     }
    ]
@@ -1422,7 +1437,7 @@
      "book": "My Surahs",
      "text": "My Surahs — Step 5 · Surah At-Takathur: verses 5–8",
      "items": [
-      "Learn verses 5–8 in little pieces",
+      "Learn it in little pieces: Verse 5, Verse 6, Verse 7, Verse 8",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -1450,7 +1465,7 @@
      "book": "Arabic Writing",
      "text": "Arabic Writing — Part 5 · Talking: in the madrasah",
      "items": [
-      "Conversation 3 · In the madrasah"
+      "3 · In the madrasah"
      ]
     }
    ]
@@ -1469,8 +1484,8 @@
      "book": "My Surahs",
      "text": "My Surahs — Step 5 review: recite in the order of the Quran",
      "items": [
-      "Recite the Step 5 Surahs in the order of the Quran",
-      "Use them in salah: the earlier Surah in the 1st rak'ah"
+      "Step 5 · 2 Surahs",
+      "Reading Surahs in Salah"
      ]
     },
     {
@@ -1513,7 +1528,7 @@
      "text": "My Surahs — Step 6 · Surah Az-Zalzalah: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite"
      ]
     },
@@ -1529,7 +1544,7 @@
      "text": "Duas & Manners — Lesson 11 · Special Moments — Dreams; someone in trouble",
      "items": [
       "When I have a dream",
-      "Dua: When I see someone suffering"
+      "Dua: Said quietly, when I see someone suffering"
      ]
     },
     {
@@ -1548,7 +1563,7 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 12 — 11 Surahs: Al-Fatihah",
      "items": [
-      "The 11 Surahs",
+      "Lesson 12 · 11 Surahs",
       "1 · Surah Al-Fatihah"
      ]
     },
@@ -1556,7 +1571,7 @@
      "book": "My Surahs",
      "text": "My Surahs — Step 6 · Surah Az-Zalzalah: verses 5–8",
      "items": [
-      "Learn verses 5–8 in little pieces",
+      "Learn it in little pieces: Verse 5, Verse 6, Verse 7, Verse 8",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -1596,7 +1611,7 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 12 — Surah An-Nas",
      "items": [
-      "2 · Surah An-Nas — read with Tajweed"
+      "2 · Surah An-Nas — 6 verses"
      ]
     },
     {
@@ -1604,7 +1619,7 @@
      "text": "My Surahs — Step 6 · Surah Al-'Adiyat: verses 1–4",
      "items": [
       "About this Surah",
-      "Learn verses 1–4 in little pieces",
+      "Learn it in little pieces: Verse 1, Verse 2, Verse 3, Verse 4",
       "Cover and Recite"
      ]
     },
@@ -1640,14 +1655,14 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 12 — Surah Al-Falaq",
      "items": [
-      "3 · Surah Al-Falaq — read with Tajweed"
+      "3 · Surah Al-Falaq — 5 verses"
      ]
     },
     {
      "book": "My Surahs",
      "text": "My Surahs — Step 6 · Surah Al-'Adiyat: verses 5–8",
      "items": [
-      "Learn verses 5–8 in little pieces",
+      "Learn it in little pieces: Verse 5, Verse 6, Verse 7, Verse 8",
       "Cover and Recite"
      ]
     },
@@ -1683,14 +1698,14 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 12 — Surah Al-Ikhlas",
      "items": [
-      "4 · Surah Al-Ikhlas — read with Tajweed"
+      "4 · Surah Al-Ikhlas — 4 verses"
      ]
     },
     {
      "book": "My Surahs",
      "text": "My Surahs — Step 6 · Surah Al-'Adiyat: verses 9–11",
      "items": [
-      "Learn verses 9–11 in little pieces",
+      "Learn it in little pieces: Verse 9, Verse 10, Verse 11",
       "Cover and Recite",
       "The whole Surah",
       "What does it mean?",
@@ -1731,15 +1746,15 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 12 — Surah Al-Lahab",
      "items": [
-      "5 · Surah Al-Lahab — read with Tajweed"
+      "5 · Surah Al-Lahab — 5 verses"
      ]
     },
     {
      "book": "My Surahs",
      "text": "My Surahs — Step 6 review: recite in the order of the Quran",
      "items": [
-      "Recite the Step 6 Surahs in the order of the Quran",
-      "Use them in salah: the earlier Surah in the 1st rak'ah"
+      "Step 6 · 2 Surahs",
+      "Reading Surahs in Salah"
      ]
     },
     {
@@ -1753,7 +1768,10 @@
      "book": "Duas & Manners",
      "text": "Duas & Manners — Lesson 13 · 12 Little Verses — verses 1–4",
      "items": [
-      "Speak well · Be good · Brotherhood · Justice"
+      "1 · Speak well",
+      "2 · Be good",
+      "3 · Brotherhood",
+      "4 · Justice"
      ]
     },
     {
@@ -1773,14 +1791,14 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 12 — Surah An-Nasr",
      "items": [
-      "6 · Surah An-Nasr — read with Tajweed"
+      "6 · Surah An-Nasr — 3 verses"
      ]
     },
     {
      "book": "My Surahs",
      "text": "My Surahs — My Daily Practice List + Big Quiz + My Certificate",
      "items": [
-      "My Daily Practice List (Az-Zalzalah to An-Nas)",
+      "My Daily Practice List",
       "Big Quiz",
       "My Surah Chart",
       "My Certificate"
@@ -1797,7 +1815,10 @@
      "book": "Duas & Manners",
      "text": "Duas & Manners — Lesson 13 · 12 Little Verses — verses 5–8",
      "items": [
-      "Give what you love · Be with the truthful · Be patient · Keep promises"
+      "5 · Give what you love",
+      "6 · Be with the truthful",
+      "7 · Be patient",
+      "8 · Keep promises"
      ]
     },
     {
@@ -1816,7 +1837,7 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 12 — Surah Al-Kafirun",
      "items": [
-      "7 · Surah Al-Kafirun — read with Tajweed"
+      "7 · Surah Al-Kafirun — 6 verses"
      ]
     },
     {
@@ -1837,7 +1858,10 @@
      "book": "Duas & Manners",
      "text": "Duas & Manners — Lesson 13 · 12 Little Verses — verses 9–12",
      "items": [
-      "Remember Allah · Forgive · No boasting · Life is short",
+      "9 · Remember Allah",
+      "10 · Forgive",
+      "11 · No boasting",
+      "12 · Life is short",
       "My duties to the Quran"
      ]
     },
@@ -1857,7 +1881,7 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 12 — Surah Al-Kawthar",
      "items": [
-      "8 · Surah Al-Kawthar — read with Tajweed"
+      "8 · Surah Al-Kawthar — 3 verses"
      ]
     },
     {
@@ -1878,7 +1902,7 @@
      "book": "Duas & Manners",
      "text": "Duas & Manners — Lesson 14 · Fard, Wajib and Sunnah",
      "items": [
-      "Fard, Wajib, Sunnah and Haram"
+      "Lesson 14 · Fard, Wajib and Sunnah — Easy Rules"
      ]
     },
     {
@@ -1897,7 +1921,7 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 12 — Surah Al-Ma'un",
      "items": [
-      "9 · Surah Al-Ma'un — read with Tajweed"
+      "9 · Surah Al-Ma'un — 7 verses"
      ]
     },
     {
@@ -1939,7 +1963,7 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 12 — Surah Quraysh",
      "items": [
-      "10 · Surah Quraysh — read with Tajweed"
+      "10 · Surah Quraysh — 4 verses"
      ]
     },
     {
@@ -1981,7 +2005,7 @@
      "book": "Noorani Qaida",
      "text": "Noorani Qaida — Lesson 12 — Surah Al-Fil",
      "items": [
-      "11 · Surah Al-Fil — read with Tajweed"
+      "11 · Surah Al-Fil — 5 verses"
      ]
     },
     {
