@@ -1,0 +1,2106 @@
+{
+ "books": [
+  "Easy Noorani Qaida — Step 02",
+  "Memorized Surah — Az-Zalzalah to An-Nas",
+  "Tajweed and Makhraj",
+  "Islamic Duas, Manners and Values (Book 2)",
+  "My Arabic Writing Book — Step 2"
+ ],
+ "short": [
+  "Noorani Qaida",
+  "My Surahs",
+  "Tajweed",
+  "Duas & Manners",
+  "Arabic Writing"
+ ],
+ "lectures": [
+  {
+   "no": 1,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Do You Remember? — Step One revision",
+     "items": [
+      "Do You Remember? (checklist)",
+      "Questions from Step One"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — My Memory Toolkit + Reading Surahs in Salah",
+     "items": [
+      "My Memory Toolkit (8 tools)",
+      "My Daily Memory Routine",
+      "My Revision Plan",
+      "Reading Surahs in Salah"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 1 — Why we read with Tajweed",
+     "items": [
+      "Why We Read with Tajweed",
+      "What the Prophet ﷺ said",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Do You Remember? — the duas of Book 1",
+     "items": [
+      "Do You Remember? (Book 1 checklist)"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Do You Remember? + Letters change their shape",
+     "items": [
+      "Write all 29 letters from memory",
+      "Part 1 · Letters Change Their Shape",
+      "6 letters that never hold the next hand"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 2,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — The Word Allah — Pur and Barik",
+     "items": [
+      "1. Pur — full and heavy",
+      "2. Barik — light and thin",
+      "Reading practice",
+      "Questions"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 1 · Surah Al-Lahab: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 2 — The 5 big areas; Makhraj 1–4",
+     "items": [
+      "The 5 big areas",
+      "Makhraj 1–4: the mouth space and the throat"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 1 · My Faith — Who is Allah? The two Kalimas",
+     "items": [
+      "Who is Allah?",
+      "The first Kalimah",
+      "The second Kalimah"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 1 · Ba, Ta, Tha: the 4 shapes",
+     "items": [
+      "The 4 shapes: model and trace",
+      "Join them (three times)"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 3,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 8 — The 10 kinds of Madd; Madd-e-Tabee'i",
+     "items": [
+      "The 10 kinds of Madd (1, 3 and 4 Alif)",
+      "1 · Madd-e-Tabee'i — 1 Alif"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 1 · Surah Al-Lahab: verses 5–5",
+     "items": [
+      "Learn verse 5",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 2 — Makhraj 5–8",
+     "items": [
+      "Makhraj 5–8: the back, middle and side of the tongue"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 1 · My Faith — Iman Mujmal and Iman Mufassal",
+     "items": [
+      "Iman Mujmal",
+      "Iman Mufassal",
+      "Dua: To keep my Iman pure"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 1 · Ba, Ta, Tha: build words",
+     "items": [
+      "Build words from letters",
+      "Read and say each word's meaning"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 4,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 8 — Madd-e-Badal",
+     "items": [
+      "2 · Madd-e-Badal — 1 Alif"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 1 · Surah Al-Ikhlas: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 2 — Makhraj 9–14",
+     "items": [
+      "Makhraj 9–14: the edge and tip of the tongue"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 1 · My Faith — A True Story: Jibril Comes to Teach",
+     "items": [
+      "A True Story: Jibril Comes to Teach",
+      "Did you know?",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 2 · Jeem, Haa, Kha: the 4 shapes",
+     "items": [
+      "The 4 shapes: model and trace",
+      "Join them (three times)"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 5,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 8 — Madd-e-Leen, stopping, Madd-e-Iwad",
+     "items": [
+      "3 · Madd-e-Leen — 1 Alif",
+      "Stopping on a round Ta",
+      "Madd-e-Iwad"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 1 · Surah Al-Falaq: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 2 — Makhraj 15–17",
+     "items": [
+      "Makhraj 15–17: the lips and the nose",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 2 · What I Believe — Allah, the Angels, the Books",
+     "items": [
+      "Allah — One and Only",
+      "The Angels",
+      "The Books"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 2 · Jeem, Haa, Kha: build words",
+     "items": [
+      "Build words from letters",
+      "Read and say each word's meaning"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 6,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 8 — Madd-e-Aaridi",
+     "items": [
+      "4 · Madd-e-Aaridi — 3 Alif"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 1 · Surah Al-Falaq: verses 5–5",
+     "items": [
+      "Learn verse 5",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 3 — Letters that sound alike",
+     "items": [
+      "Letters That Sound Alike",
+      "One wrong letter, a new meaning!",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 2 · What I Believe — The Prophets",
+     "items": [
+      "The Prophets (25 names)",
+      "My duty to the Prophet ﷺ",
+      "Dua: When I hear his name"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 3 · Dal, Dhal, Ra, Zay: the 4 shapes",
+     "items": [
+      "The 4 shapes: model and trace",
+      "Join them (three times)"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 7,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 8 — Madd-e-Munfasil",
+     "items": [
+      "5 · Madd-e-Munfasil — 3 Alif"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 1 · Surah An-Nas: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 4 — Sifat: pairs 1–2",
+     "items": [
+      "Pair 1 · Hams and Jahr",
+      "Pair 2 · Shiddah, Tawassut, Rakhawah"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 2 · What I Believe — The Last Day, Taqdir, Shirk and Bid'ah",
+     "items": [
+      "The Last Day",
+      "Taqdir",
+      "Two things a Muslim stays far away from"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 3 · Dal, Dhal, Ra, Zay: build words",
+     "items": [
+      "Build words from letters",
+      "Read and say each word's meaning"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 8,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 8 — The Huroof-e-Muqatta'at",
+     "items": [
+      "The Huroof-e-Muqatta'at"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 1 · Surah An-Nas: verses 5–6",
+     "items": [
+      "Learn verses 5–6 in little pieces",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 4 — Sifat: pairs 3–5",
+     "items": [
+      "Pair 3 · Isti'la and Istifal",
+      "Pair 4 · Itbaq and Infitah",
+      "Pair 5 · Idhlaq and Ismat"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 2 · What I Believe — A True Story: Allah Taught Adam the Names",
+     "items": [
+      "A True Story: Allah Taught Adam the Names",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 4 · Seen, Sheen, Sad, Dad: the 4 shapes",
+     "items": [
+      "The 4 shapes: model and trace",
+      "Join them (three times)"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 9,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 8 — Madd-e-Lazim Harfi",
+     "items": [
+      "6 · Madd-e-Lazim Harfi Mukhaffaf — 4 Alif",
+      "7 · Madd-e-Lazim Harfi Muthaqqal — 4 Alif"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 1 review: recite in the order of the Quran",
+     "items": [
+      "Recite the Step 1 Surahs in the order of the Quran",
+      "Use them in salah: the earlier Surah in the 1st rak'ah"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 4 — The 8 special qualities",
+     "items": [
+      "8 special qualities (no opposites)",
+      "The memory words",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 3 · Allah Above All — Duas for His love and a pure heart",
+     "items": [
+      "I do this",
+      "Dua: Asking for the love of Allah",
+      "Dua: For a pure and God-fearing heart"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 4 · Seen, Sheen, Sad, Dad: build words",
+     "items": [
+      "Build words from letters",
+      "Read and say each word's meaning"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 10,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 8 — Madd-e-Lazim Kalimi",
+     "items": [
+      "8 · Madd-e-Lazim Kalimi Mukhaffaf — 4 Alif",
+      "9 · Madd-e-Lazim Kalimi Muthaqqal — 4 Alif"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 2 · Surah Al-Kawthar: verses 1–3",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–3 in little pieces",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 5 — Noon Sakin: Izhar and Iqlab",
+     "items": [
+      "1 · Izhar — the 6 throat letters",
+      "2 · Iqlab"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 3 · Allah Above All — Rabbana atina; content with halal",
+     "items": [
+      "Dua: Rabbana atina …",
+      "Dua: To be content with what is halal"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 5 · Toa, Zoa, Ain, Ghain: the 4 shapes",
+     "items": [
+      "The 4 shapes: model and trace",
+      "Join them (three times)"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 11,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 8 — Madd-e-Muttasil",
+     "items": [
+      "10 · Madd-e-Muttasil — 4 Alif",
+      "Munfasil or Muttasil?"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 2 · Surah Al-Kafirun: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 5 — Noon Sakin: Idgham",
+     "items": [
+      "3 · Idgham with and without Ghunnah",
+      "The 4 words with no Idgham"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 3 · Allah Above All — A True Story: “Young Boy, I Will Teach You”",
+     "items": [
+      "A True Story: “Young Boy, I Will Teach You Some Words”",
+      "Did you know?",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 5 · Toa, Zoa, Ain, Ghain: build words",
+     "items": [
+      "Build words from letters",
+      "Read and say each word's meaning"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 12,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 8 — Reading practice + Questions",
+     "items": [
+      "Reading practice",
+      "Questions",
+      "Lesson 8 review"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 2 · Surah Al-Kafirun: verses 5–6",
+     "items": [
+      "Learn verses 5–6 in little pieces",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 5 — Noon Sakin: Ikhfa",
+     "items": [
+      "4 · Ikhfa — the 15 letters",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 4 · My Shield — Morning and evening protection",
+     "items": [
+      "Dua: Protection from all harm (3 times)",
+      "Dua: Seeking refuge in Allah's perfect words"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 6 · Fa, Qaf, Kaf, Lam: the 4 shapes",
+     "items": [
+      "The 4 shapes: model and trace",
+      "Join them (three times)"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 13,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 9 — Noon Sakin and Tanween",
+     "items": [
+      "Noon Sakin and Tanween",
+      "A Noon Sakin is hidden in every Tanween"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 2 · Surah An-Nasr: verses 1–3",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–3 in little pieces",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 6 — Ghunnah",
+     "items": [
+      "Wajib Ghunnah",
+      "The 4 kinds of Ghunnah",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 4 · My Shield — Sayyidul Istighfar (lines 1–2)",
+     "items": [
+      "Sayyidul Istighfar: lines 1–2"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 6 · Fa, Qaf, Kaf, Lam: build words",
+     "items": [
+      "Build words from letters",
+      "Read and say each word's meaning"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 14,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 9 — The Tanween of every letter (part 1)",
+     "items": [
+      "Read the Tanween of every letter: first half"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 2 review: recite in the order of the Quran",
+     "items": [
+      "Recite the Step 2 Surahs in the order of the Quran",
+      "Use them in salah: the earlier Surah in the 1st rak'ah"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 7 — Meem Sakin",
+     "items": [
+      "Ikhfa, Idgham and Izhar Shafawi",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 4 · My Shield — Sayyidul Istighfar (the whole dua)",
+     "items": [
+      "Sayyidul Istighfar: lines 3–4",
+      "The whole dua"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 7 · Meem, Noon, Waw, Ha, Ya: the 4 shapes",
+     "items": [
+      "The 4 shapes: model and trace",
+      "Join them (three times)"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 15,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 9 — The Tanween of every letter (part 2)",
+     "items": [
+      "Read the Tanween of every letter: second half",
+      "Reading practice"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 3 · Surah Al-Fil: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 8 — Idgham Mithlayn and Mutajanisayn",
+     "items": [
+      "1 · Idgham Mithlayn",
+      "2 · Idgham Mutajanisayn"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 4 · My Shield — Ayat al-Kursi (first half)",
+     "items": [
+      "Ayat al-Kursi: lines 1–4"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Group 7 · Meem, Noon, Waw, Ha, Ya: build words",
+     "items": [
+      "Build words from letters",
+      "Read and say each word's meaning"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 16,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 9 — The 4 ways to read Noon Sakin and Tanween",
+     "items": [
+      "The 4 ways: Iqlab, Idgham, Izhar, Ikhfa"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 3 · Surah Al-Fil: verses 5–5",
+     "items": [
+      "Learn verse 5",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 8 — Idgham Mutaqaribayn",
+     "items": [
+      "3 · Idgham Mutaqaribayn",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 4 · My Shield — Ayat al-Kursi (whole) + true story",
+     "items": [
+      "Ayat al-Kursi: lines 5–8",
+      "A True Story: The Thief Who Taught Ayat al-Kursi",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 2 · Harakah",
+     "items": [
+      "The signs",
+      "Harakah: Zabar, Zer, Pesh"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 17,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 9 — Iqlab",
+     "items": [
+      "1 · Iqlab — changing"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 3 · Surah Quraysh: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 9 — The Lam of Allah",
+     "items": [
+      "Pur and Barik",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 5 · The Adhan — The words of the adhan",
+     "items": [
+      "The words of the Adhan",
+      "The 5 daily prayers"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 2 · Tanween",
+     "items": [
+      "Tanween"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 18,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 9 — Idgham with Ghunnah",
+     "items": [
+      "2 · Idgham with Ghunnah — joining with a hum"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 3 · Surah Al-Ma'un: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 10 — Ra is Pur in 5 cases",
+     "items": [
+      "Ra is Pur (full) in 5 cases"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 5 · The Adhan — Answering it; the dua after it",
+     "items": [
+      "How I answer the Adhan",
+      "Dua: After the adhan"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 2 · Sukun and Tashdeed",
+     "items": [
+      "Sukun",
+      "Tashdeed"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 19,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 9 — Izhar Mutlaq: the 4 words",
+     "items": [
+      "These 4 words have no Idgham — Izhar Mutlaq",
+      "Revise Iqlab and Idgham"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 3 · Surah Al-Ma'un: verses 5–7",
+     "items": [
+      "Learn verses 5–7 in little pieces",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 10 — Ra is Barik in 4 cases; Imalah",
+     "items": [
+      "Ra is Barik (light) in 4 cases",
+      "Imalah — one special Ra",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 5 · The Adhan — A True Story: How the Adhan Began",
+     "items": [
+      "A True Story: How the Adhan Began",
+      "Did you know?",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 2 · Add the sign + read and write words",
+     "items": [
+      "Add the sign!",
+      "Read and write words"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 20,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 9 — Idgham without Ghunnah",
+     "items": [
+      "3 · Idgham without Ghunnah — joining without a hum"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 3 review: recite in the order of the Quran",
+     "items": [
+      "Recite the Step 3 Surahs in the order of the Quran",
+      "Use them in salah: the earlier Surah in the 1st rak'ah"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 11 — Madd: Tabee'i, Muttasil, Munfasil",
+     "items": [
+      "How long is 1 Alif?",
+      "1 · Madd-e-Tabee'i",
+      "2 · Madd-e-Muttasil",
+      "3 · Madd-e-Munfasil"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 6 · Salam — Who says it first? Musafaha",
+     "items": [
+      "Who says salam first?",
+      "Musafaha — shaking hands",
+      "Dua: While shaking hands"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 3 · Split the word into its letters",
+     "items": [
+      "Split the word into its letters"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 21,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 9 — Izhar",
+     "items": [
+      "4 · Izhar — saying clearly"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 4 · Surah Al-Asr: verses 1–3",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–3 in little pieces",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 11 — Madd: Aridi, Leen, Badal",
+     "items": [
+      "4 · Madd-e-Aridi",
+      "5 · Madd-e-Leen",
+      "6 · Madd-e-Badal",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 6 · Salam — Good gatherings + true story",
+     "items": [
+      "Good manners in a gathering",
+      "A True Story: The Prophet ﷺ Gave Salam to Children",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 3 · Join the letters into a word",
+     "items": [
+      "Join the letters into a word"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 22,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 9 — Ikhfa (part 1)",
+     "items": [
+      "5 · Ikhfa — hiding: the first 8 letters"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 4 · Surah Al-Humazah: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 12 — Madd-e-Lazim: the 4 kinds",
+     "items": [
+      "Kalimi and Harfi, Muthaqqal and Mukhaffaf"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 7 · Truthful and Trustworthy — I do this",
+     "items": [
+      "I do this",
+      "Dua: For guidance and good character"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 4 · My new words",
+     "items": [
+      "My New Words"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 23,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 9 — Ikhfa (part 2)",
+     "items": [
+      "Ikhfa: the last 7 letters",
+      "Full and light Ghunnah of Ikhfa"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 4 · Surah Al-Humazah: verses 5–8",
+     "items": [
+      "Learn verses 5–8 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 12 — Which letters get Madd-e-Lazim?",
+     "items": [
+      "Kam 'asal naqas — the 8 letters",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 7 · Truthful and Trustworthy — A True Story",
+     "items": [
+      "A True Story: “What Did You Want to Give Him?”",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 4 · More new words",
+     "items": [
+      "More New Words"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 24,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 9 — Reading practice + Questions",
+     "items": [
+      "Reading practice",
+      "Questions",
+      "Lesson 9 review"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 4 · Surah Al-Humazah: verses 9–9",
+     "items": [
+      "Learn verse 9",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 13 — Qalqalah",
+     "items": [
+      "Small bounce and bigger bounce",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 8 · Good Character — The mirror dua",
+     "items": [
+      "Good character — and its opposite",
+      "Dua: When I look in the mirror"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 4 · Flowers and a fruit",
+     "items": [
+      "Flowers and a Fruit"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 25,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 10 — Meem Sakin: Ikhfa Shafawi",
+     "items": [
+      "Meem Sakin — 3 ways",
+      "1 · Ikhfa Shafawi"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 4 review: recite in the order of the Quran",
+     "items": [
+      "Recite the Step 4 Surahs in the order of the Quran",
+      "Use them in salah: the earlier Surah in the 1st rak'ah"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 14 — Ha-e-Zameer",
+     "items": [
+      "The 4 rules of Ha-e-Zameer",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 8 · Good Character — The dua for the best manners",
+     "items": [
+      "Dua: For the best manners"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 4 · Animals and birds",
+     "items": [
+      "Animals and Birds"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 26,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 10 — Idgham Shafawi",
+     "items": [
+      "2 · Idgham Shafawi"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 5 · Surah Al-Qari'ah: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 15 — Saktah",
+     "items": [
+      "Saktah — the 4 places",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 8 · Good Character — When I feel angry",
+     "items": [
+      "When I feel angry",
+      "A True Story: A Word That Takes Anger Away",
+      "Did you know?",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 4 · Vegetables; clothes and my home",
+     "items": [
+      "Vegetables",
+      "Clothes and My Home"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 27,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 10 — Izhar Shafawi",
+     "items": [
+      "3 · Izhar Shafawi",
+      "Extra care before Waw and Fa"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 5 · Surah Al-Qari'ah: verses 5–8",
+     "items": [
+      "Learn verses 5–8 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 16 — Special words 1–5",
+     "items": [
+      "Special words 1–5"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 9 · Parents and Relatives — Their rights",
+     "items": [
+      "My parents' rights",
+      "My relatives' rights",
+      "Dua: For me, my parents and all believers"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 4 · The four directions + word quiz",
+     "items": [
+      "The Four Directions",
+      "Word quiz"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 28,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 10 — Questions",
+     "items": [
+      "Questions",
+      "Lesson 10 review"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 5 · Surah Al-Qari'ah: verses 9–11",
+     "items": [
+      "Learn verses 9–11 in little pieces",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Lesson 16 — Special words 6–9",
+     "items": [
+      "Special words 6–9",
+      "Questions"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 9 · Parents and Relatives — Dua + true story",
+     "items": [
+      "Dua: For me and my family to keep praying",
+      "A True Story: Asma and Her Mother",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 5 · Talking: meeting my teacher",
+     "items": [
+      "Conversation 1 · Meeting my teacher"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 29,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 11 — Ra is Pur in 5 cases",
+     "items": [
+      "Ra is Pur in 5 cases"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 5 · Surah At-Takathur: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Big Review + My Tajweed Chart + My Certificate",
+     "items": [
+      "Big Review",
+      "My Tajweed Chart",
+      "My Certificate"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 10 · Ramadan — I do this; iftar duas",
+     "items": [
+      "I do this in Ramadan",
+      "Dua: When I break my fast",
+      "Dua: After breaking the fast"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 5 · Talking: two friends meet",
+     "items": [
+      "Conversation 2 · Two friends meet"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 30,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 11 — Ra is Barik; Imalah, Ana, the extra Alif",
+     "items": [
+      "Ra is Barik in 4 cases",
+      "Imalah",
+      "The word Ana",
+      "The extra Alif (Alif-e-Zaidah)",
+      "Reading practice",
+      "Questions"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 5 · Surah At-Takathur: verses 5–8",
+     "items": [
+      "Learn verses 5–8 in little pieces",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 10 · Ramadan — A True Story: The Children Who Fasted",
+     "items": [
+      "A True Story: The Children Who Fasted",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 5 · Talking: in the madrasah",
+     "items": [
+      "Conversation 3 · In the madrasah"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 31,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Quran Reading Practice (part 1)",
+     "items": [
+      "Quran Reading Practice: first half"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 5 review: recite in the order of the Quran",
+     "items": [
+      "Recite the Step 5 Surahs in the order of the Quran",
+      "Use them in salah: the earlier Surah in the 1st rak'ah"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 11 · Special Moments — The new moon and the wind",
+     "items": [
+      "Dua: When I see the new moon",
+      "Dua: When a strong wind blows"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 5 · About me",
+     "items": [
+      "About Me",
+      "Now write about yourself"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 32,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Quran Reading Practice (part 2)",
+     "items": [
+      "Quran Reading Practice: second half"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 6 · Surah Az-Zalzalah: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 11 · Special Moments — Dreams; someone in trouble",
+     "items": [
+      "When I have a dream",
+      "Dua: When I see someone suffering"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 6 · Words of the Quran (1–8)",
+     "items": [
+      "Words I Will Meet in the Quran: 1–8"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 33,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 12 — 11 Surahs: Al-Fatihah",
+     "items": [
+      "The 11 Surahs",
+      "1 · Surah Al-Fatihah"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 6 · Surah Az-Zalzalah: verses 5–8",
+     "items": [
+      "Learn verses 5–8 in little pieces",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 11 · Special Moments — A True Story: When the Wind Blew",
+     "items": [
+      "A True Story: When the Wind Blew Strongly",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 6 · Words of the Quran (9–16)",
+     "items": [
+      "Words I Will Meet in the Quran: 9–16"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 34,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 12 — Surah An-Nas",
+     "items": [
+      "2 · Surah An-Nas — read with Tajweed"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 6 · Surah Al-'Adiyat: verses 1–4",
+     "items": [
+      "About this Surah",
+      "Learn verses 1–4 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 12 · The Sick and the Graves — Ruqyah",
+     "items": [
+      "Visiting the sick",
+      "Dua: Ruqyah"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 6 · Sentences: This is … / What is this?",
+     "items": [
+      "My First Arabic Sentences: This is …",
+      "What is this?"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 35,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 12 — Surah Al-Falaq",
+     "items": [
+      "3 · Surah Al-Falaq — read with Tajweed"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 6 · Surah Al-'Adiyat: verses 5–8",
+     "items": [
+      "Learn verses 5–8 in little pieces",
+      "Cover and Recite"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 12 · The Sick and the Graves — At the graves",
+     "items": [
+      "Visiting the graves",
+      "Dua: At the graves"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 6 · Sentences: describing words; my faith",
+     "items": [
+      "Describing words",
+      "My faith"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 36,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 12 — Surah Al-Ikhlas",
+     "items": [
+      "4 · Surah Al-Ikhlas — read with Tajweed"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 6 · Surah Al-'Adiyat: verses 9–11",
+     "items": [
+      "Learn verses 9–11 in little pieces",
+      "Cover and Recite",
+      "The whole Surah",
+      "What does it mean?",
+      "Lessons for my life",
+      "A True Story",
+      "My memorizing chart"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 12 · The Sick and the Graves — A True Story",
+     "items": [
+      "A True Story: “I Was Sick, and You Did Not Visit Me”",
+      "My Good Deeds"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Part 6 · Copy the nasheed + my own sentences",
+     "items": [
+      "Copy the nasheed “Ya Ilahi”",
+      "I Write My Own Sentences"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 37,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 12 — Surah Al-Lahab",
+     "items": [
+      "5 · Surah Al-Lahab — read with Tajweed"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Step 6 review: recite in the order of the Quran",
+     "items": [
+      "Recite the Step 6 Surahs in the order of the Quran",
+      "Use them in salah: the earlier Surah in the 1st rak'ah"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 13 · 12 Little Verses — verses 1–4",
+     "items": [
+      "Speak well · Be good · Brotherhood · Justice"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — I Can Write! — My Chart + My Certificate",
+     "items": [
+      "I Can Write! — My Chart",
+      "My Certificate"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 38,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 12 — Surah An-Nasr",
+     "items": [
+      "6 · Surah An-Nasr — read with Tajweed"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — My Daily Practice List + Big Quiz + My Certificate",
+     "items": [
+      "My Daily Practice List (Az-Zalzalah to An-Nas)",
+      "Big Quiz",
+      "My Surah Chart",
+      "My Certificate"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 13 · 12 Little Verses — verses 5–8",
+     "items": [
+      "Give what you love · Be with the truthful · Be patient · Keep promises"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 words from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 39,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 12 — Surah Al-Kafirun",
+     "items": [
+      "7 · Surah Al-Kafirun — read with Tajweed"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Revision: recite one step in the order of the Quran",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 13 · 12 Little Verses — verses 9–12",
+     "items": [
+      "Remember Allah · Forgive · No boasting · Life is short",
+      "My duties to the Quran"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 words from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 40,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 12 — Surah Al-Kawthar",
+     "items": [
+      "8 · Surah Al-Kawthar — read with Tajweed"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Revision: recite one step in the order of the Quran",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 14 · Fard, Wajib and Sunnah",
+     "items": [
+      "Fard, Wajib, Sunnah and Haram"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 words from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 41,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 12 — Surah Al-Ma'un",
+     "items": [
+      "9 · Surah Al-Ma'un — read with Tajweed"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Revision: recite one step in the order of the Quran",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 15 · Hadith 19–21",
+     "items": [
+      "Hadith 19 · Love for others",
+      "Hadith 20 · A true Muslim",
+      "Hadith 21 · A good word"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 words from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 42,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 12 — Surah Quraysh",
+     "items": [
+      "10 · Surah Quraysh — read with Tajweed"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Revision: recite one step in the order of the Quran",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 15 · Hadith 22–24",
+     "items": [
+      "Hadith 22 · Leaving what does not concern me",
+      "Hadith 23 · Fear Allah everywhere",
+      "Hadith 24 · The truly strong"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 words from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 43,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Lesson 12 — Surah Al-Fil",
+     "items": [
+      "11 · Surah Al-Fil — read with Tajweed"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Revision: recite one step in the order of the Quran",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 15 · Hadith 25–27",
+     "items": [
+      "Hadith 25 · Showing the way to good",
+      "Hadith 26 · What Allah looks at",
+      "Hadith 27 · Small but steady"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 words from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 44,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Big Review + My Progress + My Certificate",
+     "items": [
+      "Big Review",
+      "My Progress",
+      "My Certificate"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Revision: recite one step in the order of the Quran",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — Lesson 15 · Hadith 28–30",
+     "items": [
+      "Hadith 28 · Thanking people",
+      "Hadith 29 · Best to his family",
+      "Hadith 30 · Silence is safety"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 words from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  },
+  {
+   "no": 45,
+   "topics": [
+    {
+     "book": "Noorani Qaida",
+     "text": "Noorani Qaida — Revision: read a page you found hard",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "My Surahs",
+     "text": "My Surahs — Revision: recite one step in the order of the Quran",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Tajweed",
+     "text": "Tajweed — Revision: one rule with its examples",
+     "items": [
+      "Revision of the whole book"
+     ]
+    },
+    {
+     "book": "Duas & Manners",
+     "text": "Duas & Manners — My Daily Dua Plan + Big Review + My Certificate",
+     "items": [
+      "My Daily Dua Plan",
+      "Big Review",
+      "My Certificate"
+     ]
+    },
+    {
+     "book": "Arabic Writing",
+     "text": "Arabic Writing — Revision: write 5 words from memory",
+     "items": [
+      "Revision of the whole book"
+     ]
+    }
+   ]
+  }
+ ]
+}
