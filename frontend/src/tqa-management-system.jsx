@@ -13413,6 +13413,43 @@ const splitPhone = (full) => {
 const joinPhone = (iso, local) =>
   dialDigits(iso) + String(local || "").replace(/\D/g, "");
 
+/* শিক্ষার্থীর দেশে এখন কয়টা বাজে — বাংলাদেশ সময়ের পাশে (পরিচালক/এডমিনের
+   তালিকায়)। বার আলাদা হলে দুই দিকেই বার দেখায়: "Fri 8:15 PM" বনাম
+   "Sat 2:15 AM" — কেবল ঘণ্টা দেখলে কোন দিনের কথা তা গুলিয়ে যেত। */
+const fmtClock = (zone, withDay) =>
+  new Intl.DateTimeFormat("en-US", {
+    timeZone: zone,
+    hour: "numeric",
+    minute: "2-digit",
+    ...(withDay ? { weekday: "short" } : {}),
+  }).format(new Date());
+function StudentLocalClock({ s }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
+  const raw = s.tzOverride || s.timezone || "";
+  const zone = zoneOf({ timezone: raw });
+  // বলয় জানা নেই (শিক্ষার্থী এখনো লগইন করেননি), বা ব্রাউজার বলয়টি চেনে না
+  if (!raw || zone !== raw) {
+    if (!s.country || s.country === "Bangladesh") return null;
+    return (
+      <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>
+        🕐 local time not known yet
+      </div>
+    );
+  }
+  if (zone === "Asia/Dhaka") return null;
+  const dayDiffers = todayIn(zone) !== todayIn("Asia/Dhaka");
+  return (
+    <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2, whiteSpace: "nowrap" }}>
+      🕐 <b style={{ color: C.text }}>{fmtClock(zone, dayDiffers)}</b> {zoneCity(zone)}
+      {" · "}🇧🇩 {fmtClock("Asia/Dhaka", dayDiffers)}
+    </div>
+  );
+}
+
 function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
   const [detail, setDetail] = useState(null);
   const [edit, setEdit] = usePersistedState("stu_edit", null); // {id?} — null=বন্ধ, {}=নতুন
@@ -13788,7 +13825,13 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           ) : (
             inf("Email", s.email)
           )}
-          {inf("Country", s.country)}
+          {inf(
+            "Country",
+            <>
+              {s.country}
+              <StudentLocalClock s={s} />
+            </>,
+          )}
           {inf("WhatsApp", s.phone ? "+" + s.phone : "—")}
           {inf("ID", s.user)}
           {inf("Password", s.pass)}
@@ -14003,7 +14046,10 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               </span>
             )}
           </span>,
-          s.country || "—",
+          <span key="c">
+            {s.country || "—"}
+            <StudentLocalClock s={s} />
+          </span>,
           s.user,
           <code
             key="p"
