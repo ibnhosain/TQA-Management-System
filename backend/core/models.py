@@ -25,6 +25,16 @@ class User(AbstractUser):
     sub_title = models.CharField("পরিচিতি/বিষয়", max_length=120, blank=True)
     phone = models.CharField("WhatsApp নম্বর (কান্ট্রি কোডসহ)", max_length=20, blank=True)
     country = models.CharField(max_length=60, blank=True)
+    # শিক্ষার্থীর সময়বলয় (IANA, যেমন "Europe/London") — রুটিন ও ক্লাস বাংলাদেশ
+    # সময়ে সংরক্ষিত থাকে, পোর্টালে দেখানোর সময় এই বলয়ে রূপান্তর হয়।
+    # `timezone`: শিক্ষার্থীর ডিভাইস থেকে নিজে আসে (লগইনের পর)।
+    # `timezone_override`: পরিচালক হাতে বসালে এটাই চলে — ডিভাইসের ঘড়ি ভুল
+    # থাকলে, বা দেশের নামের সাথে ডিভাইস না মিললে (ভ্রমণে থাকলে)।
+    # ⚠️ দুটো আলাদা ঘর, যাতে ডিভাইসের পরের লগইন পরিচালকের বসানো মান মুছে না দেয়।
+    # ⚠️ দেশের নাম থেকে বলয় বের করা হয় না — USA/Canada/Australia-তে একাধিক
+    # বলয়, তাই লস অ্যাঞ্জেলেসের শিক্ষার্থী নিউইয়র্কের সময় দেখতেন।
+    timezone = models.CharField(max_length=64, blank=True, default="")
+    timezone_override = models.CharField(max_length=64, blank=True, default="")
     guardian = models.CharField("অভিভাবকের নাম", max_length=120, blank=True)
     # স্টুডেন্ট আইডি — নাম+বাবার নাম+দেশ+সিরিয়াল মিলিয়ে অটো তৈরি (SH-LC-US-007),
     # পরিচালক চাইলে নিজে বদলেও দিতে পারেন। কেবল স্টুডেন্টদের জন্য প্রযোজ্য।

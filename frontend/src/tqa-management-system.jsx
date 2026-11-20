@@ -2932,17 +2932,23 @@ function ClassesView({
   const mine = (apiClasses || []).sort((a, b) =>
     (a.date + a.time).localeCompare(b.date + b.time),
   );
+  // দর্শকের বলয়ে প্রতিটি ক্লাসের তারিখ-সময় — একবারই হিসাব (Intl ভারী)
+  const zone = zoneOf(user);
+  const loc = new Map(mine.map((k) => [k.id, toZoneFullDateTime(k.date, k.time, zone)]));
+  const localDate = (k) => loc.get(k.id).date;
+  const tdy = todayIn(zone);
   const today = mine.filter(
-    (k) => k.date === todayISO() && k.status !== "done",
+    (k) => localDate(k) === tdy && k.status !== "done",
   );
   // "আসন্ন" শুধু সামনের ৭ দিন, "বিগত" শুধু গত ৩ দিন — ডাটা মোছা হয় না (সার্ভারে/DB-তে সবই থাকে),
   // শুধু এই তালিকা দুটো ছোট-পরিষ্কার রাখতে দেখানোর সীমা টানা হলো
   const upcoming = mine.filter(
-    (k) => k.date > todayISO() && k.date <= addDays(7),
+    (k) => localDate(k) > tdy && localDate(k) <= shiftISO(tdy, 7),
   );
   const past = mine.filter(
     (k) =>
-      (k.status === "done" || k.date < todayISO()) && k.date >= addDays(-3),
+      (k.status === "done" || localDate(k) < tdy) &&
+      localDate(k) >= shiftISO(tdy, -3),
   );
 
   // উস্তাদ কোন ট্রায়াল অতিথির মূল্যায়ন লিখছেন
@@ -3434,8 +3440,11 @@ function ClassesView({
             </div>
           )}
           <div style={{ fontSize: 12.5, color: C.text, marginTop: 2 }}>
-            📅 {fmtDate(k.date)} · 🕐 {k.time} ·{" "}
-            {T(`${bn(k.dur)} মিনিট`, `${k.dur} min`)}
+            📅 {fmtDate(loc.get(k.id).date)} · 🕐 {loc.get(k.id).time}
+            {zone !== "Asia/Dhaka" && (
+              <span style={{ color: C.muted }}> ({zoneCity(zone)} time)</span>
+            )}{" "}
+            · {T(`${bn(k.dur)} মিনিট`, `${k.dur} min`)}
           </div>
           {isAdm(user) && (teacherLive || liveStudentCount > 0) && (
             <div
@@ -3678,13 +3687,13 @@ function ClassesView({
             // যাচাই বাকি। নইলে পুরনো দিনের যাচাই-না-হওয়া ক্লাসে একসাথে
             // "✅ ক্লাস সম্পন্ন — যাচাই বাকি" আর লাল "অসম্পন্ন" দুটোই দেখাত
             const incomplete =
-              k.status === "upcoming" && k.date < todayISO() && !k.teacherFinished;
+              k.status === "upcoming" && localDate(k) < tdy && !k.teacherFinished;
             // উস্তাদ শেষ করেছেন, কর্তৃপক্ষের যাচাই এখনো বাকি
             const awaitingReview = k.teacherFinished && k.status !== "done";
             // আজকের ক্লাস "Completed" চিহ্নিত করা এডমিন+পরিচালক দুজনেই পারবেন, কিন্তু
             // বিগত (পুরনো) ক্লাসের স্ট্যাটাস সংশোধন কেবল পরিচালকের এখতিয়ার
-            const canEditStatus = k.date === todayISO() ? isAdm(user) : isDir(user);
-            if (!joinable && k.date <= todayISO() && canEditStatus && k.status !== "postponed") {
+            const canEditStatus = localDate(k) === tdy ? isAdm(user) : isDir(user);
+            if (!joinable && localDate(k) <= tdy && canEditStatus && k.status !== "postponed") {
               return (
                 <select
                   style={{ ...S.input, width: "auto", padding: "6px 10px", fontSize: 12.5 }}
@@ -12000,6 +12009,46 @@ const toZoneFullDateTime = (dateISO, timeStr, ianaZone) => {
     time: `${hour}:${get("minute")}`,
   };
 };
+
+/* ═══ কে কোন সময়বলয়ে দেখবেন ═══
+   ক্লাস ও রুটিন বাংলাদেশ সময়ে সংরক্ষিত। দেখানো হয় দর্শকের বলয়ে —
+   পরিচালকের বসানো বলয় আগে, নইলে ডিভাইসের, নইলে বাংলাদেশ। কর্মীদের
+   বলয় খালি থাকে বলে তাঁদের কাছে সব আগের মতোই বাংলাদেশ সময়।
+
+   ⚠️ তুলনাও (আজ/আসন্ন/বিগত) একই বলয়ে করতে হবে, শুধু দেখানো নয়। আগে
+   তুলনা হতো ডিভাইসের তারিখ (todayISO) বনাম বাংলাদেশের তারিখ (k.date)
+   দিয়ে — লন্ডনে শুক্রবার রাত ৮টার ক্লাস বাংলাদেশে শনিবার রাত ২টা, তাই
+   চলমান ক্লাসটিও "আসন্ন"-তে পড়ত আর জয়েন বাটন আসত না। এর আগের টাইমজোন
+   ব্যবস্থাও এই একই অমিলে (রুটিন এক বলয়ে, ক্লাস-তালিকা আরেক বলয়ে) বাতিল
+   হয়েছিল। */
+const zoneOf = (user) => {
+  const z = user?.timezone_override || user?.timezone || "Asia/Dhaka";
+  // সার্ভার বলয় যাচাই করে, কিন্তু পুরনো ব্রাউজারের Intl কোনো নতুন বলয়
+  // না চিনলে RangeError-এ পুরো পোর্টাল সাদা হয়ে যেত — তাই বাংলাদেশে ফিরি
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: z });
+    return z;
+  } catch {
+    return "Asia/Dhaka";
+  }
+};
+const todayIn = (zone) => {
+  const p = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const g = (t) => p.find((x) => x.type === t).value;
+  return `${g("year")}-${g("month")}-${g("day")}`;
+};
+// "2026-11-20" থেকে n দিন সামনে/পিছনে — নিছক ক্যালেন্ডার-হিসাব, কোনো বলয় নয়
+const shiftISO = (iso, n) => {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+};
+// "Europe/London" → "London" — সময়ের পাশে ছোট করে বলয় দেখাতে
+const zoneCity = (zone) => zone.split("/").pop().replace(/_/g, " ");
 // পরিচালক/এডমিনের জন্য প্রায়ই-দরকারি দেশ/শহরের তালিকা (এই একাডেমির বেশিরভাগ
 // প্রবাসী পরিবার যেসব দেশে থাকেন) — প্রয়োজনে সহজেই আরও যোগ করা যাবে
 const COMMON_ZONES = [
@@ -12340,24 +12389,47 @@ function RoutineView({ db, setDb, courses, user }) {
     }
   };
   const visible = apiRoutines || [];
-  // প্রতিটা রুটিন বাংলাদেশ-সময়ে সংরক্ষিত বার-সময় অনুযায়ীই দিন ধরে গ্রুপ করা হয় —
-  // ডিভাইসের টাইমজোন থেকে অটো-হিসাব আর করা হয় না (নির্ভরযোগ্য ছিল না)। স্টুডেন্ট
-  // বিদেশে থাকলে, রুটিন তৈরি/এডিটের সময় পরিচালক তার জন্য আলাদাভাবে ম্যানুয়ালি
-  // বার-সময় বসিয়ে দিলে (studentSchedule) সেই স্টুডেন্ট এখানে সেটাই দেখবে।
-  // রুটিন সবসময় তার আসল বাংলাদেশ-সময়ের বারেই (r.days) দেখানো হয় — আসল ক্লাস
-  // (ClassSession) ঠিক ওই বারেই তৈরি হয়, তাই ভিন্ন বারে সরিয়ে দেখালে স্টুডেন্ট
-  // আসল ক্লাসের দিনে "রুটিনে ক্লাস নেই" দেখে বিভ্রান্ত হতেন (আগে এমনটাই হচ্ছিল)।
-  // স্টুডেন্টের নিজের সময়ে বসানো ওভাররাইড থাকলে সেটা একই এন্ট্রির পাশে শুধু
-  // তথ্য হিসেবে দেখানো হয় — কোনো এন্ট্রি সরে যায় না
+  /* রুটিন বাংলাদেশ সময়ে সংরক্ষিত; দর্শকের বলয়ে (zoneOf) বার ও সময়ে সাজানো হয়।
+     কর্মীদের বলয় বাংলাদেশ, তাই তাঁদের ছক আগের মতোই।
+
+     ⚠️ আগের টাইমজোন ব্যবস্থা বাতিল হয়েছিল কারণ রুটিন সরত স্থানীয় বারে কিন্তু
+     ক্লাস-তালিকা থাকত বাংলাদেশের তারিখে — আসল ক্লাসের দিনে রুটিনে "ক্লাস
+     নেই" দেখাত। এখন ক্লাস-তালিকাও (ClassesView) একই বলয়ে হিসাব করে, তাই
+     দুটো সবসময় একই বার দেখায়।
+
+     পরিচালক হাতে বার/সময় বসিয়ে থাকলে (studentSchedule) সেটাই চলে — ওগুলো
+     আগে থেকেই শিক্ষার্থীর নিজের সময়ে লেখা। যেটুকু বসানো নেই (শুধু সময়, বা
+     শুধু বার) সেটুকু অটো-হিসাব থেকে আসে। */
+  const zone = zoneOf(user);
+  const bdToday = todayIn("Asia/Dhaka");
+  const dowOf = (iso) => new Date(iso + "T00:00:00Z").getUTCDay();
+  const bdTodayDow = dowOf(bdToday);
+  // এই সপ্তাহের ওই বারের তারিখ ধরে রূপান্তর — তাই DST বদলালেও ঠিক থাকে
+  const toLocalSlot = (bdDow, time) => {
+    const l = toZoneFullDateTime(shiftISO(bdToday, (bdDow - bdTodayDow + 7) % 7), time, zone);
+    return { dow: dowOf(l.date), time: l.time };
+  };
   const localSchedule = {};
+  const put = (dow, entry) => {
+    if (!localSchedule[dow]) localSchedule[dow] = [];
+    localSchedule[dow].push(entry);
+  };
   visible.forEach((r) => {
-    const override =
+    const ov =
       user.role === "student" ? r.studentSchedule?.[String(user.id)] : null;
-    (r.days || []).forEach((d) => {
-      if (!localSchedule[d]) localSchedule[d] = [];
-      localSchedule[d].push({ ...r, localTime: r.time, myOverride: override });
-    });
+    const slots = (r.days || []).map((d) => toLocalSlot(d, r.time));
+    if (ov?.days?.length) {
+      const time = ov.time || slots[0]?.time || r.time;
+      ov.days.forEach((dow) => put(dow, { ...r, localTime: time, manual: true }));
+    } else {
+      slots.forEach((s) =>
+        put(s.dow, { ...r, localTime: ov?.time || s.time, manual: !!ov?.time }),
+      );
+    }
   });
+  Object.values(localSchedule).forEach((xs) =>
+    xs.sort((a, b) => a.localTime.localeCompare(b.localTime)),
+  );
   return (
     <Section
       title={T("ক্লাস রুটিন (স্থায়ী সাপ্তাহিক)", "Class Routine (Fixed Weekly)")}
@@ -12455,20 +12527,12 @@ function RoutineView({ db, setDb, courses, user }) {
                             {r.kind}
                           </Tag>
                         )}{" "}
-                        🕐 {r.localTime} · {T(`${bn(r.dur)} মি`, `${r.dur} min`)} ·{" "}
+                        🕐 {r.localTime}
+                        {zone !== "Asia/Dhaka" && (
+                          <span style={{ color: C.muted }}> ({zoneCity(zone)} time)</span>
+                        )}{" "}
+                        · {T(`${bn(r.dur)} মি`, `${r.dur} min`)} ·{" "}
                         {r.teacherName || nameOf(r.teacherId || c.teacherId)}
-                        {r.myOverride &&
-                          (r.myOverride.time || r.myOverride.days?.length > 0) && (
-                            <span style={{ color: C.gold }}>
-                              {" "}
-                              · 🌍{" "}
-                              {T("আপনার সময়ে", "your time")}:{" "}
-                              {(r.myOverride.days || [])
-                                .map((d) => T(DAY_BN[d], DAY_EN[d]))
-                                .join("/")}{" "}
-                              {r.myOverride.time}
-                            </span>
-                          )}
                         {canEdit && studNames.length > 0 && (
                           <span style={{ color: C.muted }}>
                             {" "}
@@ -13395,6 +13459,8 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           fee: s.monthly_fee,
           guardian: s.guardian,
           country: s.country,
+          timezone: s.timezone || "", // শিক্ষার্থীর ডিভাইস থেকে আসা বলয়
+          tzOverride: s.timezone_override || "", // পরিচালকের বসানো বলয়
           phone: s.phone,
           email: s.email,
           days: s.class_days || [],
@@ -13508,6 +13574,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
         name_bn: edit.name,
         role: "student",
         country: edit.country,
+        timezone_override: edit.tzOverride || "",
         phone: joinPhone(edit.phoneIso, edit.phone),
         email: edit.email,
         guardian: edit.guardian,
@@ -13996,6 +14063,8 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                         id: s.id,
                         name: s.name,
                         country: s.country || "",
+                        timezone: s.timezone || "",
+                        tzOverride: s.tzOverride || "",
                         phoneIso: p.iso,
                         phone: p.local,
                         email: s.email || "",
@@ -14090,6 +14159,35 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                 ))}
               </select>
             </div>
+            {/* রুটিন ও ক্লাস শিক্ষার্থীর পোর্টালে কোন বলয়ে দেখাবে। "Auto" মানে
+                তাঁর ডিভাইস যা জানায়; এখানে বেছে দিলে সেটাই চলে, ডিভাইসের পরের
+                লগইনেও বদলায় না। */}
+            {(() => {
+              const zones = [...COMMON_ZONES, ...getCustomZones()];
+              return (
+                <div>
+                  <label style={S.label}>Timezone (class times in their portal)</label>
+                  <select
+                    style={S.input}
+                    value={edit.tzOverride || ""}
+                    onChange={(e) => setEdit({ ...edit, tzOverride: e.target.value })}
+                  >
+                    <option value="">
+                      🔄 Auto from their device
+                      {edit.timezone ? ` — now ${zoneCity(edit.timezone)}` : " — not reported yet"}
+                    </option>
+                    {edit.tzOverride && !zones.some((z) => z.zone === edit.tzOverride) && (
+                      <option value={edit.tzOverride}>{edit.tzOverride}</option>
+                    )}
+                    {zones.map((z) => (
+                      <option key={z.zone} value={z.zone}>
+                        {z.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })()}
             <div>
               <label style={S.label}>WhatsApp number</label>
               {/* দেশ বেছে নিলে কোড বসে; পাশে শুধু নম্বর — দুটো আলাদা, মিশে যায় না */}
@@ -24734,6 +24832,23 @@ export default function App() {
       alive = false;
     };
   }, []);
+  // শিক্ষার্থীর ডিভাইস নিজের সময়বলয় জানায়, যাতে রুটিন ও ক্লাস তাঁর সময়ে
+  // দেখায়। বদল থাকলে তবেই পাঠাই, আর সাথে সাথে user-এ বসাই যাতে এই
+  // সেশনেই কাজে লাগে। কর্মীরা বাংলাদেশে, তাঁদের বলয় খালিই থাকে।
+  useEffect(() => {
+    if (!user || (user.role !== "student" && user.role !== "trial")) return;
+    let tz = "";
+    try {
+      tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    } catch {
+      return;
+    }
+    if (!tz || tz === user.timezone) return;
+    api
+      .setMyTimezone(tz)
+      .then((r) => setUser((u) => (u ? { ...u, timezone: r.timezone } : u)))
+      .catch(() => {});
+  }, [user?.id]);
   // নিষ্ক্রিয়তায় অটো-লগআউট — ৩০ মিনিট কোনো কার্যকলাপ না থাকলে নিরাপত্তার জন্য
   // নিজে থেকেই লগআউট হয়ে যায় (শেয়ার্ড/খোলা রেখে যাওয়া কম্পিউটারের জন্য)।
   useEffect(() => {

@@ -546,6 +546,10 @@ export const api = {
   deleteUser: (id) => request(`/users/${id}/`, { method: "DELETE" }),
   toggleFixCross: (id) => request(`/users/${id}/toggle_fix_cross/`, { method: "POST" }),
 
+  // ডিভাইসের সময়বলয় জানানো — পরিচালকের ওভাররাইড ছোঁয় না
+  setMyTimezone: (timezone) =>
+    request("/users/my-timezone/", { method: "POST", body: { timezone } }),
+
   // ভাই-বোন পোর্টাল সুইচ
   myFamily: () => request("/users/my-family/"),
   switchSibling: (id) => request(`/users/${id}/switch-sibling/`, { method: "POST", body: {} }),

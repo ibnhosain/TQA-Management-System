@@ -73,6 +73,21 @@ class UserViewSet(viewsets.ModelViewSet):
     def me(self, request):
         return Response(UserSerializer(request.user).data)
 
+    @action(detail=False, methods=["post"], url_path="my-timezone",
+            permission_classes=[IsAuthenticated])
+    def my_timezone(self, request):
+        """লগইন করা ব্যবহারকারীর ডিভাইস নিজের সময়বলয় জানায়।
+        কেবল `timezone` ঘরটি বদলায় — পরিচালকের `timezone_override` ছোঁয় না,
+        তাই পরিচালক হাতে বসালে ডিভাইসের পরের লগইন সেটা মুছে দেয় না।"""
+        from .utils import clean_timezone
+        tz = clean_timezone(request.data.get("timezone"))
+        u = request.user
+        if u.timezone != tz:
+            u.timezone = tz
+            u.save(update_fields=["timezone"])
+        return Response({"timezone": u.timezone,
+                         "timezone_override": u.timezone_override})
+
     @action(detail=False, permission_classes=[IsAdminLevel])
     def students(self, request):  # "সকল স্টুডেন্ট" পেজ — এডমিনও দেখতে পারে
         qs = User.objects.filter(role="student").prefetch_related("due_months")

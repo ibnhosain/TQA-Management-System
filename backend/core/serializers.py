@@ -2,6 +2,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from .safe_html import clean_html
+from .utils import clean_timezone
 from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
                      Routine, ClassSession, Attendance, Question, Assignment, Exam,
                      Submission, ExamResult, FeePayment, DueMonth, TeacherPayment,
@@ -23,12 +24,18 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "role", "name", "name_bn", "sub", "sub_title",
-                  "phone", "country", "guardian", "guardian_phone", "email", "monthly_fee", "fee_currency",
+                  "phone", "country", "timezone", "timezone_override",
+                  "guardian", "guardian_phone", "email", "monthly_fee", "fee_currency",
                   "monthly_salary", "class_days", "can_fix_cross", "due_months",
                   "student_id", "teacher", "teacher_name",
                   # ট্রায়াল অতিথির নিজের পোর্টালে মেয়াদ ও কোর্স দেখাতে লাগে।
                   # অন্য সব ভূমিকায় ঘর দুটি খালি (null) যায়, তাই কারও কিছু বদলায় না।
                   "trial_until", "trial_course"]
+        # ডিভাইস নিজের পথে (users/my-timezone/) এটা বসায় — এডিট ফর্ম থেকে নয়
+        read_only_fields = ["timezone"]
+
+    def validate_timezone_override(self, value):
+        return clean_timezone(value)
 
     def get_due_months(self, obj):
         """যে মাসগুলোর টাকা সত্যিই বাকি।
