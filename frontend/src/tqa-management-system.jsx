@@ -3667,7 +3667,7 @@ function ClassesView({
               ক্লাসটি আজকের তালিকাতেই আছে, শুধু এই চিহ্নটি নিয়ে */}
           {k.teacherFinished && k.status !== "done" && (
             <Tag color={C.green} bg={C.greenBg}>
-              {T("✅ ক্লাস সম্পন্ন — যাচাই বাকি", "✅ Class completed")}
+              {T("✅ ক্লাস সম্পন্ন — যাচাই বাকি", "✅ Class completed — awaiting review")}
             </Tag>
           )}
           {(() => {
@@ -12806,7 +12806,7 @@ function LeaveView({ db, setDb, user }) {
   const T = (_bnText, enText) => enText;
   const [show, setShow] = usePersistedState("leave_show", false);
   const [f, setF] = usePersistedState("leave_f", {
-    type: "Illness",
+    type: "অসুস্থতা",
     from: todayISO(),
     to: todayISO(),
     reason: "",
@@ -12866,7 +12866,7 @@ function LeaveView({ db, setDb, user }) {
       return;
     }
     setShow(false);
-    setF({ type: "Illness", from: todayISO(), to: todayISO(), reason: "" });
+    setF({ type: "অসুস্থতা", from: todayISO(), to: todayISO(), reason: "" });
   };
   const forward = async (l) => {
     try {
