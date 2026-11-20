@@ -201,6 +201,8 @@ LOGGING = {
     "loggers": {
         "django": {"handlers": ["console"], "level": "ERROR"},
         "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": False},
+        # পাহারাদারের প্রতিটি সফল/ব্যর্থ কাজ Render-এর লগে (core/scheduler.py)
+        "tqa": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 

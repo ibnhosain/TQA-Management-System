@@ -1022,3 +1022,30 @@ class DeckTaught(models.Model):
     class Meta:
         unique_together = [("deck", "student")]
         ordering = ["-taught_at"]
+
+
+class ScheduledJob(models.Model):
+    """নির্ধারিত কাজ (রোজের ক্লাস তৈরি, মাসিক বকেয়া) শেষ কবে, কোন সময়কালের
+    জন্য চলেছে।
+
+    দুটো কাজে লাগে:
+    ১) ঠিক-একবার লক — সার্ভারের নিজের পাহারাদার (scheduler.py) আর
+       cron-job.org দুজনেই একই কাজ ডাকে; যে আগে "দাবি" করে সে-ই চালায়,
+       অন্যজন দেখে কাজটি হয়ে গেছে। তাই কোনো কাজ দুবার হয় না।
+    ২) পরিচালকের স্বাস্থ্য কার্ড — কোন কাজ শেষ কখন সফল হয়েছে, বা ব্যর্থ হলে কেন।
+    """
+    name = models.CharField(max_length=40, unique=True)
+    # যে সময়কালের জন্য শেষবার সফল — দৈনিকে "2026-11-20", মাসিকে "2026-11"
+    done_key = models.CharField(max_length=20, blank=True, default="")
+    # এখন যে সময়কাল নিয়ে কেউ কাজ করছে। প্রসেস মাঝপথে মরে গেলে (ডিপ্লয়/
+    # রিস্টার্ট) claimed_at দেখে দাবিটা বাসি ধরা হয় আর আবার চেষ্টা হয়।
+    claimed_key = models.CharField(max_length=20, blank=True, default="")
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    last_trigger = models.CharField(max_length=20, blank=True, default="")
+    last_result = models.JSONField(default=dict, blank=True)
+    last_error = models.TextField(blank=True, default="")
+    last_error_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.done_key or '—'})"

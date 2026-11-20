@@ -247,12 +247,17 @@ def generate_for_routine(r):
 def generate_routine_sessions():
     """প্রতিটি সক্রিয় রুটিনের আগামী ৭ দিনের ক্লাস নিশ্চিত করা (দৈনিক ক্রন + ম্যানুয়াল বাটন)।
     একটি রুটিনে সমস্যা হলেও বাকিগুলো যাতে থেমে না যায় — প্রতিটি আলাদা try তে। মোট নতুন ক্লাস ফেরত।"""
+    import logging
     from .models import Routine
     total = 0
     for r in Routine.objects.filter(is_active=True):
         try:
             total += generate_for_routine(r) or 0
         except Exception:
+            # আগে চুপচাপ বাদ পড়ত — ওই রুটিনের শিক্ষার্থীরা ক্লাস পেতেন না,
+            # অথচ কোথাও কোনো চিহ্ন থাকত না। এখন অন্তত Render-এর লগে থাকে।
+            logging.getLogger("tqa.scheduler").exception(
+                "routine %s: class generation failed", r.pk)
             continue
     return total
 

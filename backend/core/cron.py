@@ -2,6 +2,8 @@
 TQA-MS — Cron Endpoints (core/cron.py)
 
 Celery/Redis ছাড়া ফ্রি hosting এ scheduled কাজ চালানোর ব্যবস্থা।
+⚠️ দৈনিক ও মাসিক কাজ এখন সার্ভার নিজেই চালায় (core/scheduler.py); এই
+URL গুলো ব্যাকআপ — একই লকে চলে বলে কাজ দুবার হয় না।
 cron-job.org (ফ্রি) থেকে এই URL গুলোতে নির্দিষ্ট সময়ে request আসবে:
 
   প্রতি মিনিটে:        GET /api/cron/reminders/?key=<CRON_SECRET>
@@ -41,24 +43,33 @@ def cron_reminders(request):
     return _run(request, queue_class_reminders, "reminders")
 
 
+def _run_scheduled(request, name, key_fn, work):
+    """সার্ভারের নিজের পাহারাদারের সাথে একই লকে চলে (scheduler.run_job) —
+    যে আগে আসে সে-ই কাজটি করে, অন্যজন দেখে "done"। এখানে সময় দেখা হয়
+    না: cron ডাকলেই চলতি সময়কালের কাজ (যদি আগে না হয়ে থাকে)।"""
+    from django.utils import timezone
+    from .scheduler import run_job
+
+    if not _authorized(request):
+        return JsonResponse({"ok": False, "error": "unauthorized"}, status=403)
+    key = key_fn(timezone.localtime())
+    try:
+        status, result = run_job(name, key, work, "cron")
+    except Exception as exc:
+        return JsonResponse({"ok": False, "task": name, "error": str(exc)}, status=500)
+    return JsonResponse({"ok": True, "task": name, "key": key, "status": status, "result": result})
+
+
 @require_GET
 def cron_daily(request):
     """রুটিন থেকে সামনের ৭ দিনের ক্লাস তৈরি + তারিখ-পেরানো upcoming ক্লাস স্থগিত
     + ৬০ দিনের বেশি পুরনো ক্লাস-শিডিউল মোছা (হাজিরার তথ্য কখনো মোছে না, প্রতিদিন একবার)"""
-    from .tasks import generate_routine_sessions, cleanup_old_classes, auto_postpone_missed_classes
-
-    def _all():
-        return {
-            "created": generate_routine_sessions(),
-            "auto_postponed": auto_postpone_missed_classes(),
-            "deleted_old_classes": cleanup_old_classes(),
-        }
-
-    return _run(request, _all, "daily")
+    from .scheduler import daily_key, daily_work
+    return _run_scheduled(request, "daily", daily_key, daily_work)
 
 
 @require_GET
 def cron_monthly(request):
-    """সবার মাসিক বকেয়া তৈরি (মাসের ১ তারিখে একবার)"""
-    from .tasks import generate_monthly_dues
-    return _run(request, generate_monthly_dues, "monthly")
+    """সবার মাসিক বকেয়া তৈরি (মাসে একবার)"""
+    from .scheduler import monthly_key, monthly_work
+    return _run_scheduled(request, "monthly", monthly_key, monthly_work)
