@@ -98,11 +98,19 @@ def queue_class_reminders():
     now = timezone.localtime()
     today = now.date()
     sessions = ClassSession.objects.filter(date=today, status="upcoming", reminder_sent=False)
+    reminded = 0
     for s in sessions:
         start = timezone.make_aware(datetime.combine(today, s.time))
         mins_left = int((start - now).total_seconds() // 60)
         if not (0 <= mins_left <= REMINDER_WINDOW_MINUTES):
             continue  # জানালার বাইরে
+        # ⚠️ আগে দাবি, তারপর পাঠানো। আগে সবার শেষে reminder_sent বসত — দুজন
+        # একসাথে চালালে (সার্ভারের worker-রা আর cron-job.org) দুজনেই
+        # "পাঠানো হয়নি" দেখে পাঠাত, অভিভাবক একই মেসেজ দুবার পেতেন।
+        # একটিমাত্র UPDATE — কেবল একজনই ১ সারি পায়, বাকিরা এগিয়ে যায়।
+        if not ClassSession.objects.filter(pk=s.pk, reminder_sent=False).update(reminder_sent=True):
+            continue
+        reminded += 1
         students = list(s.students.all())
         # ইন-অ্যাপ নোটিফিকেশন
         n = Notification.objects.create(
@@ -119,9 +127,15 @@ def queue_class_reminders():
                     f"Jazakumullahu Khairan. — Tarbiyatul Quran Academy")
             m = WaMessage.objects.create(to_name=st.guardian or st.name_bn, student=st,
                                          phone=st.phone, text=text, reason="reminder")
-            dispatch_whatsapp(m.id)
-        s.reminder_sent = True
-        s.save(update_fields=["reminder_sent"])
+            try:
+                dispatch_whatsapp(m.id)
+            except Exception:
+                # একজনের ব্যর্থতায় বাকি অভিভাবকরা যেন বাদ না পড়েন; মেসেজটি
+                # আউটবক্সে থেকে যায়, সেখান থেকে আবার পাঠানো যায়
+                import logging
+                logging.getLogger("tqa.scheduler").exception(
+                    "reminder dispatch failed (message %s)", m.id)
+    return reminded
 
 
 # ─────────────────── মাসিক বকেয়া অটো-জেনারেশন (১ তারিখ) ───────────────────

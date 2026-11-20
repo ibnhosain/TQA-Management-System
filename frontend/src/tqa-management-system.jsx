@@ -9848,6 +9848,10 @@ const JOB_INFO = {
     title: "Monthly dues",
     what: "Creates the month's fee and salary dues",
   },
+  reminders: {
+    title: "Class reminders",
+    what: "Sends the WhatsApp reminder to guardians before each class — never twice",
+  },
 };
 const bdWhen = (iso) =>
   new Date(iso).toLocaleString("en-GB", {
@@ -9893,6 +9897,10 @@ function SchedulerHealthCard() {
       icon = "✅";
       color = C.green;
       text = `${period} — already created before the automatic system started`;
+    } else if (j.state === "ok" && j.name === "reminders") {
+      icon = "✅";
+      color = C.green;
+      text = `Checking every minute · last check ${bdWhen(j.last_run_at)}`;
     } else if (j.state === "ok") {
       icon = "✅";
       color = C.green;

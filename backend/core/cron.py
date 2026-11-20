@@ -2,8 +2,8 @@
 TQA-MS — Cron Endpoints (core/cron.py)
 
 Celery/Redis ছাড়া ফ্রি hosting এ scheduled কাজ চালানোর ব্যবস্থা।
-⚠️ দৈনিক ও মাসিক কাজ এখন সার্ভার নিজেই চালায় (core/scheduler.py); এই
-URL গুলো ব্যাকআপ — একই লকে চলে বলে কাজ দুবার হয় না।
+⚠️ তিনটি কাজই এখন সার্ভার নিজেই চালায় (core/scheduler.py); এই URL গুলো
+ব্যাকআপ — একই লকে চলে বলে কাজ দুবার হয় না।
 cron-job.org (ফ্রি) থেকে এই URL গুলোতে নির্দিষ্ট সময়ে request আসবে:
 
   প্রতি মিনিটে:        GET /api/cron/reminders/?key=<CRON_SECRET>
@@ -26,21 +26,11 @@ def _authorized(request):
     return bool(expected) and secrets.compare_digest(given, expected)
 
 
-def _run(request, fn, name):
-    if not _authorized(request):
-        return JsonResponse({"ok": False, "error": "unauthorized"}, status=403)
-    try:
-        result = fn()  # Celery task কে সরাসরি ডাকলে synchronous চলে
-        return JsonResponse({"ok": True, "task": name, "result": result})
-    except Exception as exc:
-        return JsonResponse({"ok": False, "task": name, "error": str(exc)}, status=500)
-
-
 @require_GET
 def cron_reminders(request):
-    """ক্লাস শুরুর ৫ মিনিট আগের WhatsApp রিমাইন্ডার (প্রতি মিনিটে ডাকুন)"""
-    from .tasks import queue_class_reminders
-    return _run(request, queue_class_reminders, "reminders")
+    """ক্লাস শুরুর আগের WhatsApp রিমাইন্ডার (প্রতি মিনিটে ডাকুন)"""
+    from .scheduler import minute_key, reminders_work
+    return _run_scheduled(request, "reminders", minute_key, reminders_work)
 
 
 def _run_scheduled(request, name, key_fn, work):

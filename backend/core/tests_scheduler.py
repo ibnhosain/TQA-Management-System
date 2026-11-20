@@ -103,7 +103,8 @@ class WhenJobsAreDue(TestCase):
     def test_keys(self):
         now = bd(2026, 12, 3, 9, 0)
         keys = {n: k for n, k, _ in scheduler.due_jobs(now)}
-        self.assertEqual(keys, {"daily": "2026-12-03", "monthly": "2026-12"})
+        self.assertEqual(keys, {"daily": "2026-12-03", "monthly": "2026-12",
+                                "reminders": "2026-12-03T09:00"})
 
 
 class NoDbWhenAlreadyDone(TestCase):
@@ -267,4 +268,87 @@ class HealthStatus(TestCase):
             r = c.get("/api/scheduler/status/")
             self.assertEqual(r.status_code, code, role)
             if code == 200:
-                self.assertEqual({j["name"] for j in r.json()["jobs"]}, {"daily", "monthly"})
+                self.assertEqual({j["name"] for j in r.json()["jobs"]}, {"daily", "monthly", "reminders"})
+
+
+class RemindersSentOnce(TestCase):
+    """অভিভাবক একই রিমাইন্ডার কখনো দুবার পাবেন না"""
+
+    def setUp(self):
+        from datetime import time as T
+        from core.models import ClassSession, Course, User
+        self.now = bd(2026, 11, 20, 14, 0)
+        t = User.objects.create(username="t", role="teacher", name_bn="T")
+        self.students = [
+            User.objects.create(username=f"s{i}", role="student", name_bn=f"S{i}",
+                                phone=f"88017000000{i}", guardian="G")
+            for i in (1, 2)
+        ]
+        c = Course.objects.create(name="Qaida", teacher=t)
+        self.s = ClassSession.objects.create(course=c, teacher=t, date=self.now.date(),
+                                             time=T(14, 10), duration_min=60, kind="regular")
+        self.s.students.set(self.students)
+        for target, kw in (("core.tasks.timezone.localtime", {"return_value": self.now}),
+                           ("core.tasks.dispatch_whatsapp", {})):
+            p = mock.patch(target, **kw)
+            setattr(self, target.rsplit(".", 1)[1], p.start())
+            self.addCleanup(p.stop)
+
+    def counts(self):
+        from core.models import Notification, WaMessage
+        return WaMessage.objects.count(), Notification.objects.count()
+
+    def test_second_run_sends_nothing(self):
+        from core.tasks import queue_class_reminders
+        self.assertEqual(queue_class_reminders(), 1)
+        self.assertEqual(queue_class_reminders(), 0)
+        self.assertEqual(self.counts(), (2, 1))  # দুই অভিভাবক, একটি নোটিফিকেশন
+
+    def test_other_worker_claims_between_read_and_send(self):
+        """আসল রেস: আমরা ক্লাসটি "পাঠানো হয়নি" পড়ার পর, দাবি করার আগে
+        অন্য worker দাবি করে ফেলল — আমরা যেন আর না পাঠাই"""
+        from core import tasks
+        from core.models import ClassSession
+        real = tasks.timezone.make_aware
+
+        def other_worker_claims_first(dt):
+            ClassSession.objects.filter(pk=self.s.pk).update(reminder_sent=True)
+            return real(dt)
+
+        with mock.patch("core.tasks.timezone.make_aware", side_effect=other_worker_claims_first):
+            self.assertEqual(tasks.queue_class_reminders(), 0)
+        self.assertEqual(self.counts(), (0, 0))
+
+    def test_one_failed_send_does_not_skip_the_others(self):
+        from core.tasks import queue_class_reminders
+        self.dispatch_whatsapp.side_effect = [RuntimeError("provider down"), None]
+        with self.assertLogs("tqa.scheduler", level="ERROR"):
+            self.assertEqual(queue_class_reminders(), 1)
+        self.assertEqual(self.dispatch_whatsapp.call_count, 2)
+        self.assertEqual(self.counts()[0], 2)  # দুটো মেসেজই আউটবক্সে
+
+
+class RemindersSchedule(TestCase):
+    def test_due_every_minute_any_time(self):
+        jobs = {n: k for n, k, _ in scheduler.due_jobs(bd(2026, 11, 20, 1, 7))}
+        self.assertEqual(jobs["reminders"], "2026-11-20T01:07")
+        self.assertNotIn("daily", jobs)  # রাত ১টা — দৈনিকের সময় হয়নি
+
+    def test_health(self):
+        now = bd(2026, 11, 20, 14, 0)
+        st = lambda: {j["name"]: j for j in scheduler.job_status(now)}["reminders"]
+        self.assertEqual(st()["state"], "late")  # কখনো চলেনি
+        ScheduledJob.objects.create(name="reminders", last_run_at=now - timedelta(minutes=2))
+        self.assertEqual(st()["state"], "ok")
+        ScheduledJob.objects.filter(name="reminders").update(last_run_at=now - timedelta(minutes=10))
+        self.assertEqual((st()["state"], st()["overdue_minutes"]), ("late", 10))
+        ScheduledJob.objects.filter(name="reminders").update(last_error="X: boom")
+        self.assertEqual(st()["state"], "error")
+
+    def test_cron_endpoint_shares_the_minute_lock(self):
+        from rest_framework.test import APIClient
+        c = APIClient()
+        with mock.patch.dict(os.environ, {"CRON_SECRET": "s3cret"}):
+            r1 = c.get("/api/cron/reminders/?key=s3cret").json()
+            r2 = c.get("/api/cron/reminders/?key=s3cret").json()
+        self.assertEqual((r1["status"], r2["status"]), ("ran", "done"))

@@ -98,12 +98,21 @@ def monthly_work():
     return {"created": generate_monthly_dues()}
 
 
+def reminders_work():
+    from .tasks import queue_class_reminders
+    return {"reminded": queue_class_reminders()}
+
+
 def daily_key(now_bd):
     return now_bd.date().isoformat()
 
 
 def monthly_key(now_bd):
     return now_bd.strftime("%Y-%m")
+
+
+def minute_key(now_bd):
+    return now_bd.strftime("%Y-%m-%dT%H:%M")
 
 
 def due_jobs(now_bd):
@@ -120,6 +129,11 @@ def due_jobs(now_bd):
         jobs.append(("daily", daily_key(now_bd), daily_work))
     if now_bd.day > 1 or hm >= MONTHLY_AT:
         jobs.append(("monthly", monthly_key(now_bd), monthly_work))
+    # ক্লাসের WhatsApp রিমাইন্ডার — প্রতি মিনিটে, তাই সবসময় "বাকি"।
+    # ⚠️ শেষে রাখা: অনেক অভিভাবককে পাঠাতে সময় লাগলে আগের দুটো যেন না পিছায়।
+    # দুবার পাঠানো আটকায় দুই স্তরে: মিনিটের লক, আর ক্লাস-প্রতি দাবি
+    # (queue_class_reminders) — মিনিট পেরিয়ে দুটো চালানো একসাথে পড়লেও।
+    jobs.append(("reminders", minute_key(now_bd), reminders_work))
     return jobs
 
 
@@ -140,6 +154,8 @@ def _expected(name, now_bd):
 
 # এর বেশি দেরি হলে "late" — পাহারাদার প্রতি মিনিটে দেখে, তাই ১৫ মিনিট উদার
 LATE_AFTER_MIN = 15
+# রিমাইন্ডারের শেষ চেক এর চেয়ে পুরনো হলে "late" (টিক সামান্য পিছিয়ে যেতে পারে)
+REMINDERS_OK_WITHIN_MIN = 3
 
 
 def job_status(now=None):
@@ -174,6 +190,27 @@ def job_status(now=None):
             "last_error": j.last_error if j else "",
             "last_error_at": j.last_error_at if j else None,
         })
+    # রিমাইন্ডার প্রতি মিনিটের — শেষ সফল চেক কয়েক মিনিটের মধ্যে হলেই ঠিক
+    j = rows.get("reminders")
+    age = int((now_bd - j.last_run_at).total_seconds() // 60) if j and j.last_run_at else None
+    if age is not None and age <= REMINDERS_OK_WITHIN_MIN:
+        state = "ok"
+    elif j and j.last_error:
+        state = "error"
+    else:
+        state = "late"
+    out.append({
+        "name": "reminders",
+        "state": state,
+        "expected_key": minute_key(now_bd),
+        "overdue_minutes": 0 if state == "ok" else (age or 0),
+        "done_key": j.done_key if j else "",
+        "last_run_at": j.last_run_at if j else None,
+        "last_trigger": j.last_trigger if j else "",
+        "last_result": j.last_result if j else {},
+        "last_error": j.last_error if j else "",
+        "last_error_at": j.last_error_at if j else None,
+    })
     return out
 
 
