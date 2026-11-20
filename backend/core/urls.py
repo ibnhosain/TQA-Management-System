@@ -78,6 +78,8 @@ urlpatterns = [
     path("deck-plays/", app_settings_views.DeckPlayView.as_view()),                  # স্লাইড কত মিনিট চলল
     # ⚠️ নির্ণয়ের পথ — সার্ভারে কোন মাইগ্রেশন পর্যন্ত চলেছে
     path("version/", _version),
+    # পাহারাদারের স্বাস্থ্য — রোজের ক্লাস ও মাসিক বকেয়া শেষ কবে হয়েছে
+    path("scheduler/status/", views.scheduler_status),
     # Cron endpoints (cron-job.org থেকে ডাকা হয় — Celery ছাড়া scheduled কাজ)
     path("cron/reminders/", cron.cron_reminders),
     path("cron/daily/", cron.cron_daily),

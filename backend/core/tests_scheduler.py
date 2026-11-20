@@ -216,3 +216,55 @@ class MigrationSeed(TestCase):
     def test_no_dues_leaves_month_for_the_scheduler(self):
         self.seed()
         self.assertFalse(ScheduledJob.objects.filter(name="monthly").exists())
+
+
+class HealthStatus(TestCase):
+    """পরিচালকের স্বাস্থ্য কার্ড — কোন অবস্থায় কোন রং"""
+
+    def state(self, now, name="daily"):
+        return {j["name"]: j for j in scheduler.job_status(now)}[name]
+
+    def test_before_2am_yesterdays_run_is_enough(self):
+        ScheduledJob.objects.create(name="daily", done_key="2026-11-19")
+        s = self.state(bd(2026, 11, 20, 1, 0))
+        self.assertEqual((s["state"], s["expected_key"]), ("ok", "2026-11-19"))
+
+    def test_just_due_is_pending_then_late(self):
+        ScheduledJob.objects.create(name="daily", done_key="2026-11-19")
+        self.assertEqual(self.state(bd(2026, 11, 20, 2, 5))["state"], "pending")
+        late = self.state(bd(2026, 11, 20, 3, 0))
+        self.assertEqual((late["state"], late["overdue_minutes"]), ("late", 60))
+
+    def test_failure_shows_error(self):
+        ScheduledJob.objects.create(name="daily", done_key="2026-11-19",
+                                    last_error="RuntimeError: db is down",
+                                    last_error_at=timezone.now())
+        s = self.state(bd(2026, 11, 20, 2, 5))
+        self.assertEqual(s["state"], "error")
+        self.assertIn("db is down", s["last_error"])
+
+    def test_done_today_is_ok(self):
+        ScheduledJob.objects.create(name="daily", done_key="2026-11-20")
+        self.assertEqual(self.state(bd(2026, 11, 20, 9, 0))["state"], "ok")
+
+    def test_monthly_early_on_the_first_expects_last_month(self):
+        ScheduledJob.objects.create(name="monthly", done_key="2026-11")
+        s = self.state(bd(2026, 12, 1, 3, 0), "monthly")
+        self.assertEqual((s["state"], s["expected_key"]), ("ok", "2026-11"))
+        self.assertEqual(self.state(bd(2026, 12, 1, 6, 0), "monthly")["state"], "late")
+
+    def test_never_ran_is_reported(self):
+        s = self.state(bd(2026, 11, 20, 9, 0))
+        self.assertEqual((s["state"], s["done_key"], s["last_run_at"]), ("late", "", None))
+
+    def test_endpoint_permissions(self):
+        from rest_framework.test import APIClient
+        from core.models import User
+        c = APIClient()
+        for role, code in (("director", 200), ("admin", 200), ("teacher", 403), ("student", 403)):
+            u = User.objects.create(username=f"u_{role}", role=role, name_bn=role)
+            c.force_authenticate(u)
+            r = c.get("/api/scheduler/status/")
+            self.assertEqual(r.status_code, code, role)
+            if code == 200:
+                self.assertEqual({j["name"] for j in r.json()["jobs"]}, {"daily", "monthly"})

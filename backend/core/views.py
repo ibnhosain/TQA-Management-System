@@ -3255,6 +3255,17 @@ class DailyAmalWeekView(APIView):
         return Response(result)
 
 
+# ─────────────────────────── পাহারাদারের স্বাস্থ্য (পরিচালক/এডমিন) ───────────────────────────
+@api_view(["GET"])
+@pc([IsAdminLevel])
+def scheduler_status(request):
+    """রোজের ক্লাস ও মাসিক বকেয়ার কাজ শেষ কবে হয়েছে — স্বাস্থ্য কার্ডের জন্য।
+    scheduler_running: এই worker-এ পাহারাদার চালু কিনা (লোকালে বন্ধ থাকে)।"""
+    from . import scheduler
+    return Response({"jobs": scheduler.job_status(),
+                     "scheduler_running": scheduler._started})
+
+
 # ─────────────────────────── ডেটা এক্সপোর্ট (পরিচালক মাত্র) ───────────────────────────
 @api_view(["GET"])
 @pc([IsDirector])

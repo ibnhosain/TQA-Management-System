@@ -9836,6 +9836,121 @@ function TimezoneManagerCard() {
 }
 
 /* ═══════════════ ম্যানেজ সেটিংস — কেবল পরিচালক (পূর্ণ নিয়ন্ত্রণ, কিছুই আড়াল নয়) ═══════════════ */
+/* ⏰ স্বয়ংক্রিয় কাজের স্বাস্থ্য — রোজের ক্লাস ও মাসিক বকেয়া শেষ কবে হয়েছে
+   (core/scheduler.py)। আগে এ দুটো থেমে গেলে কেউ টের পেতেন না: ক্লাস ৭
+   দিনে উধাও হতো, আর ১ তারিখের ডাক ফসকালে সে মাসের বকেয়াই তৈরি হতো না। */
+const JOB_INFO = {
+  daily: {
+    title: "Daily classes",
+    what: "Creates the next 7 days of classes from routines, postpones missed ones, clears classes older than 60 days",
+  },
+  monthly: {
+    title: "Monthly dues",
+    what: "Creates the month's fee and salary dues",
+  },
+};
+const bdWhen = (iso) =>
+  new Date(iso).toLocaleString("en-GB", {
+    timeZone: "Asia/Dhaka",
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+const monthName = (key) =>
+  new Date(key + "-01T00:00:00Z").toLocaleString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+const sinceText = (min) =>
+  min < 60 ? `${min} min` : min < 2880 ? `${Math.round(min / 60)} h` : `${Math.round(min / 1440)} days`;
+function SchedulerHealthCard() {
+  const [data, setData] = useState(null);
+  const [loadErr, setLoadErr] = useState("");
+  useEffect(() => {
+    let alive = true;
+    const stop = visiblePoll(
+      () =>
+        api
+          .schedulerStatus()
+          .then((d) => alive && (setData(d), setLoadErr("")))
+          .catch((e) => alive && setLoadErr(e?.message || "Could not load")),
+      60000,
+    );
+    return () => {
+      alive = false;
+      stop();
+    };
+  }, []);
+  const line = (j) => {
+    const info = JOB_INFO[j.name] || { title: j.name, what: "" };
+    const r = j.last_result || {};
+    const period =
+      j.name === "monthly" ? monthName(j.done_key || j.expected_key) : "";
+    let icon, color, text;
+    if (j.state === "ok" && j.last_trigger === "before-scheduler") {
+      icon = "✅";
+      color = C.green;
+      text = `${period} — already created before the automatic system started`;
+    } else if (j.state === "ok") {
+      icon = "✅";
+      color = C.green;
+      const summary =
+        j.name === "daily"
+          ? `${r.created ?? 0} new class(es) · ${r.auto_postponed ?? 0} postponed`
+          : `${period} · ${r.created ?? 0} due(s) created`;
+      text = `${j.last_run_at ? bdWhen(j.last_run_at) : ""} · ${summary}`;
+    } else if (j.state === "pending") {
+      icon = "⏳";
+      color = C.gold;
+      text = "Due now — will run within a minute";
+    } else if (j.state === "error") {
+      icon = "❌";
+      color = C.red;
+      text = `Failed ${j.last_error_at ? bdWhen(j.last_error_at) : ""}: ${j.last_error} — retrying every minute`;
+    } else {
+      icon = "⚠️";
+      color = C.red;
+      text = `Has not run for ${sinceText(j.overdue_minutes)}${
+        j.last_run_at ? ` (last success ${bdWhen(j.last_run_at)})` : " (never ran)"
+      } — the automatic runner may be off`;
+    }
+    return (
+      <div
+        key={j.name}
+        style={{
+          padding: "8px 10px",
+          borderRadius: 10,
+          background: j.state === "ok" ? C.greenBg : j.state === "pending" ? C.cream : C.redBg,
+          marginBottom: 6,
+        }}
+      >
+        <div style={{ fontSize: 13.5 }}>
+          {icon} <b>{info.title}</b>{" "}
+          <span style={{ color, fontWeight: 600 }}>— {text}</span>
+        </div>
+        <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{info.what}</div>
+      </div>
+    );
+  };
+  return (
+    <div style={{ ...S.card, marginBottom: 14 }}>
+      <div style={{ fontWeight: 800, marginBottom: 8 }}>⏰ Automatic tasks</div>
+      {loadErr && <div style={{ color: C.red, fontSize: 13 }}>{loadErr}</div>}
+      {!data && !loadErr && <div style={{ color: C.muted, fontSize: 13 }}>Loading…</div>}
+      {data && data.jobs.map(line)}
+      {data && (
+        <div style={{ fontSize: 11.5, color: C.muted, marginTop: 4 }}>
+          {data.scheduler_running
+            ? "Runs by itself on the server, checking every minute · cron-job.org is a backup · times in Bangladesh time"
+            : "The automatic runner is off on this server (normal on a local computer) — only cron-job.org can trigger these"}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ManageView({ db, setDb, user, refresh }) {
   const [show, setShow] = useState(false);
   const [editId, setEditId] = useState(null); // এডিট মোড — কোন ইউজার (null = নতুন)
@@ -10329,7 +10444,7 @@ function ManageView({ db, setDb, user, refresh }) {
 
   return (
     <Section
-      title="Settings"
+      title="Management"
       sub="Full director control — everyone's ID and password, detailed reports; nothing is hidden"
       action={
         <Btn
@@ -10353,6 +10468,7 @@ function ManageView({ db, setDb, user, refresh }) {
         </Btn>
       }
     >
+      <SchedulerHealthCard />
       {loading && <Loader text="Loading user list" />}
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
@@ -24212,7 +24328,8 @@ const NAV = [
     labelEn: "Notice Board",
     roles: ["director", "admin", "teacher", "student"],
   },
-  { id: "manage", icon: "⚙️", label: "Settings", labelEn: "Settings", roles: ["director"] },
+  // ⚠️ "Settings" নয় — ওই নামে আলাদা একটি পাতা আছে (id: "settings")
+  { id: "manage", icon: "🛠️", label: "Management", labelEn: "Management", roles: ["director"] },
 ];
 
 /* ═══════════════ নতুন সংস্করণ এসেছে কিনা জানানো ═══════════════

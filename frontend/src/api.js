@@ -547,6 +547,9 @@ export const api = {
   deleteUser: (id) => request(`/users/${id}/`, { method: "DELETE" }),
   toggleFixCross: (id) => request(`/users/${id}/toggle_fix_cross/`, { method: "POST" }),
 
+  // স্বয়ংক্রিয় কাজের স্বাস্থ্য — রোজের ক্লাস ও মাসিক বকেয়া (পরিচালক/এডমিন)
+  schedulerStatus: () => request("/scheduler/status/"),
+
   // ডিভাইসের সময়বলয় জানানো — পরিচালকের ওভাররাইড ছোঁয় না
   setMyTimezone: (timezone) =>
     request("/users/my-timezone/", { method: "POST", body: { timezone } }),

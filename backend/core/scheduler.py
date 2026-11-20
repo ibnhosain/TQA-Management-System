@@ -123,6 +123,60 @@ def due_jobs(now_bd):
     return jobs
 
 
+def _expected(name, now_bd):
+    """এই মুহূর্তে কোন সময়কালের কাজ হয়ে থাকার কথা, আর সেটা কখন থেকে বাকি।
+    যেমন রাত ১টায় দৈনিকের প্রত্যাশা গতকালের (আজকেরটার সময় হয়নি)।"""
+    if name == "daily":
+        due = now_bd.replace(hour=DAILY_AT[0], minute=DAILY_AT[1], second=0, microsecond=0)
+        if now_bd < due:
+            due -= timedelta(days=1)
+        return daily_key(due), due
+    due = now_bd.replace(day=1, hour=MONTHLY_AT[0], minute=MONTHLY_AT[1],
+                         second=0, microsecond=0)
+    if now_bd < due:
+        due = (due - timedelta(days=1)).replace(day=1)  # আগের মাসের ১ তারিখ
+    return monthly_key(due), due
+
+
+# এর বেশি দেরি হলে "late" — পাহারাদার প্রতি মিনিটে দেখে, তাই ১৫ মিনিট উদার
+LATE_AFTER_MIN = 15
+
+
+def job_status(now=None):
+    """পরিচালকের স্বাস্থ্য কার্ডের জন্য — প্রতিটি কাজের অবস্থা।
+    state: ok (হয়ে গেছে) · pending (সবে সময় হলো) · error (ব্যর্থ, আবার
+    চেষ্টা চলছে) · late (অনেকক্ষণ বাকি — পাহারাদার সম্ভবত চলছে না)"""
+    from .models import ScheduledJob
+
+    now_bd = timezone.localtime(now) if now else timezone.localtime()
+    rows = {j.name: j for j in ScheduledJob.objects.all()}
+    out = []
+    for name in ("daily", "monthly"):
+        key, due = _expected(name, now_bd)
+        j = rows.get(name)
+        done = bool(j and j.done_key == key)
+        overdue = 0 if done else int((now_bd - due).total_seconds() // 60)
+        if done:
+            state = "ok"
+        elif j and j.last_error:
+            state = "error"
+        else:
+            state = "pending" if overdue <= LATE_AFTER_MIN else "late"
+        out.append({
+            "name": name,
+            "state": state,
+            "expected_key": key,
+            "overdue_minutes": overdue,
+            "done_key": j.done_key if j else "",
+            "last_run_at": j.last_run_at if j else None,
+            "last_trigger": j.last_trigger if j else "",
+            "last_result": j.last_result if j else {},
+            "last_error": j.last_error if j else "",
+            "last_error_at": j.last_error_at if j else None,
+        })
+    return out
+
+
 # এই প্রসেসে কোন কাজ কোন সময়কালের জন্য হয়ে গেছে বলে জানা — তাহলে প্রতি
 # মিনিটে ডাটাবেসে যেতে হয় না (Neon-কে অকারণে জাগিয়ে রাখে না)
 _known_done = {}
