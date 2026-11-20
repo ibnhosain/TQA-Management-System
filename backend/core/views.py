@@ -978,6 +978,19 @@ class RoutineViewSet(viewsets.ModelViewSet):
         self._sync_upcoming_sessions(routine)
         self._generate_now(routine)
 
+    def perform_destroy(self, instance):
+        # রুটিন মুছলে আগে তৈরি হয়ে থাকা আগামী ক্লাসগুলো (routine=NULL হয়ে)
+        # থেকে যেত — মুছে-ফেলা রুটিনের বারেও শিক্ষার্থী-উস্তাদ ক্লাস দেখতেন,
+        # আর রুটিনহীন বলে তারিখ পেরোলে auto-postpone-ও ধরত না, "অসম্পন্ন"
+        # হয়ে ঝুলে থাকত। কেউ জয়েন করে ফেলেছেন এমন ক্লাস রাখা হয় — হাজিরা
+        # হারানো যাবে না (_sync_upcoming_sessions-এর বাদ-পড়া বারের নিয়মই)।
+        today = timezone.localtime().date()
+        ClassSession.objects.filter(
+            routine=instance, date__gte=today, status="upcoming",
+            attendance__isnull=True,
+        ).delete()
+        instance.delete()
+
     @action(detail=False, methods=["post"], permission_classes=[IsAdminLevel])
     def generate(self, request):
         """সব সক্রিয় রুটিনের আগামী ৭ দিনের ক্লাস তৈরি/নিশ্চিত করা — পরিচালক/এডমিন এক ক্লিকে
@@ -1255,7 +1268,22 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         # date.today() সার্ভারের (UTC) তারিখ দেয়, বাংলাদেশ সময়ের নয় — মধ্যরাত থেকে
         # ভোর ৬টার মধ্যে এটা "গতকাল" ধরে ফেলত (UTC তখনও আগের দিন) — তাই
         # timezone.localtime() দিয়ে Asia/Dhaka অনুযায়ী প্রকৃত "আজ" বের করা হচ্ছে
-        qs = self.get_queryset().filter(date=timezone.localtime().date(), status="upcoming")
+        today = timezone.localtime().date()
+        # ?around=1 → গতকাল থেকে আগামীকাল। দুটো কারণে লাগে:
+        # ১) মধ্যরাত পেরোনো ক্লাস — রাত ১১:৩০-এর ক্লাসের ২য় পর্ব (জুমের ৪০
+        #    মিনিটের সীমায়) পড়ে রাত ১২টার পরে; শুধু "আজ" দিলে তখন ক্লাসটিই
+        #    আসত না, পপআপ ও রিজয়েনের পথ হারিয়ে যেত।
+        # ২) বিদেশি শিক্ষার্থীর "আজ" বাংলাদেশের আজ নয় — লন্ডনের শুক্রবার
+        #    সন্ধ্যার ক্লাস বাংলাদেশে শনিবার।
+        # কোনটা দেখাবে তা ফ্রন্টএন্ড ঠিক করে (দর্শকের বলয় + চলমান-ক্লাসের
+        # সময়সীমা)। প্যারামিটার ছাড়া আগের মতোই শুধু আজ — পুরনো ফ্রন্টএন্ড
+        # (খোলা ট্যাব) ভুল করে অন্য দিনের ক্লাস "আজ" দেখাবে না।
+        if request.query_params.get("around"):
+            from datetime import timedelta
+            dates = {"date__range": (today - timedelta(days=1), today + timedelta(days=1))}
+        else:
+            dates = {"date": today}
+        qs = self.get_queryset().filter(status="upcoming", **dates)
         return Response(self.get_serializer(qs, many=True).data)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])

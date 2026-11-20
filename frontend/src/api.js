@@ -219,7 +219,8 @@ export const getMe = () => request("/users/me/");
 /* ── রিসোর্স অনুযায়ী ফাংশন — প্রতিটি ফিচারের mock setDb এর প্রতিস্থাপন ── */
 export const api = {
   // ক্লাস ও জুম জয়েন
-  todayClasses: () => request("/classes/today/"),
+  // around=true → গতকাল থেকে আগামীকাল; কোনটা দেখাবে তা ডাকা পাতা ঠিক করে
+  todayClasses: (around) => request(around ? "/classes/today/?around=1" : "/classes/today/"),
   classes: () => request("/classes/"),
   scheduleClass: (d) => request("/classes/", { method: "POST", body: d }),
   editClass: (id, d) => request(`/classes/${id}/`, { method: "PATCH", body: d }),

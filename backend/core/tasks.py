@@ -267,13 +267,25 @@ def auto_postpone_missed_classes():
     """রুটিন থেকে তৈরি যে ক্লাসগুলোর তারিখ পেরিয়ে গেছে কিন্তু এখনো 'upcoming' —
     সেগুলো স্বয়ংক্রিয়ভাবে 'postponed' চিহ্নিত করা (প্রতিদিন daily cron-এ চলে)।
     শুধু routine-connected ক্লাস, ম্যানুয়ালি তৈরি standalone ক্লাস নয়।"""
-    from .models import ClassSession
+    from django.db.models import Exists, OuterRef, Q
+    from .models import Attendance, ClassSession
     today = timezone.localtime().date()
+    # ⚠️ যে ক্লাস আসলে হয়েছে তা "স্থগিত" নয়। উস্তাদ শেষ করলে status
+    # "upcoming"-ই থাকে (কর্তৃপক্ষের যাচাই বাকি) — আগে সেদিন যাচাই না হলে
+    # রাতের এই কাজ ক্লাসটিকে "স্থগিত" করে দিত: শিক্ষার্থী দেখতেন তাঁর করা
+    # ক্লাস বাতিল, আর ক্লাস-তালিকায় স্থগিত ক্লাসের স্ট্যাটাস-ঘর লুকানো থাকায়
+    # এডমিন পরে "Completed"-ও করতে পারতেন না।
+    # "হয়েছে" ধরা হয়: উস্তাদ শেষ করেছেন, অথবা কারও হাজিরা পাকা হয়েছে
+    # (উস্তাদ-শিক্ষার্থী একসাথে মিটিংয়ে ছিলেন, বা যথেষ্ট মিনিট জমেছে)।
+    held = Attendance.objects.filter(session=OuterRef("pk")).filter(
+        Q(marked_present=True) | Q(minutes__gte=Attendance.MIN_PRESENT_MINUTES)
+    )
     count = ClassSession.objects.filter(
         status="upcoming",
         date__lt=today,
         routine__isnull=False,
-    ).update(status="postponed")
+        teacher_finished=False,
+    ).filter(~Exists(held)).update(status="postponed")
     return count
 
 

@@ -2937,16 +2937,24 @@ function ClassesView({
   const loc = new Map(mine.map((k) => [k.id, toZoneFullDateTime(k.date, k.time, zone)]));
   const localDate = (k) => loc.get(k.id).date;
   const tdy = todayIn(zone);
+  // তারিখ যা-ই হোক, এই মুহূর্তে চলছে বা ১৫ মিনিটের মধ্যে শুরু হবে —
+  // মধ্যরাত পেরোনো ক্লাসও তাই "আজ"-এ থাকে, জয়েন/রিজয়েন হারায় না
+  const activeNow = (k) =>
+    k.status === "upcoming" &&
+    !k.teacherFinished &&
+    inClassWindow(k.date, k.time, k.dur, 15, REJOIN_GRACE_MIN);
   const today = mine.filter(
-    (k) => localDate(k) === tdy && k.status !== "done",
+    (k) => k.status !== "done" && (localDate(k) === tdy || activeNow(k)),
   );
+  const inToday = new Set(today.map((k) => k.id));
   // "আসন্ন" শুধু সামনের ৭ দিন, "বিগত" শুধু গত ৩ দিন — ডাটা মোছা হয় না (সার্ভারে/DB-তে সবই থাকে),
   // শুধু এই তালিকা দুটো ছোট-পরিষ্কার রাখতে দেখানোর সীমা টানা হলো
   const upcoming = mine.filter(
-    (k) => localDate(k) > tdy && localDate(k) <= shiftISO(tdy, 7),
+    (k) => !inToday.has(k.id) && localDate(k) > tdy && localDate(k) <= shiftISO(tdy, 7),
   );
   const past = mine.filter(
     (k) =>
+      !inToday.has(k.id) &&
       (k.status === "done" || localDate(k) < tdy) &&
       localDate(k) >= shiftISO(tdy, -3),
   );
@@ -3334,13 +3342,7 @@ function ClassesView({
       // সম্পন্ন করে দেওয়া মানেই ক্লাস শেষ, কেউ "ক্লাস শেষ করুন" চাপুক বা না চাপুক
       // উস্তাদ শেষ করে দিলে আর "চলছে" নয় — যাচাই বাকি থাকলেও নয়
       if (!isToday || k.status !== "upcoming" || k.teacherFinished) return false;
-      const n = new Date();
-      // ক্লাসের সময় বাংলাদেশ সময়ে সংরক্ষিত — "এখন কয়টা" হিসাবও সেভাবেই
-      const nowMin =
-        ((n.getUTCHours() + DHAKA_OFFSET_HOURS) % 24) * 60 + n.getUTCMinutes();
-      const [sh, sm] = String(k.time || "0:0").split(":").map(Number);
-      const startMin = (sh || 0) * 60 + (sm || 0);
-      return nowMin >= startMin - 15 && nowMin <= startMin + (+k.dur || 60) + 30;
+      return inClassWindow(k.date, k.time, k.dur, 15, 30);
     })();
     const teacherLive =
       withinClassWindow &&
@@ -10730,7 +10732,9 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
             </div>
           )}
           <div style={{ fontSize: 12.5, color: "#cfe6d8", marginBottom: 16 }}>
-            🕐 {k.time} · {T("Teacher", "Teacher")}: {course.teacher_name || userById(course.teacherId || course.teacher).name}
+            🕐 {toZoneFullDateTime(k.date, k.time, zoneOf(user)).time}
+            {zoneOf(user) !== "Asia/Dhaka" && ` (${zoneCity(zoneOf(user))} time)`} ·{" "}
+            {T("Teacher", "Teacher")}: {course.teacher_name || userById(course.teacherId || course.teacher).name}
           </div>
           {/* উস্তাদ রিজয়েন চালু করার পর ১ম লিংক আর দেখানো হয় না — নইলে
               শিক্ষার্থী ভুল করে পুরনো মিটিংয়ে ঢুকে পড়ত */}
@@ -12049,6 +12053,26 @@ const shiftISO = (iso, n) => {
 };
 // "Europe/London" → "London" — সময়ের পাশে ছোট করে বলয় দেখাতে
 const zoneCity = (zone) => zone.split("/").pop().replace(/_/g, " ");
+
+/* ═══ ক্লাস কি এই মুহূর্তে চলছে/শুরু হচ্ছে ═══
+   ⚠️ তারিখসহ নির্দিষ্ট মুহূর্ত ধরে হিসাব — কেবল "দিনের কত মিনিট" ধরে নয়।
+   আগে মিনিট-অফ-ডে দিয়ে হিসাব হতো, আর ক্লাস আসত শুধু "আজকের তারিখের"।
+   রাত ১১:৩০-এর ক্লাসের ২য় পর্ব (জুমের ৪০ মিনিটের সীমায়) পড়ে রাত ১২টার
+   পরে — তখন ক্লাসটি "গতকালের" হয়ে যেত, উস্তাদ-শিক্ষার্থী দুজনেরই
+   জয়েন/রিজয়েন বাটন ও পপআপ হারিয়ে যেত। UK-র সন্ধ্যার ক্লাসে এটা নিয়মিত। */
+const classStartMs = (date, time) => {
+  const [y, mo, d] = String(date).split("-").map(Number);
+  const [hh, mm] = String(time || "00:00").split(":").map(Number);
+  return Date.UTC(y, mo - 1, d, (hh || 0) - DHAKA_OFFSET_HOURS, mm || 0);
+};
+// এখন কি [শুরু − before, শুরু + সময়কাল + after] মিনিটের ভেতরে
+const inClassWindow = (date, time, dur, before, after) => {
+  const s = classStartMs(date, time);
+  const now = Date.now();
+  return now >= s - before * 60000 && now <= s + ((+dur || 60) + after) * 60000;
+};
+// রিজয়েনের জন্য ক্লাস শেষের পরও এতক্ষণ খোলা থাকে (পপআপের আগের নিয়মই)
+const REJOIN_GRACE_MIN = 180;
 // পরিচালক/এডমিনের জন্য প্রায়ই-দরকারি দেশ/শহরের তালিকা (এই একাডেমির বেশিরভাগ
 // প্রবাসী পরিবার যেসব দেশে থাকেন) — প্রয়োজনে সহজেই আরও যোগ করা যাবে
 const COMMON_ZONES = [
@@ -16760,8 +16784,22 @@ function Overview({ db, courses, user, goTo }) {
   // আগে এখানে stale mock db.classes/db.feePayments/db.forms/db.admissions/
   // db.ratings/db.assignments/db.notices ব্যবহার হতো — লগইনের পরের প্রথম
   // পেজ (ড্যাশবোর্ড) হওয়ায় প্রভাব সবচেয়ে বেশি ছিল; এখন সরাসরি API থেকে লোড হয়
-  const [todayClasses, setTodayClasses] = useState([]);
+  const [todayRaw, setTodayRaw] = useState([]); // সার্ভারের গতকাল-আজ-আগামীকাল
   const [todayLoading, setTodayLoading] = useState(true); // লোড শেষ হওয়ার আগে "আজ ক্লাস নেই" না দেখাতে
+  // দর্শকের নিজের "আজ"-এর ক্লাস, আর এই মুহূর্তে চলছে এমন (মধ্যরাত পেরোনো)
+  // ক্লাস — সময়ক্রমে। বিদেশি শিক্ষার্থী আগে বাংলাদেশের "আজ" দেখতেন, ফলে
+  // নিজের সন্ধ্যার ক্লাসের দিনেও "No more classes today" দেখাত।
+  const ovZone = zoneOf(user);
+  const ovToday = todayIn(ovZone);
+  const ovLocal = (k) => toZoneFullDateTime(k.date, k.time, ovZone);
+  const todayClasses = todayRaw
+    .filter(
+      (k) =>
+        ovLocal(k).date === ovToday ||
+        (!k.teacher_finished &&
+          inClassWindow(k.date, k.time, k.duration_min, 15, REJOIN_GRACE_MIN)),
+    )
+    .sort((a, b) => classStartMs(a.date, a.time) - classStartMs(b.date, b.time));
   const [income, setIncome] = useState(0);
   const [admissionsPending, setAdmissionsPending] = useState(0);
   const [newForms, setNewForms] = useState(0);
@@ -16787,13 +16825,24 @@ function Overview({ db, courses, user, goTo }) {
       enablePushNotifications(true);
     }
   }, []);
+  // আজকের ক্লাস নিয়মিত হালনাগাদ — আগে একবারই আনা হতো, তাই মধ্যরাতের আগে
+  // খোলা পাতায় রাতের ক্লাসটি আর কখনো আসত না
   useEffect(() => {
     let cancelled = false;
-    api
-      .todayClasses()
-      .then((d) => !cancelled && setTodayClasses(d))
-      .catch(() => {})
-      .finally(() => !cancelled && setTodayLoading(false));
+    const load = () =>
+      api
+        .todayClasses(true)
+        .then((d) => !cancelled && setTodayRaw(d))
+        .catch(() => {})
+        .finally(() => !cancelled && setTodayLoading(false));
+    const stop = visiblePoll(load, 60000);
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, [user?.id]);
+  useEffect(() => {
+    let cancelled = false;
     api.notices().then((d) => !cancelled && setRecentNotices(d)).catch(() => {});
     if (isAdm(user)) {
       Promise.all([api.myFees(), api.admissions()])
@@ -16949,7 +16998,7 @@ function Overview({ db, courses, user, goTo }) {
           {greet} 🌙
         </div>
         <div style={{ fontSize: 13, color: "#d7e9de" }}>
-          {fmtDate(todayISO())} ·{" "}
+          {fmtDate(ovToday)} ·{" "}
           {T(
             `আজ ${bn(todayClasses.length)}টি ক্লাস নির্ধারিত আছে`,
             `${todayClasses.length} class(es) scheduled today`,
@@ -17087,7 +17136,12 @@ function Overview({ db, courses, user, goTo }) {
                 <div style={{ fontSize: 26 }}>🕐</div>
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <div style={{ fontWeight: 800 }}>
-                    {c.name} — {k.time}
+                    {c.name} — {ovLocal(k).time}
+                    {ovZone !== "Asia/Dhaka" && (
+                      <span style={{ color: C.muted, fontWeight: 600 }}>
+                        {" "}({zoneCity(ovZone)} time)
+                      </span>
+                    )}
                   </div>
                   {lec && (
                     <div style={{ fontSize: 12.5, color: C.muted }}>
@@ -22759,6 +22813,38 @@ function TrialPortal({ user }) {
   const [scoreItems, setScoreItems] = useState(TRIAL_SCORES);
   const [openTopic, setOpenTopic] = useState({});
   const [loading, setLoading] = useState(true);
+  // ক্লাসের তালিকা নিয়মিত হালনাগাদ — উস্তাদ ১ম পর্ব শেষ করলে বাটন যেন নিজে
+  // থেকেই "Rejoin" (২য় লিংক) হয়ে যায়। আগে একবারই আনা হতো, তাই পাতা
+  // রিফ্রেশ না করলে অতিথি শেষ-হয়ে-যাওয়া ১ম মিটিংয়ের লিংকেই আটকে থাকতেন।
+  useEffect(() => {
+    let alive = true;
+    const stop = visiblePoll(
+      () =>
+        api
+          .todayClasses(true)
+          .then((d) => alive && setClasses(d || []))
+          .catch(() => {}),
+      20000,
+    );
+    return () => {
+      alive = false;
+      stop();
+    };
+  }, []);
+  // অতিথির নিজের "আজ"-এর ক্লাস, আর এই মুহূর্তে চলছে এমন — তাঁর নিজের সময়ে।
+  // ট্রায়াল অতিথিরা প্রায়ই বিদেশে; আগে বাংলাদেশের "আজ" ধরা হতো, তাই
+  // লন্ডনের শুক্রবার সন্ধ্যার ক্লাসের দিনে "No class scheduled for today"
+  // দেখাত, আর সময় দেখাত বাংলাদেশের।
+  const tz = zoneOf(user);
+  const tLocal = (k) => toZoneFullDateTime(k.date, k.time, tz);
+  const shownClasses = classes
+    .filter(
+      (k) =>
+        tLocal(k).date === todayIn(tz) ||
+        (!k.teacher_finished &&
+          inClassWindow(k.date, k.time, k.duration_min, 15, REJOIN_GRACE_MIN)),
+    )
+    .sort((a, b) => classStartMs(a.date, a.time) - classStartMs(b.date, b.time));
 
   const daysLeft = (() => {
     if (!user.trial_until) return null;
@@ -22776,7 +22862,7 @@ function TrialPortal({ user }) {
            তালিকার প্রথমটাই তাঁর কোর্স */
         const [cs, todays, allBooks, reps] = await Promise.all([
           api.courses().catch(() => []),
-          api.todayClasses().catch(() => []),
+          api.todayClasses(true).catch(() => []),
           api.books().catch(() => []),
           api.trialReports().catch(() => []),
         ]);
@@ -23088,13 +23174,13 @@ function TrialPortal({ user }) {
 
       {/* ───── আজকের ক্লাস ───── */}
       <Section title="Your trial class">
-        {classes.length === 0 && (
+        {shownClasses.length === 0 && (
           <div style={{ color: C.muted, fontSize: 14 }}>
             No class scheduled for today. Your teacher will let you know the
             next one, in shaa Allah.
           </div>
         )}
-        {classes.map((k) => (
+        {shownClasses.map((k) => (
           <div
             key={k.id}
             style={{
@@ -23114,7 +23200,12 @@ function TrialPortal({ user }) {
                 {k.course_name || course?.name} — Trial Class
               </div>
               <div style={{ fontSize: 12.5, color: C.muted }}>
-                {[k.time, k.teacher_name, `${k.duration_min || 60} min`]
+                {[
+                  tLocal(k).time +
+                    (tz !== "Asia/Dhaka" ? ` (${zoneCity(tz)} time)` : ""),
+                  k.teacher_name,
+                  `${k.duration_min || 60} min`,
+                ]
                   .filter(Boolean)
                   .join(" · ")}
               </div>
@@ -25139,19 +25230,12 @@ export default function App() {
     }
     const checkLive = async () => {
       try {
-        const classes = await api.todayClasses();
-        const now = new Date();
-        // ক্লাসের সময় (c.time) সবসময় বাংলাদেশ সময়ে সংরক্ষিত — তাই "এখন কয়টা
-        // বাজে" এর হিসাবও বাংলাদেশ সময়েই করতে হবে, ডিভাইসের নিজস্ব টাইমজোন
-        // দিয়ে নয় (নইলে বিদেশে থাকা স্টুডেন্টের জন্য এই পপআপ ভুল সময়ে আসত)
-        const cur =
-          ((now.getUTCHours() + DHAKA_OFFSET_HOURS) % 24) * 60 +
-          now.getUTCMinutes();
-        const inWindow = (c) => {
-          const [h, m] = c.time.split(":").map(Number);
-          const st = h * 60 + m;
-          return cur >= st - 15 && cur <= st + (c.duration_min || 60); // শুরুর ১৫ মিনিট আগে থেকে শেষ পর্যন্ত "চলমান"
-        };
+        // গতকাল-আজ-আগামীকাল — মধ্যরাত পেরোনো ক্লাসও যেন হাতছাড়া না হয়;
+        // কোনটা এখন চলছে তা নিচে তারিখসহ মুহূর্ত ধরে বাছাই হয়
+        const classes = await api.todayClasses(true);
+        // শুরুর ১৫ মিনিট আগে থেকে নির্ধারিত শেষ পর্যন্ত "চলমান"
+        const inWindow = (c) =>
+          inClassWindow(c.date, c.time, c.duration_min, 15, 0);
         // ক্লাস নির্ধারিত সময়ের চেয়ে বেশি চললে (যা প্রায়ই হয়) সেটা সময়সীমার
         // বাইরে চলে যেত, আর তখন রিজয়েনের পপআপ আসত না — উস্তাদ ২য় লিংকে চলে
         // গেছেন অথচ শিক্ষার্থী ১ম মিটিংয়ে একা বসে থাকতেন। তাই রিজয়েন চালু
@@ -25159,11 +25243,8 @@ export default function App() {
         // ⚠️ কিন্তু "সারাদিনের জন্য" নয়: rejoin_active একবার চালু হলে দিনের
         // শেষ পর্যন্ত চালুই থাকে, তাই সীমা না দিলে সকালের ক্লাসটা সারাদিন
         // অগ্রাধিকার পেত আর বিকেলের ক্লাসের পপআপ কখনো আসতই না।
-        const nearby = (c) => {
-          const [h, m] = c.time.split(":").map(Number);
-          const st = h * 60 + m;
-          return cur >= st - 15 && cur <= st + (c.duration_min || 60) + 180;
-        };
+        const nearby = (c) =>
+          inClassWindow(c.date, c.time, c.duration_min, 15, REJOIN_GRACE_MIN);
         // উস্তাদ শেষ করে দেওয়া ক্লাস বাদ — নইলে রিজয়েন খোলা থাকায় ক্লাস
         // শেষ হওয়ার পরেও শিক্ষার্থীর পর্দা ঢেকে রিজয়েনের পপআপ আসত
         const live = classes.filter((c) => !c.teacher_finished);
