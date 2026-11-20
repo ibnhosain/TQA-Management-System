@@ -9938,7 +9938,11 @@ function SchedulerHealthCard() {
           {icon} <b>{info.title}</b>{" "}
           <span style={{ color, fontWeight: 600 }}>— {text}</span>
         </div>
-        <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>{info.what}</div>
+        <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>
+          {j.name === "reminders" && data && !data.whatsapp_configured
+            ? "WhatsApp API not connected yet — reminders wait in WhatsApp Messages for manual (wa.me) sending; in-app notifications still go out"
+            : info.what}
+        </div>
       </div>
     );
   };

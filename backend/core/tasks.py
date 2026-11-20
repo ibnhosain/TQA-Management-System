@@ -67,6 +67,16 @@ def send_whatsapp_now(msg_id, raise_on_fail=False):
             raise exc
 
 
+def whatsapp_configured():
+    """Render-এ WhatsApp API-র চাবি বসানো আছে কিনা (tqa-backend-এর Environment)।
+    ⚠️ whatsapp-server/ ফোল্ডারের আলাদা Node সার্ভার নয় — আসল পাঠানো হয় এখান থেকে।"""
+    if os.environ.get("WHATSAPP_PROVIDER", "meta").lower() == "twilio":
+        keys = ("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM")
+    else:
+        keys = ("META_ACCESS_TOKEN", "META_PHONE_NUMBER_ID")
+    return all(os.environ.get(k) for k in keys)
+
+
 def dispatch_whatsapp(msg_id):
     """Celery থাকলে queue তে দেয়, না থাকলে সরাসরি পাঠায়"""
     if USE_CELERY:
@@ -98,6 +108,10 @@ def queue_class_reminders():
     now = timezone.localtime()
     today = now.date()
     sessions = ClassSession.objects.filter(date=today, status="upcoming", reminder_sent=False)
+    # API বসানো না থাকলে মেসেজ তৈরি হয় কিন্তু পাঠানোর চেষ্টা হয় না — "অপেক্ষমাণ"
+    # থাকে, WhatsApp Messages পাতা থেকে হাতে (wa.me) পাঠানোর জন্য। আগে চেষ্টা
+    # করে প্রতিটি লাল "API failed" হয়ে যেত, যদিও আসলে কিছু ব্যর্থ হয়নি।
+    can_send = whatsapp_configured()
     reminded = 0
     for s in sessions:
         start = timezone.make_aware(datetime.combine(today, s.time))
@@ -127,6 +141,8 @@ def queue_class_reminders():
                     f"Jazakumullahu Khairan. — Tarbiyatul Quran Academy")
             m = WaMessage.objects.create(to_name=st.guardian or st.name_bn, student=st,
                                          phone=st.phone, text=text, reason="reminder")
+            if not can_send:
+                continue
             try:
                 dispatch_whatsapp(m.id)
             except Exception:

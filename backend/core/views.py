@@ -3262,8 +3262,10 @@ def scheduler_status(request):
     """রোজের ক্লাস ও মাসিক বকেয়ার কাজ শেষ কবে হয়েছে — স্বাস্থ্য কার্ডের জন্য।
     scheduler_running: এই worker-এ পাহারাদার চালু কিনা (লোকালে বন্ধ থাকে)।"""
     from . import scheduler
+    from .tasks import whatsapp_configured
     return Response({"jobs": scheduler.job_status(),
-                     "scheduler_running": scheduler._started})
+                     "scheduler_running": scheduler._started,
+                     "whatsapp_configured": whatsapp_configured()})
 
 
 # ─────────────────────────── ডেটা এক্সপোর্ট (পরিচালক মাত্র) ───────────────────────────

@@ -289,7 +289,8 @@ class RemindersSentOnce(TestCase):
                                              time=T(14, 10), duration_min=60, kind="regular")
         self.s.students.set(self.students)
         for target, kw in (("core.tasks.timezone.localtime", {"return_value": self.now}),
-                           ("core.tasks.dispatch_whatsapp", {})):
+                           ("core.tasks.dispatch_whatsapp", {}),
+                           ("core.tasks.whatsapp_configured", {"return_value": True})):
             p = mock.patch(target, **kw)
             setattr(self, target.rsplit(".", 1)[1], p.start())
             self.addCleanup(p.stop)
@@ -352,3 +353,45 @@ class RemindersSchedule(TestCase):
             r1 = c.get("/api/cron/reminders/?key=s3cret").json()
             r2 = c.get("/api/cron/reminders/?key=s3cret").json()
         self.assertEqual((r1["status"], r2["status"]), ("ran", "done"))
+
+
+class WithoutWhatsAppApi(TestCase):
+    """API বসানো না থাকলে মেসেজ তৈরি হয়, পাঠানোর চেষ্টা হয় না — "অপেক্ষমাণ"
+    থাকে হাতে পাঠানোর জন্য; লাল "failed" হয়ে জমে না"""
+
+    def test_configured_detection(self):
+        from core.tasks import whatsapp_configured
+        none = {k: "" for k in ("WHATSAPP_PROVIDER", "META_ACCESS_TOKEN", "META_PHONE_NUMBER_ID",
+                                "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM")}
+        with mock.patch.dict(os.environ, none):
+            self.assertFalse(whatsapp_configured())
+        with mock.patch.dict(os.environ, {**none, "META_ACCESS_TOKEN": "EAAG", "META_PHONE_NUMBER_ID": "1"}):
+            self.assertTrue(whatsapp_configured())
+        with mock.patch.dict(os.environ, {**none, "WHATSAPP_PROVIDER": "twilio", "TWILIO_ACCOUNT_SID": "AC"}):
+            self.assertFalse(whatsapp_configured())  # তিনটির একটি মাত্র
+
+    def test_reminder_waits_for_manual_sending(self):
+        from datetime import time as T
+        from core.models import ClassSession, Course, User, WaMessage
+        from core.tasks import queue_class_reminders
+        now = bd(2026, 11, 20, 14, 0)
+        t = User.objects.create(username="t", role="teacher", name_bn="T")
+        st = User.objects.create(username="s", role="student", name_bn="S", phone="8801700000001")
+        c = Course.objects.create(name="Qaida", teacher=t)
+        k = ClassSession.objects.create(course=c, teacher=t, date=now.date(), time=T(14, 10),
+                                        duration_min=60, kind="regular")
+        k.students.set([st])
+        with mock.patch("core.tasks.timezone.localtime", return_value=now), \
+                mock.patch("core.tasks.whatsapp_configured", return_value=False), \
+                mock.patch("core.tasks.dispatch_whatsapp") as dispatch:
+            self.assertEqual(queue_class_reminders(), 1)
+        dispatch.assert_not_called()
+        self.assertEqual(list(WaMessage.objects.values_list("status", flat=True)), ["queued"])
+
+    def test_status_endpoint_reports_it(self):
+        from rest_framework.test import APIClient
+        from core.models import User
+        c = APIClient()
+        c.force_authenticate(User.objects.create(username="d", role="director", name_bn="D"))
+        with mock.patch("core.tasks.whatsapp_configured", return_value=False):
+            self.assertIs(c.get("/api/scheduler/status/").json()["whatsapp_configured"], False)
