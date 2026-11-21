@@ -3103,9 +3103,33 @@ class PushSubscriptionViewSet(viewsets.ModelViewSet):
 
 
 class WaMessageViewSet(viewsets.ModelViewSet):
-    queryset = WaMessage.objects.all().order_by("-created_at")
     serializer_class = WaMessageSerializer
     permission_classes = [IsAdminLevel]
+    # আউটবক্স, সংরক্ষণাগার নয় — প্রতিটি ক্লাসের রিমাইন্ডার এখানে জমে, তাই
+    # সব মেসেজ ফেরত দিলে কয়েক মাসে পাতা হাজার সারিতে ভারী হয়ে যেত
+    KEEP_DAYS = 30
+
+    def get_queryset(self):
+        from datetime import timedelta
+        since = timezone.now() - timedelta(days=self.KEEP_DAYS)
+        return WaMessage.objects.filter(created_at__gte=since).order_by("-created_at")
+
+    @action(detail=False)
+    def config(self, request):
+        """Render-এ WhatsApp API-র চাবি বসানো আছে কিনা — পাতা "Send via API" বাটন
+        দেখাবে কিনা এখান থেকে জানে (আগে ব্রাউজারের এক অস্থায়ী সেটিং দেখত)"""
+        from .tasks import whatsapp_configured
+        return Response({"whatsapp_configured": whatsapp_configured()})
+
+    @action(detail=True, methods=["post"])
+    def mark_sent(self, request, pk=None):
+        """হাতে (wa.me) পাঠানোর পর "পাঠানো হয়েছে" — আগে কেবল ব্রাউজারে মনে
+        থাকত, পাতা রিফ্রেশ করলেই আবার "পাঠানো হয়নি" দেখাত"""
+        m = self.get_object()
+        if m.status != "sent":
+            m.status, m.provider_ref = "sent", "manual"
+            m.save(update_fields=["status", "provider_ref"])
+        return Response(self.get_serializer(m).data)
 
     @action(detail=True, methods=["post"])
     def send_now(self, request, pk=None):
@@ -3115,12 +3139,21 @@ class WaMessageViewSet(viewsets.ModelViewSet):
         ডাকা হতো, যা কোনো Redis/worker ছাড়া কানেকশন এরর দিয়ে ব্যর্থ হতো — director-এর
         "আউটবক্স"-এ ব্যর্থ মেসেজ রিট্রাই করার একমাত্র বাটনটাই কখনো কাজ করত না
         """
-        from .tasks import dispatch_whatsapp
+        from .tasks import dispatch_whatsapp, whatsapp_configured
+        m = self.get_object()
+        if not whatsapp_configured():
+            # আগে চেষ্টা করে মেসেজটিকে লাল "failed" বানাত, যদিও আসলে API-ই বসানো নেই
+            return Response({"error": "WhatsApp API is not connected — send with wa.me"},
+                            status=400)
         try:
-            dispatch_whatsapp(pk)
+            dispatch_whatsapp(m.pk)
         except Exception as e:
             return Response({"error": str(e)}, status=502)
-        return Response({"queued": True})
+        m.refresh_from_db()
+        if m.status == "failed":
+            return Response({"error": "WhatsApp did not accept the message — check the number"},
+                            status=502)
+        return Response(self.get_serializer(m).data)
 
 
 # ─────────────────────────── লাইব্রেরি বই (বাহ্যিক লিংক) ───────────────────────────

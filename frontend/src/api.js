@@ -460,6 +460,8 @@ export const api = {
     request("/push-subscriptions/unsubscribe/", { method: "POST", body: { endpoint } }),
   waOutbox: () => request("/wa-messages/"),
   waSendNow: (id) => request(`/wa-messages/${id}/send_now/`, { method: "POST" }),
+  waMarkSent: (id) => request(`/wa-messages/${id}/mark_sent/`, { method: "POST" }),
+  waConfig: () => request("/wa-messages/config/"),
 
   // লাইব্রেরি বই (বাহ্যিক লিংক)
   libraryBooks: () => request("/library-books/"),

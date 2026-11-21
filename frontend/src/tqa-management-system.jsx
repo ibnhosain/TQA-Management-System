@@ -820,7 +820,6 @@ const seedDB = () => ({
   syllabus: [],
   academicBooks: [],
   waOutbox: [],
-  waConfig: { backendUrl: "", autoSend: false },
   sentReceipts: [],
   routine: [],
   leaves: [],
@@ -14984,215 +14983,220 @@ function TeacherWiseBoard({ db, setDb, user }) {
 }
 
 /* ═══════════════ WhatsApp মেসেজ আউটবক্স — অভিভাবকের কাছে অটো-প্রস্তুত মেসেজ ═══════════════ */
-function WaOutboxView({ db, setDb, user }) {
-  const [waList, setWaList] = useState(db.waOutbox || []);
-  const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
-  const cfg = db.waConfig || { backendUrl: "", autoSend: false };
-  const setCfg = (patch) =>
-    setDb((d) => ({ ...d, waConfig: { ...(d.waConfig || {}), ...patch } }));
+/* 📤 WhatsApp আউটবক্স — রিমাইন্ডার (ক্লাসের ১০ মিনিট আগে), স্থগিত ও ভর্তির
+   মেসেজ। API বসানো থাকলে সার্ভার নিজেই পাঠায়; না থাকলে এখান থেকে wa.me দিয়ে।
+   ⚠️ আগের "backend URL / auto-send" সেটিং সরানো হয়েছে — সেটা সার্ভারে সংরক্ষিত
+   হতো না (রিফ্রেশে মুছে যেত) আর পুরনো, অব্যবহৃত Node সার্ভারে পাঠাত। এখন
+   "Send via API" বাটন দেখায় সার্ভার বলে দিলে (চাবি বসানো আছে কিনা)। */
+const WA_REASON = {
+  reminder: { label: "Class reminder", color: C.gold, bg: C.amberBg },
+  postpone: { label: "Class postponed", color: C.red, bg: C.redBg },
+  fee: { label: "Fee reminder", color: C.blue, bg: C.blueBg },
+};
+// ভর্তি/ট্রায়ালের মেসেজও reason "reminder" নিয়ে আসে — ক্লাসের রিমাইন্ডার চেনা
+// যায় template-এর ঘর দিয়ে (queue_class_reminders কেবল সেগুলোতেই বসায়)
+const isClassReminder = (m) =>
+  m.reason === "reminder" && (m.template_params || []).length > 0;
+// রিমাইন্ডার তৈরি হয় ক্লাসের ১০ মিনিট আগে — ৩০ মিনিট পেরোলে ক্লাস শুরু হয়ে
+// গেছে, তখন পাঠানোর আর মানে নেই
+const REMINDER_STALE_MIN = 30;
+const waDigits = (p) => String(p || "").replace(/\D/g, "");
 
-  const adaptMsg = (m) => ({
-    id: m.id,
-    toName: m.to_name || m.toName,
-    phone: m.phone,
-    student: m.to_name || m.student,
-    reason: m.reason,
-    text: m.text,
-    date: m.created_at || m.date,
-    sent: m.sent || m.status === "sent",
-    apiStatus: m.status || (m.sent ? "sent" : "pending"),
-  });
-  const loadData = async () => {
+function WaOutboxView({ user }) {
+  const [list, setList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState("");
+  const [apiOn, setApiOn] = useState(null);
+  const [busy, setBusy] = useState(null);
+  const [showMissed, setShowMissed] = useState(false);
+  const [showSent, setShowSent] = useState(false);
+  const load = async () => {
     try {
-      setWaList((await api.waOutbox()).map(adaptMsg));
-    } catch {
-      setWaList(db.waOutbox || []);
+      setList(await api.waOutbox());
+      setLoadErr("");
+    } catch (e) {
+      setLoadErr(e?.message || "Could not load messages");
     } finally {
       setLoading(false);
     }
   };
   useEffect(() => {
-    loadData();
+    api
+      .waConfig()
+      .then((d) => setApiOn(!!d.whatsapp_configured))
+      .catch(() => setApiOn(false));
+    // নতুন রিমাইন্ডার প্রতি মিনিটে তৈরি হতে পারে — পাতা খোলা থাকলেও আসে
+    return visiblePoll(load, 30000);
   }, []);
-
-  const list = waList;
-  const sendViaApi = async (m) => {
+  const act = async (m, fn) => {
+    setBusy(m.id);
     try {
-      setWaList((prev) =>
-        prev.map((x) => (x.id === m.id ? { ...x, apiStatus: "sending" } : x)),
-      );
-      await api.waSendNow(m.id);
-      await loadData();
-    } catch {
-      setWaList((prev) =>
-        prev.map((x) => (x.id === m.id ? { ...x, apiStatus: "failed" } : x)),
-      );
+      await fn(m.id);
+    } catch (e) {
+      notice(e?.data?.error || e?.message || "Could not send");
     }
+    await load();
+    setBusy(null);
   };
-  const markSent = (id) =>
-    setWaList((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, sent: true } : m)),
+  const stale = (m) =>
+    isClassReminder(m) &&
+    Date.now() - new Date(m.created_at).getTime() > REMINDER_STALE_MIN * 60000;
+  const toSend = list.filter((m) => m.status !== "sent" && !stale(m));
+  const missed = list.filter((m) => m.status !== "sent" && stale(m));
+  const sent = list.filter((m) => m.status === "sent");
+
+  const row = (m, withButtons) => {
+    const r =
+      m.reason === "reminder" && !isClassReminder(m)
+        ? { label: "Message", color: C.blue, bg: C.blueBg }
+        : WA_REASON[m.reason] || { label: m.reason, color: C.muted, bg: C.cream };
+    return (
+      <div
+        key={m.id}
+        style={{
+          ...S.card,
+          padding: 14,
+          borderLeft: `4px solid ${m.status === "sent" ? C.green : r.color}`,
+          opacity: withButtons || m.status === "sent" ? 1 : 0.7,
+        }}
+      >
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <b style={{ fontSize: 13.5 }}>{m.to_name}</b>{" "}
+            <Tag color={r.color} bg={r.bg}>
+              {r.label}
+            </Tag>{" "}
+            {m.status === "sent" && (
+              <Tag>Sent ✔ {m.provider_ref === "manual" ? "(wa.me)" : "(API)"}</Tag>
+            )}
+            {m.status === "sending" && (
+              <Tag color={C.blue} bg={C.blueBg}>
+                ⏳ Sending…
+              </Tag>
+            )}
+            {m.status === "failed" && (
+              <Tag color={C.red} bg={C.redBg}>
+                API failed — check the number, or send with WhatsApp below
+              </Tag>
+            )}
+            <div style={{ fontSize: 11.5, color: C.muted }}>
+              To: {m.to_name} · +{waDigits(m.phone)} · {bdWhen(m.created_at)}
+            </div>
+            <div
+              style={{
+                fontSize: 12.5,
+                marginTop: 6,
+                background: C.cream,
+                padding: "8px 10px",
+                borderRadius: 8,
+                whiteSpace: "pre-line",
+              }}
+            >
+              {m.text}
+            </div>
+          </div>
+          {withButtons && (
+            <span style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {apiOn && (
+                <Btn sm onClick={() => act(m, api.waSendNow)} disabled={busy === m.id}>
+                  {busy === m.id ? "⏳ Sending…" : "🚀 Send via API"}
+                </Btn>
+              )}
+              {/* খোলার সাথে সাথে সার্ভারে "পাঠানো হয়েছে" — আগে কেবল এই
+                  ব্রাউজারে মনে থাকত, রিফ্রেশে আবার "পাঠানো হয়নি" দেখাত */}
+              <a
+                href={`https://wa.me/${waDigits(m.phone)}?text=${encodeURIComponent(m.text)}`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => act(m, api.waMarkSent)}
+                style={{ textDecoration: "none" }}
+              >
+                <Btn sm style={{ background: "#25D366", color: "#fff" }}>
+                  📱 Send on WhatsApp
+                </Btn>
+              </a>
+            </span>
+          )}
+        </div>
+      </div>
     );
+  };
+
   return (
     <Section
       title="WhatsApp Messages"
-      sub="Reminders 5 minutes before class and postponement messages for guardians are generated automatically — they send themselves when the API is live"
+      sub="Class reminders (10 minutes before), postponement and admission messages are created automatically — the server sends them when the WhatsApp API is connected; otherwise send them from here"
     >
-      {isDir(user) && (
+      {apiOn !== null && (
         <div
           style={{
             ...S.card,
             marginBottom: 14,
-            borderLeft: `4px solid #25D366`,
+            borderLeft: `4px solid ${apiOn ? C.green : C.gold}`,
+            fontSize: 13,
           }}
         >
-          <div style={{ fontWeight: 800, marginBottom: 4 }}>
-            ⚙️ WhatsApp Business API connection (Twilio / Meta)
-          </div>
-          <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>
-            Deploy the bundled backend server (whatsapp-server.js) and enter its URL here — then turn on auto-send and messages go straight to the guardian's WhatsApp. The API key/token lives in the backend's .env file, not here (for security).
-          </div>
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <input
-              style={{ ...S.input, flex: 1, minWidth: 220 }}
-              value={cfg.backendUrl}
-              onChange={(e) => setCfg({ backendUrl: e.target.value })}
-              placeholder="Backend URL — e.g. https://tqa-whatsapp.onrender.com"
-            />
-            <label
-              style={{
-                display: "flex",
-                gap: 8,
-                alignItems: "center",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-                padding: "9px 14px",
-                borderRadius: 10,
-                background: cfg.autoSend ? C.greenBg : C.cream,
-                border: `1.5px solid ${cfg.autoSend ? C.green : C.line}`,
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={cfg.autoSend}
-                onChange={(e) => setCfg({ autoSend: e.target.checked })}
-              />
-              ⚡ Auto-send {cfg.autoSend ? "Active" : "Off"}
-            </label>
-          </div>
-          {cfg.autoSend && !cfg.backendUrl && (
-            <div style={{ fontSize: 12, color: C.red, marginTop: 6 }}>
-              ⚠️ Auto-send is on but no backend URL has been set.
-            </div>
+          {apiOn ? (
+            <>
+              ✅ <b>WhatsApp API connected</b> — the server sends messages by itself. Use the
+              buttons below only to retry a failed one.
+            </>
+          ) : (
+            <>
+              ⚠️ <b>WhatsApp API not connected yet</b> — press the green button: WhatsApp opens
+              with the message ready, and it is marked as sent.
+              {isDir(user) && (
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+                  To send automatically, add the Meta keys in Render → tqa-backend → Environment.
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
-      <div style={{ display: "grid", gap: 10 }}>
-        {loading && <Loader text="Loading messages" />}
-        {!loading && list.length === 0 && (
-          <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
-            No messages yet — they appear here automatically 5 minutes before a class starts or when a class is postponed.
-          </div>
-        )}
-        {list.map((m) => (
-          <div
-            key={m.id}
-            style={{
-              ...S.card,
-              padding: 14,
-              borderLeft: `4px solid ${m.sent ? C.green : m.reason === "Class postponed" ? C.red : C.gold}`,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                alignItems: "flex-start",
-                flexWrap: "wrap",
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 220 }}>
-                <b style={{ fontSize: 13.5 }}>{m.toName}</b>{" "}
-                <Tag
-                  color={m.reason === "Class postponed" ? C.red : C.gold}
-                  bg={m.reason === "Class postponed" ? C.redBg : C.amberBg}
-                >
-                  {m.reason}
-                </Tag>{" "}
-                {m.sent && (
-                  <Tag>
-                    Sent ✔{m.apiStatus === "sent" ? " (API)" : ""}
-                  </Tag>
-                )}
-                {m.apiStatus === "sending" && (
-                  <Tag color={C.blue} bg={C.blueBg}>
-                    ⏳ Sending via API...
-                  </Tag>
-                )}
-                {m.apiStatus === "failed" && (
-                  <Tag color={C.red} bg={C.redBg}>
-                    API failed — check the server/number
-                  </Tag>
-                )}
-                <div style={{ fontSize: 11.5, color: C.muted }}>
-                  Student: {m.student} · +{m.phone} · {fmtDate(m.date)}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12.5,
-                    marginTop: 6,
-                    background: C.cream,
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                  }}
-                >
-                  {m.text}
-                </div>
+      {loading && <Loader text="Loading messages" />}
+      {loadErr && <div style={{ color: C.red, fontSize: 13, marginBottom: 8 }}>{loadErr}</div>}
+      {!loading && (
+        <>
+          <div style={{ fontWeight: 800, margin: "4px 0 8px" }}>📤 To send ({toSend.length})</div>
+          <div style={{ display: "grid", gap: 10 }}>
+            {toSend.length === 0 && (
+              <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
+                Nothing waiting to be sent.
               </div>
-              <span
-                style={{ display: "flex", flexDirection: "column", gap: 6 }}
-              >
-                {!m.sent && cfg.backendUrl && (
-                  <Btn sm onClick={() => sendViaApi(m)}>
-                    🚀 Send via API
-                  </Btn>
-                )}
-                <a
-                  href={`https://wa.me/${m.phone}?text=${encodeURIComponent(m.text)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => markSent(m.id)}
-                  style={{ textDecoration: "none" }}
-                >
-                  <Btn sm style={{ background: "#25D366", color: "#fff" }}>
-                    📱 Manual (wa.me)
-                  </Btn>
-                </a>
-              </span>
-            </div>
+            )}
+            {toSend.map((m) => row(m, true))}
           </div>
-        ))}
-      </div>
-      <div
-        style={{
-          marginTop: 12,
-          padding: "10px 12px",
-          borderRadius: 10,
-          background: C.blueBg,
-          fontSize: 12,
-          color: C.blue,
-        }}
-      >
-        ℹ️ When the API is connected (settings above), the server sends each message straight to the guardian's WhatsApp via Twilio/Meta as soon as it is created. Setup guide: see whatsapp-setup.md. Without the API, the manual (wa.me) buttons still work.
-      </div>
+          {missed.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <Btn sm kind="soft" onClick={() => setShowMissed((x) => !x)}>
+                ⌛ {missed.length} reminder(s) not sent before the class started —{" "}
+                {showMissed ? "hide" : "show"}
+              </Btn>
+              {showMissed && (
+                <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
+                  {missed.map((m) => row(m, false))}
+                </div>
+              )}
+            </div>
+          )}
+          {sent.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <Btn sm kind="soft" onClick={() => setShowSent((x) => !x)}>
+                ✔ {sent.length} sent — {showSent ? "hide" : "show"}
+              </Btn>
+              {showSent && (
+                <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
+                  {sent.map((m) => row(m, false))}
+                </div>
+              )}
+            </div>
+          )}
+          <div style={{ fontSize: 11.5, color: C.muted, marginTop: 12 }}>
+            Messages from the last 30 days are shown.
+          </div>
+        </>
+      )}
     </Section>
   );
 }
@@ -25194,48 +25198,6 @@ export default function App() {
   const [livePopupDone, setLivePopupDone] = useState([]);
   const [autoJoinId, setAutoJoinId] = useState(null);
   const [receipt, setReceipt] = useState(null);
-  // WhatsApp Business API অটো-সেন্ড: আউটবক্সে নতুন মেসেজ এলে ব্যাকএন্ডে পাঠায়
-  useEffect(() => {
-    const cfg = db.waConfig || {};
-    if (!cfg.autoSend || !cfg.backendUrl) return;
-    const pending = (db.waOutbox || []).filter((m) => !m.sent && !m.apiTried);
-    if (!pending.length) return;
-    setDb((d) => ({
-      ...d,
-      waOutbox: d.waOutbox.map((m) =>
-        pending.some((p) => p.id === m.id)
-          ? { ...m, apiTried: true, apiStatus: "sending" }
-          : m,
-      ),
-    }));
-    pending.forEach(async (m) => {
-      try {
-        const res = await fetch(
-          cfg.backendUrl.replace(/\/+$/, "") + "/api/send-whatsapp",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ to: m.phone, text: m.text }),
-          },
-        );
-        setDb((d) => ({
-          ...d,
-          waOutbox: d.waOutbox.map((x) =>
-            x.id === m.id
-              ? { ...x, sent: res.ok, apiStatus: res.ok ? "sent" : "failed" }
-              : x,
-          ),
-        }));
-      } catch (err) {
-        setDb((d) => ({
-          ...d,
-          waOutbox: d.waOutbox.map((x) =>
-            x.id === m.id ? { ...x, apiStatus: "failed" } : x,
-          ),
-        }));
-      }
-    });
-  }, [db.waOutbox, db.waConfig]);
   const [confirmReq, setConfirmReq] = useState(null);
   const [toast, setToast] = useState(null);
   useEffect(() => {
