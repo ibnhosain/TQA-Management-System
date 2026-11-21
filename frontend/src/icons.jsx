@@ -22,7 +22,7 @@ import {
   Save, ScrollText, Search, Send, SendHorizontal, Settings, Shield, SkipForward, Smartphone,
   Smile, Sparkles, Speech, Sprout, Star, Tag, Target, Timer, Trash2, TreePalm, TrendingUp,
   TriangleAlert, Upload, User, UserRound, Users, Video, Wallet, Wrench, X, Zap, Layers,
-  ShieldCheck, Clapperboard, Footprints, CalendarClock, ListChecks, BookCheck, IdCard, Undo2,
+  ShieldCheck, Clapperboard, Footprints, CalendarClock, ListChecks, BookCheck, IdCard, Undo2, Backpack,
 } from "lucide-react";
 
 /* Lucide-এ নেই এমন কয়েকটি — একই ধাঁচে (২৪×২৪, রেখা, গোল প্রান্ত) হাতে আঁকা */
@@ -107,7 +107,7 @@ export const EMOJI_ICON = {
   "❓": CircleHelp, "🤖": Bot, "📎": Paperclip, "❤": Heart, "🔖": Bookmark, "🪵": Layers,
   "👆": Pointer, "🚀": Rocket, "🏷": Tag, "👂": Ear, "🎤": Mic, "⏸": Pause, "🎯": Target,
   "⏭": SkipForward, "🏅": Medal, "🎉": PartyPopper, "⛶": Maximize, "🎞": Film,
-  "🐪": Footprints,
+  "🐪": Footprints, "🎒": Backpack,
   "🟢": dot("#16a34a"), "🔴": dot("#dc2626"), "🟠": dot("#ea580c"), "🟡": dot("#eab308"),
   "⚪": dot("#d1d5db"),
 };

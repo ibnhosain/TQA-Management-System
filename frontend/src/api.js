@@ -257,10 +257,7 @@ export const api = {
     const f = new FormData(); f.append("name", name); f.append("file", file);
     return request("/books/", { method: "POST", body: f, isForm: true });
   },
-  addBookLink: (name, link, library_shelf) =>  // Google Drive/লিংক — সাইজ সীমা নেই
-    request("/books/", { method: "POST", body: { name, link, ...(library_shelf ? { library_shelf } : {}) } }),
-  // 🪔 Little Mu'min Library — পরিচালক বইটিকে কোন তাকে রাখবেন ("" = নাম দেখে নিজে থেকে)
-  setBookShelf: (id, library_shelf) => request(`/books/${id}/`, { method: "PATCH", body: { library_shelf } }),
+  addBookLink: (name, link) => request("/books/", { method: "POST", body: { name, link } }),  // Google Drive/লিংক — সাইজ সীমা নেই
   updateBookName: (id, name) => request(`/books/${id}/`, { method: "PATCH", body: { name } }),  // পরিচালক বইয়ের নাম বদলাতে পারেন (যেমন ইংরেজি করতে)
   deleteBook: (id) => request(`/books/${id}/`, { method: "DELETE" }),
   syllabus: (courseId) => request(`/syllabus/?course=${courseId}`),
@@ -470,6 +467,8 @@ export const api = {
   libraryBooks: () => request("/library-books/"),
   addLibraryBook: (d) => request("/library-books/", { method: "POST", body: d }),
   deleteLibraryBook: (id) => request(`/library-books/${id}/`, { method: "DELETE" }),
+  // 🪔 Little Mu'min Library — নাম/লিংক/তাক বদল (cls = তাকের id)
+  updateLibraryBook: (id, d) => request(`/library-books/${id}/`, { method: "PATCH", body: d }),
 
   // ব্যবহারকারী (পরিচালক)
   allUsers: () => request("/users/"),

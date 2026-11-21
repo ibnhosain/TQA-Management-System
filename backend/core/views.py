@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 
-from .models import (LIBRARY_SHELVES, User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
+from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
                      Routine, RoutineStudentSchedule, ClassSession, Attendance, Assignment, Exam, Submission,
                      ExamResult, FeePayment, DueMonth, TeacherPayment, SentReceipt,
                      Admission, LeaveRequest, Rating, StudentRemark, Notice, Notification,
@@ -205,11 +205,7 @@ class AcademicBookViewSet(viewsets.ModelViewSet):
                 from django.core.files.storage import default_storage
                 saved = default_storage.save(f"books/{uploaded.name}", uploaded)
                 file_url = request.build_absolute_uri(f"/media/{saved}")
-        # লাইব্রেরি পাতা থেকে যোগ করলে তাকও সাথে আসে
-        shelf = (request.data.get("library_shelf") or "").strip()
-        if shelf and shelf not in {k for k, _ in LIBRARY_SHELVES}:
-            return Response({"error": "Unknown library shelf"}, status=400)
-        book = AcademicBook.objects.create(name=name, file=file_url, library_shelf=shelf)
+        book = AcademicBook.objects.create(name=name, file=file_url)
         return Response(AcademicBookSerializer(book).data, status=201)
 
 
@@ -3182,9 +3178,11 @@ class WaMessageViewSet(viewsets.ModelViewSet):
 
 # ─────────────────────────── লাইব্রেরি বই (বাহ্যিক লিংক) ───────────────────────────
 class LibraryBookViewSet(viewsets.ModelViewSet):
+    """🪔 Little Mu'min Library — লগইন করা যে কেউ (যেকোনো ভূমিকা, ট্রায়ালও,
+    যেকোনো কোর্স) সব বই পড়তে পারে; যোগ/বদল/মোছা পরিচালক ও এডমিন।"""
     queryset = LibraryBook.objects.all()
     serializer_class = LibraryBookSerializer
-    permission_classes = [ReadAllWriteAdmin]  # সবাই দেখতে পারে, যোগ/মুছা এডমিন+
+    permission_classes = [ReadAllWriteAdmin]
 
 
 # ─────────────────────────── দৈনিক আমল ───────────────────────────

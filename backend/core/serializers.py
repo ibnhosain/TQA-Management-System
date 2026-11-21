@@ -988,6 +988,13 @@ class LibraryBookSerializer(serializers.ModelSerializer):
         model = LibraryBook
         fields = ["id", "cls", "title", "author", "link", "file_type", "created_at"]
 
+    def validate_cls(self, value):
+        from .models import LIBRARY_SHELVES
+        value = (value or "").strip()
+        if value not in {k for k, _ in LIBRARY_SHELVES}:
+            raise serializers.ValidationError("Choose one of the library shelves")
+        return value
+
 
 class DailyAmalItemSerializer(serializers.ModelSerializer):
     class Meta:

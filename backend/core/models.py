@@ -101,8 +101,8 @@ class User(AbstractUser):
 
 
 # ─────────────────────────── একাডেমিক বই ও কোর্স ───────────────────────────
-# 🪔 Little Mu'min Library-র তাক — ফ্রন্টএন্ডের IQRA_SHELVES-এর একই id। "teachers" তাক
-# এখানে নেই: সেটা staff_only থেকেই ঠিক হয়, হাতে বসানো যায় না।
+# 🪔 Little Mu'min Library-র তাক — ফ্রন্টএন্ডের IQRA_SHELVES-এর একই id।
+# লাইব্রেরির বই (LibraryBook.cls) কেবল এগুলোর একটিতে বসে।
 LIBRARY_SHELVES = [
     ("qaida", "Qaida & Arabic"),
     ("quran", "Quran & Tajweed"),
@@ -122,9 +122,6 @@ class AcademicBook(models.Model):
     # True হলে বইটি (যেমন শিক্ষক নির্দেশিকা) কেবল পরিচালক, এডমিন ও উস্তাদ দেখেন —
     # শিক্ষার্থী, অভিভাবক বা ট্রায়ালের তালিকায় আসে না
     staff_only = models.BooleanField("কেবল শিক্ষক ও পরিচালকের জন্য", default=False)
-    # লাইব্রেরির কোন তাকে — খালি থাকলে ফ্রন্টএন্ড বইয়ের নাম দেখে আন্দাজ করে
-    library_shelf = models.CharField("লাইব্রেরির তাক", max_length=20, blank=True, default="",
-                                     choices=LIBRARY_SHELVES)
     created_at = models.DateField(auto_now_add=True)
 
     def __str__(self):
@@ -954,8 +951,10 @@ class WaMessage(models.Model):
 
 # ─────────────────────────── লাইব্রেরি বই (বাহ্যিক লিংক) ───────────────────────────
 class LibraryBook(models.Model):
-    """ওয়েবসাইট লাইব্রেরি — ডাউনলোড লিংকসহ পাঠ্যপুস্তক ও সহায়ক বই"""
-    cls = models.CharField("শ্রেণি / ক্যাটাগরি", max_length=100)
+    """🪔 Little Mu'min Library — একাডেমিক বই থেকে সম্পূর্ণ আলাদা তালিকা।
+    পরিচালক একে একে বই দেন (Drive লিংক); যেকোনো ভূমিকার যে কেউ, যেকোনো
+    কোর্সের হোক, সব বই পড়তে পারে। cls = তাকের id (LIBRARY_SHELVES)।"""
+    cls = models.CharField("তাক (shelf)", max_length=100)
     title = models.CharField("বইয়ের নাম", max_length=200)
     author = models.CharField("লেখক", max_length=150, blank=True)
     link = models.URLField("ডাউনলোড লিংক", blank=True, default="#")

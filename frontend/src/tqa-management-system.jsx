@@ -8376,13 +8376,12 @@ function FormsView({ db, setDb }) {
    সব বই বিষয় অনুযায়ী কাঠের তাকে সাজানো; বইয়ে চাপলে অ্যাপের ভেতরেই পূর্ণ-পর্দায়
    বইটি খোলে (BookReader) — Drive-এর পাতায় চলে যায় না।
 
-   আলাদা বই-তালিকা রাখা হয়নি — Academic Books-এ যোগ করা প্রতিটি বই (Drive
-   লিংকসহ) নিজে থেকেই এখানে আসে। ফলে দুই জায়গায় লিংক মেলানোর ঝামেলা নেই,
-   একটা বদলালে অন্যটা পুরনো থেকে যায় না।
+   ⚠️ একাডেমিক বই থেকে সম্পূর্ণ আলাদা তালিকা (LibraryBook, /library-books/) —
+   মালিকের নির্দেশ: লাইব্রেরির বই তিনি একে একে দেবেন; কোর্সের বই থাকে
+   🎒 Academic Books-এর স্কুলব্যাগে। যেকোনো ভূমিকার যে কেউ, যেকোনো কোর্সের
+   হোক, লাইব্রেরির সব বই পড়তে পারে; যোগ/বদল/মোছা পরিচালক ও এডমিন।
 
-   তাক: পরিচালক বেছে দিলে সেটাই (library_shelf), নইলে বইয়ের নাম দেখে আন্দাজ।
-   শিক্ষক-নির্দেশিকা (staff_only) সার্ভার শিক্ষার্থীদের পাঠায়ই না; কর্মীরা
-   সেগুলো "Teachers' Corner" তাকে দেখেন। */
+   তাক: বইয়ের cls (তাকের id); না মিললে বইয়ের নাম দেখে আন্দাজ। */
 const IQRA_SHELVES = [
   { id: "qaida", emoji: "🔤", name: "Qaida & Arabic" },
   { id: "quran", emoji: "📖", name: "Quran & Tajweed" },
@@ -8393,7 +8392,6 @@ const IQRA_SHELVES = [
   { id: "manners", emoji: "🤲", name: "Duas & Good Manners" },
   { id: "stories", emoji: "📜", name: "Stories of the Prophets" },
   { id: "more", emoji: "📚", name: "More Books" },
-  { id: "teachers", emoji: "🧑‍🏫", name: "Teachers' Corner" },
 ];
 const IQRA_SHELF = Object.fromEntries(IQRA_SHELVES.map((s) => [s.id, s]));
 /* নাম দেখে তাক — ⚠️ ক্রম জরুরি: "Hadith with stories" হাদিসে যাবে, গল্পে
@@ -8410,8 +8408,7 @@ const IQRA_RULES = [
   ["qaida", /qa'?ida|qaeda|noorani|nurani|arabic|alphabet|writing|আরবি|কায়দা|কাইদা|নূরানী/i],
 ];
 const iqraShelfOf = (b) => {
-  if (b.staff_only) return "teachers";
-  if (b.library_shelf && IQRA_SHELF[b.library_shelf]) return b.library_shelf;
+  if (b.cls && IQRA_SHELF[b.cls]) return b.cls;
   const name = String(b.name || "").normalize("NFC");
   const hit = IQRA_RULES.find(([, re]) => re.test(name));
   return hit ? hit[0] : "more";
@@ -8569,25 +8566,33 @@ const iqraReaderSrc = (url) => {
 /* 📖 পূর্ণ-পর্দার পড়ার ঘর — বাচ্চারা বোঝে না যে বইটা Drive থেকে আসছে।
    ⚠️ ডান-উপরের কোণে স্বচ্ছ "ঢাল": Drive-এর ফ্রেমে ওখানে "নতুন উইন্ডোতে
    খুলুন" বোতাম থাকে, চাপলে Drive-এর পাতায় চলে যেত। */
-function BookReader({ book, emoji, onClose }) {
-  const [loaded, setLoaded] = useState(false);
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
+/* পূর্ণ-পর্দার কিছু খোলা থাকলে ফোনের ব্যাক/Esc সেটাই বন্ধ করে — স্তরে স্তরে:
+   খোলা ব্যাগের উপর বই খোলা থাকলে প্রথম ব্যাকে বই, পরেরটায় ব্যাগ। */
+function useBackClose(onClose) {
+  const ref = useRef(onClose);
+  ref.current = onClose;
   useEffect(() => {
-    const close = () => closeRef.current();
+    const close = () => ref.current();
+    const prev = BACK_OVERRIDE.fn;
     BACK_OVERRIDE.fn = close;
     const onKey = (e) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape" && BACK_OVERRIDE.fn === close) close(); // কেবল সবচেয়ে উপরেরটা
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
+    const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      if (BACK_OVERRIDE.fn === close) BACK_OVERRIDE.fn = null;
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      // ব্যাক-পাহারা আগেই null করে দিতে পারে — তখনও নিচের স্তরকে ফিরিয়ে দিই
+      if (BACK_OVERRIDE.fn === close || BACK_OVERRIDE.fn === null) BACK_OVERRIDE.fn = prev;
+      document.body.style.overflow = prevOverflow;
     };
   }, []);
+}
+
+function BookReader({ book, emoji, onClose }) {
+  const [loaded, setLoaded] = useState(false);
+  useBackClose(onClose);
   const { src, drive } = iqraReaderSrc(book.link);
   const { title } = iqraSplitName(book.name);
   return createPortal(
@@ -8622,6 +8627,221 @@ function BookReader({ book, emoji, onClose }) {
   );
 }
 
+/* ═══════════════ 🎒 Academic Books — স্কুলব্যাগ ═══════════════
+   প্রতিটি কোর্স একটি স্কুলব্যাগ; খোলা চেইনের ফাঁক দিয়ে ভেতরের বই উঁকি দেয়,
+   সামনের পকেটে বইয়ের সংখ্যা। ব্যাগে চাপলে ব্যাগটা খুলে সামনে আসে, ভেতরের সব
+   বই দেখা যায়; বইয়ে চাপলে পড়া। শিক্ষার্থী কেবল নিজের কোর্সের ব্যাগ পায়
+   (সার্ভার কোর্স-তালিকা ভূমিকা অনুযায়ী ছেঁকে দেয়)। */
+const BAG_COLORS = ["#e2574c", "#2f80ed", "#27ae60", "#f2994a", "#9b51e0", "#0f9d9a", "#e84393", "#3f51b5"];
+const bagShade = (hex, amt) => {
+  const n = parseInt(String(hex).slice(1), 16);
+  const f = (c) => Math.max(0, Math.min(255, Math.round(amt < 0 ? c * (1 + amt) : c + (255 - c) * amt)));
+  return "#" + [n >> 16, (n >> 8) & 255, n & 255].map((c) => f(c).toString(16).padStart(2, "0")).join("");
+};
+// কোর্সের নিজের রং থাকলে সেটাই; সবার ডিফল্ট সবুজ হলে প্যালেট থেকে — নইলে সব ব্যাগ এক রঙের হতো
+const bagColorOf = (c) =>
+  /^#[0-9a-f]{6}$/i.test(c.color || "") && c.color.toLowerCase() !== "#1a5c3a"
+    ? c.color
+    : BAG_COLORS[(Number(c.id) || iqraHash(c.name)) % BAG_COLORS.length];
+
+const BAG_CSS = `
+.bag-wrap{font-family:'Fredoka','Hind Siliguri',sans-serif;color:#3e2a14}
+.bag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:22px 14px;padding:6px 2px}
+.bag-card{border:none;background:none;cursor:pointer;font:inherit;color:inherit;display:flex;flex-direction:column;
+  align-items:center;gap:8px;padding:8px 6px;border-radius:18px}
+.bag-card svg{width:100%;max-width:168px;height:auto;filter:drop-shadow(0 12px 10px rgba(40,25,10,.22));transform-origin:50% 12%}
+.bag-card:hover svg,.bag-card:focus-visible svg{animation:bagWiggle .6s ease-in-out}
+.bag-card:focus-visible{outline:3px solid #ffd54f;outline-offset:2px}
+@keyframes bagWiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-4deg)}75%{transform:rotate(4deg)}}
+.bag-name{font-weight:700;font-size:15.5px;text-align:center;line-height:1.2}
+.bag-sub{font-size:12.5px;font-weight:600;color:#8a7763;margin-top:-4px}
+.bag-overlay{position:fixed;inset:0;z-index:90;background:rgba(20,28,24,.6);display:grid;place-items:center;padding:14px}
+.bag-open{width:min(840px,100%);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+  border-radius:28px 28px 22px 22px;background:var(--bag);box-shadow:0 26px 60px rgba(0,0,0,.45);
+  font-family:'Fredoka','Hind Siliguri',sans-serif;animation:bagPop .3s cubic-bezier(.3,1.4,.5,1)}
+@keyframes bagPop{from{transform:scale(.86) translateY(30px);opacity:0}to{transform:none;opacity:1}}
+.bag-head{display:flex;align-items:center;gap:12px;padding:14px 16px 12px;color:#fff;background:var(--bagD)}
+.bag-head b{font-size:19px;line-height:1.2}
+.bag-head small{display:block;font-size:12.5px;opacity:.85;font-weight:600}
+.bag-zip{height:9px;background:repeating-linear-gradient(90deg,#f5d36b 0 5px,transparent 5px 9px),var(--bagD)}
+.bag-x{margin-left:auto;flex:0 0 auto;border:none;background:#ffffff2e;color:#fff;border-radius:999px;width:40px;height:40px;
+  cursor:pointer;display:grid;place-items:center}
+.bag-inside{flex:1;overflow:auto;margin:12px;padding:22px 16px 24px;border-radius:18px;
+  background:repeating-linear-gradient(45deg,rgba(255,255,255,.045) 0 6px,transparent 6px 12px),var(--bagIn);
+  outline:2px dashed rgba(255,255,255,.3);outline-offset:-8px;box-shadow:inset 0 10px 24px rgba(0,0,0,.35)}
+.bag-books{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:20px 14px;align-items:end;justify-items:center}
+.bag-book{position:relative;width:100%;max-width:134px;height:var(--h);border:none;border-radius:4px 12px 12px 4px;
+  padding:14px 9px 10px 17px;background:linear-gradient(150deg,var(--c1),var(--c2));color:var(--fg);text-align:left;
+  cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:7px;transform:rotate(var(--tilt));
+  box-shadow:3px 5px 0 rgba(0,0,0,.3),inset -4px 0 0 rgba(255,255,255,.2);transition:transform .28s cubic-bezier(.3,1.6,.5,1)}
+.bag-book:hover,.bag-book:focus-visible{transform:translateY(-12px) rotate(0) scale(1.05);outline:none}
+.bag-book .sp{position:absolute;left:0;top:0;bottom:0;width:10px;border-radius:4px 0 0 4px;background:rgba(0,0,0,.2)}
+.bag-book .t{font-weight:700;font-size:13.5px;line-height:1.22;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;
+  overflow:hidden;overflow-wrap:break-word;hyphens:auto}
+.bag-book .age{margin-top:auto;align-self:flex-start;font-size:10.5px;font-weight:700;background:#ffffffe0;color:#4a2c10;
+  border-radius:999px;padding:2px 8px}
+.bag-book .flag{position:absolute;top:8px;right:-7px;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:6px;
+  transform:rotate(10deg);color:#fff;background:#4a2c10}
+.bag-empty{color:#fff;text-align:center;padding:30px 10px;font-weight:600;font-size:15.5px;opacity:.92}
+@media (max-width:560px){.bag-grid{grid-template-columns:repeat(2,1fr)}.bag-inside{margin:8px;padding:18px 10px}}
+@media (prefers-reduced-motion:reduce){.bag-card:hover svg{animation:none}.bag-open{animation:none}}
+`;
+
+/* স্কুলব্যাগের ছবি — সামনে থেকে, চেইন খোলা; উঁকি দেওয়া বইগুলো আসল বইয়ের মলাটের রঙে */
+function BagSvg({ color, books }) {
+  const dark = bagShade(color, -0.32);
+  const light = bagShade(color, 0.16);
+  const slots = [
+    { x: 56, w: 26, top: 22, rot: -9 },
+    { x: 84, w: 30, top: 10, rot: -2 },
+    { x: 117, w: 26, top: 17, rot: 6 },
+    { x: 141, w: 21, top: 30, rot: 12 },
+  ];
+  const peek = books.slice(0, slots.length);
+  return (
+    <svg viewBox="0 0 200 230" aria-hidden="true">
+      {/* পিঠের ফিতে ও হাতল — ব্যাগের পেছনে */}
+      <path d="M40 92 Q24 146 36 206" stroke={dark} strokeWidth="10" fill="none" strokeLinecap="round" />
+      <path d="M160 92 Q176 146 164 206" stroke={dark} strokeWidth="10" fill="none" strokeLinecap="round" />
+      <path d="M76 62 C76 26 124 26 124 62" stroke={dark} strokeWidth="9" fill="none" strokeLinecap="round" />
+      {peek.map((b, i) => {
+        const s = slots[i];
+        const [c1, c2] = IQRA_COVERS[iqraHash(b.name) % IQRA_COVERS.length];
+        return (
+          <g key={b.id} transform={`rotate(${s.rot} ${s.x + s.w / 2} 90)`}>
+            <rect x={s.x} y={s.top} width={s.w} height={92 - s.top} rx="3" fill={c2} />
+            <rect x={s.x} y={s.top} width={s.w} height="9" rx="3" fill={c1} />
+            <rect x={s.x} y={s.top} width="5" height={92 - s.top} fill="rgba(0,0,0,.18)" />
+            <rect x={s.x + s.w * 0.3} y={s.top + 16} width={s.w * 0.45} height="4" rx="2" fill="rgba(255,255,255,.65)" />
+          </g>
+        );
+      })}
+      {/* ব্যাগের দেহ */}
+      <path d="M38 76 Q38 60 54 60 L146 60 Q162 60 162 76 L168 200 Q168 217 151 217 L49 217 Q32 217 32 200 Z" fill={color} />
+      {/* খোলা চেইন */}
+      <path d="M44 66 Q100 78 156 66" stroke={dark} strokeWidth="6" fill="none" strokeLinecap="round" />
+      <path d="M44 66 Q100 78 156 66" stroke="#f5d36b" strokeWidth="2.5" strokeDasharray="2 3" fill="none" />
+      <path d="M48 82 Q43 142 46 204" stroke="#fff" strokeOpacity=".2" strokeWidth="6" fill="none" strokeLinecap="round" />
+      {/* সামনের পকেট — বইয়ের সংখ্যা */}
+      <path d="M58 132 Q58 120 70 120 L130 120 Q142 120 142 132 L144 192 Q144 205 131 205 L69 205 Q56 205 56 192 Z" fill={light} />
+      <path d="M64 133 L136 133" stroke={dark} strokeWidth="2.5" strokeDasharray="3 2.5" />
+      <rect x="131" y="133" width="7" height="13" rx="2.5" fill="#f5d36b" stroke={dark} strokeWidth="1.2" />
+      <text x="100" y="178" textAnchor="middle" fontSize="30" fontWeight="700" fill="#fff" fontFamily="Fredoka, sans-serif">
+        {books.length}
+      </text>
+      <text x="100" y="195" textAnchor="middle" fontSize="11.5" fontWeight="600" fill="#fff" fillOpacity=".88" fontFamily="Fredoka, sans-serif">
+        {books.length === 1 ? "book" : "books"}
+      </text>
+    </svg>
+  );
+}
+
+/* খোলা ব্যাগ — ভেতরের সব বই */
+function OpenBag({ bag, label, onRead, onClose }) {
+  useBackClose(onClose);
+  const dark = bagShade(bag.color, -0.3);
+  return createPortal(
+    <div className="bag-overlay bag-wrap" onClick={onClose}>
+      <style>{BAG_CSS}</style>
+      <div
+        className="bag-open"
+        role="dialog"
+        aria-modal="true"
+        aria-label={bag.name}
+        onClick={(e) => e.stopPropagation()}
+        style={{ "--bag": bag.color, "--bagD": dark, "--bagIn": bagShade(bag.color, -0.5) }}
+      >
+        <div className="bag-head">
+          <Ico e="🎒" size={30} style={{ verticalAlign: 0 }} />
+          <span style={{ minWidth: 0 }}>
+            <b>{bag.name}</b>
+            <small>
+              {bag.books.length} {bag.books.length === 1 ? "book" : "books"} in this bag
+            </small>
+          </span>
+          <button className="bag-x" onClick={onClose} aria-label="Close the bag">
+            <Ico e="✕" size={20} style={{ verticalAlign: 0 }} />
+          </button>
+        </div>
+        <div className="bag-zip" />
+        <div className="bag-inside">
+          {!bag.books.length ? (
+            <div className="bag-empty">
+              <Ico e="📭" /> This bag is empty for now — books will be added soon.
+            </div>
+          ) : (
+            <div className="bag-books">
+              {bag.books.map((b) => {
+                const h = iqraHash(b.name);
+                const [c1, c2, fg] = IQRA_COVERS[h % IQRA_COVERS.length];
+                const { title, age } = iqraSplitName(label(b));
+                return (
+                  <button
+                    key={b.id}
+                    className="bag-book"
+                    lang="en"
+                    title={label(b)}
+                    onClick={() => onRead(b)}
+                    style={{
+                      "--c1": c1,
+                      "--c2": c2,
+                      "--fg": fg,
+                      "--h": `${150 + (h % 3) * 8}px`,
+                      "--tilt": `${((h >>> 3) % 5) - 2}deg`,
+                    }}
+                  >
+                    <span className="sp" />
+                    <Ico
+                      e={IQRA_SHELF[iqraShelfOf({ name: b.name })].emoji}
+                      size={28}
+                      strokeWidth={2.2}
+                      style={{ verticalAlign: 0 }}
+                    />
+                    <span className="t">{title}</span>
+                    {age && <span className="age">{age}</span>}
+                    {b.staff_only ? (
+                      <span className="flag">TEACHERS</span>
+                    ) : (
+                      !b.file && <span className="flag">NO FILE</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function SchoolBags({ bags, label, onRead }) {
+  const [openId, setOpenId] = useState(null);
+  const open = bags.find((b) => b.id === openId);
+  return (
+    <div className="bag-wrap">
+      <style>{BAG_CSS}</style>
+      {!bags.length ? (
+        <div style={{ ...S.card, textAlign: "center", color: C.muted, padding: 28 }}>
+          <Ico e="🎒" /> No school bag yet — your course books will appear here once you join a course.
+        </div>
+      ) : (
+        <div className="bag-grid">
+          {bags.map((bag) => (
+            <button key={bag.id} className="bag-card" onClick={() => setOpenId(bag.id)} title={`Open the ${bag.name} bag`}>
+              <BagSvg color={bag.color} books={bag.books} />
+              <span className="bag-name">{bag.name}</span>
+              <span className="bag-sub">Tap to open</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {open && <OpenBag bag={open} label={label} onRead={onRead} onClose={() => setOpenId(null)} />}
+    </div>
+  );
+}
+
 // এই ডিভাইসে শেষ খোলা বইগুলো — "🔖 Read Again" তাকের জন্য। কেবল সুবিধা:
 // প্রাইভেট উইন্ডো/মোছা ডেটায় খালি থাকলেও পাতা ঠিকঠাক চলে।
 const IQRA_RECENT_KEY = "tqa-library-recent";
@@ -8640,19 +8860,26 @@ function LibraryView({ user }) {
   const [failed, setFailed] = useState(false);
   const [q, setQ] = useState("");
   const [only, setOnly] = useState(""); // একটিমাত্র তাক দেখাতে
-  // পরিচালকের সাজানো: arrange চালু থাকলে বইয়ে চাপলে Drive নয়, তাক বদলানোর ঘর খোলে
-  const canArrange = isDir(user);
+  // পরিচালক/এডমিন: "Edit books" চালু থাকলে বইয়ে চাপলে পড়ার বদলে বদলানোর ঘর খোলে
+  const canManage = isAdm(user);
   const [arrange, setArrange] = useState(false);
-  const [edit, setEdit] = useState(null); // { book, shelf }
+  const [edit, setEdit] = useState(null); // { book, name, link, shelf }
   const [adding, setAdding] = useState(null); // { name, link, shelf }
   const [saving, setSaving] = useState(false);
   const [reading, setReading] = useState(null); // যে বইটি এখন পড়ার পর্দায় খোলা
-  const BASE_MEDIA = (import.meta.env?.VITE_API_URL || "http://localhost:8000/api").replace(/\/api$/, "");
+  // সার্ভারের LibraryBook → পাতার বই (title → name; "#" মানে লিংক নেই)
+  const fromApi = (b) => ({
+    id: b.id,
+    name: b.title,
+    link: b.link && b.link !== "#" ? b.link : "",
+    cls: b.cls,
+    created_at: b.created_at,
+  });
   const load = () => {
     setFailed(false);
     api
-      .books()
-      .then((d) => setBooks(Array.isArray(d) ? d : []))
+      .libraryBooks()
+      .then((d) => setBooks(Array.isArray(d) ? d.map(fromApi) : []))
       .catch(() => {
         setBooks((b) => b || []);
         setFailed(true);
@@ -8660,14 +8887,9 @@ function LibraryView({ user }) {
   };
   useEffect(load, []);
 
-  const linkOf = (b) => {
-    const f = String(b.file || "").trim();
-    if (!f) return "";
-    return /^https?:\/\//i.test(f) ? f : BASE_MEDIA + (f.startsWith("/") ? f : "/" + f);
-  };
-  const all = (books || []).map((b) => ({ ...b, shelf: iqraShelfOf(b), link: linkOf(b) }));
-  // শিক্ষার্থীরা লিংকহীন বই দেখবে না (চাপলে কিছুই হতো না); কর্মীরা দেখবেন, যাতে ঠিক করা যায়
-  const visible = all.filter((b) => b.link || isAdm(user));
+  const all = (books || []).map((b) => ({ ...b, shelf: iqraShelfOf(b) }));
+  // লিংকহীন বই পাঠকেরা দেখবেন না (চাপলে কিছুই হতো না); পরিচালক/এডমিন দেখবেন, যাতে ঠিক করা যায়
+  const visible = all.filter((b) => b.link || canManage);
   const norm = (s) => String(s || "").normalize("NFC").toLowerCase();
   const nq = norm(q.trim());
   const shown = visible.filter(
@@ -8689,7 +8911,7 @@ function LibraryView({ user }) {
     })),
   ].filter((s) => s.books.length);
   // ⭐ আজকের বই — তারিখ দেখে বাছাই, তাই সারাদিন একই বই, পরদিন নতুন
-  const pickable = visible.filter((b) => b.link && !b.staff_only);
+  const pickable = visible.filter((b) => b.link);
   const daily = pickable.length
     ? [...pickable].sort((a, b) => a.id - b.id)[iqraHash(todayISO()) % pickable.length]
     : null;
@@ -8700,8 +8922,8 @@ function LibraryView({ user }) {
   };
 
   const open = (b) => {
-    if (arrange) return setEdit({ book: b, shelf: b.library_shelf || "" });
-    if (!b.link) return notice("This book has no link yet — add its Google Drive link in Academic Books.");
+    if (arrange) return setEdit({ book: b, name: b.name, link: b.link, shelf: IQRA_SHELF[b.cls] ? b.cls : "" });
+    if (!b.link) return notice("This book has no link yet.");
     setReading(b);
     const next = [b.id, ...recent.filter((id) => id !== b.id)].slice(0, 8);
     setRecent(next);
@@ -8711,27 +8933,51 @@ function LibraryView({ user }) {
       /* সংরক্ষণ না হলেও বই খোলা থামবে না */
     }
   };
-  const guessName = (name) => IQRA_SHELF[iqraShelfOf({ name })].name;
-  const saveShelf = async () => {
+  const guess = (name) => iqraShelfOf({ name });
+  const guessName = (name) => IQRA_SHELF[guess(name)].name;
+  // নাম আর লিংক ঠিক আছে কিনা — যোগ ও বদল দুই জায়গাতেই
+  const checkForm = (f) => {
+    const name = f.name.trim();
+    const link = f.link.trim();
+    if (!name) return notice("Please write the book's name."), null;
+    if (!/^https?:\/\//i.test(link))
+      return notice("Please paste the book's Google Drive link (starts with https://)."), null;
+    // "স্বয়ংক্রিয়" বাছলে নাম দেখে তাক ঠিক করে সেটাই সংরক্ষণ — সার্ভারে তাক খালি থাকে না
+    return { title: name, link, cls: f.shelf || guess(name) };
+  };
+  const saveEdit = async () => {
+    const body = checkForm(edit);
+    if (!body) return;
     setSaving(true);
     try {
-      const r = await api.setBookShelf(edit.book.id, edit.shelf);
-      setBooks((bs) => bs.map((x) => (x.id === r.id ? { ...x, library_shelf: r.library_shelf } : x)));
+      const r = fromApi(await api.updateLibraryBook(edit.book.id, body));
+      setBooks((bs) => bs.map((x) => (x.id === r.id ? r : x)));
       setEdit(null);
-      notice("✔ Book moved.");
+      notice("✔ Book saved.");
     } catch (e) {
-      notice("Could not move the book — " + (e?.data?.error || e?.message || "please try again"));
+      notice("Could not save the book — " + (e?.data?.error || e?.message || "please try again"));
     }
     setSaving(false);
   };
+  const delBook = () => {
+    const b = edit.book;
+    askConfirm(`Remove "${b.name}" from the library?`, async () => {
+      try {
+        await api.deleteLibraryBook(b.id);
+        setBooks((bs) => bs.filter((x) => x.id !== b.id));
+        setEdit(null);
+        notice("✔ Book removed from the library.");
+      } catch (e) {
+        notice("Could not remove the book — " + (e?.data?.error || e?.message || "please try again"));
+      }
+    });
+  };
   const addBook = async () => {
-    const name = adding.name.trim();
-    const link = adding.link.trim();
-    if (!name) return notice("Please write the book's name.");
-    if (!/^https?:\/\//i.test(link)) return notice("Please paste the book's Google Drive link (starts with https://).");
+    const body = checkForm(adding);
+    if (!body) return;
     setSaving(true);
     try {
-      const r = await api.addBookLink(name, link, adding.shelf);
+      const r = fromApi(await api.addLibraryBook({ ...body, file_type: "PDF" }));
       setBooks((bs) => [...(bs || []), r]);
       setAdding(null);
       notice("✔ Book added to the library.");
@@ -8743,7 +8989,7 @@ function LibraryView({ user }) {
   const shelfOptions = (auto) => (
     <>
       <option value="">Automatic — {auto}</option>
-      {IQRA_SHELVES.filter((s) => s.id !== "teachers").map((s) => (
+      {IQRA_SHELVES.map((s) => (
         <option key={s.id} value={s.id}>
           {s.name}
         </option>
@@ -8810,7 +9056,7 @@ function LibraryView({ user }) {
           placeholder="Find a book…"
           aria-label="Find a book"
         />
-        {canArrange && (
+        {canManage && (
           <>
             <button className="iqra-tool" onClick={() => setAdding({ name: "", link: "", shelf: "" })}>
               <Ico e="➕" /> Add a book
@@ -8818,16 +9064,16 @@ function LibraryView({ user }) {
             <button
               className={"iqra-tool alt" + (arrange ? " on" : "")}
               onClick={() => setArrange((a) => !a)}
-              title="Tap a book to choose its shelf"
+              title="Tap a book to rename it, change its link or shelf, or remove it"
             >
-              {withIcons(arrange ? "✔ Done arranging" : "🛠️ Arrange shelves")}
+              {withIcons(arrange ? "✔ Done" : "✏️ Edit books")}
             </button>
           </>
         )}
       </div>
       {arrange && (
         <div style={{ margin: "-2px 0 10px", fontSize: 13.5, fontWeight: 600, color: "#7a4a1d" }}>
-          <Ico e="🛠" /> Arranging — tap any book to move it to another shelf. Students don’t see this.
+          <Ico e="✏" /> Editing — tap any book to rename it, change its link or shelf, or remove it. Readers don’t see this.
         </div>
       )}
       {shelvesWithBooks.length > 1 && (
@@ -8857,7 +9103,13 @@ function LibraryView({ user }) {
           </div>
         ) : !shelves.length ? (
           <div className="iqra-empty">
-            {withIcons(visible.length ? "No book found — try another word 🔍" : "📭 The shelves are waiting for books!")}
+            {withIcons(
+              visible.length
+                ? "No book found — try another word 🔍"
+                : canManage
+                  ? "📭 The shelves are empty — add the first book with ➕ Add a book."
+                  : "📭 The shelves are waiting for books — new books are coming soon!",
+            )}
           </div>
         ) : (
           shelves.map((s) => (
@@ -8918,30 +9170,23 @@ function LibraryView({ user }) {
       )}
 
       {edit && (
-        <Modal title="📚 Move this book" onClose={() => setEdit(null)}>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>{edit.book.name}</div>
-          {edit.book.staff_only ? (
-            <div style={{ fontSize: 13.5, color: C.muted }}>
-              Teacher guides always stay in the <Ico e="🧑‍🏫" /> Teachers’ Corner — students never see them.
-            </div>
-          ) : (
-            <>
-              <label style={S.label}>Shelf</label>
-              <select
-                style={S.input}
-                value={edit.shelf}
-                onChange={(e) => setEdit({ ...edit, shelf: e.target.value })}
-              >
-                {shelfOptions(guessName(edit.book.name))}
-              </select>
-            </>
-          )}
+        <Modal title="✏️ Edit this book" onClose={() => setEdit(null)}>
+          <label style={S.label}>Book name</label>
+          <input style={S.input} value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>Google Drive link</label>
+            <input style={S.input} value={edit.link} onChange={(e) => setEdit({ ...edit, link: e.target.value })} />
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>Shelf</label>
+            <select style={S.input} value={edit.shelf} onChange={(e) => setEdit({ ...edit, shelf: e.target.value })}>
+              {shelfOptions(guessName(edit.name))}
+            </select>
+          </div>
           <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-            {!edit.book.staff_only && (
-              <Btn onClick={saveShelf} disabled={saving}>
-                {saving ? "Saving…" : "✔ Save"}
-              </Btn>
-            )}
+            <Btn onClick={saveEdit} disabled={saving}>
+              {saving ? "Saving…" : "✔ Save"}
+            </Btn>
             {edit.book.link && (
               <Btn
                 kind="soft"
@@ -8953,9 +9198,9 @@ function LibraryView({ user }) {
                 📖 Open book
               </Btn>
             )}
-          </div>
-          <div style={{ fontSize: 12.5, color: C.muted, marginTop: 12 }}>
-            To rename the book or change its link, use <Ico e="📚" /> Academic Books.
+            <Btn kind="danger" onClick={delBook} style={{ marginLeft: "auto" }}>
+              🗑 Remove
+            </Btn>
           </div>
         </Modal>
       )}
@@ -8998,7 +9243,7 @@ function LibraryView({ user }) {
             {saving ? "Adding…" : "➕ Add to the library"}
           </Btn>
           <div style={{ fontSize: 12.5, color: C.muted, marginTop: 10 }}>
-            The book also appears in <Ico e="📚" /> Academic Books, where you can attach it to a course.
+            Library books are open to everyone — every role, every course.
           </div>
         </Modal>
       )}
@@ -17062,6 +17307,27 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     allCourses.filter((c) => (c.books || []).includes(bid));
   const myIds = new Set(allCourses.flatMap((c) => c.books || []));
   const visible = isAdm(user) ? all : all.filter((b) => myIds.has(b.id));
+  // 🎒 প্রতিটি কোর্স একটি ব্যাগ — সার্ভারই বলে কে কোন কোর্স পায় (শিক্ষার্থী: নিজের কোর্স)
+  const [tab, setTab] = useState("bags"); // পরিচালক/এডমিন: "bags" | "list"
+  const [reading, setReading] = useState(null);
+  const bags = [...allCourses]
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      color: bagColorOf(c),
+      books: all.filter((b) => (c.books || []).includes(b.id)),
+    }));
+  if (isAdm(user)) {
+    const loose = all.filter((b) => !myIds.has(b.id));
+    if (loose.length) bags.push({ id: "loose", name: "Not in a course yet", color: "#8d8a84", books: loose });
+  }
+  // ব্যাগের বই: লিংকের বই অ্যাপের ভেতরেই পড়ার পর্দায়; আপলোড করা ফাইল আগের মতো ডিভাইসে
+  const readFromBag = (b) => {
+    if (!b.file?.data) return notice("No file is attached to this book yet.");
+    if (b.isLink) return setReading({ name: bookNameFor(b.name), link: b.file.data });
+    openBook(b, () => {});
+  };
   const MAX_UPLOAD = 10 * 1024 * 1024; // Cloudinary ফ্রি সীমা: ১০ MB
   const pickFile = (e) => {
     const f = e.target.files[0];
@@ -17363,11 +17629,8 @@ function AcademicBooksView({ db, setDb, user, courses }) {
       title={T("Academic Books", "Academic Books")}
       sub={
         isAdm(user)
-          ? "The academy's central book list — books are selected from here when creating a course"
-          : T(
-              "আপনার কোর্সের নির্ধারিত বইসমূহ — নামে ক্লিক করলেই খুলবে",
-              "Books assigned to your course — click a name to open it",
-            )
+          ? "Every course is a school bag — open a bag to see its books. Manage books in the Book list."
+          : "Your school bags — one for each course you study. Tap a bag to open it, then tap a book to read."
       }
       action={
         isDir(user) && (
@@ -17383,7 +17646,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
     >
       {/* viewer state সরানো হয়েছে — BookLink সরাসরি ডিভাইসে খোলে */}
       {booksLoading && <Loader text={T("বই লোড হচ্ছে", "Loading books")} />}
-      {!booksLoading && visible.length === 0 && (
+      {!booksLoading && visible.length === 0 && isAdm(user) && tab === "list" && (
         <div
           style={{
             ...S.card,
@@ -17401,30 +17664,23 @@ function AcademicBooksView({ db, setDb, user, courses }) {
               )}
         </div>
       )}
-      {isAdm(user) ? (
-        <div style={{ display: "grid", gap: 10 }}>{visible.map(Card)}</div>
-      ) : (
-        /* উস্তাদ/স্টুডেন্ট: নিজের কোর্স হিসাবে ভাগ করা তালিকা */
-        courses.map((c) => {
-          const items = all.filter((b) => (c.books || []).includes(b.id));
-          if (!items.length) return null;
-          return (
-            <div key={c.id} style={{ marginBottom: 16 }}>
-              <div
-                style={{
-                  fontWeight: 800,
-                  fontSize: 14.5,
-                  marginBottom: 8,
-                  color: c.color || C.emerald,
-                }}
-              >
-                <Ico e="📗" /> {c.name}
-              </div>
-              <div style={{ display: "grid", gap: 10 }}>{items.map(Card)}</div>
-            </div>
-          );
-        })
+      {isAdm(user) && !booksLoading && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+          <Btn sm kind={tab === "bags" ? "primary" : "soft"} onClick={() => setTab("bags")}>
+            🎒 School bags
+          </Btn>
+          <Btn sm kind={tab === "list" ? "primary" : "soft"} onClick={() => setTab("list")}>
+            📋 Book list (manage)
+          </Btn>
+        </div>
       )}
+      {!booksLoading &&
+        (isAdm(user) && tab === "list" ? (
+          <div style={{ display: "grid", gap: 10 }}>{visible.map(Card)}</div>
+        ) : (
+          <SchoolBags bags={bags} label={(b) => bookNameFor(b.name)} onRead={readFromBag} />
+        ))}
+      {reading && <BookReader book={reading} emoji="📖" onClose={() => setReading(null)} />}
       {form && (
         <Modal title="+ Add book" onClose={() => setForm(null)}>
           <label style={S.label}>Enter the book name</label>
@@ -24936,7 +25192,8 @@ const NAV = [
     icon: "🪔",
     label: "Little Mu'min Library",
     labelEn: "Little Mu'min Library",
-    roles: ["director", "admin", "teacher", "student"],
+    // যেকোনো ভূমিকার যে কেউ পড়তে পারে — ট্রায়াল অতিথিও (মালিকের নির্দেশ)
+    roles: ["director", "admin", "teacher", "student", "trial"],
   },
   {
     // নামাজ শিক্ষা: বাস্তব শিশুর 3D মডেলে অজু ও নামাজ (কেবল লগইন করা ব্যবহারকারী; ট্রায়াল নয়)
