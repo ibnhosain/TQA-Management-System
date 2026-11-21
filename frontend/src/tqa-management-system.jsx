@@ -8492,6 +8492,17 @@ const IQRA_CSS = `
   transform:rotate(12deg);color:#fff;background:#ff5252;box-shadow:0 2px 0 #b71c1c}
 .iqra-empty{text-align:center;color:#fbe9c4;padding:34px 12px;font-size:16px;font-weight:600}
 .iqra-book.arranging{outline:3px dashed #ffd54f;outline-offset:3px}
+.iqra-flag.warn{background:#6b7280;box-shadow:0 2px 0 #374151}
+.iqra-daily{display:flex;gap:14px;align-items:center;width:100%;margin:14px 0 0;border:none;cursor:pointer;text-align:left;
+  font:inherit;color:#4a2c10;background:linear-gradient(120deg,#fff8e1,#ffe7a8);border-radius:18px;padding:12px 16px;
+  box-shadow:0 4px 0 #efcd7c;transition:transform .2s}
+.iqra-daily:hover,.iqra-daily:focus-visible{transform:translateY(-3px);outline:none}
+.iqra-daily-cover{flex:0 0 auto;width:58px;height:76px;border-radius:3px 9px 9px 3px;display:grid;place-items:center;font-size:26px;
+  background:linear-gradient(150deg,var(--c1),var(--c2));box-shadow:2px 3px 0 #00000030;animation:iqraFloat 4s ease-in-out infinite}
+.iqra-daily-k{display:block;font-size:12px;font-weight:700;color:#b26a00;text-transform:uppercase;letter-spacing:.7px}
+.iqra-daily-t{display:block;font-size:17px;font-weight:700;line-height:1.2;margin:2px 0 5px}
+.iqra-daily-go{font-size:13px;font-weight:700;color:#1a5c3a}
+@media (prefers-reduced-motion:reduce){.iqra-daily-cover{animation:none}}
 .iqra-pen{position:absolute;bottom:8px;right:8px;font-size:15px;background:#fff;border-radius:50%;width:26px;height:26px;
   display:grid;place-items:center;box-shadow:0 2px 0 #00000030}
 .iqra-tool{border:none;border-radius:999px;padding:10px 16px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;
@@ -8509,7 +8520,20 @@ const IQRA_STARS = Array.from({ length: 16 }, (_, i) => ({
   delay: `${(i * 0.37) % 2.8}s`,
 }));
 
+// এই ডিভাইসে শেষ খোলা বইগুলো — "🔖 Read Again" তাকের জন্য। কেবল সুবিধা:
+// প্রাইভেট উইন্ডো/মোছা ডেটায় খালি থাকলেও পাতা ঠিকঠাক চলে।
+const IQRA_RECENT_KEY = "tqa-library-recent";
+const iqraRecentRead = () => {
+  try {
+    const v = JSON.parse(localStorage.getItem(IQRA_RECENT_KEY) || "[]");
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+};
+
 function LibraryView({ user }) {
+  const [recent, setRecent] = useState(iqraRecentRead);
   const [books, setBooks] = useState(null); // null = লোড হচ্ছে
   const [failed, setFailed] = useState(false);
   const [q, setQ] = useState("");
@@ -8547,17 +8571,42 @@ function LibraryView({ user }) {
     (b) => (!nq || norm(b.name).includes(nq)) && (!only || b.shelf === only),
   );
   const shelvesWithBooks = IQRA_SHELVES.filter((s) => visible.some((b) => b.shelf === s.id));
-  const shelves = IQRA_SHELVES.map((s) => ({
-    ...s,
-    books: shown
-      .filter((b) => b.shelf === s.id)
-      .sort((a, b) => String(a.name).localeCompare(String(b.name))),
-  })).filter((s) => s.books.length);
+  const browsing = !nq && !only; // খোঁজা/ফিল্টার না চললে
+  const byId = new Map(visible.map((b) => [b.id, b]));
+  const recentBooks = recent.map((id) => byId.get(id)).filter((b) => b && b.link);
+  const shelves = [
+    ...(browsing && recentBooks.length
+      ? [{ id: "recent", emoji: "🔖", name: "Read Again", books: recentBooks }]
+      : []),
+    ...IQRA_SHELVES.map((s) => ({
+      ...s,
+      books: shown
+        .filter((b) => b.shelf === s.id)
+        .sort((a, b) => String(a.name).localeCompare(String(b.name))),
+    })),
+  ].filter((s) => s.books.length);
+  // ⭐ আজকের বই — তারিখ দেখে বাছাই, তাই সারাদিন একই বই, পরদিন নতুন
+  const pickable = visible.filter((b) => b.link && !b.staff_only);
+  const daily = pickable.length
+    ? [...pickable].sort((a, b) => a.id - b.id)[iqraHash(todayISO()) % pickable.length]
+    : null;
+  // গত ৩০ দিনে যোগ হওয়া বই — মলাটে "NEW"
+  const isNew = (b) => {
+    const t = b.created_at ? new Date(String(b.created_at).slice(0, 10) + "T00:00:00").getTime() : NaN;
+    return Date.now() - t < 30 * 864e5;
+  };
 
   const open = (b) => {
     if (arrange) return setEdit({ book: b, shelf: b.library_shelf || "" });
     if (!b.link) return notice("This book has no link yet — add its Google Drive link in Academic Books.");
     window.open(b.link, "_blank", "noopener,noreferrer");
+    const next = [b.id, ...recent.filter((id) => id !== b.id)].slice(0, 8);
+    setRecent(next);
+    try {
+      localStorage.setItem(IQRA_RECENT_KEY, JSON.stringify(next));
+    } catch {
+      /* সংরক্ষণ না হলেও বই খোলা থামবে না */
+    }
   };
   const guessName = (name) => IQRA_SHELF[iqraShelfOf({ name })].name;
   const saveShelf = async () => {
@@ -8627,6 +8676,22 @@ function LibraryView({ user }) {
         </div>
       </div>
 
+      {daily && browsing && (() => {
+        const h = iqraHash(daily.name);
+        const [c1, c2, fg] = IQRA_COVERS[h % IQRA_COVERS.length];
+        return (
+          <button className="iqra-daily" onClick={() => open(daily)}>
+            <span className="iqra-daily-cover" style={{ "--c1": c1, "--c2": c2, color: fg }}>
+              {IQRA_SHELF[daily.shelf].emoji}
+            </span>
+            <span style={{ minWidth: 0 }}>
+              <span className="iqra-daily-k">⭐ Book of the Day</span>
+              <span className="iqra-daily-t">{iqraSplitName(daily.name).title}</span>
+              <span className="iqra-daily-go">📖 Open and read →</span>
+            </span>
+          </button>
+        );
+      })()}
       <div className="iqra-tools">
         <input
           className="iqra-search"
@@ -8715,10 +8780,14 @@ function LibraryView({ user }) {
                       }}
                     >
                       <span className="iqra-spine" />
-                      <span className="iqra-emoji">{s.emoji}</span>
+                      <span className="iqra-emoji">{IQRA_SHELF[b.shelf].emoji}</span>
                       <span className="iqra-btitle">{title}</span>
                       {age && <span className="iqra-age">{age}</span>}
-                      {!b.link && <span className="iqra-flag">NO LINK</span>}
+                      {!b.link ? (
+                        <span className="iqra-flag warn">NO LINK</span>
+                      ) : (
+                        isNew(b) && <span className="iqra-flag">NEW</span>
+                      )}
                       {arrange && <span className="iqra-pen">✏️</span>}
                     </button>
                   );
@@ -17771,6 +17840,36 @@ function Overview({ db, courses, user, goTo }) {
           })}
         </div>
       </Section>
+      {user.role === "student" && (
+        <button
+          onClick={() => goTo("library")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            width: "100%",
+            margin: "4px 0 18px",
+            padding: "16px 18px",
+            border: "none",
+            borderRadius: 18,
+            cursor: "pointer",
+            textAlign: "left",
+            color: "#fff",
+            fontFamily: "'Fredoka','Hind Siliguri',sans-serif",
+            background: "linear-gradient(135deg,#17466b,#1a5c3a)",
+            boxShadow: "0 6px 18px #0f2a4a33",
+          }}
+        >
+          <span style={{ fontSize: 38 }}>📚</span>
+          <span style={{ flex: 1 }}>
+            <span style={{ display: "block", fontSize: 19, fontWeight: 700 }}>Little Mu’min Library</span>
+            <span style={{ display: "block", fontSize: 13.5, opacity: 0.9 }}>
+              Pick a book from the shelves and start reading! ✨
+            </span>
+          </span>
+          <span style={{ fontSize: 22 }}>→</span>
+        </button>
+      )}
       <Section
         title={T("সাম্প্রতিক নোটিশ", "Recent Notices")}
         action={
