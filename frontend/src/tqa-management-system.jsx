@@ -5185,7 +5185,9 @@ function LecturePlan({ db, courses, user, refresh }) {
   // টপিকে ক্লিক → সেই হেডিংয়ের লেকচারের স্লাইড ("Lecture N")। টগল আর নেই।
   // প্রতিটি টপিক স্লাইডের নিজের বইয়ের অংশটুকু চালায় (PowerPoint section) — টপিক ১ শেষে থামে, বাকিটা টপিক ২-এ …
   const DECK_PART = { "Easy Noorani Qaida": "Qaida", "My First Surahs": "Surah", "Duas & Manners": "Duas & Manners",
-                      "My Salah Duas": "Salah Duas", "Arabic Writing": "Writing" };
+                      "My Salah Duas": "Salah Duas", "Arabic Writing": "Writing",
+                      // Noorani Qaida Course (৭–১২)
+                      "Noorani Qaida": "Qaida", "My Surahs": "Surah", "Tajweed": "Tajweed" };
   const partOf = (tp) => DECK_PART[(tp.text || "").split(" — ")[0].trim()];
   const [play, setPlay] = useState(null);   // { no, part, topicId }
   const playLecture = (sec, tp) => {

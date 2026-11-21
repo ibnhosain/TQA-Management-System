@@ -57,3 +57,18 @@ class NooraniBooks(TestCase):
         self.assertEqual(course.books.filter(staff_only=True).count(), 2)
         self.assertTrue(AcademicBook.objects.filter(name="Old book").exists(), "পুরনো বই মোছা উচিত নয়")
         self.assertIn(old, easy.books.all(), "Easy কোর্সের বই বদলানো উচিত নয়")
+
+
+class NooraniDecks(TestCase):
+    def test_lectures_1_to_5_get_teacher_and_student_slides(self):
+        from core.models import LectureDeck
+        easy = Course.objects.create(name="Easy Noorani Qaida")
+        course = Course.objects.create(name="Noorani Qaida")
+        importlib.import_module("core.migrations.0088_seed_noorani_lectures_1_to_5").forwards(django_apps, None)
+        decks = LectureDeck.objects.filter(course=course)
+        self.assertEqual(decks.count(), 10)
+        self.assertEqual(sorted(set(decks.values_list("no", flat=True))), [1, 2, 3, 4, 5])
+        d = decks.get(no=1, audience="student")
+        self.assertEqual(d.filename, "Lecture 01 - Noorani Qaida Course - Student.pptx")
+        self.assertTrue(bytes(d.data[:2]) == b"PK", "pptx (zip) হওয়া উচিত")
+        self.assertFalse(LectureDeck.objects.filter(course=easy).exists(), "Easy কোর্সে স্লাইড যাওয়া উচিত নয়")
