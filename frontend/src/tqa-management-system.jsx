@@ -8363,6 +8363,302 @@ function FormsView({ db, setDb }) {
   );
 }
 
+/* ═══════════════ 🪔 Iqra Library — বাচ্চাদের ভার্চুয়াল লাইব্রেরি ═══════════════
+   সব বই বিষয় অনুযায়ী কাঠের তাকে সাজানো; বইয়ে চাপলে Drive-এ বইটি খোলে।
+
+   আলাদা বই-তালিকা রাখা হয়নি — Academic Books-এ যোগ করা প্রতিটি বই (Drive
+   লিংকসহ) নিজে থেকেই এখানে আসে। ফলে দুই জায়গায় লিংক মেলানোর ঝামেলা নেই,
+   একটা বদলালে অন্যটা পুরনো থেকে যায় না।
+
+   তাক: পরিচালক বেছে দিলে সেটাই (library_shelf), নইলে বইয়ের নাম দেখে আন্দাজ।
+   শিক্ষক-নির্দেশিকা (staff_only) সার্ভার শিক্ষার্থীদের পাঠায়ই না; কর্মীরা
+   সেগুলো "Teachers' Corner" তাকে দেখেন। */
+const IQRA_SHELVES = [
+  { id: "qaida", emoji: "🔤", name: "Qaida & Arabic" },
+  { id: "quran", emoji: "📖", name: "Quran & Tajweed" },
+  { id: "surah", emoji: "🌟", name: "Surahs to Memorise" },
+  { id: "hadith", emoji: "💬", name: "Beautiful Hadith" },
+  { id: "aqeedah", emoji: "❤️", name: "Knowing Allah — Aqeedah & Fiqh" },
+  { id: "salah", emoji: "🕌", name: "My Salah" },
+  { id: "manners", emoji: "🤲", name: "Duas & Good Manners" },
+  { id: "stories", emoji: "🐪", name: "Stories of the Prophets" },
+  { id: "more", emoji: "📚", name: "More Books" },
+  { id: "teachers", emoji: "🧑‍🏫", name: "Teachers' Corner" },
+];
+const IQRA_SHELF = Object.fromEntries(IQRA_SHELVES.map((s) => [s.id, s]));
+/* নাম দেখে তাক — ⚠️ ক্রম জরুরি: "Hadith with stories" হাদিসে যাবে, গল্পে
+   নয়; "Dua & Manners for Qaida Course" আদবে, কায়দায় নয় — তাই "qaida"
+   সবার শেষে (অনেক বইয়ের নামেই "Qaida Course" থাকে)। */
+const IQRA_RULES = [
+  ["salah", /salah|salat|namaz|wudu|prayer|নামাজ|নামায|অজু|ওযু/i],
+  ["hadith", /hadith|ahadith|হাদিস|হাদীস/i],
+  ["stories", /stor(y|ies)|prophet|নবী|কাহিনী|গল্প/i],
+  ["surah", /surah|sura\b|memori[sz]|hifz|সূরা|হিফজ/i],
+  ["quran", /qur'?an|tajweed|tajwid|makhraj|nuzhat|nujhat|tilawa|কুরআন|তাজভীদ|তাজবীদ|মাখরাজ|নুযহাত/i],
+  ["aqeedah", /aqeed|aqid|aqaid|akaid|akaeid|akkaeid|fiqh|fikh|fikkah|fikah|allah|\biman\b|islamiyat|আকিদা|আকীদা|আকাইদ|আকাঈদ|ফিকহ|আল্লাহ|ঈমান|ইসলামিয়াত/i],
+  ["manners", /\bdu'?a|manners|adab|akhlaa?q|values|দোয়া|দুআ|আদব|আখলাক/i],
+  ["qaida", /qa'?ida|qaeda|noorani|nurani|arabic|alphabet|writing|আরবি|কায়দা|কাইদা|নূরানী/i],
+];
+const iqraShelfOf = (b) => {
+  if (b.staff_only) return "teachers";
+  if (b.library_shelf && IQRA_SHELF[b.library_shelf]) return b.library_shelf;
+  const name = String(b.name || "").normalize("NFC");
+  const hit = IQRA_RULES.find(([, re]) => re.test(name));
+  return hit ? hit[0] : "more";
+};
+// বইয়ের মলাটের রং — নাম থেকে স্থির (প্রতিবার একই বই একই রঙে), [শুরু, শেষ, লেখা]
+const IQRA_COVERS = [
+  ["#ff8a65", "#e64a19", "#fff"],
+  ["#4fc3f7", "#0277bd", "#fff"],
+  ["#81c784", "#2e7d32", "#fff"],
+  ["#ffe082", "#ffb300", "#4a2c10"],
+  ["#ce93d8", "#7b1fa2", "#fff"],
+  ["#4db6ac", "#00695c", "#fff"],
+  ["#f48fb1", "#c2185b", "#fff"],
+  ["#9fa8da", "#3949ab", "#fff"],
+  ["#ffcc80", "#ef6c00", "#4a2c10"],
+  ["#a5d6a7", "#558b2f", "#fff"],
+];
+const iqraHash = (s) => {
+  let h = 7;
+  for (const ch of String(s)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+  return h;
+};
+// "Tajweed and Makhraj (Ages 7-12)" → মলাটে নাম আলাদা, বয়স আলাদা ব্যাজে
+const iqraSplitName = (name) => {
+  let title = String(name || "").replace(/\s*\((teachers? only)\)\s*/gi, " ");
+  let age = "";
+  title = title.replace(/\s*\((ages?\s*[\d\s–-]+)\)\s*/i, (_, a) => {
+    age = a.replace(/^ages?/i, "Ages").replace(/\s+/g, " ").trim();
+    return " ";
+  });
+  // "the_story_of_adam" ধরনের ফাইল-নাম → "the story of adam"
+  return { title: title.replace(/_+/g, " ").replace(/\s+/g, " ").trim(), age };
+};
+const IQRA_CSS = `
+.iqra-lib{font-family:'Fredoka','Hind Siliguri',sans-serif;color:#3e2a14}
+.iqra-hero{position:relative;overflow:hidden;border-radius:22px;padding:28px 22px 26px;color:#fff;
+  background:radial-gradient(circle at 85% 0%,#ffd54f33,transparent 38%),linear-gradient(160deg,#0f2a4a 0%,#17466b 55%,#1a5c3a 100%);
+  box-shadow:0 12px 30px #0f2a4a40}
+.iqra-star{position:absolute;border-radius:50%;background:#fff;animation:iqraTwinkle 2.8s ease-in-out infinite}
+@keyframes iqraTwinkle{0%,100%{opacity:.2;transform:scale(.6)}50%{opacity:1;transform:scale(1.15)}}
+.iqra-lantern{position:absolute;top:-6px;font-size:30px;transform-origin:50% 0;animation:iqraSwing 3.4s ease-in-out infinite}
+@keyframes iqraSwing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+.iqra-moon{position:absolute;right:22px;top:16px;font-size:44px;animation:iqraFloat 5s ease-in-out infinite}
+@keyframes iqraFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.iqra-name{font-size:clamp(32px,7vw,50px);font-weight:700;line-height:1;letter-spacing:.5px;text-shadow:0 3px 0 #0b1f36}
+.iqra-arabic{font-family:'Amiri',serif;font-size:clamp(22px,4.6vw,30px);color:#ffd54f;line-height:1.5}
+.iqra-tag{font-size:14px;opacity:.92;max-width:560px}
+.iqra-pill{display:inline-flex;align-items:center;gap:6px;background:#ffffff22;border:1px solid #ffffff38;
+  border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600}
+.iqra-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 10px}
+.iqra-search{flex:1 1 220px;min-width:0;border:3px solid #f0d9ad;border-radius:999px;padding:10px 16px;
+  font:inherit;font-size:15px;background:#fffaf0;color:#3e2a14;outline:none}
+.iqra-search:focus{border-color:#ffb300}
+.iqra-chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:thin}
+.iqra-chip{border:none;border-radius:999px;padding:7px 13px;font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;
+  white-space:nowrap;background:#fff;color:#4a2c10;box-shadow:0 3px 0 #e6d3b0;transition:transform .15s}
+.iqra-chip:hover{transform:translateY(-2px)}
+.iqra-chip.on{background:#ffd54f;box-shadow:0 3px 0 #e0a800}
+.iqra-case{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,430px),1fr));gap:20px 18px;
+  background:linear-gradient(#8a5629,#6d421d);border-radius:22px;padding:18px 14px 20px;
+  box-shadow:inset 0 0 0 7px #5a3416,0 16px 34px #3e2a1440}
+.iqra-case>.iqra-empty{grid-column:1/-1}
+.iqra-shelf{min-width:0}
+.iqra-plaque{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(#fbe9c4,#ecc98a);color:#4a2c10;
+  border-radius:10px;padding:5px 14px;font-weight:700;font-size:15.5px;box-shadow:0 3px 0 #b8894a;margin:0 0 10px 8px}
+.iqra-count{font-size:12px;font-weight:700;background:#4a2c10;color:#fbe9c4;border-radius:999px;padding:1px 8px}
+/* তাকের প্রতিটি সারি ২০৪px উঁচু, নিচের ১৮px কাঠের পাটাতন — বই বেশি হলে নতুন
+   সারিতে নামে আর সেটাও নিজের পাটাতনে বসে (পাশে লুকিয়ে থাকে না) */
+.iqra-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));grid-auto-rows:204px;
+  align-items:end;justify-items:center;column-gap:14px;padding:0 12px;border-radius:12px;
+  background:repeating-linear-gradient(to bottom,#3a220e 0,#4e2f15 186px,#d39a5c 186px,#93602f 204px);
+  box-shadow:inset 0 10px 18px #00000055,0 8px 12px #00000045}
+.iqra-book{position:relative;width:100%;max-width:134px;height:var(--h);margin-bottom:18px;border:none;
+  border-radius:4px 12px 12px 4px;padding:14px 9px 10px 17px;background:linear-gradient(150deg,var(--c1),var(--c2));
+  color:var(--fg);text-align:left;cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:7px;
+  box-shadow:3px 4px 0 #00000035,inset -4px 0 0 #ffffff30;transform:rotate(var(--tilt));
+  transition:transform .28s cubic-bezier(.3,1.6,.5,1),box-shadow .28s}
+.iqra-book:hover,.iqra-book:focus-visible{transform:translateY(-14px) rotate(0) scale(1.05);box-shadow:7px 16px 20px #00000050;outline:none}
+.iqra-book:active{transform:translateY(-5px) scale(.97)}
+.iqra-book[disabled]{cursor:not-allowed;filter:grayscale(.6);opacity:.75}
+.iqra-spine{position:absolute;left:0;top:0;bottom:0;width:10px;border-radius:4px 0 0 4px;background:#00000033}
+.iqra-emoji{font-size:30px;line-height:1;filter:drop-shadow(0 2px 0 #00000028)}
+.iqra-btitle{font-weight:700;font-size:13.5px;line-height:1.22;display:-webkit-box;-webkit-line-clamp:5;
+  -webkit-box-orient:vertical;overflow:hidden;overflow-wrap:break-word;hyphens:auto}
+.iqra-age{margin-top:auto;align-self:flex-start;font-size:10.5px;font-weight:700;background:#ffffffe0;color:#4a2c10;
+  border-radius:999px;padding:2px 8px}
+.iqra-flag{position:absolute;top:8px;right:-7px;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;
+  transform:rotate(12deg);color:#fff;background:#ff5252;box-shadow:0 2px 0 #b71c1c}
+.iqra-empty{text-align:center;color:#fbe9c4;padding:34px 12px;font-size:16px;font-weight:600}
+@media (max-width:560px){.iqra-hero{padding:24px 16px 22px}.iqra-case{padding:14px 10px 16px}.iqra-row{padding:0 8px;column-gap:10px}}
+@media (prefers-reduced-motion:reduce){.iqra-star,.iqra-lantern,.iqra-moon{animation:none}.iqra-book{transition:none}}
+`;
+// তারার অবস্থান স্থির — প্রতিবার রেন্ডারে লাফাবে না
+const IQRA_STARS = Array.from({ length: 16 }, (_, i) => ({
+  left: `${(i * 37 + 11) % 96}%`,
+  top: `${(i * 23 + 7) % 88}%`,
+  size: 2 + (i % 3),
+  delay: `${(i * 0.37) % 2.8}s`,
+}));
+
+function LibraryView({ user }) {
+  const [books, setBooks] = useState(null); // null = লোড হচ্ছে
+  const [failed, setFailed] = useState(false);
+  const [q, setQ] = useState("");
+  const [only, setOnly] = useState(""); // একটিমাত্র তাক দেখাতে
+  const BASE_MEDIA = (import.meta.env?.VITE_API_URL || "http://localhost:8000/api").replace(/\/api$/, "");
+  const load = () => {
+    setFailed(false);
+    api
+      .books()
+      .then((d) => setBooks(Array.isArray(d) ? d : []))
+      .catch(() => {
+        setBooks((b) => b || []);
+        setFailed(true);
+      });
+  };
+  useEffect(load, []);
+
+  const linkOf = (b) => {
+    const f = String(b.file || "").trim();
+    if (!f) return "";
+    return /^https?:\/\//i.test(f) ? f : BASE_MEDIA + (f.startsWith("/") ? f : "/" + f);
+  };
+  const all = (books || []).map((b) => ({ ...b, shelf: iqraShelfOf(b), link: linkOf(b) }));
+  // শিক্ষার্থীরা লিংকহীন বই দেখবে না (চাপলে কিছুই হতো না); কর্মীরা দেখবেন, যাতে ঠিক করা যায়
+  const visible = all.filter((b) => b.link || isAdm(user));
+  const norm = (s) => String(s || "").normalize("NFC").toLowerCase();
+  const nq = norm(q.trim());
+  const shown = visible.filter(
+    (b) => (!nq || norm(b.name).includes(nq)) && (!only || b.shelf === only),
+  );
+  const shelvesWithBooks = IQRA_SHELVES.filter((s) => visible.some((b) => b.shelf === s.id));
+  const shelves = IQRA_SHELVES.map((s) => ({
+    ...s,
+    books: shown
+      .filter((b) => b.shelf === s.id)
+      .sort((a, b) => String(a.name).localeCompare(String(b.name))),
+  })).filter((s) => s.books.length);
+
+  const open = (b) => {
+    if (!b.link) return notice("This book has no link yet — add its Google Drive link in Academic Books.");
+    window.open(b.link, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <div className="iqra-lib">
+      <style>{IQRA_CSS}</style>
+      <div className="iqra-hero">
+        {IQRA_STARS.map((s, i) => (
+          <span
+            key={i}
+            className="iqra-star"
+            style={{ left: s.left, top: s.top, width: s.size, height: s.size, animationDelay: s.delay }}
+          />
+        ))}
+        <span className="iqra-lantern" style={{ left: "6%" }}>🏮</span>
+        <span className="iqra-lantern" style={{ left: "17%", animationDelay: ".8s", fontSize: 24 }}>🏮</span>
+        <span className="iqra-moon">🌙</span>
+        <div style={{ position: "relative", marginTop: 22 }}>
+          <div className="iqra-arabic" dir="rtl" lang="ar" style={{ textAlign: "left" }}>اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ</div>
+          <div className="iqra-name">Iqra Library</div>
+          <div className="iqra-tag" style={{ marginTop: 8 }}>
+            “Read! In the name of your Lord who created.” — Surah Al-‘Alaq 96:1
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
+            <span className="iqra-pill">📚 {visible.length} books</span>
+            <span className="iqra-pill">🪵 {shelvesWithBooks.length} shelves</span>
+            <span className="iqra-pill">👆 Tap a book to open it</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="iqra-tools">
+        <input
+          className="iqra-search"
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="🔍 Find a book…"
+          aria-label="Find a book"
+        />
+      </div>
+      {shelvesWithBooks.length > 1 && (
+        <div className="iqra-chips" role="tablist" aria-label="Shelves">
+          <button className={"iqra-chip" + (!only ? " on" : "")} onClick={() => setOnly("")}>
+            ✨ All shelves
+          </button>
+          {shelvesWithBooks.map((s) => (
+            <button
+              key={s.id}
+              className={"iqra-chip" + (only === s.id ? " on" : "")}
+              onClick={() => setOnly(only === s.id ? "" : s.id)}
+            >
+              {s.emoji} {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="iqra-case">
+        {books === null ? (
+          <div className="iqra-empty">📖 Opening the library…</div>
+        ) : failed && !visible.length ? (
+          <div className="iqra-empty">
+            Could not reach the library right now.{" "}
+            <button className="iqra-chip" onClick={load}>🔄 Try again</button>
+          </div>
+        ) : !shelves.length ? (
+          <div className="iqra-empty">
+            {visible.length ? "No book found — try another word 🔍" : "📭 The shelves are waiting for books!"}
+          </div>
+        ) : (
+          shelves.map((s) => (
+            <div key={s.id} className="iqra-shelf">
+              <div className="iqra-plaque">
+                <span style={{ fontSize: 20 }}>{s.emoji}</span>
+                {s.name}
+                <span className="iqra-count">{s.books.length}</span>
+              </div>
+              <div className="iqra-row">
+                {s.books.map((b) => {
+                  const h = iqraHash(b.name);
+                  const [c1, c2, fg] = IQRA_COVERS[h % IQRA_COVERS.length];
+                  const { title, age } = iqraSplitName(b.name);
+                  return (
+                    <button
+                      key={b.id}
+                      className="iqra-book"
+                      title={b.name}
+                      lang="en"
+                      onClick={() => open(b)}
+                      disabled={!b.link}
+                      style={{
+                        "--c1": c1,
+                        "--c2": c2,
+                        "--fg": fg,
+                        "--h": `${156 + (h % 3) * 8}px`,
+                        "--tilt": `${((h >>> 3) % 5) - 2}deg`,
+                      }}
+                    >
+                      <span className="iqra-spine" />
+                      <span className="iqra-emoji">{s.emoji}</span>
+                      <span className="iqra-btitle">{title}</span>
+                      {age && <span className="iqra-age">{age}</span>}
+                      {!b.link && <span className="iqra-flag">NO LINK</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════ বই লাইব্রেরি (ফিচার ১০) ═══════════════ */
 function BooksView({ db, user }) {
   const [show, setShow] = useState(false);
@@ -24258,6 +24554,14 @@ const NAV = [
     roles: ["director", "admin", "teacher", "student"],
   },
   {
+    // বাচ্চাদের ভার্চুয়াল লাইব্রেরি — সব বই তাকে সাজানো, চাপলে Drive-এ খোলে
+    id: "library",
+    icon: "🪔",
+    label: "Iqra Library",
+    labelEn: "Iqra Library",
+    roles: ["director", "admin", "teacher", "student"],
+  },
+  {
     // নামাজ শিক্ষা: বাস্তব শিশুর 3D মডেলে অজু ও নামাজ (কেবল লগইন করা ব্যবহারকারী; ট্রায়াল নয়)
     id: "salah",
     icon: "🕌",
@@ -25866,6 +26170,7 @@ export default function App() {
           {view === "accounts" && isDir(user) && <AccountsView {...props} />}
           {view === "forms" && isAdm(user) && <FormsView {...props} />}
           {view === "books" && <AcademicBooksView {...props} />}
+          {view === "library" && <LibraryView user={user} />}
 
           {view === "myreceipts" && <MyReceiptsView {...props} />}
           {view === "leaves" && <LeaveView {...props} />}
@@ -25919,6 +26224,7 @@ export {
   ManageView,
   AllStudentsView,
   TeacherMode,
+  LibraryView,
   statusTag,
   kindLabel,
   bandLabel,
