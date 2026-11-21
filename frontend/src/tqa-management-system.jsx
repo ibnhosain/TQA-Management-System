@@ -8364,7 +8364,8 @@ function FormsView({ db, setDb }) {
 }
 
 /* ═══════════════ 🪔 Little Mu'min Library — বাচ্চাদের ভার্চুয়াল লাইব্রেরি ═══════════════
-   সব বই বিষয় অনুযায়ী কাঠের তাকে সাজানো; বইয়ে চাপলে Drive-এ বইটি খোলে।
+   সব বই বিষয় অনুযায়ী কাঠের তাকে সাজানো; বইয়ে চাপলে অ্যাপের ভেতরেই পূর্ণ-পর্দায়
+   বইটি খোলে (BookReader) — Drive-এর পাতায় চলে যায় না।
 
    আলাদা বই-তালিকা রাখা হয়নি — Academic Books-এ যোগ করা প্রতিটি বই (Drive
    লিংকসহ) নিজে থেকেই এখানে আসে। ফলে দুই জায়গায় লিংক মেলানোর ঝামেলা নেই,
@@ -8503,6 +8504,19 @@ const IQRA_CSS = `
 .iqra-daily-t{display:block;font-size:17px;font-weight:700;line-height:1.2;margin:2px 0 5px}
 .iqra-daily-go{font-size:13px;font-weight:700;color:#1a5c3a}
 @media (prefers-reduced-motion:reduce){.iqra-daily-cover{animation:none}}
+.iqra-reader{position:fixed;inset:0;z-index:95;display:flex;flex-direction:column;font-family:'Fredoka','Hind Siliguri',sans-serif;
+  background:linear-gradient(160deg,#0f2a4a,#17466b 55%,#1a5c3a)}
+.iqra-reader-bar{display:flex;align-items:center;gap:12px;padding:10px 12px;color:#fff}
+.iqra-back{flex:0 0 auto;border:none;border-radius:999px;padding:9px 16px;font:inherit;font-weight:700;font-size:15px;cursor:pointer;
+  background:#ffd54f;color:#4a2c10;box-shadow:0 3px 0 #e0a800}
+.iqra-reader-title{font-weight:700;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.iqra-reader-page{position:relative;flex:1;margin:0 10px 10px;border-radius:14px;overflow:hidden;background:#fffaf0;
+  box-shadow:0 10px 30px #00000055}
+.iqra-reader-page iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.iqra-reader-wait{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:10px;color:#4a2c10;
+  font-weight:700;font-size:17px;text-align:center;padding:16px}
+.iqra-reader-wait b{font-size:56px;animation:iqraFloat 1.6s ease-in-out infinite}
+.iqra-reader-shield{position:absolute;top:0;right:0;width:76px;height:62px;z-index:2}
 .iqra-pen{position:absolute;bottom:8px;right:8px;font-size:15px;background:#fff;border-radius:50%;width:26px;height:26px;
   display:grid;place-items:center;box-shadow:0 2px 0 #00000030}
 .iqra-tool{border:none;border-radius:999px;padding:10px 16px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;
@@ -8519,6 +8533,83 @@ const IQRA_STARS = Array.from({ length: 16 }, (_, i) => ({
   size: 2 + (i % 3),
   delay: `${(i * 0.37) % 2.8}s`,
 }));
+
+/* ফোনের "ব্যাক" — অ্যাপের বের-হওয়ার-পাহারা (App-এর popstate) আগে এটা দেখে:
+   পূর্ণ-পর্দার কিছু (যেমন খোলা বই) থাকলে ব্যাক = সেটা বন্ধ, "Do you want to
+   exit?" নয়। নিজেরা আলাদা history এন্ট্রি বসাইনি — পাহারার সাথে দুটো
+   popstate-শ্রোতা একসাথে জাগত, বই বন্ধও হতো আবার বের-হওয়ার প্রশ্নও আসত। */
+const BACK_OVERRIDE = { fn: null };
+
+/* বইয়ের লিংক → অ্যাপের ভেতরে দেখানোর ঠিকানা। Drive-এর "/preview" ফ্রেমে
+   খোলা যায় আর Drive-এর মেনু/ডাউনলোড বোতাম থাকে না। */
+const iqraReaderSrc = (url) => {
+  const u = String(url || "");
+  if (/drive\.google\.com|docs\.google\.com/.test(u)) {
+    const folder = u.match(/\/folders\/([\w-]{10,})/);
+    if (folder) return { src: `https://drive.google.com/embeddedfolderview?id=${folder[1]}#grid`, drive: true };
+    const file = u.match(/\/d\/([\w-]{10,})/) || u.match(/[?&]id=([\w-]{10,})/);
+    if (file) return { src: `https://drive.google.com/file/d/${file[1]}/preview`, drive: true };
+  }
+  if (/\/media\//.test(u)) return { src: u, drive: false }; // সার্ভারের নিজের ফাইল
+  // অন্য কোথাও রাখা PDF (যেমন Cloudinary) — Google-এর দর্শক দিয়ে
+  return { src: `https://docs.google.com/viewer?embedded=true&url=${encodeURIComponent(u)}`, drive: false };
+};
+
+/* 📖 পূর্ণ-পর্দার পড়ার ঘর — বাচ্চারা বোঝে না যে বইটা Drive থেকে আসছে।
+   ⚠️ ডান-উপরের কোণে স্বচ্ছ "ঢাল": Drive-এর ফ্রেমে ওখানে "নতুন উইন্ডোতে
+   খুলুন" বোতাম থাকে, চাপলে Drive-এর পাতায় চলে যেত। */
+function BookReader({ book, emoji, onClose }) {
+  const [loaded, setLoaded] = useState(false);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const close = () => closeRef.current();
+    BACK_OVERRIDE.fn = close;
+    const onKey = (e) => {
+      if (e.key === "Escape") close();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      if (BACK_OVERRIDE.fn === close) BACK_OVERRIDE.fn = null;
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, []);
+  const { src, drive } = iqraReaderSrc(book.link);
+  const { title } = iqraSplitName(book.name);
+  return createPortal(
+    <div className="iqra-reader" role="dialog" aria-modal="true" aria-label={title}>
+      <style>{IQRA_CSS}</style>
+      <div className="iqra-reader-bar">
+        <button className="iqra-back" onClick={onClose}>
+          ← Back to shelves
+        </button>
+        <div className="iqra-reader-title">
+          {emoji} {title}
+        </div>
+      </div>
+      <div className="iqra-reader-page">
+        {!loaded && (
+          <div className="iqra-reader-wait">
+            <b>📖</b>
+            Opening your book…
+          </div>
+        )}
+        <iframe
+          src={src}
+          title={title}
+          allow="autoplay; fullscreen"
+          onLoad={() => setLoaded(true)}
+          style={{ opacity: loaded ? 1 : 0 }}
+        />
+        {drive && <div className="iqra-reader-shield" aria-hidden="true" />}
+      </div>
+    </div>,
+    document.body,
+  );
+}
 
 // এই ডিভাইসে শেষ খোলা বইগুলো — "🔖 Read Again" তাকের জন্য। কেবল সুবিধা:
 // প্রাইভেট উইন্ডো/মোছা ডেটায় খালি থাকলেও পাতা ঠিকঠাক চলে।
@@ -8544,6 +8635,7 @@ function LibraryView({ user }) {
   const [edit, setEdit] = useState(null); // { book, shelf }
   const [adding, setAdding] = useState(null); // { name, link, shelf }
   const [saving, setSaving] = useState(false);
+  const [reading, setReading] = useState(null); // যে বইটি এখন পড়ার পর্দায় খোলা
   const BASE_MEDIA = (import.meta.env?.VITE_API_URL || "http://localhost:8000/api").replace(/\/api$/, "");
   const load = () => {
     setFailed(false);
@@ -8599,7 +8691,7 @@ function LibraryView({ user }) {
   const open = (b) => {
     if (arrange) return setEdit({ book: b, shelf: b.library_shelf || "" });
     if (!b.link) return notice("This book has no link yet — add its Google Drive link in Academic Books.");
-    window.open(b.link, "_blank", "noopener,noreferrer");
+    setReading(b);
     const next = [b.id, ...recent.filter((id) => id !== b.id)].slice(0, 8);
     setRecent(next);
     try {
@@ -8798,6 +8890,14 @@ function LibraryView({ user }) {
         )}
       </div>
 
+      {reading && (
+        <BookReader
+          book={reading}
+          emoji={IQRA_SHELF[reading.shelf]?.emoji || "📖"}
+          onClose={() => setReading(null)}
+        />
+      )}
+
       {edit && (
         <Modal title="📚 Move this book" onClose={() => setEdit(null)}>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>{edit.book.name}</div>
@@ -8824,7 +8924,13 @@ function LibraryView({ user }) {
               </Btn>
             )}
             {edit.book.link && (
-              <Btn kind="soft" onClick={() => window.open(edit.book.link, "_blank", "noopener,noreferrer")}>
+              <Btn
+                kind="soft"
+                onClick={() => {
+                  setReading(edit.book);
+                  setEdit(null);
+                }}
+              >
                 📖 Open book
               </Btn>
             )}
@@ -24806,7 +24912,7 @@ const NAV = [
     roles: ["director", "admin", "teacher", "student"],
   },
   {
-    // বাচ্চাদের ভার্চুয়াল লাইব্রেরি — সব বই তাকে সাজানো, চাপলে Drive-এ খোলে
+    // বাচ্চাদের ভার্চুয়াল লাইব্রেরি — সব বই তাকে সাজানো, চাপলে অ্যাপেই পড়ার পর্দা
     id: "library",
     icon: "🪔",
     label: "Little Mu'min Library",
@@ -25558,6 +25664,13 @@ export default function App() {
     const onPop = () => {
       if (!active) return;
       pushGuard(); // এখনই বেরিয়ে যাওয়া ঠেকাই; "না" হলে এটাই বহাল থাকবে
+      // পূর্ণ-পর্দার কিছু খোলা (যেমন লাইব্রেরির বই) — ব্যাক মানে সেটা বন্ধ করা
+      if (BACK_OVERRIDE.fn) {
+        const fn = BACK_OVERRIDE.fn;
+        BACK_OVERRIDE.fn = null;
+        fn();
+        return;
+      }
       askConfirm(
         T("আপনি কি বের হয়ে যেতে চান?", "Do you want to exit?"),
         () => {
