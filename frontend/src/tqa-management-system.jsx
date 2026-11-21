@@ -1196,10 +1196,11 @@ const waGuardianMsgs = (k, course, reason) => {
     .map((sid) => {
       const s = userById(sid);
       if (!s.phone) return null;
+      const w = classWhenFor(s, k.date, k.time);
       const text =
         reason === "reminder"
-          ? `Assalamu Alaikum wa Rahmatullah. Respected ${s.guardian || "Guardian"}, ${s.name}'s "${course.name}" class starts today at ${k.time} (in 5 minutes), insha'Allah. Please help them join the class. Jazakumullahu Khairan. — Tarbiyatul Quran Academy`
-          : `Assalamu Alaikum wa Rahmatullah. Respected ${s.guardian || "Guardian"}, ${s.name}'s "${course.name}" class (${fmtDate(k.date)}, ${k.time}) has been postponed due to unavoidable circumstances / the teacher being unwell. The class will be rescheduled and made up, insha'Allah. Jazakumullahu Khairan. — Tarbiyatul Quran Academy`;
+          ? `Assalamu Alaikum wa Rahmatullah. Respected ${s.guardian || "Guardian"}, ${s.name}'s "${course.name}" class starts ${w.day} at ${w.at} (in 5 minutes), insha'Allah. Please help them join the class. Jazakumullahu Khairan. — Tarbiyatul Quran Academy`
+          : `Assalamu Alaikum wa Rahmatullah. Respected ${s.guardian || "Guardian"}, ${s.name}'s "${course.name}" class (${fmtDate(w.date)}, ${w.at}) has been postponed due to unavoidable circumstances / the teacher being unwell. The class will be rescheduled and made up, insha'Allah. Jazakumullahu Khairan. — Tarbiyatul Quran Academy`;
       return {
         id: uid(),
         toName: s.guardian || s.name,
@@ -1422,6 +1423,9 @@ const adaptPerson = (u) => ({
   sub: u.sub || u.sub_title || "",
   phone: u.phone || "",
   email: u.email || "",
+  // WhatsApp বার্তায় প্রাপকের নিজের দেশের সময় দেখাতে (classWhenFor)
+  timezone: u.timezone || "",
+  timezone_override: u.timezone_override || "",
 });
 /* API Routine → ফ্রন্টএন্ড shape */
 const adaptRoutine = (r) => ({
@@ -3069,10 +3073,11 @@ function ClassesView({
       return notice("No phone number found for this class's teacher/student.");
     const courseName = c.name || k.courseName || "your class";
     targets.forEach((p, i) => {
+      const w = classWhenFor(p, k.date, k.time);
       const text =
         `Assalamu Alaikum Warahmatullah,\n\n` +
         `Dear ${p.name},\n\n` +
-        `This is a reminder that you have a class today — "${courseName}" at ${k.time}.\n\n` +
+        `This is a reminder that you have a class ${w.day} — "${courseName}" at ${w.at}.\n\n` +
         `*Please join on time insaallah.*\n\n` +
         `Jazakallahu Khairan Fid-darayn.\n— Tarbiyatul Quran Academy.`;
       const phone = p.phone.replace(/[^\d]/g, "");
@@ -3581,12 +3586,6 @@ function ClassesView({
               )}
             </>
           )}
-          {/* দারস পড়ানোর পর্দা — ক্লাসের পাশ থেকেই, আলাদা মেনুতে না গিয়ে।
-              উস্তাদ নিজের ক্লাসে, আর পরিচালক/এডমিন যেকোনো ক্লাসে। */}
-          {k.status !== "postponed" && k.courseId &&
-            (isTeacherOf || isAdm(user)) && (
-              <TeachFromClass courseId={k.courseId} label={k.courseName} />
-            )}
           {/* ট্রায়াল ক্লাসের উস্তাদ এখান থেকেই মূল্যায়ন লিখতে পারেন —
               তাঁর আলাদা কোনো পর্দা নেই, তাই ক্লাসের পাশেই */}
           {k.kind === "Trial Class" &&
@@ -4117,10 +4116,11 @@ function InstantClassView({ courses, user }) {
     const targets = [...(teacher && teacher.phone ? [teacher] : []), ...studentTargets];
     if (!targets.length) return notice("No phone number found for this class's teacher/student.");
     targets.forEach((p, i) => {
+      const w = classWhenFor(p, created.date, created.time);
       const text =
         `Assalamu Alaikum Warahmatullah,\n\n` +
         `Dear ${p.name},\n\n` +
-        `This is a reminder that you have a class today — "${created.courseName}" at ${(created.time || "").slice(0, 5)}.\n\n` +
+        `This is a reminder that you have a class ${w.day} — "${created.courseName}" at ${w.at}.\n\n` +
         `*Please join on time insaallah.*\n\n` +
         `Jazakallahu Khairan Fid-darayn.\n— Tarbiyatul Quran Academy.`;
       const phone = p.phone.replace(/[^\d]/g, "");
@@ -12183,6 +12183,34 @@ const shiftISO = (iso, n) => {
 // "Europe/London" → "London" — সময়ের পাশে ছোট করে বলয় দেখাতে
 const zoneCity = (zone) => zone.split("/").pop().replace(/_/g, " ");
 
+/* WhatsApp বার্তায় ক্লাসের দিন-সময় — প্রাপকের নিজের বলয়ে, AM/PM-সহ।
+   আগে বাংলাদেশের "03:00" সরাসরি বসত — লন্ডনের পরিবার ভাবতেন ভোর ৩টা,
+   অথচ তাঁদের তখন আগের রাত ৯টা। ব্যাকএন্ডের tasks._when_for-এর একই ধাঁচ:
+   { day: "today" | "tomorrow" | "on Sat 22 Nov", at: "9:00 PM London time",
+     date: প্রাপকের বলয়ের তারিখ (ISO) } */
+const classWhenFor = (person, dateISO, timeStr) => {
+  const zone = zoneOf(person);
+  const l = toZoneFullDateTime(dateISO, String(timeStr || "").slice(0, 5), zone);
+  const [h, m] = l.time.split(":").map(Number);
+  const clock = `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+  const place = zone === "Asia/Dhaka" ? "Bangladesh" : zoneCity(zone);
+  const today = todayIn(zone);
+  const [y, mo, d] = l.date.split("-").map(Number);
+  const day =
+    l.date === today
+      ? "today"
+      : l.date === shiftISO(today, 1)
+        ? "tomorrow"
+        : "on " +
+          new Intl.DateTimeFormat("en-GB", {
+            timeZone: "UTC",
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          }).format(new Date(Date.UTC(y, mo - 1, d)));
+  return { day, at: `${clock} ${place} time`, date: l.date };
+};
+
 /* ═══ ক্লাস কি এই মুহূর্তে চলছে/শুরু হচ্ছে ═══
    ⚠️ তারিখসহ নির্দিষ্ট মুহূর্ত ধরে হিসাব — কেবল "দিনের কত মিনিট" ধরে নয়।
    আগে মিনিট-অফ-ডে দিয়ে হিসাব হতো, আর ক্লাস আসত শুধু "আজকের তারিখের"।
@@ -19055,92 +19083,6 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
   );
 }
 
-/* ক্লাসের পাশ থেকেই শিক্ষক মোড — উস্তাদকে আর আলাদা মেনুতে গিয়ে দারস
-   খুঁজতে হয় না।
-
-   ⚠️ বোতামটি চাপার আগে সার্ভারে কোনো অনুরোধ যায় না — ক্লাসের পাতায়
-   অনেকগুলো ক্লাস থাকে, প্রত্যেকটির জন্য আগেভাগে দারস আনলে পাতা খোলার
-   খরচই বেড়ে যেত। */
-function TeachFromClass({ courseId, label }) {
-  const [pick, setPick] = useState(null); // একাধিক দারস — কোনটি?
-  const [teachId, setTeachId] = useState(null);
-  const [busy, setBusy] = useState(false);
-
-  const open = async () => {
-    setBusy(true);
-    try {
-      const rows = (await api.lessons(courseId)) || [];
-      // পড়ানোর জন্য তৈরি বলতে — প্রকাশিত, আর ধাপ লেখা আছে
-      const ready = rows.filter(
-        (l) => l.status === "published" && (l.step_count || 0) > 0,
-      );
-      if (!ready.length) {
-        notice(
-          "No lesson has been prepared for this course — use “📗 Lesson Script”" +
-            "write it on the page and mark it “Published”.",
-        );
-      } else if (ready.length === 1) {
-        setTeachId(ready[0].id);
-      } else {
-        ready.sort(
-          (a, b) =>
-            a.title.localeCompare(b.title) || a.age_from - b.age_from,
-        );
-        setPick(ready);
-      }
-    } catch (e) {
-      notice("Could not load lessons —" + (e?.data?.error || e?.message || ""));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <>
-      <Btn sm kind="soft" onClick={open} disabled={busy}>
-        {busy ? "…" : "📗 Teacher mode"}
-      </Btn>
-
-      {pick && (
-        <Modal
-          title={"📗 Which lesson will you teach?" + (label ? ` — ${label}` : "")}
-          onClose={() => setPick(null)}
-        >
-          <div style={{ display: "grid", gap: 8 }}>
-            {pick.map((l) => (
-              <button
-                key={l.id}
-                onClick={() => {
-                  setPick(null);
-                  setTeachId(l.id);
-                }}
-                style={{
-                  ...S.card,
-                  padding: 12,
-                  textAlign: "left",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  border: `1.5px solid ${C.emerald}`,
-                }}
-              >
-                <div style={{ fontWeight: 800, color: C.text }}>{l.title}</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
-                  {bandLabel(l)} · {bn(l.step_count || 0)} steps ·{" "}
-                  {bn(l.duration_min)} min
-                </div>
-              </button>
-            ))}
-          </div>
-        </Modal>
-      )}
-
-      {teachId && (
-        <TeacherMode id={teachId} onClose={() => setTeachId(null)} />
-      )}
-    </>
-  );
-}
-
 /* একটিমাত্র নাম লেখার ছোট পাতা — হেডিংয়ের নাম দিতে/বদলাতে */
 function NameModal({ title, label, value, ph, onClose, onSave }) {
   const [v, setV] = useState(value || "");
@@ -25977,7 +25919,6 @@ export {
   ManageView,
   AllStudentsView,
   TeacherMode,
-  TeachFromClass,
   statusTag,
   kindLabel,
   bandLabel,
