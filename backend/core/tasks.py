@@ -190,7 +190,23 @@ def queue_class_reminders():
         # (বিদেশি শিক্ষার্থীর কাছে বাংলাদেশের সময় ভুল দেখাত), শুধু বাকি-মিনিট
         n = Notification.objects.create(
             text=f"⏰ Your {s.course.name} class starts in {minutes} minutes — please join on time.")
-        n.recipients.set(students + ([teacher] if teacher else []))
+        everyone = students + ([teacher] if teacher else [])
+        n.recipients.set(everyone)
+        # ফোনে পুশ — WhatsApp API ছাড়াই, বিনা খরচে; যাঁরা অ্যাপে নোটিফিকেশন চালু
+        # করেছেন তাঁদের ফোনে অ্যাপ বন্ধ থাকলেও পৌঁছায়। আগে রিমাইন্ডার কেবল অ্যাপের
+        # ঘণ্টায় যেত, অ্যাপ না খুললে কেউ দেখতেন না। চাপলে সরাসরি ক্লাসের পাতা
+        # (জয়েন বাটন); ট্রায়াল অতিথির জয়েন বাটন তাঁর প্রথম পাতাতেই।
+        try:
+            from .push import send_push
+            regular = [u for u in everyone if u.role != "trial"]
+            trial = [u for u in everyone if u.role == "trial"]
+            if regular:
+                send_push(regular, "Tarbiyatul Quran Academy", n.text, url="/?view=classes")
+            if trial:
+                send_push(trial, "Tarbiyatul Quran Academy", n.text, url="/")
+        except Exception:
+            # পুশ ব্যর্থ হলেও WhatsApp রিমাইন্ডার যেন আটকে না যায়
+            logging.getLogger("tqa.scheduler").exception("reminder push failed (class %s)", s.pk)
         # WhatsApp — প্রত্যেক শিক্ষার্থী ও উস্তাদকে, প্রত্যেকের নিজের সময়ে
         people = [(st, st) for st in students] + ([(teacher, None)] if teacher else [])
         for person, student_ref in people:

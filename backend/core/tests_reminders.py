@@ -146,3 +146,40 @@ class SentAsApprovedTemplate(TestCase):
         self.assertEqual(data["ContentSid"], "HX123")
         self.assertEqual(json.loads(data["ContentVariables"])["4"], "8:10 AM London time")
         self.assertNotIn("Body", data)
+
+
+class PhonePush(TestCase):
+    """ফোনে পুশ — WhatsApp API ছাড়াই; চাপলে ক্লাসের পাতা (ট্রায়াল অতিথি প্রথম পাতা)"""
+
+    def setUp(self):
+        from core.models import ClassSession, Course, User
+        t = User.objects.create(username="t", role="teacher", name_bn="T")
+        self.s = User.objects.create(username="s", role="student", name_bn="S")
+        self.g = User.objects.create(username="g", role="trial", name_bn="G")
+        c = Course.objects.create(name="Qaida", teacher=t)
+        k = ClassSession.objects.create(course=c, teacher=t, date=datetime(2026, 11, 20).date(),
+                                        time=T(14, 10), duration_min=60, kind="regular")
+        k.students.set([self.s, self.g])
+        self.now = datetime(2026, 11, 20, 14, 0, tzinfo=BD)
+
+    def run_with(self, push):
+        from core.tasks import queue_class_reminders
+        with mock.patch("core.tasks.timezone.localtime", return_value=self.now), \
+                mock.patch("core.tasks.whatsapp_configured", return_value=False), \
+                mock.patch("core.push.send_push", push):
+            return queue_class_reminders()
+
+    def test_push_sent_with_right_links(self):
+        push = mock.Mock()
+        self.assertEqual(self.run_with(push), 1)
+        calls = {c.kwargs["url"]: sorted(u.username for u in c.args[0]) for c in push.call_args_list}
+        self.assertEqual(calls, {"/?view=classes": ["s", "t"], "/": ["g"]})
+        self.assertEqual(push.call_args_list[0].args[2],
+                         "⏰ Your Qaida class starts in 10 minutes — please join on time.")
+
+    def test_push_failure_does_not_stop_whatsapp(self):
+        from core.models import WaMessage, User
+        User.objects.filter(username="s").update(phone="8801700000001")
+        with self.assertLogs("tqa.scheduler", level="ERROR"):
+            self.assertEqual(self.run_with(mock.Mock(side_effect=RuntimeError("push down"))), 1)
+        self.assertEqual(WaMessage.objects.count(), 1)

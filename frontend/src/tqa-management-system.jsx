@@ -24978,12 +24978,33 @@ export default function App() {
   // মেমরি থেকে সরিয়ে দেয় ও ফিরে এলে নতুন করে লোড করে; আগে তখন সবসময়
   // "ওভারভিউ"-তে ফিরে যেত, চলমান কাজ হারিয়ে যেত
   const [view, setView] = useState(() => {
+    // ফোনের পুশ থেকে এলে (ক্লাসের রিমাইন্ডার: /?view=classes) সরাসরি জয়েন
+    // বাটনের পাতায়। ⚠️ কেবল জানা মানই — URL দিয়ে যেকোনো পাতা খোলানো যায় না।
+    try {
+      if (new URLSearchParams(window.location.search).get("view") === "classes")
+        return "classes";
+    } catch {
+      /* উপেক্ষা */
+    }
     try {
       return window.localStorage.getItem("tqa_view") || "overview";
     } catch {
       return "overview";
     }
   });
+  // প্যারামিটারটা একবারই কাজে লাগে — নইলে পরে পাতা রিফ্রেশ করলেও বারবার
+  // ক্লাসের পাতায় ফিরিয়ে নিত
+  useEffect(() => {
+    try {
+      const u = new URL(window.location.href);
+      if (u.searchParams.has("view")) {
+        u.searchParams.delete("view");
+        window.history.replaceState(null, "", u.pathname + u.search + u.hash);
+      }
+    } catch {
+      /* উপেক্ষা */
+    }
+  }, []);
   const [menu, setMenu] = useState(false);
   const [bell, setBell] = useState(false);
   const [, force] = useState(0);
