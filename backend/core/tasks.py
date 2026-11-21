@@ -95,7 +95,7 @@ def send_whatsapp_now(msg_id, raise_on_fail=False):
 
 def whatsapp_configured():
     """Render-এ WhatsApp API-র চাবি বসানো আছে কিনা (tqa-backend-এর Environment)।
-    ⚠️ whatsapp-server/ ফোল্ডারের আলাদা Node সার্ভার নয় — আসল পাঠানো হয় এখান থেকে।"""
+    ⚠️ আসল পাঠানো হয় এখান থেকেই (আগের আলাদা Node সার্ভারটি অ্যাপ ব্যবহার করত না, সরানো হয়েছে)।"""
     if os.environ.get("WHATSAPP_PROVIDER", "meta").lower() == "twilio":
         keys = ("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM")
     else:

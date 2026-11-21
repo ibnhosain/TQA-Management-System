@@ -2,9 +2,8 @@
 
 ```
 tqa-clean/
-├── backend/          → Django REST API
-├── frontend/         → React + Vite
-└── whatsapp-server/  → Node.js WhatsApp Server
+├── backend/          → Django REST API (WhatsApp পাঠানোও এখান থেকে)
+└── frontend/         → React + Vite
 ```
 
 ## 🔑 Environment Variable কিভাবে কাজ করে
@@ -53,14 +52,23 @@ npm run dev        # → http://localhost:5173
 
 ---
 
-## 📱 WhatsApp Server (Local)
+## 📱 WhatsApp (Meta Cloud API)
 
-```bash
-cd whatsapp-server
-npm install
-# .env এ আপনার META_ACCESS_TOKEN বসান (regenerate করা নতুনটা!)
-npm start          # → http://localhost:3001
+আলাদা কোনো সার্ভার লাগে না — ব্যাকএন্ড নিজেই পাঠায়। চাবি বসান
+**Render → tqa-backend → Environment**-এ:
+
 ```
+WHATSAPP_PROVIDER=meta
+META_ACCESS_TOKEN=...        # System User-এর স্থায়ী টোকেন
+META_PHONE_NUMBER_ID=...
+```
+
+ক্লাসের রিমাইন্ডার যায় Meta-তে অনুমোদিত template **`class_reminder`**
+(Utility, English) দিয়ে — লেখা `backend/core/tasks.py`-র `reminder_text()`-এর
+সাথে হুবহু মিলতে হবে। চাবি না থাকলে মেসেজ "WhatsApp Messages" পাতায় জমা
+থাকে, সেখান থেকে wa.me দিয়ে হাতে পাঠানো যায়।
+
+(আগের `whatsapp-server/` Node সার্ভার অ্যাপ ব্যবহার করত না — সরানো হয়েছে।)
 
 ---
 
