@@ -928,6 +928,10 @@ class WaMessage(models.Model):
     status = models.CharField(max_length=8, choices=STATUS, default="queued")
     provider_ref = models.CharField(max_length=120, blank=True)  # Twilio SID / Meta msg id
     created_at = models.DateTimeField(auto_now_add=True)
+    # রিমাইন্ডারের template-এর ঘরগুলো (নাম, কোর্স, মিনিট, সময়) — Meta ২৪ ঘণ্টার
+    # বাইরে সাধারণ লেখা পাঠাতে দেয় না, অনুমোদিত template লাগে। সংরক্ষিত থাকে
+    # যাতে আউটবক্স থেকে পরে "Send" চাপলেও template-ই যায়।
+    template_params = models.JSONField(default=list, blank=True)
 
 
 # ─────────────────────────── লাইব্রেরি বই (বাহ্যিক লিংক) ───────────────────────────

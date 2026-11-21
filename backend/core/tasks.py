@@ -24,23 +24,47 @@ def _clean(phone):
 _WA_TIMEOUT = 8
 
 
-def _send_twilio(to, text):
+def _send_twilio(to, text, params=None):
     sid, token = os.environ["TWILIO_ACCOUNT_SID"], os.environ["TWILIO_AUTH_TOKEN"]
-    r = http.post(
-        f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
-        auth=(sid, token),
-        data={"From": f"whatsapp:{os.environ['TWILIO_WHATSAPP_FROM']}",
-              "To": f"whatsapp:+{_clean(to)}", "Body": text}, timeout=_WA_TIMEOUT)
+    data = {"From": f"whatsapp:{os.environ['TWILIO_WHATSAPP_FROM']}",
+            "To": f"whatsapp:+{_clean(to)}"}
+    content_sid = os.environ.get("TWILIO_REMINDER_CONTENT_SID", "")
+    if params and content_sid:
+        # Twilio-তেও ২৪ ঘণ্টার বাইরে অনুমোদিত template (Content) লাগে
+        import json
+        data["ContentSid"] = content_sid
+        data["ContentVariables"] = json.dumps({str(i + 1): str(p) for i, p in enumerate(params)})
+    else:
+        data["Body"] = text
+    r = http.post(f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json",
+                  auth=(sid, token), data=data, timeout=_WA_TIMEOUT)
     r.raise_for_status()
     return r.json().get("sid", "")
 
 
-def _send_meta(to, text):
+def _send_meta(to, text, params=None):
+    """params থাকলে অনুমোদিত template ("class_reminder") পাঠায়, নইলে সাধারণ লেখা।
+    ⚠️ Meta অভিভাবক/শিক্ষার্থী গত ২৪ ঘণ্টায় আমাদের মেসেজ না দিয়ে থাকলে সাধারণ
+    লেখা ফিরিয়ে দেয় — রিমাইন্ডার তাই template ছাড়া যায় না।
+    META_REMINDER_TEMPLATE="" দিলে template বন্ধ (কেবল পরীক্ষার জন্য)।"""
+    template = os.environ.get("META_REMINDER_TEMPLATE", "class_reminder")
+    if params and template:
+        body = {"type": "template", "template": {
+            "name": template,
+            "language": {"code": os.environ.get("META_TEMPLATE_LANG", "en")},
+            "components": [{"type": "body", "parameters": [
+                {"type": "text", "text": str(p)} for p in params]}],
+        }}
+    else:
+        body = {"type": "text", "text": {"body": text}}
+    # ⚠️ ভার্সন বদলানো যায়: আগে v19.0 (২০২৪-এর শুরু) বাঁধা ছিল; Meta একটি
+    # ভার্সন মোটামুটি দুই বছর চালু রাখে
+    ver = os.environ.get("META_GRAPH_VERSION", "v22.0")
     r = http.post(
-        f"https://graph.facebook.com/v19.0/{os.environ['META_PHONE_NUMBER_ID']}/messages",
+        f"https://graph.facebook.com/{ver}/{os.environ['META_PHONE_NUMBER_ID']}/messages",
         headers={"Authorization": f"Bearer {os.environ['META_ACCESS_TOKEN']}"},
-        json={"messaging_product": "whatsapp", "to": _clean(to),
-              "type": "text", "text": {"body": text}}, timeout=_WA_TIMEOUT)
+        json={"messaging_product": "whatsapp", "to": _clean(to), **body},
+        timeout=_WA_TIMEOUT)
     r.raise_for_status()
     return (r.json().get("messages") or [{}])[0].get("id", "")
 
@@ -57,7 +81,9 @@ def send_whatsapp_now(msg_id, raise_on_fail=False):
     msg.save(update_fields=["status"])
     try:
         provider = os.environ.get("WHATSAPP_PROVIDER", "meta").lower()
-        ref = _send_twilio(msg.phone, msg.text) if provider == "twilio" else _send_meta(msg.phone, msg.text)
+        params = msg.template_params if msg.reason == "reminder" else None
+        send = _send_twilio if provider == "twilio" else _send_meta
+        ref = send(msg.phone, msg.text, params)
         msg.status, msg.provider_ref = "sent", ref
         msg.save(update_fields=["status", "provider_ref"])
     except Exception as exc:
@@ -97,27 +123,57 @@ def send_whatsapp(self, msg_id):
 # ─────────────────── ক্লাস-শুরুর রিমাইন্ডার (cron প্রতি ~১৫ মিনিটে চালান) ───────────────────
 # আগে জানালা ছিল ৫ মিনিট আর cron চলত প্রতি মিনিটে — কিন্তু এতে ডেটাবেস (Neon) কখনো
 # অলস হয়ে "ঘুমাতে" পারত না, ফলে ফ্রি compute-quota কয়েক দিনেই শেষ হয়ে যেত (লগইন 500)।
-# এখন cron কম ঘন ঘন চলার কথা (~১৫ মিনিট পরপর) — তাই জানালা ১৮ মিনিট রাখা হলো (কিছুটা
-# মার্জিনসহ) যাতে কোনো ক্লাস রিমাইন্ডার ছাড়া বাদ না পড়ে। বার্তায় প্রকৃত বাকি-মিনিট দেখানো হয়।
-REMINDER_WINDOW_MINUTES = 18
+# ক্লাস শুরুর ১০ মিনিট আগে। পাহারাদার প্রতি মিনিটে দেখে, তাই সাধারণত ঠিক ১০
+# মিনিট আগেই যায়; সার্ভার সাময়িক বন্ধ থাকলে ফিরে এসে বাকি-মিনিটসহ পাঠায়।
+# (আগে cron ~১৫ মিনিট পরপর চলত বলে ১৮ মিনিটের জানালা রাখা ছিল।)
+REMINDER_MINUTES = 10
+
+
+def _when_for(start, person):
+    """ক্লাসের সময় প্রাপকের নিজের সময়বলয়ে — "8:10 PM London time"।
+    বিদেশি পরিবারকে বাংলাদেশের "02:10" লিখলে বিভ্রান্ত হতেন।"""
+    from zoneinfo import ZoneInfo
+    name = (getattr(person, "timezone_override", "") or getattr(person, "timezone", "")
+            or "Asia/Dhaka")
+    try:
+        tz = ZoneInfo(name)
+    except Exception:
+        name, tz = "Asia/Dhaka", ZoneInfo("Asia/Dhaka")
+    t = start.astimezone(tz).strftime("%I:%M %p").lstrip("0")
+    place = "Bangladesh" if name == "Asia/Dhaka" else name.split("/")[-1].replace("_", " ")
+    return f"{t} {place} time"
+
+
+def reminder_text(name, course, minutes, when):
+    """⚠️ Meta-তে অনুমোদিত "class_reminder" template-এর হুবহু একই লেখা — {{1}}
+    নাম, {{2}} কোর্স, {{3}} মিনিট, {{4}} সময়। এখানে বদলালে Meta-তেও নতুন
+    template অনুমোদন করাতে হবে, নইলে API-র মেসেজ আর এই লেখা মিলবে না।"""
+    return (f"Assalamu Alaikum {name}, your {course} class starts in {minutes} minutes, "
+            f"at {when}. Please join on time. — Tarbiyatul Quran Academy")
 
 
 @shared_task
 def queue_class_reminders():
+    import logging
+    import math
     from .models import ClassSession, WaMessage, Notification
     now = timezone.localtime()
     today = now.date()
-    sessions = ClassSession.objects.filter(date=today, status="upcoming", reminder_sent=False)
+    # আগামীকালও — রাত ১২:০৫-এর ক্লাসের রিমাইন্ডার রাত ১১:৫৫-তেই যায়
+    sessions = ClassSession.objects.filter(
+        date__in=[today, today + timedelta(days=1)], status="upcoming", reminder_sent=False,
+    ).select_related("course", "teacher", "course__teacher")
     # API বসানো না থাকলে মেসেজ তৈরি হয় কিন্তু পাঠানোর চেষ্টা হয় না — "অপেক্ষমাণ"
     # থাকে, WhatsApp Messages পাতা থেকে হাতে (wa.me) পাঠানোর জন্য। আগে চেষ্টা
     # করে প্রতিটি লাল "API failed" হয়ে যেত, যদিও আসলে কিছু ব্যর্থ হয়নি।
     can_send = whatsapp_configured()
     reminded = 0
     for s in sessions:
-        start = timezone.make_aware(datetime.combine(today, s.time))
-        mins_left = int((start - now).total_seconds() // 60)
-        if not (0 <= mins_left <= REMINDER_WINDOW_MINUTES):
+        start = timezone.make_aware(datetime.combine(s.date, s.time))
+        secs = (start - now).total_seconds()
+        if not (0 < secs <= REMINDER_MINUTES * 60):
             continue  # জানালার বাইরে
+        minutes = max(1, math.ceil(secs / 60))
         # ⚠️ আগে দাবি, তারপর পাঠানো। আগে সবার শেষে reminder_sent বসত — দুজন
         # একসাথে চালালে (সার্ভারের worker-রা আর cron-job.org) দুজনেই
         # "পাঠানো হয়নি" দেখে পাঠাত, অভিভাবক একই মেসেজ দুবার পেতেন।
@@ -126,29 +182,28 @@ def queue_class_reminders():
             continue
         reminded += 1
         students = list(s.students.all())
-        # ইন-অ্যাপ নোটিফিকেশন
+        teacher = s.teacher or (s.course.teacher if s.course_id else None)
+        # ইন-অ্যাপ নোটিফিকেশন — সবার জন্য একটিই সারি, তাই ঘড়ির সময় নয়
+        # (বিদেশি শিক্ষার্থীর কাছে বাংলাদেশের সময় ভুল দেখাত), শুধু বাকি-মিনিট
         n = Notification.objects.create(
-            text=f"⏰ {s.course.name} class starts at {s.time.strftime('%H:%M')} (in {mins_left} minutes)! "
-                 f"Join from the dashboard.")
-        n.recipients.set(students + ([s.teacher] if s.teacher else []))
-        # অভিভাবকের WhatsApp
-        for st in students:
-            if not st.phone:
+            text=f"⏰ Your {s.course.name} class starts in {minutes} minutes — please join on time.")
+        n.recipients.set(students + ([teacher] if teacher else []))
+        # WhatsApp — প্রত্যেক শিক্ষার্থী ও উস্তাদকে, প্রত্যেকের নিজের সময়ে
+        people = [(st, st) for st in students] + ([(teacher, None)] if teacher else [])
+        for person, student_ref in people:
+            if not person.phone:
                 continue
-            text = (f"Assalamu Alaikum wa Rahmatullah. Respected {st.guardian or 'Guardian'}, "
-                    f"{st.name_bn}'s \"{s.course.name}\" class starts today at {s.time.strftime('%H:%M')} "
-                    f"(in {mins_left} minutes), insha'Allah. Please help them join the class. "
-                    f"Jazakumullahu Khairan. — Tarbiyatul Quran Academy")
-            m = WaMessage.objects.create(to_name=st.guardian or st.name_bn, student=st,
-                                         phone=st.phone, text=text, reason="reminder")
+            params = [person.name_bn, s.course.name, str(minutes), _when_for(start, person)]
+            m = WaMessage.objects.create(
+                to_name=person.name_bn, student=student_ref, phone=person.phone,
+                text=reminder_text(*params), reason="reminder", template_params=params)
             if not can_send:
                 continue
             try:
                 dispatch_whatsapp(m.id)
             except Exception:
-                # একজনের ব্যর্থতায় বাকি অভিভাবকরা যেন বাদ না পড়েন; মেসেজটি
-                # আউটবক্সে থেকে যায়, সেখান থেকে আবার পাঠানো যায়
-                import logging
+                # একজনের ব্যর্থতায় বাকিরা যেন বাদ না পড়েন; মেসেজটি আউটবক্সে
+                # থেকে যায়, সেখান থেকে আবার পাঠানো যায়
                 logging.getLogger("tqa.scheduler").exception(
                     "reminder dispatch failed (message %s)", m.id)
     return reminded

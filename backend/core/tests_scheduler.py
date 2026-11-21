@@ -312,9 +312,12 @@ class RemindersSentOnce(TestCase):
         from core.models import ClassSession
         real = tasks.timezone.make_aware
 
-        def other_worker_claims_first(dt):
-            ClassSession.objects.filter(pk=self.s.pk).update(reminder_sent=True)
-            return real(dt)
+        def other_worker_claims_first(dt, *args, **kwargs):
+            # কেবল লুপের নিজের ডাকে (এক আর্গুমেন্ট) — Django নিজেও ডাটাবেসের
+            # তারিখ পড়তে দুই আর্গুমেন্টে make_aware ডাকে, সেগুলো যেমন ছিল
+            if not args and not kwargs:
+                ClassSession.objects.filter(pk=self.s.pk).update(reminder_sent=True)
+            return real(dt, *args, **kwargs)
 
         with mock.patch("core.tasks.timezone.make_aware", side_effect=other_worker_claims_first):
             self.assertEqual(tasks.queue_class_reminders(), 0)
