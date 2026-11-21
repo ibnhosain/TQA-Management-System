@@ -101,12 +101,30 @@ class User(AbstractUser):
 
 
 # ─────────────────────────── একাডেমিক বই ও কোর্স ───────────────────────────
+# 🪔 Little Mu'min Library-র তাক — ফ্রন্টএন্ডের IQRA_SHELVES-এর একই id। "teachers" তাক
+# এখানে নেই: সেটা staff_only থেকেই ঠিক হয়, হাতে বসানো যায় না।
+LIBRARY_SHELVES = [
+    ("qaida", "Qaida & Arabic"),
+    ("quran", "Quran & Tajweed"),
+    ("surah", "Surahs to Memorise"),
+    ("hadith", "Beautiful Hadith"),
+    ("aqeedah", "Knowing Allah — Aqeedah & Fiqh"),
+    ("salah", "My Salah"),
+    ("manners", "Duas & Good Manners"),
+    ("stories", "Stories of the Prophets"),
+    ("more", "More Books"),
+]
+
+
 class AcademicBook(models.Model):
     name = models.CharField(max_length=200)
     file = models.CharField(max_length=500, blank=True)  # Cloudinary URL বা local path
     # True হলে বইটি (যেমন শিক্ষক নির্দেশিকা) কেবল পরিচালক, এডমিন ও উস্তাদ দেখেন —
     # শিক্ষার্থী, অভিভাবক বা ট্রায়ালের তালিকায় আসে না
     staff_only = models.BooleanField("কেবল শিক্ষক ও পরিচালকের জন্য", default=False)
+    # লাইব্রেরির কোন তাকে — খালি থাকলে ফ্রন্টএন্ড বইয়ের নাম দেখে আন্দাজ করে
+    library_shelf = models.CharField("লাইব্রেরির তাক", max_length=20, blank=True, default="",
+                                     choices=LIBRARY_SHELVES)
     created_at = models.DateField(auto_now_add=True)
 
     def __str__(self):

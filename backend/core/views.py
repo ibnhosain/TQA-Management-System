@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 
-from .models import (User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
+from .models import (LIBRARY_SHELVES, User, AcademicBook, Course, SyllabusItem, Lecture, LectureTopic,
                      Routine, RoutineStudentSchedule, ClassSession, Attendance, Assignment, Exam, Submission,
                      ExamResult, FeePayment, DueMonth, TeacherPayment, SentReceipt,
                      Admission, LeaveRequest, Rating, StudentRemark, Notice, Notification,
@@ -205,7 +205,11 @@ class AcademicBookViewSet(viewsets.ModelViewSet):
                 from django.core.files.storage import default_storage
                 saved = default_storage.save(f"books/{uploaded.name}", uploaded)
                 file_url = request.build_absolute_uri(f"/media/{saved}")
-        book = AcademicBook.objects.create(name=name, file=file_url)
+        # লাইব্রেরি পাতা থেকে যোগ করলে তাকও সাথে আসে
+        shelf = (request.data.get("library_shelf") or "").strip()
+        if shelf and shelf not in {k for k, _ in LIBRARY_SHELVES}:
+            return Response({"error": "Unknown library shelf"}, status=400)
+        book = AcademicBook.objects.create(name=name, file=file_url, library_shelf=shelf)
         return Response(AcademicBookSerializer(book).data, status=201)
 
 

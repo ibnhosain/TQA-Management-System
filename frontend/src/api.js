@@ -257,7 +257,10 @@ export const api = {
     const f = new FormData(); f.append("name", name); f.append("file", file);
     return request("/books/", { method: "POST", body: f, isForm: true });
   },
-  addBookLink: (name, link) => request("/books/", { method: "POST", body: { name, link } }),  // Google Drive/লিংক — সাইজ সীমা নেই
+  addBookLink: (name, link, library_shelf) =>  // Google Drive/লিংক — সাইজ সীমা নেই
+    request("/books/", { method: "POST", body: { name, link, ...(library_shelf ? { library_shelf } : {}) } }),
+  // 🪔 Little Mu'min Library — পরিচালক বইটিকে কোন তাকে রাখবেন ("" = নাম দেখে নিজে থেকে)
+  setBookShelf: (id, library_shelf) => request(`/books/${id}/`, { method: "PATCH", body: { library_shelf } }),
   updateBookName: (id, name) => request(`/books/${id}/`, { method: "PATCH", body: { name } }),  // পরিচালক বইয়ের নাম বদলাতে পারেন (যেমন ইংরেজি করতে)
   deleteBook: (id) => request(`/books/${id}/`, { method: "DELETE" }),
   syllabus: (courseId) => request(`/syllabus/?course=${courseId}`),

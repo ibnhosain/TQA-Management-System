@@ -8363,7 +8363,7 @@ function FormsView({ db, setDb }) {
   );
 }
 
-/* ═══════════════ 🪔 Iqra Library — বাচ্চাদের ভার্চুয়াল লাইব্রেরি ═══════════════
+/* ═══════════════ 🪔 Little Mu'min Library — বাচ্চাদের ভার্চুয়াল লাইব্রেরি ═══════════════
    সব বই বিষয় অনুযায়ী কাঠের তাকে সাজানো; বইয়ে চাপলে Drive-এ বইটি খোলে।
 
    আলাদা বই-তালিকা রাখা হয়নি — Academic Books-এ যোগ করা প্রতিটি বই (Drive
@@ -8491,6 +8491,13 @@ const IQRA_CSS = `
 .iqra-flag{position:absolute;top:8px;right:-7px;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;
   transform:rotate(12deg);color:#fff;background:#ff5252;box-shadow:0 2px 0 #b71c1c}
 .iqra-empty{text-align:center;color:#fbe9c4;padding:34px 12px;font-size:16px;font-weight:600}
+.iqra-book.arranging{outline:3px dashed #ffd54f;outline-offset:3px}
+.iqra-pen{position:absolute;bottom:8px;right:8px;font-size:15px;background:#fff;border-radius:50%;width:26px;height:26px;
+  display:grid;place-items:center;box-shadow:0 2px 0 #00000030}
+.iqra-tool{border:none;border-radius:999px;padding:10px 16px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;
+  background:#1a5c3a;color:#fff;box-shadow:0 3px 0 #123f28;white-space:nowrap}
+.iqra-tool.alt{background:#fff;color:#4a2c10;box-shadow:0 3px 0 #e6d3b0}
+.iqra-tool.on{background:#ffd54f;color:#4a2c10;box-shadow:0 3px 0 #e0a800}
 @media (max-width:560px){.iqra-hero{padding:24px 16px 22px}.iqra-case{padding:14px 10px 16px}.iqra-row{padding:0 8px;column-gap:10px}}
 @media (prefers-reduced-motion:reduce){.iqra-star,.iqra-lantern,.iqra-moon{animation:none}.iqra-book{transition:none}}
 `;
@@ -8507,6 +8514,12 @@ function LibraryView({ user }) {
   const [failed, setFailed] = useState(false);
   const [q, setQ] = useState("");
   const [only, setOnly] = useState(""); // একটিমাত্র তাক দেখাতে
+  // পরিচালকের সাজানো: arrange চালু থাকলে বইয়ে চাপলে Drive নয়, তাক বদলানোর ঘর খোলে
+  const canArrange = isDir(user);
+  const [arrange, setArrange] = useState(false);
+  const [edit, setEdit] = useState(null); // { book, shelf }
+  const [adding, setAdding] = useState(null); // { name, link, shelf }
+  const [saving, setSaving] = useState(false);
   const BASE_MEDIA = (import.meta.env?.VITE_API_URL || "http://localhost:8000/api").replace(/\/api$/, "");
   const load = () => {
     setFailed(false);
@@ -8542,9 +8555,49 @@ function LibraryView({ user }) {
   })).filter((s) => s.books.length);
 
   const open = (b) => {
+    if (arrange) return setEdit({ book: b, shelf: b.library_shelf || "" });
     if (!b.link) return notice("This book has no link yet — add its Google Drive link in Academic Books.");
     window.open(b.link, "_blank", "noopener,noreferrer");
   };
+  const guessName = (name) => IQRA_SHELF[iqraShelfOf({ name })].name;
+  const saveShelf = async () => {
+    setSaving(true);
+    try {
+      const r = await api.setBookShelf(edit.book.id, edit.shelf);
+      setBooks((bs) => bs.map((x) => (x.id === r.id ? { ...x, library_shelf: r.library_shelf } : x)));
+      setEdit(null);
+      notice("✔ Book moved.");
+    } catch (e) {
+      notice("Could not move the book — " + (e?.data?.error || e?.message || "please try again"));
+    }
+    setSaving(false);
+  };
+  const addBook = async () => {
+    const name = adding.name.trim();
+    const link = adding.link.trim();
+    if (!name) return notice("Please write the book's name.");
+    if (!/^https?:\/\//i.test(link)) return notice("Please paste the book's Google Drive link (starts with https://).");
+    setSaving(true);
+    try {
+      const r = await api.addBookLink(name, link, adding.shelf);
+      setBooks((bs) => [...(bs || []), r]);
+      setAdding(null);
+      notice("✔ Book added to the library.");
+    } catch (e) {
+      notice("Could not add the book — " + (e?.data?.error || e?.message || "please try again"));
+    }
+    setSaving(false);
+  };
+  const shelfOptions = (auto) => (
+    <>
+      <option value="">✨ Automatic — {auto}</option>
+      {IQRA_SHELVES.filter((s) => s.id !== "teachers").map((s) => (
+        <option key={s.id} value={s.id}>
+          {s.emoji} {s.name}
+        </option>
+      ))}
+    </>
+  );
 
   return (
     <div className="iqra-lib">
@@ -8562,7 +8615,7 @@ function LibraryView({ user }) {
         <span className="iqra-moon">🌙</span>
         <div style={{ position: "relative", marginTop: 22 }}>
           <div className="iqra-arabic" dir="rtl" lang="ar" style={{ textAlign: "left" }}>اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ</div>
-          <div className="iqra-name">Iqra Library</div>
+          <div className="iqra-name">Little Mu’min Library</div>
           <div className="iqra-tag" style={{ marginTop: 8 }}>
             “Read! In the name of your Lord who created.” — Surah Al-‘Alaq 96:1
           </div>
@@ -8583,7 +8636,26 @@ function LibraryView({ user }) {
           placeholder="🔍 Find a book…"
           aria-label="Find a book"
         />
+        {canArrange && (
+          <>
+            <button className="iqra-tool" onClick={() => setAdding({ name: "", link: "", shelf: "" })}>
+              ➕ Add a book
+            </button>
+            <button
+              className={"iqra-tool alt" + (arrange ? " on" : "")}
+              onClick={() => setArrange((a) => !a)}
+              title="Tap a book to choose its shelf"
+            >
+              {arrange ? "✔ Done arranging" : "🛠️ Arrange shelves"}
+            </button>
+          </>
+        )}
       </div>
+      {arrange && (
+        <div style={{ margin: "-2px 0 10px", fontSize: 13.5, fontWeight: 600, color: "#7a4a1d" }}>
+          🛠️ Arranging — tap any book to move it to another shelf. Students don’t see this.
+        </div>
+      )}
       {shelvesWithBooks.length > 1 && (
         <div className="iqra-chips" role="tablist" aria-label="Shelves">
           <button className={"iqra-chip" + (!only ? " on" : "")} onClick={() => setOnly("")}>
@@ -8629,11 +8701,11 @@ function LibraryView({ user }) {
                   return (
                     <button
                       key={b.id}
-                      className="iqra-book"
+                      className={"iqra-book" + (arrange ? " arranging" : "")}
                       title={b.name}
                       lang="en"
                       onClick={() => open(b)}
-                      disabled={!b.link}
+                      disabled={!b.link && !arrange}
                       style={{
                         "--c1": c1,
                         "--c2": c2,
@@ -8647,6 +8719,7 @@ function LibraryView({ user }) {
                       <span className="iqra-btitle">{title}</span>
                       {age && <span className="iqra-age">{age}</span>}
                       {!b.link && <span className="iqra-flag">NO LINK</span>}
+                      {arrange && <span className="iqra-pen">✏️</span>}
                     </button>
                   );
                 })}
@@ -8655,6 +8728,86 @@ function LibraryView({ user }) {
           ))
         )}
       </div>
+
+      {edit && (
+        <Modal title="📚 Move this book" onClose={() => setEdit(null)}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>{edit.book.name}</div>
+          {edit.book.staff_only ? (
+            <div style={{ fontSize: 13.5, color: C.muted }}>
+              Teacher guides always stay in the 🧑‍🏫 Teachers’ Corner — students never see them.
+            </div>
+          ) : (
+            <>
+              <label style={S.label}>Shelf</label>
+              <select
+                style={S.input}
+                value={edit.shelf}
+                onChange={(e) => setEdit({ ...edit, shelf: e.target.value })}
+              >
+                {shelfOptions(guessName(edit.book.name))}
+              </select>
+            </>
+          )}
+          <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+            {!edit.book.staff_only && (
+              <Btn onClick={saveShelf} disabled={saving}>
+                {saving ? "Saving…" : "✔ Save"}
+              </Btn>
+            )}
+            {edit.book.link && (
+              <Btn kind="soft" onClick={() => window.open(edit.book.link, "_blank", "noopener,noreferrer")}>
+                📖 Open book
+              </Btn>
+            )}
+          </div>
+          <div style={{ fontSize: 12.5, color: C.muted, marginTop: 12 }}>
+            To rename the book or change its link, use 📚 Academic Books.
+          </div>
+        </Modal>
+      )}
+
+      {adding && (
+        <Modal title="➕ Add a book to the library" onClose={() => setAdding(null)}>
+          <label style={S.label}>Book name</label>
+          <input
+            style={S.input}
+            value={adding.name}
+            onChange={(e) => setAdding({ ...adding, name: e.target.value })}
+            placeholder="e.g. Allah — Aqeedah for Little Ones (Ages 5-8)"
+          />
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+            Tip: write the age in brackets — “(Ages 5-8)” — and it shows as a badge on the cover.
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>Google Drive link</label>
+            <input
+              style={S.input}
+              value={adding.link}
+              onChange={(e) => setAdding({ ...adding, link: e.target.value })}
+              placeholder="https://drive.google.com/file/d/…/view"
+            />
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+              In Google Drive: right-click the book → Share → “Anyone with the link” → Copy link.
+            </div>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>Shelf</label>
+            <select
+              style={S.input}
+              value={adding.shelf}
+              onChange={(e) => setAdding({ ...adding, shelf: e.target.value })}
+            >
+              {shelfOptions(guessName(adding.name))}
+            </select>
+          </div>
+          <Btn style={{ marginTop: 16, width: "100%", justifyContent: "center" }} onClick={addBook} disabled={saving}>
+            {saving ? "Adding…" : "➕ Add to the library"}
+          </Btn>
+          <div style={{ fontSize: 12.5, color: C.muted, marginTop: 10 }}>
+            The book also appears in 📚 Academic Books, where you can attach it to a course.
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -24557,8 +24710,8 @@ const NAV = [
     // বাচ্চাদের ভার্চুয়াল লাইব্রেরি — সব বই তাকে সাজানো, চাপলে Drive-এ খোলে
     id: "library",
     icon: "🪔",
-    label: "Iqra Library",
-    labelEn: "Iqra Library",
+    label: "Little Mu'min Library",
+    labelEn: "Little Mu'min Library",
     roles: ["director", "admin", "teacher", "student"],
   },
   {
