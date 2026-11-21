@@ -41,3 +41,19 @@ class NooraniPlan(TestCase):
         self.assertTrue(LectureTopic.objects.filter(text="easy topic").exists())
         self.assertEqual(LessonSection.objects.filter(course=self.easy).count(), 1)
         self.assertFalse(CourseSyllabusSheet.objects.filter(course=self.easy).exists())
+
+
+class NooraniBooks(TestCase):
+    def test_the_course_gets_its_own_books(self):
+        from core.models import AcademicBook
+        easy = Course.objects.create(name="Easy Noorani Qaida")
+        course = Course.objects.create(name="Noorani Qaida")
+        old = AcademicBook.objects.create(name="Old book", file="x")
+        course.books.add(old); easy.books.add(old)
+        importlib.import_module("core.migrations.0086_noorani_qaida_books").forwards(django_apps, None)
+        names = sorted(b.name for b in course.books.all())
+        self.assertEqual(len(names), 7)
+        self.assertNotIn("Old book", names)
+        self.assertEqual(course.books.filter(staff_only=True).count(), 2)
+        self.assertTrue(AcademicBook.objects.filter(name="Old book").exists(), "পুরনো বই মোছা উচিত নয়")
+        self.assertIn(old, easy.books.all(), "Easy কোর্সের বই বদলানো উচিত নয়")
