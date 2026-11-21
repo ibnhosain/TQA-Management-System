@@ -129,9 +129,10 @@ def send_whatsapp(self, msg_id):
 REMINDER_MINUTES = 10
 
 
-def _when_for(start, person):
-    """ক্লাসের সময় প্রাপকের নিজের সময়বলয়ে — "8:10 PM London time"।
-    বিদেশি পরিবারকে বাংলাদেশের "02:10" লিখলে বিভ্রান্ত হতেন।"""
+def _when_for(start, person, with_day=False):
+    """ক্লাসের সময় প্রাপকের নিজের সময়বলয়ে — "8:10 PM London time"
+    (with_day: "Fri 20 Nov, 8:10 PM London time")। বিদেশি পরিবারকে
+    বাংলাদেশের "02:10" লিখলে বিভ্রান্ত হতেন। person=None → বাংলাদেশ।"""
     from zoneinfo import ZoneInfo
     name = (getattr(person, "timezone_override", "") or getattr(person, "timezone", "")
             or "Asia/Dhaka")
@@ -139,9 +140,11 @@ def _when_for(start, person):
         tz = ZoneInfo(name)
     except Exception:
         name, tz = "Asia/Dhaka", ZoneInfo("Asia/Dhaka")
-    t = start.astimezone(tz).strftime("%I:%M %p").lstrip("0")
+    local = start.astimezone(tz)
+    t = local.strftime("%I:%M %p").lstrip("0")
     place = "Bangladesh" if name == "Asia/Dhaka" else name.split("/")[-1].replace("_", " ")
-    return f"{t} {place} time"
+    day = f"{local:%a} {local.day} {local:%b}, " if with_day else ""
+    return f"{day}{t} {place} time"
 
 
 def reminder_text(name, course, minutes, when):

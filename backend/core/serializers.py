@@ -335,7 +335,7 @@ class UserAdminSerializer(UserSerializer):
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
             raise serializers.ValidationError(
-                "এই স্টুডেন্ট আইডি অন্য একজনের জন্য ইতিমধ্যে ব্যবহৃত হয়েছে।"
+                "This student ID is already used by someone else."
             )
         return value
 
@@ -881,7 +881,7 @@ class AdmissionSerializer(serializers.ModelSerializer):
         digits = "".join(ch for ch in (value or "") if ch.isdigit())
         if len(digits) < 8:
             raise serializers.ValidationError(
-                "সঠিক WhatsApp/ফোন নম্বর দিন (কমপক্ষে ৮ ডিজিট)।"
+                "Please enter a valid WhatsApp/phone number (at least 8 digits)."
             )
         return value
 

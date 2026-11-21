@@ -31,13 +31,22 @@ from .permissions import (IsDirector, IsAdminLevel, IsTeacherOrAdminLevel,
 # আলাদা করে বদলাতে পারেন (ফ্রন্টএন্ডের DEFAULT_FEE-এর সাথে মিল রাখা)
 DEFAULT_STUDENT_FEE = 3500
 
+# ⚠️ ছুটির ধরন ডাটাবেসে বাংলায় সংরক্ষিত (ফ্রন্টএন্ডের LEAVE_TYPE_EN-এর key) —
+# মান বদলালে পুরনো আবেদন আর মিলত না; তাই কেবল দেখানোর সময় ইংরেজি
+_LEAVE_EN = {"অসুস্থতা": "Sickness", "সফর": "Travel", "পারিবারিক প্রয়োজন": "Family Reasons",
+             "পরীক্ষা": "Exam", "অন্যান্য": "Other"}
+
+
+def _leave_en(t):
+    return _LEAVE_EN.get(t, t)
+
 
 def notify(text, users):
     n = Notification.objects.create(text=text)
     n.recipients.set(users)
     from .push import send_push
     try:
-        send_push(users, "তারবিয়াতুল কুরআন একাডেমি", text)
+        send_push(users, "Tarbiyatul Quran Academy", text)
     except Exception:
         pass  # পুশ ব্যর্থ হলেও ইন-অ্যাপ নোটিফিকেশন যেন আটকে না যায়
     return n
@@ -1374,9 +1383,14 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         s.status = "postponed"
         s.save()
         studs = list(s.students.all())
-        msg = (f"⛔ {s.course.name} ক্লাসটি ({s.date}, {s.time}) অনিবার্য কারণে / "
-               f"উস্তাদ-উস্তাদা অসুস্থ থাকার দরুন স্থগিত করা হয়েছে। "
-               f"পরবর্তীতে শিডিউল করে মেকআপ করা হবে ইনশাআল্লাহ।")
+        from datetime import datetime as _dt
+        from .tasks import _when_for
+        start = timezone.make_aware(_dt.combine(s.date, s.time))
+        # আগে কাঁচা "2026-11-20, 14:10:00" দেখাত; নোটিফিকেশন সবার জন্য একটিই
+        # সারি, তাই সেখানে বাংলাদেশ সময় স্পষ্ট লেখা থাকে
+        msg = (f"⛔ The {s.course.name} class on {_when_for(start, None, with_day=True)} "
+               f"has been postponed for an unavoidable reason. A make-up class will be "
+               f"scheduled, insha'Allah.")
         # s.teacher নাল হতে পারে (টিচারের অ্যাকাউন্ট মুছে ফেললে পুরনো ক্লাস-সেশনে
         # SET_NULL হয়ে যায়) — না ছেঁকে পাঠালে notify()-এর recipients.set() এ
         # None ঢুকে ৫০০ এরর দিত, অথচ স্ট্যাটাস ততক্ষণে সেভ হয়ে গেছে
@@ -1384,10 +1398,14 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
         # SET_NULL হয়ে যায়) — Django এমনিতেই None নিঃশব্দে বাদ দেয় (ক্র্যাশ করে
         # না), তবু স্পষ্টভাবে ছেঁকে দেওয়া বেশি নির্ভরযোগ্য ও উদ্দেশ্য-স্পষ্ট
         notify(msg, studs + ([s.teacher] if s.teacher_id else []) + list(admins()))
-        for st in studs:  # অভিভাবকের WhatsApp — Celery টাস্ক পাঠাবে
+        for st in studs:  # WhatsApp — প্রত্যেককে তাঁর নিজের সময়ে
             if st.phone:
-                WaMessage.objects.create(to_name=st.guardian or st.name_bn, student=st,
-                                         phone=st.phone, text=msg, reason="postpone")
+                text = (f"Assalamu Alaikum {st.name_bn}, your {s.course.name} class on "
+                        f"{_when_for(start, st, with_day=True)} has been postponed for an "
+                        f"unavoidable reason. A make-up class will be scheduled, insha'Allah. "
+                        f"— Tarbiyatul Quran Academy")
+                WaMessage.objects.create(to_name=st.name_bn, student=st,
+                                         phone=st.phone, text=text, reason="postpone")
         return Response({"status": "postponed"})
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdminLevel])
@@ -1413,7 +1431,8 @@ class ClassSessionViewSet(viewsets.ModelViewSet):
                 },
             )
         notify(
-            f"✅ {s.course.name if s.course_id else 'ক্লাস'}টি ({s.date}) সম্পন্ন চিহ্নিত হয়েছে।",
+            f"✅ The {s.course.name if s.course_id else 'class'} class of "
+            f"{s.date.day} {s.date:%b} has been marked completed.",
             list(s.students.all()) + ([s.teacher] if s.teacher_id else []) + list(admins()),
         )
         return Response({"status": "done"})
@@ -1681,8 +1700,8 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
             currency=student.fee_currency or "BDT",
         )
         DueMonth.objects.filter(user=pay.student, month_label=pay.month_label).delete()
-        notify(f"{pay.student.name_bn} — {pay.month_label} মাসের ফি পরিশোধ করেছে, "
-               f"পরিচালকের ভেরিফাই বাকি।", admins())
+        notify(f"{pay.student.name_bn} paid the fee for {pay.month_label} — "
+               f"waiting for the director's verification.", admins())
 
     def perform_destroy(self, instance):
         # ভুলবশত/ডুপ্লিকেট যোগ হওয়া পেমেন্ট রেকর্ড মোছার পর, ওই মাসের আর কোনো
@@ -1775,7 +1794,7 @@ class FeePaymentViewSet(viewsets.ModelViewSet):
         pay.status = "verified"
         pay.verified_by = request.user
         pay.save()
-        notify(f"আপনার {pay.month_label} মাসের ফি ভেরিফাই হয়েছে, জাযাকুমুল্লাহু খাইরান।", [pay.student])
+        notify(f"Your fee for {pay.month_label} has been verified. Jazakumullahu Khairan.", [pay.student])
         return Response({"status": "verified"})
 
 
@@ -1835,7 +1854,7 @@ class SentReceiptViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         r = serializer.save(sent_by=self.request.user)
-        notify(f"🧾 আপনার পোর্টালে একটি \"{r.kind}\" পাঠানো হয়েছে — ভাউচার/রিসিট মেনুতে দেখুন।",
+        notify(f"🧾 A \"{r.kind}\" has been sent to your portal — see the Vouchers/Receipts menu.",
                [r.to_user])
 
 
@@ -2201,7 +2220,7 @@ class LessonViewSet(viewsets.ModelViewSet):
             course=src.course).order_by("-order").first()
         new = Lesson.objects.create(
             course=src.course,
-            title=title or (src.title + " (নকল)")[:200],
+            title=title or (src.title + " (copy)")[:200],
             title_ar=src.title_ar, kind=src.kind,
             age_from=age_from,
             age_to=age_to,
@@ -2451,7 +2470,7 @@ class TrialReportViewSet(viewsets.ModelViewSet):
         # যাচাই হয়ে যাওয়ার পর উস্তাদ আর বদলাতে পারবেন না — কর্তৃপক্ষ পারবেন
         if obj.reviewed_at and u.role not in ("director", "admin"):
             raise PermissionDenied(
-                "রিপোর্টটি যাচাই হয়ে গেছে — বদলাতে হলে পরিচালককে বলুন")
+                "This report is already verified — ask the director to change it")
         serializer.save()
 
     def perform_destroy(self, instance):
@@ -2526,13 +2545,13 @@ class TrialReportViewSet(viewsets.ModelViewSet):
             country=g.country or "", contact=g.phone or "", email=g.email or "",
             course_name=(r.recommended_course.name if r.recommended_course_id else ""),
             preferred_time=r.offer_schedule or "",
-            message=("ট্রায়াল থেকে — অতিথি প্রস্তাব গ্রহণ করেছেন। "
-                     f"আইডি: {g.username}"
-                     + (f" · স্তর: {r.recommended_level}" if r.recommended_level else "")),
+            message=("From a trial — the guest accepted the offer. "
+                     f"ID: {g.username}"
+                     + (f" · Level: {r.recommended_level}" if r.recommended_level else "")),
         )
         r.accepted_at = timezone.now()
         r.save(update_fields=["accepted_at"])
-        notify(f"🌱 ট্রায়াল থেকে ভর্তির আবেদন এসেছে: {g.name_bn}",
+        notify(f"🌱 New admission application from a trial: {g.name_bn}",
                User.objects.filter(role__in=["director", "admin"]))
         return Response(self.get_serializer(r).data)
 
@@ -2727,8 +2746,8 @@ class AdmissionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """ওয়েবসাইট থেকে নতুন আবেদন এলেই এডমিন ও পরিচালককে নোটিফিকেশন"""
         a = serializer.save()
-        kind_bn = {"trial": "ফ্রি ট্রায়াল অনুরোধ", "contact": "যোগাযোগ বার্তা", "enroll": "ভর্তি আবেদন (পেমেন্টসহ)", "admission": "ভর্তি আবেদন"}.get(a.kind, "ভর্তি আবেদন")
-        notify(f"🌐 ওয়েবসাইট থেকে নতুন {kind_bn}: {a.name}" + (f" ({a.course_name})" if a.course_name else ""),
+        kind_en = {"trial": "free trial request", "contact": "contact message", "enroll": "admission application (with payment)", "admission": "admission application"}.get(a.kind, "admission application")
+        notify(f"🌐 New {kind_en} from the website: {a.name}" + (f" ({a.course_name})" if a.course_name else ""),
                User.objects.filter(role__in=["admin", "director"]))
 
     @action(detail=True, methods=["post"])
@@ -2739,15 +2758,16 @@ class AdmissionViewSet(viewsets.ModelViewSet):
         if len(phone) < 8:
             return Response({"error": "This application has no valid WhatsApp number"}, status=400)
         if a.kind == "trial":
-            text = (f"আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম, তারবিয়াতুল কুরআন একাডেমিতে "
-                    f"\"{a.course_name or 'কুরআন'}\" কোর্সের ফ্রি ট্রায়াল ক্লাসের জন্য {a.name}-এর অনুরোধটি "
-                    f"আমরা পেয়েছি, আলহামদুলিল্লাহ। আপনার পছন্দের সময় ({a.preferred_time or 'আলোচনাসাপেক্ষ'}) "
-                    f"বিবেচনায় রেখে ক্লাস শিডিউল চূড়ান্ত করতে আমরা শীঘ্রই এই নম্বরে যোগাযোগ করছি ইনশাআল্লাহ। "
-                    f"জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি")
+            text = (f"Assalamu Alaikum wa Rahmatullah. Alhamdulillah, we have received "
+                    f"{a.name}'s request for a free trial class in our \"{a.course_name or 'Quran'}\" "
+                    f"course at Tarbiyatul Quran Academy. We will contact you on this number soon "
+                    f"to finalise the class schedule, keeping your preferred time "
+                    f"({a.preferred_time or 'to be discussed'}) in mind, insha'Allah. "
+                    f"Jazakumullahu Khairan. — Tarbiyatul Quran Academy")
         else:
-            text = (f"আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম {a.name}, আপনার বার্তাটি আমরা পেয়েছি, "
-                    f"আলহামদুলিল্লাহ। আমাদের একজন প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবেন ইনশাআল্লাহ। "
-                    f"জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি")
+            text = (f"Assalamu Alaikum wa Rahmatullah. Dear {a.name}, alhamdulillah, we have "
+                    f"received your message. One of our team will contact you soon, insha'Allah. "
+                    f"Jazakumullahu Khairan. — Tarbiyatul Quran Academy")
         from .tasks import dispatch_whatsapp
         m = WaMessage.objects.create(to_name=a.name, phone=phone, text=text, reason="reminder")
         try:
@@ -2763,7 +2783,7 @@ class AdmissionViewSet(viewsets.ModelViewSet):
         a = self.get_object()
         a.forwarded_to_director = True
         a.save()
-        notify(f"এডমিন একটি ভর্তি আবেদন পরিচালক বরাবর পাঠিয়েছেন: {a.name} ({a.course_name})",
+        notify(f"An admin forwarded an admission application to you: {a.name} ({a.course_name})",
                User.objects.filter(role="director"))
         return Response({"forwarded": True})
 
@@ -2810,14 +2830,14 @@ class AdmissionViewSet(viewsets.ModelViewSet):
         # গ্রহণের পর অভিভাবকের WhatsApp এ আইডি-পাসওয়ার্ডসহ স্বাগত বার্তা
         phone = "".join(ch for ch in a.contact if ch.isdigit())
         if len(phone) >= 8:
-            text = (f"আসসালামু আলাইকুম ওয়া রাহমাতুল্লাহ। মুহতারাম, আলহামদুলিল্লাহ — "
-                    f"তারবিয়াতুল কুরআন একাডেমিতে {a.name}-এর ভর্তি নিশ্চিত হয়েছে। "
-                    f"নিয়মিত ক্লাসে যোগ দিতে আমাদের ম্যানেজমেন্ট পোর্টালে লগইন করুন:\n\n"
+            text = (f"Assalamu Alaikum wa Rahmatullah. Alhamdulillah — {a.name}'s admission "
+                    f"to Tarbiyatul Quran Academy is confirmed. Log in to our portal to join "
+                    f"regular classes:\n\n"
                     f"🔗 https://app.tarbiyatulquran.org\n"
-                    f"👤 আইডি: {username}\n"
-                    f"🔑 পাসওয়ার্ড: {pwd}\n\n"
-                    f"প্রথমবার লগইন করে পাসওয়ার্ডটি পরিবর্তন করে নেবেন। "
-                    f"জাযাকুমুল্লাহু খাইরান। — তারবিয়াতুল কুরআন একাডেমি")
+                    f"👤 ID: {username}\n"
+                    f"🔑 Password: {pwd}\n\n"
+                    f"Please change the password after your first login. "
+                    f"Jazakumullahu Khairan. — Tarbiyatul Quran Academy")
             from .tasks import dispatch_whatsapp
             m = WaMessage.objects.create(to_name=a.name, phone=phone, text=text, reason="reminder")
             try:
@@ -2849,7 +2869,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         lv = serializer.save(applicant=self.request.user)
-        notify(f"✉️ {lv.applicant.name_bn} ছুটির আবেদন করেছেন ({lv.leave_type}: "
+        notify(f"✉️ {lv.applicant.name_bn} applied for leave ({_leave_en(lv.leave_type)}: "
                f"{lv.from_date} — {lv.to_date})", admins())
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdminLevel])
@@ -2857,7 +2877,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         lv = self.get_object()
         lv.status = "forwarded"
         lv.save()
-        notify(f"✉️ এডমিন {lv.applicant.name_bn}-এর ছুটির আবেদন পরিচালক বরাবর পাঠিয়েছেন।",
+        notify(f"✉️ An admin forwarded {lv.applicant.name_bn}'s leave application to you.",
                User.objects.filter(role="director"))
         return Response({"status": "forwarded"})
 
@@ -2868,8 +2888,8 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         lv.status = "approved" if ok else "rejected"
         lv.decided_by = request.user
         lv.save()
-        notify(f"আপনার ছুটির আবেদন ({lv.leave_type}) "
-               f"{'মঞ্জুর হয়েছে ✔ আলহামদুলিল্লাহ' if ok else 'নামঞ্জুর হয়েছে ✘'}।", [lv.applicant])
+        notify(f"Your leave application ({_leave_en(lv.leave_type)}) "
+               f"{'has been approved ✔ Alhamdulillah' if ok else 'has been rejected ✘'}.", [lv.applicant])
         return Response({"status": lv.status})
 
 
