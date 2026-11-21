@@ -1,6 +1,7 @@
 /* পরিচালকের Settings পাতা — চালু/বন্ধ বোতাম (শুধু পরিচালক বদলান)। লেকচার খোলা হয় "Lecture Approvals" পাতা থেকে। */
 import { useEffect, useState } from "react";
 import { settingsApi } from "../api";
+import { Ico } from "../icons";
 
 const G = "#1A5C3A", MUTED = "#5B6B62";
 
@@ -29,7 +30,7 @@ export default function SettingsView({ user }) {
 
   return (
     <div style={{ display: "grid", gap: 18, maxWidth: 900 }}>
-      <h2 style={{ margin: 0 }}>⚙️ Settings</h2>
+      <h2 style={{ margin: 0 }}><Ico e="⚙" /> Settings</h2>
       {msg && <div style={{ color: msg.startsWith("✅") ? G : "#b00020" }}>{msg}</div>}
 
       <section style={{ display: "grid", gap: 10 }}>

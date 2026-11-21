@@ -2,6 +2,7 @@
    Entrance animations and slide transitions play as in PowerPoint (fade, pop, zoom, fly, bounce, spin, wipe, wheel, float). */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadPptx } from "./pptx";
+import { Ico } from "../icons";
 
 const CSS = `
 @keyframes dk-fade{from{opacity:0}to{opacity:1}}
@@ -201,9 +202,9 @@ export default function DeckPlayer({ buffer, title, onClose, finish, part, autoF
         <button style={btn} onClick={prev}>‹</button>
         <button style={btn} onClick={next}>›</button>
         <button style={btn} onClick={() => setNotes((v) => !v)}>{notes ? "Hide notes" : "Notes"}</button>
-        <button style={btn} onClick={() => (document.fullscreenElement ? document.exitFullscreen() : wrap.current.requestFullscreen?.())}>⛶</button>
-        {finish && <button style={btn} onClick={() => setDone(true)}>✓ Topics</button>}
-        <button style={btn} onClick={onClose}>✕</button>
+        <button style={btn} onClick={() => (document.fullscreenElement ? document.exitFullscreen() : wrap.current.requestFullscreen?.())}><Ico e="⛶" /></button>
+        {finish && <button style={btn} onClick={() => setDone(true)}><Ico e="✓" /> Topics</button>}
+        <button style={btn} onClick={onClose}><Ico e="✕" /></button>
       </div>
       <div onClick={next} style={{ flex: 1, display: "grid", placeItems: "center", overflow: "hidden", cursor: "pointer", position: "relative" }}>
         {/* iPad/ফোনে আঙুল দিয়ে চালানোর বড় তীর — বামে আগের, ডানে পরের */}

@@ -3,6 +3,7 @@
    Approve দিলে তবেই ওই শিক্ষার্থীর পরের লেকচার খোলে। */
 import { useEffect, useState } from "react";
 import { api, approvalsApi } from "../api";
+import { Ico, withIcons } from "../icons";
 
 const G = "#1A5C3A", GOLD = "#C9962A", MUTED = "#5B6B62", RED = "#b00020";
 const fmt = (d) => (d ? new Date(d).toLocaleDateString("en-GB") : "");
@@ -49,13 +50,13 @@ function Card({ p, onApprove, busy }) {
               {p.slides.map((s, i) => <tr key={i}><td style={cell}>{s.part}</td><td style={cell}>{s.minutes}</td></tr>)}
             </tbody>
           </table>
-          <div>{p.topics.map((t, i) => <div key={i} style={{ fontSize: 14 }}>{t.covered === "covered" ? "✔" : "✘"} {t.text}</div>)}</div>
+          <div>{p.topics.map((t, i) => <div key={i} style={{ fontSize: 14 }}>{withIcons(t.covered === "covered" ? "✔" : "✘")} {t.text}</div>)}</div>
         </div>
       </details>
       <div>
         <button disabled={busy} onClick={() => onApprove(p)}
           style={{ border: "none", background: G, color: "#fff", borderRadius: 10, padding: "10px 18px", fontWeight: 700, cursor: "pointer", font: "inherit" }}>
-          ✅ Approve — open Lecture {p.no + 1}
+          <Ico e="✅" /> Approve — open Lecture {p.no + 1}
         </button>
       </div>
     </div>
@@ -108,7 +109,7 @@ export default function ApprovalsView({ courses }) {
   };
   return (
     <div style={{ display: "grid", gap: 14, maxWidth: 980 }}>
-      <h2 style={{ margin: 0 }}>✅ Lecture Approvals</h2>
+      <h2 style={{ margin: 0 }}><Ico e="✅" /> Lecture Approvals</h2>
       <div style={{ color: MUTED }}>Everything here is per student: approving opens the next lecture for that one student only, not for anyone else. When a teacher ticks every topic of a lecture for a student, it waits here — check the class time and slide time, then approve.</div>
       {msg && <div style={{ color: msg.startsWith("✅") ? G : RED }}>{msg}</div>}
       <ManualUnlock courses={courses} onDone={async (c, st, prev, ok) => {

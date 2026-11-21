@@ -1,6 +1,7 @@
 /* শিক্ষার্থীর Homework — প্রতিদিনের স্লাইড থেকে নোট (যে লেকচার তাকে পড়ানো হয়েছে, নতুনটা আগে)। */
 import { useEffect, useState } from "react";
 import { deckApi, settingsApi } from "../api";
+import { Ico } from "../icons";
 
 const AR = /[؀-ۿ]/;
 
@@ -29,7 +30,7 @@ export default function HomeworkNotes() {
 
   return (
     <div>
-      <h2 style={{ margin: "0 0 12px" }}>📚 Homework</h2>
+      <h2 style={{ margin: "0 0 12px" }}><Ico e="📚" /> Homework</h2>
       <div style={{ color: "#5B6B62", marginBottom: 14 }}>Notes from your daily lecture slides.</div>
       {err && <div style={{ color: "#b00020" }}>{err}</div>}
       {!rows && !err && <div>Loading…</div>}
@@ -51,7 +52,7 @@ export default function HomeworkNotes() {
                 {r.topics?.length > 0 && (
                   <div style={{ background: "#EEF6F0", borderRadius: 10, padding: "10px 12px", margin: "12px 0" }}>
                     <b style={{ color: "#1A5C3A" }}>Covered in class</b>
-                    {r.topics.map((t, i) => <div key={i}>✓ {t}</div>)}
+                    {r.topics.map((t, i) => <div key={i}><Ico e="✓" /> {t}</div>)}
                   </div>
                 )}
                 {r.note ? r.note.split("\n").map(line) : <div style={{ color: "#5B6B62", marginTop: 12 }}>No note for this lecture yet.</div>}

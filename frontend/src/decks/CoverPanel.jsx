@@ -2,6 +2,7 @@
    Lecture Plan-এ এই লেকচারের টপিক থাকলে সেগুলোই (সেখানে কভার বসে); না থাকলে স্লাইডের নিজের টপিক। */
 import { useEffect, useState } from "react";
 import { deckApi } from "../api";
+import { Ico, withIcons } from "../icons";
 
 export default function CoverPanel({ deck, preselect, onBack, onDone }) {
   const [data, setData] = useState(null);
@@ -47,7 +48,7 @@ export default function CoverPanel({ deck, preselect, onBack, onDone }) {
   return (
     <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", inset: 0, background: "rgba(5,20,12,.72)", display: "grid", placeItems: "center", zIndex: 5 }}>
       <div style={box}>
-        <h2 style={{ margin: "0 0 4px", color: "#1A5C3A" }}>🎉 {preselect ? "This part is finished" : `Lecture ${deck.no} finished`}</h2>
+        <h2 style={{ margin: "0 0 4px", color: "#1A5C3A" }}><Ico e="🎉" /> {preselect ? "This part is finished" : `Lecture ${deck.no} finished`}</h2>
         <div style={{ color: "#5B6B62", marginBottom: 14 }}>Tick the topics you covered today.</div>
         {!data && !err && <div>Loading…</div>}
         {data && (
@@ -56,7 +57,7 @@ export default function CoverPanel({ deck, preselect, onBack, onDone }) {
             {topics.length > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <b>Topics</b>
-                <button style={b} onClick={() => setTops(Object.fromEntries(topics.map((t) => [t.key, !allOn])))}>{allOn ? "Clear all" : "✓ Tick all"}</button>
+                <button style={b} onClick={() => setTops(Object.fromEntries(topics.map((t) => [t.key, !allOn])))}>{withIcons(allOn ? "Clear all" : "✓ Tick all")}</button>
               </div>
             )}
             <div style={{ display: "grid", gap: 6, marginBottom: 16 }}>
@@ -79,7 +80,7 @@ export default function CoverPanel({ deck, preselect, onBack, onDone }) {
               {data.students.map((s) => (
                 <label key={s.id} style={{ ...row(!!studs[s.id]), padding: "6px 12px" }}>
                   <input type="checkbox" checked={!!studs[s.id]} onChange={(e) => setStuds({ ...studs, [s.id]: e.target.checked })} />
-                  <span>{s.name}{s.done ? " ✓" : ""}</span>
+                  <span>{s.name}{withIcons(s.done ? " ✓" : "")}</span>
                 </label>
               ))}
             </div>

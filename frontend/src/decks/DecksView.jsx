@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, deckApi, fetchBinary } from "../api";
 import CoverPanel from "./CoverPanel.jsx";
 import DeckPlayer from "./DeckPlayer.jsx";
+import { Ico } from "../icons";
 
 export default function DecksView({ user, courses }) {
   const isDir = user?.role === "director";
@@ -58,7 +59,7 @@ export default function DecksView({ user, courses }) {
   const go = { ...btn, background: "#1A5C3A", color: "#fff", borderColor: "#1A5C3A", fontWeight: 700 };
   return (
     <div>
-      <h2 style={{ margin: "0 0 12px" }}>🎞️ Lecture Slides</h2>
+      <h2 style={{ margin: "0 0 12px" }}><Ico e="🎞" /> Lecture Slides</h2>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
         <select value={course} onChange={(e) => setCourse(e.target.value)} style={{ ...btn, padding: "8px 10px" }}>
           {mine.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -70,7 +71,7 @@ export default function DecksView({ user, courses }) {
           <label>Lecture <input type="number" min="1" value={no} onChange={(e) => setNo(e.target.value)} style={{ ...btn, width: 80, padding: "6px 8px" }} /></label>
           <input placeholder="Title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} style={{ ...btn, flex: 1, minWidth: 180, cursor: "text" }} />
           <input ref={fileRef} type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" style={{ display: "none" }} onChange={(e) => upload(e.target.files?.[0])} />
-          <button style={go} onClick={() => fileRef.current?.click()}>⬆ Choose .pptx</button>
+          <button style={go} onClick={() => fileRef.current?.click()}><Ico e="⬆" /> Choose .pptx</button>
           <span style={{ fontSize: 12, color: "#5B6B62", width: "100%" }}>Same lecture number again = the old slides are replaced.</span>
         </div>
       )}
@@ -85,8 +86,8 @@ export default function DecksView({ user, courses }) {
               <div style={{ fontSize: 12, color: "#5B6B62" }}>{d.filename} · {(d.size / 1048576).toFixed(1)} MB</div>
             </div>
             <button style={go} onClick={() => open(d)}>▶ Play</button>
-            {isDir && <button style={btn} onClick={() => setEdit({ id: d.id, no: d.no, note: d.note || "", topics: d.topics || "" })}>✎ Note</button>}
-            {isDir && <button style={btn} onClick={() => remove(d)}>🗑</button>}
+            {isDir && <button style={btn} onClick={() => setEdit({ id: d.id, no: d.no, note: d.note || "", topics: d.topics || "" })}><Ico e="✎" /> Note</button>}
+            {isDir && <button style={btn} onClick={() => remove(d)}><Ico e="🗑" /></button>}
           </div>
         ))}
       </div>

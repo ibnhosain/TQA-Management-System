@@ -2,6 +2,8 @@
 // ভাসমান পর্দাটি উস্তাদের উইন্ডোর ভেতর থেকেই আঁকা হয় — তাই portal
 import { createPortal } from "react-dom";
 import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
+// ইমোজির বদলে আসল আইকন — বিস্তারিত icons.jsx-এ
+import { Ico, withIcons, NAV_ICON } from "./icons";
 // লেকচারের স্লাইড — Lesson Plan-এ টপিকে ক্লিক করলে চলে (আলাদা মেনু নেই; মালিকের নির্দেশ ২০২৬-১১-১৭)
 const PlanPlayer = lazy(() => import("./decks/PlanPlayer.jsx"));
 const SettingsView = lazy(() => import("./decks/SettingsView.jsx"));   // পরিচালকের Settings — চালু/বন্ধ
@@ -573,10 +575,10 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
             {row("Month / Description", p.month || "—")}
             {row("Payment Date", p.date || "")}
             {row("Method", p.method || "—")}
-            {row(
+            {withIcons(row(
               "Status",
               p.status === "pending" ? "Awaiting Verification ⏳" : "Paid ✔",
-            )}
+            ))}
             <div
               style={{
                 background: C.greenBg,
@@ -679,7 +681,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
             marginTop: 8,
           }}
         >
-          ⬇️ Downloading saves the receipt as an image (PNG) — ready to send straight on WhatsApp
+          <Ico e="⬇" /> Downloading saves the receipt as an image (PNG) — ready to send straight on WhatsApp
         </div>
       </div>
       {ask && (
@@ -706,7 +708,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: 34 }}>🧾</div>
+            <div style={{ fontSize: 34 }}><Ico e="🧾" /></div>
             <div style={{ fontWeight: 800, fontSize: 16, margin: "6px 0 4px" }}>
               What would you like to do?
             </div>
@@ -766,12 +768,12 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: 40 }}>✅</div>
+            <div style={{ fontSize: 40 }}><Ico e="✅" /></div>
             <div style={{ fontWeight: 800, fontSize: 16, margin: "8px 0 4px" }}>
               Sent!
             </div>
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>
-              The receipt has been added to <b>{person.name}</b>'s "🧾 Vouchers/Receipts"
+              The receipt has been added to <b>{person.name}</b>'s "<Ico e="🧾" /> Vouchers/Receipts"
               menu and a notification has been sent.
             </div>
             <Btn
@@ -901,7 +903,7 @@ const Btn = ({ children, kind = "primary", sm, style, ...p }) => {
   };
   return (
     <button style={{ ...base, ...kinds[kind], ...style }} {...p}>
-      {children}
+      {withIcons(children)}
     </button>
   );
 };
@@ -916,9 +918,12 @@ const Tag = ({ children, color = C.emerald, bg = C.greenBg }) => (
       padding: "3px 10px",
       borderRadius: 99,
       whiteSpace: "nowrap",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 4,
     }}
   >
-    {children}
+    {withIcons(children)}
   </span>
 );
 
@@ -938,16 +943,17 @@ const Stat = ({ icon, label, value, accent = C.emerald, note }) => (
         height: 46,
         borderRadius: 12,
         background: accent + "14",
+        color: accent,
         display: "grid",
         placeItems: "center",
         fontSize: 22,
       }}
     >
-      {icon}
+      {withIcons(icon, { size: 23, style: { verticalAlign: 0 } })}
     </div>
     <div style={{ minWidth: 0 }}>
       <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>
-        {label}
+        {withIcons(label)}
       </div>
       <div
         style={{
@@ -957,9 +963,9 @@ const Stat = ({ icon, label, value, accent = C.emerald, note }) => (
           lineHeight: 1.2,
         }}
       >
-        {value}
+        {withIcons(value)}
       </div>
-      {note && <div style={{ fontSize: 11.5, color: C.muted }}>{note}</div>}
+      {note && <div style={{ fontSize: 11.5, color: C.muted }}>{withIcons(note)}</div>}
     </div>
   </div>
 );
@@ -997,7 +1003,7 @@ const Modal = ({ title, onClose, children, wide }) => (
           marginBottom: 14,
         }}
       >
-        <h3 style={{ ...S.h2, fontSize: 17 }}>{title}</h3>
+        <h3 style={{ ...S.h2, fontSize: 17 }}>{withIcons(title, { style: { verticalAlign: "-0.15em", color: C.emeraldL } })}</h3>
         <button
           onClick={onClose}
           style={{
@@ -1010,7 +1016,7 @@ const Modal = ({ title, onClose, children, wide }) => (
             fontSize: 15,
           }}
         >
-          ✕
+          <Ico e="✕" />
         </button>
       </div>
       {children}
@@ -1094,8 +1100,8 @@ const Section = ({ title, sub, action, children }) => (
       }}
     >
       <div>
-        <h2 style={S.h2}>{title}</h2>
-        {sub && <div style={S.sub}>{sub}</div>}
+        <h2 style={S.h2}>{withIcons(title, { style: { verticalAlign: "-0.15em", color: C.emeraldL } })}</h2>
+        {sub && <div style={S.sub}>{withIcons(sub)}</div>}
       </div>
       {action}
     </div>
@@ -1576,7 +1582,7 @@ function InstallBanner({ lang }) {
         padding: 18,
       }}
     >
-      <div style={{ fontSize: 30 }}>📲</div>
+      <div style={{ fontSize: 30 }}><Ico e="📲" /></div>
       {ready ? (
         <>
           <div style={{ fontWeight: 800, margin: "6px 0 10px", fontSize: 15 }}>
@@ -1932,7 +1938,10 @@ function Login({ onLogin }) {
                         background: r.tint,
                       }}
                     >
-                      {r.icon}
+                      {withIcons(r.icon, {
+                        size: 22,
+                        style: { verticalAlign: 0, color: r.tint.replace("rgba", "rgb").replace(/,\s*[\d.]+\)$/, ")") },
+                      })}
                     </span>
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span
@@ -2050,8 +2059,8 @@ function Login({ onLogin }) {
                   marginBottom: 16,
                 }}
               >
-                <span style={{ fontSize: 30 }}>
-                  {ROLES.find((r) => r.key === role).icon}
+                <span style={{ fontSize: 30, color: C.emerald }}>
+                  {withIcons(ROLES.find((r) => r.key === role).icon)}
                 </span>
                 <div>
                   <div
@@ -2119,7 +2128,7 @@ function Login({ onLogin }) {
                     lineHeight: 1,
                   }}
                 >
-                  {showPass ? "🙈" : "👁️"}
+                  {withIcons(showPass ? "🙈" : "👁️")}
                 </button>
               </div>
               {err && (
@@ -2584,7 +2593,7 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 42 }}>🤔</div>
+          <div style={{ fontSize: 42 }}><Ico e="🤔" /></div>
           <div
             style={{
               fontWeight: 800,
@@ -2633,18 +2642,18 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
     <div style={{ marginTop: 6, fontSize: 13 }}>
       {joinError && (
         <div style={{ color: C.red, fontWeight: 700, marginBottom: 4 }}>
-          {T(
+          {withIcons(T(
             "⚠️ আপনার জয়েন ব্যাকএন্ডে সংরক্ষণ করা যায়নি — এই ক্লাসের সাথে আপনার অ্যাকাউন্ট ঠিকভাবে যুক্ত কিনা পরিচালককে জানান।",
             "⚠️ Your join couldn't be recorded — please tell the director if your account isn't properly linked to this class.",
-          )}
+          ))}
         </div>
       )}
       {presenceStale && !joinError && (
         <div style={{ color: C.red, fontWeight: 700, marginBottom: 4 }}>
-          {T(
+          {withIcons(T(
             "⚠️ সংযোগ চেক করতে সমস্যা হচ্ছে — ইন্টারনেট সংযোগ যাচাই করুন। 🔄 বাটনে চেপে আবার চেষ্টা করুন।",
             "⚠️ Trouble checking connection status — please check your internet. Tap 🔄 to try again.",
-          )}
+          ))}
         </div>
       )}
       {/* উপরের সবুজ লেখাটা চলতি পর্বের খবর দেয়, আর নিচের হলুদ লেখাটা এই
@@ -2656,19 +2665,19 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
             • ১ম পর্ব, এখনো মেলেননি        → কিছুই না, শুধু নিচের অপেক্ষার লেখা */}
       {metThisPart ? (
         <div style={{ fontWeight: 800, color: C.green }}>
-          ✓ Teacher &amp; student join confirmed
+          <Ico e="✓" /> Teacher &amp; student join confirmed
         </div>
       ) : presence?.rejoin ? (
         <div style={{ fontWeight: 800, color: C.green }}>
-          ✅ The first part of the class has ended
+          <Ico e="✅" /> The first part of the class has ended
         </div>
       ) : null}
       {!bothIn ? (
         <span style={{ fontWeight: 700, color: C.gold }}>
-          {T(
+          {withIcons(T(
             `⏳ ${user.role === "teacher" ? "student's" : "Teacher's"} জয়েনের অপেক্ষায়…`,
             `⏳ Waiting for ${user.role === "teacher" ? "student" : "teacher"} to join…`,
-          )}
+          ))}
           <button
             onClick={refreshPresence}
             title={T("এখনই আবার চেক করুন", "Check again now")}
@@ -2682,7 +2691,7 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
               fontWeight: 700,
             }}
           >
-            🔄
+            <Ico e="🔄" />
           </button>
         </span>
       ) : (
@@ -2737,12 +2746,12 @@ function LiveClassPanel({ k, user, usingApi, onExit, onFinished }) {
               lineHeight: 1.55,
             }}
           >
-            {T(
+            {withIcons(T(
               "🔄 পুনঃসংযোগ — ক্লাস শেষ হবে না। নেট কেটে গেলে বা বেরিয়ে যেতে " +
                 "press this, and you can rejoin the same class later.",
               "🔄 Reconnect — this does not end the class. Use it if your " +
                 "connection drops, then rejoin the same class.",
-            )}
+            ))}
           </div>
         </div>
       )}
@@ -3416,7 +3425,7 @@ function ClassesView({
           </div>
           {user.role !== "student" && (
             <div style={{ fontSize: 12, color: C.muted }}>
-              👥 Students:{" "}
+              <Ico e="👥" /> Students:{" "}
               {(k.studentNames && k.studentNames.length
                 ? k.studentNames
                 : kStudents.map((s) => nameOf(s))
@@ -3425,7 +3434,7 @@ function ClassesView({
           )}
           {k.req && user.role !== "student" && (
             <div style={{ fontSize: 12, color: "#a16207", marginTop: 2 }}>
-              📌 Guardian's requirement: {k.req}
+              <Ico e="📌" /> Guardian's requirement: {k.req}
             </div>
           )}
           {k.status === "postponed" && (
@@ -3439,14 +3448,14 @@ function ClassesView({
                 borderRadius: 8,
               }}
             >
-              {T(
+              {withIcons(T(
                 "⛔ ক্লাসটি অনিবার্য কারণে / উস্তাদ-উস্তাদা অসুস্থ থাকার দরুন স্থগিত করা হয়েছে। পরবর্তীতে শিডিউল করে মেকআপ করা হবে ইনশাআল্লাহ।",
                 "⛔ This class has been postponed due to unavoidable circumstances / the teacher being unwell. A makeup class will be scheduled soon, InshaAllah.",
-              )}
+              ))}
             </div>
           )}
           <div style={{ fontSize: 12.5, color: C.text, marginTop: 2 }}>
-            📅 {fmtDate(loc.get(k.id).date)} · 🕐 {loc.get(k.id).time}
+            <Ico e="📅" /> {fmtDate(loc.get(k.id).date)} · <Ico e="🕐" /> {loc.get(k.id).time}
             {zone !== "Asia/Dhaka" && (
               <span style={{ color: C.muted }}> ({zoneCity(zone)} time)</span>
             )}{" "}
@@ -3465,7 +3474,7 @@ function ClassesView({
                 display: "inline-block",
               }}
             >
-              🔴 Class in progress — {teacherLive ? "Teacher is in" : "No teacher"}
+              <Ico e="🔴" /> Class in progress — {teacherLive ? "Teacher is in" : "No teacher"}
               {" · "}
               {liveStudentCount > 0
                 ? `${bn(liveStudentCount)} student(s) present`
@@ -3568,7 +3577,7 @@ function ClassesView({
                   whiteSpace: "nowrap",
                 }}
               >
-                ⏳ Teacher is joining, please wait
+                <Ico e="⏳" /> Teacher is joining, please wait
               </span>
             ) : null)}
           {/* পরিচালক/এডমিন যেকোনো সময় যেকোনো উস্তাদের ক্লাসে ঢুকে দেখতে
@@ -3706,12 +3715,12 @@ function ClassesView({
                 >
                   {awaitingReview && (
                     <option value="review" disabled>
-                      {T("⏳ যাচাই বাকি", "⏳ Awaiting review")}
+                      {T("যাচাই বাকি", "Awaiting review")}
                     </option>
                   )}
                   <option value="upcoming">
                     {awaitingReview
-                      ? T("↩️ আবার চালু করুন", "↩️ Reopen class")
+                      ? T("আবার চালু করুন", "Reopen class")
                       : incomplete
                         ? T("অসম্পন্ন", "Incomplete")
                         : T("আসন্ন", "Upcoming")}
@@ -3772,10 +3781,10 @@ function ClassesView({
           }}
         >
           <span style={{ flex: 1, minWidth: 200 }}>
-            {T(
+            {withIcons(T(
               `⚠️ ক্লাসের তালিকা আনা যায়নি — ${loadError}। নিচে কিছু না দেখালে সেটা "No classes" নয়।`,
               `⚠️ Couldn't load your classes — ${loadError}. An empty list below does not mean "no classes".`,
-            )}
+            ))}
           </span>
           <Btn
             sm
@@ -3873,7 +3882,7 @@ function ClassesView({
               marginBottom: 12,
             }}
           >
-            💡 If a class is missed through illness or any other reason, create a make-up / support / recovery / trial class from here — the join option reaches the student's and teacher's portals automatically at the scheduled date and time.
+            <Ico e="💡" /> If a class is missed through illness or any other reason, create a make-up / support / recovery / trial class from here — the join option reaches the student's and teacher's portals automatically at the scheduled date and time.
           </div>
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
@@ -4240,7 +4249,7 @@ function InstantClassView({ courses, user }) {
         </div>
       </div>
       <div style={{ marginTop: 10 }}>
-        <label style={S.label}>🌍 Timezone preview (optional — handy for telling someone abroad)</label>
+        <label style={S.label}><Ico e="🌍" /> Timezone preview (optional — handy for telling someone abroad)</label>
         <select
           style={S.input}
           value={previewZone}
@@ -4304,7 +4313,7 @@ function InstantClassView({ courses, user }) {
           }}
         >
           <div style={{ fontWeight: 800, marginBottom: 6 }}>
-            ✔ Created — {created.courseName} · {fmtDate(created.date)} ·{" "}
+            <Ico e="✔" /> Created — {created.courseName} · {fmtDate(created.date)} ·{" "}
             {(created.time || "").slice(0, 5)}
           </div>
           <Btn kind="gold" onClick={notifyCreated}>
@@ -4458,12 +4467,12 @@ function PostponedClassesView({ user }) {
                     {k.course_name || "—"}
                   </div>
                   <div style={{ fontSize: 12.5, color: C.muted }}>
-                    📅 {fmtDate(k.date)} · 🕐 {(k.time || "").slice(0, 5)}
-                    {k.teacher_name ? ` · 👳 ${k.teacher_name}` : ""}
+                    <Ico e="📅" /> {fmtDate(k.date)} · <Ico e="🕐" /> {(k.time || "").slice(0, 5)}
+                    {withIcons(k.teacher_name ? ` · 👳 ${k.teacher_name}` : "")}
                   </div>
                   {isAdm(user) && (k.student_names || []).length > 0 && (
                     <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>
-                      👥 {(k.student_names || []).join(", ")}
+                      <Ico e="👥" /> {(k.student_names || []).join(", ")}
                     </div>
                   )}
                 </div>
@@ -5048,7 +5057,7 @@ function RichText({ value, onChange, placeholder }) {
               color: C.muted,
             }}
           >
-            ✕
+            <Ico e="✕" />
           </button>
         </span>
         <button type="button" onMouseDown={noBlur} title="Bullet list" style={tool} onClick={() => cmd("insertUnorderedList")}>• List</button>
@@ -5082,10 +5091,10 @@ function RichText({ value, onChange, placeholder }) {
           ع
         </button>
         <button type="button" onMouseDown={noBlur} title="Add image or PDF" style={tool} onClick={busy ? undefined : pickFile}>
-          {busy ? "⏳ Sending…" : "🖼️ Image/PDF"}
+          {withIcons(busy ? "⏳ Sending…" : "🖼️ Image/PDF")}
         </button>
         <button type="button" onMouseDown={noBlur} title="Insert table" style={tool} onClick={insertTable}>▦ Table</button>
-        <button type="button" onMouseDown={noBlur} title="Clear formatting" style={tool} onClick={() => cmd("removeFormat")}>✕ Format</button>
+        <button type="button" onMouseDown={noBlur} title="Clear formatting" style={tool} onClick={() => cmd("removeFormat")}><Ico e="✕" /> Format</button>
         <input
           ref={fileRef}
           type="file"
@@ -5108,12 +5117,12 @@ function RichText({ value, onChange, placeholder }) {
           }}
         >
           <span style={{ fontSize: 12, fontWeight: 700, color: C.gold, marginRight: 4 }}>
-            🖼️ Image {bn(imgPct)}%
+            <Ico e="🖼" /> Image {bn(imgPct)}%
           </span>
           {/* ⚠️ onMouseDown-এ preventDefault — নইলে বাটনে চাপা মাত্র লেখার ঘর
               ফোকাস হারাত, আর কোনো কোনো ব্রাউজারে নির্বাচিত ছবিটাও ছুটে যেত */}
-          <button type="button" title="Shrink" style={tool} onMouseDown={noBlur} onClick={() => resizeImg(-10)}>➖ Smaller</button>
-          <button type="button" title="Enlarge" style={tool} onMouseDown={noBlur} onClick={() => resizeImg(10)}>➕ Larger</button>
+          <button type="button" title="Shrink" style={tool} onMouseDown={noBlur} onClick={() => resizeImg(-10)}><Ico e="➖" /> Smaller</button>
+          <button type="button" title="Enlarge" style={tool} onMouseDown={noBlur} onClick={() => resizeImg(10)}><Ico e="➕" /> Larger</button>
           {[25, 50, 75, 100].map((z) => (
             <button
               key={z}
@@ -5136,7 +5145,7 @@ function RichText({ value, onChange, placeholder }) {
             onMouseDown={noBlur}
             onClick={removeImg}
           >
-            🗑️ Delete
+            <Ico e="🗑" /> Delete
           </button>
         </div>
       )}
@@ -5458,8 +5467,8 @@ function LecturePlan({ db, courses, user, refresh }) {
                 color: C.text,
               }}
             >
-              <b style={{ color: C.gold }}>📋 Today's-lesson mode is on.</b>{" "}
-              Press the <b style={{ color: C.gold }}>📌</b> button on each topic to mark what will be taught in today's class. Only the marked topics show in the teacher's portal — students see everything.
+              <b style={{ color: C.gold }}><Ico e="📋" /> Today's-lesson mode is on.</b>{" "}
+              Press the <b style={{ color: C.gold }}><Ico e="📌" /></b> button on each topic to mark what will be taught in today's class. Only the marked topics show in the teacher's portal — students see everything.
             </div>
           )}
           {trialTab && (
@@ -5509,7 +5518,7 @@ function LecturePlan({ db, courses, user, refresh }) {
             color: C.text,
           }}
         >
-          📋 <b style={{ color: C.gold }}>Today's class topics</b> — showing the topics the director has set for today.
+          <Ico e="📋" /> <b style={{ color: C.gold }}>Today's class topics</b> — showing the topics the director has set for today.
           {allTopics.length === 0 && (
             <span style={{ color: C.muted, marginLeft: 6 }}>
               (no topic assigned yet)
@@ -5572,7 +5581,7 @@ function LecturePlan({ db, courses, user, refresh }) {
             fontSize: 13,
           }}
         >
-          <span style={{ fontWeight: 800, color: C.emerald }}>👤 Ticking for:</span>
+          <span style={{ fontWeight: 800, color: C.emerald }}><Ico e="👤" /> Ticking for:</span>
           <span style={{ fontWeight: 800 }}>{forStudent.name}</span>
           {forStudent.student_id && (
             <span style={{ color: C.muted, fontSize: 12 }}>({forStudent.student_id})</span>
@@ -5660,10 +5669,10 @@ function LecturePlan({ db, courses, user, refresh }) {
       {loading && <Loader text={T("Loading", "Loading")} />}
       {!loading && sections.length === 0 && (
         <div style={{ ...S.card, textAlign: "center", color: C.muted, padding: 28 }}>
-          {T(
+          {withIcons(T(
             "📋 এই কোর্সের দারস পরিকল্পনা এখনো তৈরি হয়নি।",
             "📋 The lesson plan for this course hasn't been created yet.",
-          )}
+          ))}
         </div>
       )}
 
@@ -5683,7 +5692,7 @@ function LecturePlan({ db, courses, user, refresh }) {
               }}
             >
               <span style={{ fontWeight: 800, fontSize: 15, flex: 1, minWidth: 140 }}>
-                {sec.lock ? "🔒 " : ""}{sec.name}
+                {withIcons(sec.lock ? "🔒 " : "")}{sec.name}
                 {sec.lock && (
                   <span style={{ fontWeight: 600, fontSize: 12, opacity: 0.85, marginLeft: 8 }}>{sec.lock}</span>
                 )}
@@ -5723,9 +5732,9 @@ function LecturePlan({ db, courses, user, refresh }) {
             <div style={{ padding: 12, display: "grid", gap: 6 }}>
               {(sec.topics || []).length === 0 ? (
                 <div style={{ color: C.muted, fontSize: 12.5, textAlign: "center", padding: 8 }}>
-                  {isDir(user)
+                  {withIcons(isDir(user)
                     ? 'Press "✏️ Topics" to add topics under this heading'
-                    : "—"}
+                    : "—")}
                 </div>
               ) : (
                 (sec.topics || []).map((tp) => {
@@ -5736,7 +5745,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                     <div key={tp.id}>
                       <div
                         onClick={() => playLecture(sec, tp)}
-                        title={sec.lock ? "🔒 " + sec.lock : "Play the slides"}
+                        title={sec.lock ? "" + sec.lock : "Play the slides"}
                         style={{
                           cursor: "pointer",
                           display: "flex",
@@ -5753,7 +5762,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                           }`,
                         }}
                       >
-                        <span style={{ color: C.emerald, fontWeight: 800, fontSize: 13, width: 14 }}>{sec.lock ? "🔒" : "▶"}</span>
+                        <span style={{ color: C.emerald, fontWeight: 800, fontSize: 13, width: 14 }}>{withIcons(sec.lock ? "🔒" : "▶")}</span>
                         <span
                           style={{
                             width: 22,
@@ -5768,7 +5777,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                             border: `1.5px solid ${isDone ? C.green : isMissed ? C.red : C.line}`,
                           }}
                         >
-                          {isDone ? "✔" : isMissed ? "✘" : "–"}
+                          {withIcons(isDone ? "✔" : isMissed ? "✘" : "–")}
                         </span>
                         <span
                           style={{
@@ -5917,7 +5926,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                     title="Move"
                     style={{ border: "none", background: "none", cursor: "pointer", color: C.red, fontSize: 14 }}
                   >
-                    🗑
+                    <Ico e="🗑" />
                   </button>
                 </div>
                 {b.open && (
@@ -6375,7 +6384,7 @@ function SubmitWork({ item, kind, onClose, onDone }) {
               textAlign: "center",
             }}
           >
-            <span style={{ fontSize: 30 }}>{img ? "✅" : "📷"}</span>
+            <span style={{ fontSize: 30 }}>{withIcons(img ? "✅" : "📷")}</span>
             <span style={{ fontSize: 13.5, fontWeight: 700 }}>
               {img ? img.name : "Take a photo or choose a file (image / PDF)"}
             </span>
@@ -6516,7 +6525,7 @@ function EvalWork({ item, onClose, onMark }) {
                               }}
                             >
                               {q.options[sub.answers[q.id]] ?? "—"}{" "}
-                              {sub.answers[q.id] === q.correct ? "✔" : "✘"}
+                              {withIcons(sub.answers[q.id] === q.correct ? "✔" : "✘")}
                             </b>
                             {sub.answers[q.id] !== q.correct && (
                               <span style={{ color: C.muted }}>
@@ -6546,7 +6555,7 @@ function EvalWork({ item, onClose, onMark }) {
                           color: C.blue,
                         }}
                       >
-                        🤖 MCQ auto-score: {bn(auto.ok)}/{bn(auto.total)} correct
+                        <Ico e="🤖" /> MCQ auto-score: {bn(auto.ok)}/{bn(auto.total)} correct
                       </div>
                     )}
                   </div>
@@ -6569,7 +6578,7 @@ function EvalWork({ item, onClose, onMark }) {
                           fontSize: 13.5,
                         }}
                       >
-                        📄 {sub.image.name} — open/download
+                        <Ico e="📄" /> {sub.image.name} — open/download
                       </a>
                     ) : (
                       <a href={sub.image.data} target="_blank" rel="noreferrer">
@@ -6590,14 +6599,14 @@ function EvalWork({ item, onClose, onMark }) {
                   <div
                     style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}
                   >
-                    📎 No file attached (old/demo submission)
+                    <Ico e="📎" /> No file attached (old/demo submission)
                   </div>
                 )}
                 {sub.note && (
                   <div
                     style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}
                   >
-                    💬 Student’s note: “{sub.note}”
+                    <Ico e="💬" /> Student’s note: “{sub.note}”
                   </div>
                 )}
                 <div
@@ -6837,7 +6846,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
                     {a.desc}
                   </div>
                   <div style={{ fontSize: 12 }}>
-                    {T("📅 শেষ তারিখ", "📅 Due date")}:{" "}
+                    {withIcons(T("📅 শেষ তারিখ", "📅 Due date"))}:{" "}
                     <b>{fmtDate(a.due)}</b> ·{" "}
                     {T("পূর্ণমান", "Total marks")}: <b>{T(bn(a.total), a.total)}</b> ·{" "}
                     {T("Submitted", "Submitted")}:{" "}
@@ -6980,7 +6989,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
                   background: f.mode === "form" ? C.greenBg : "#fff",
                 }}
               >
-                📋 Form — build the questions
+                <Ico e="📋" /> Form — build the questions
               </button>
               <button
                 onClick={() => setF({ ...f, mode: "photo" })}
@@ -6995,7 +7004,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
                   background: f.mode === "photo" ? C.greenBg : "#fff",
                 }}
               >
-                📷 Photo/PDF submission
+                <Ico e="📷" /> Photo/PDF submission
               </button>
             </div>
           </div>
@@ -7396,7 +7405,7 @@ function ExamsView({ db, setDb, courses, user }) {
                   background: f.mode === "form" ? C.greenBg : "#fff",
                 }}
               >
-                📋 Form — build MCQ/written questions
+                <Ico e="📋" /> Form — build MCQ/written questions
               </button>
               <button
                 onClick={() => setF({ ...f, mode: "photo" })}
@@ -7411,7 +7420,7 @@ function ExamsView({ db, setDb, courses, user }) {
                   background: f.mode === "photo" ? C.greenBg : "#fff",
                 }}
               >
-                📷 Notebook photo/PDF submission
+                <Ico e="📷" /> Notebook photo/PDF submission
               </button>
             </div>
           </div>
@@ -7756,7 +7765,7 @@ function ProgressView({ db, setDb, courses, user }) {
       <div style={{ display: "grid", gap: 14 }}>
         <div style={{ ...S.card }}>
           <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            {T("📈 কোর্সভিত্তিক সিলেবাস অগ্রগতি", "📈 Syllabus Progress by Course")}
+            {withIcons(T("📈 কোর্সভিত্তিক সিলেবাস অগ্রগতি", "📈 Syllabus Progress by Course"))}
           </div>
           {stCourses.map((c) => {
             const cv = progress[c.id] || { done: 0, total: 0, pct: 0 };
@@ -7800,7 +7809,7 @@ function ProgressView({ db, setDb, courses, user }) {
             }}
           >
             <div style={{ fontWeight: 800 }}>
-              {T("💳 ফি পরিশোধের ইতিহাস", "💳 Fee Payment History")}
+              {withIcons(T("💳 ফি পরিশোধের ইতিহাস", "💳 Fee Payment History"))}
             </div>
             <span style={{ display: "flex", gap: 8 }}>
               {user.role === "student" && due > 0 && (
@@ -7894,7 +7903,7 @@ function ProgressView({ db, setDb, courses, user }) {
                       color: pf.method === m ? C.emerald : C.text,
                     }}
                   >
-                    {m === "bKash" ? "📱" : m === "Nagad" ? "🟠" : "🏦"}
+                    {withIcons(m === "bKash" ? "📱" : m === "Nagad" ? "🟠" : "🏦")}
                     <br />
                     {T(
                       m,
@@ -7934,7 +7943,7 @@ function ProgressView({ db, setDb, courses, user }) {
         </div>
         <div style={{ ...S.card }}>
           <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            {T("📝 পরীক্ষার ফলাফল", "📝 Exam Results")}
+            {withIcons(T("📝 পরীক্ষার ফলাফল", "📝 Exam Results"))}
           </div>
           <Table
             head={T(["Exams", "Date", "Marks obtained"], ["Exam", "Date", "Marks Obtained"])}
@@ -7949,7 +7958,7 @@ function ProgressView({ db, setDb, courses, user }) {
         {user.role === "student" && (
           <div style={{ ...S.card }}>
             <div style={{ fontWeight: 800, marginBottom: 10 }}>
-              {T("💬 টিচারের মন্তব্য", "💬 Teacher's Comment")}
+              {withIcons(T("💬 টিচারের মন্তব্য", "💬 Teacher's Comment"))}
             </div>
             {remarks.length > 0 ? (
               <div
@@ -7975,7 +7984,7 @@ function ProgressView({ db, setDb, courses, user }) {
         )}
         <div style={{ ...S.card }}>
           <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            {T("🔁 মেকআপ ক্লাস", "🔁 Makeup Classes")}
+            {withIcons(T("🔁 মেকআপ ক্লাস", "🔁 Makeup Classes"))}
           </div>
           <Table
             head={T(
@@ -8152,7 +8161,7 @@ function AccountsView({ db }) {
       {loading && <Loader text="Loading accounts" />}
       <div style={{ ...S.card, marginBottom: 14, display: loading ? "none" : undefined }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          👳 Teacher salaries
+          <Ico e="👳" /> Teacher salaries
         </div>
         <Table
           head={["Name", "Monthly salary", "Dues months"]}
@@ -8189,7 +8198,7 @@ function AccountsView({ db }) {
       </div>
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          📤 Salary payment history
+          <Ico e="📤" /> Salary payment history
         </div>
         <Table
           head={["Teacher", "Month", "Amount", "Date", "Method", "Status"]}
@@ -8222,7 +8231,7 @@ function AccountsView({ db }) {
       </div>
       <div style={{ ...S.card, display: loading ? "none" : undefined }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          📥 Student fee dues
+          <Ico e="📥" /> Student fee dues
         </div>
         <Table
           head={["Student", "Monthly fee", "Dues months", "Dues amount"]}
@@ -8340,7 +8349,7 @@ function FormsView({ db, setDb }) {
                 )}
               </div>
               <div style={{ fontSize: 12.5, color: C.muted, margin: "3px 0" }}>
-                📞 {f.contact} · {fmtDate(f.date)}
+                <Ico e="📞" /> {f.contact} · {fmtDate(f.date)}
               </div>
               <div style={{ fontSize: 13.5 }}>{f.msg}</div>
             </div>
@@ -8382,7 +8391,7 @@ const IQRA_SHELVES = [
   { id: "aqeedah", emoji: "❤️", name: "Knowing Allah — Aqeedah & Fiqh" },
   { id: "salah", emoji: "🕌", name: "My Salah" },
   { id: "manners", emoji: "🤲", name: "Duas & Good Manners" },
-  { id: "stories", emoji: "🐪", name: "Stories of the Prophets" },
+  { id: "stories", emoji: "📜", name: "Stories of the Prophets" },
   { id: "more", emoji: "📚", name: "More Books" },
   { id: "teachers", emoji: "🧑‍🏫", name: "Teachers' Corner" },
 ];
@@ -8443,9 +8452,11 @@ const IQRA_CSS = `
   box-shadow:0 12px 30px #0f2a4a40}
 .iqra-star{position:absolute;border-radius:50%;background:#fff;animation:iqraTwinkle 2.8s ease-in-out infinite}
 @keyframes iqraTwinkle{0%,100%{opacity:.2;transform:scale(.6)}50%{opacity:1;transform:scale(1.15)}}
-.iqra-lantern{position:absolute;top:-6px;font-size:30px;transform-origin:50% 0;animation:iqraSwing 3.4s ease-in-out infinite}
+.iqra-lantern{position:absolute;top:-2px;font-size:30px;transform-origin:50% 0;animation:iqraSwing 3.4s ease-in-out infinite;
+  filter:drop-shadow(0 0 10px #ffd54f88)}
 @keyframes iqraSwing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
-.iqra-moon{position:absolute;right:22px;top:16px;font-size:44px;animation:iqraFloat 5s ease-in-out infinite}
+.iqra-moon{position:absolute;right:22px;top:16px;font-size:44px;animation:iqraFloat 5s ease-in-out infinite;
+  filter:drop-shadow(0 0 14px #ffd54f66)}
 @keyframes iqraFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
 .iqra-name{font-size:clamp(32px,7vw,50px);font-weight:700;line-height:1;letter-spacing:.5px;text-shadow:0 3px 0 #0b1f36}
 .iqra-arabic{font-family:'Amiri',serif;font-size:clamp(22px,4.6vw,30px);color:#ffd54f;line-height:1.5}
@@ -8587,13 +8598,13 @@ function BookReader({ book, emoji, onClose }) {
           ← Back to shelves
         </button>
         <div className="iqra-reader-title">
-          {emoji} {title}
+          <Ico e={emoji} /> {title}
         </div>
       </div>
       <div className="iqra-reader-page">
         {!loaded && (
           <div className="iqra-reader-wait">
-            <b>📖</b>
+            <b><Ico e="📖" /></b>
             Opening your book…
           </div>
         )}
@@ -8731,10 +8742,10 @@ function LibraryView({ user }) {
   };
   const shelfOptions = (auto) => (
     <>
-      <option value="">✨ Automatic — {auto}</option>
+      <option value="">Automatic — {auto}</option>
       {IQRA_SHELVES.filter((s) => s.id !== "teachers").map((s) => (
         <option key={s.id} value={s.id}>
-          {s.emoji} {s.name}
+          {s.name}
         </option>
       ))}
     </>
@@ -8751,9 +8762,15 @@ function LibraryView({ user }) {
             style={{ left: s.left, top: s.top, width: s.size, height: s.size, animationDelay: s.delay }}
           />
         ))}
-        <span className="iqra-lantern" style={{ left: "6%" }}>🏮</span>
-        <span className="iqra-lantern" style={{ left: "17%", animationDelay: ".8s", fontSize: 24 }}>🏮</span>
-        <span className="iqra-moon">🌙</span>
+        <span className="iqra-lantern" style={{ left: "6%" }}>
+          <Ico e="🏮" size={34} strokeWidth={1.7} color="#ffd54f" fill="#ffd54f2e" style={{ verticalAlign: 0 }} />
+        </span>
+        <span className="iqra-lantern" style={{ left: "17%", animationDelay: ".8s" }}>
+          <Ico e="🏮" size={26} strokeWidth={1.8} color="#ffd54f" fill="#ffd54f2e" style={{ verticalAlign: 0 }} />
+        </span>
+        <span className="iqra-moon">
+          <Ico e="🌙" size={46} strokeWidth={1.6} color="#ffd54f" fill="#ffd54f" style={{ verticalAlign: 0 }} />
+        </span>
         <div style={{ position: "relative", marginTop: 22 }}>
           <div className="iqra-arabic" dir="rtl" lang="ar" style={{ textAlign: "left" }}>اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ</div>
           <div className="iqra-name">Little Mu’min Library</div>
@@ -8761,9 +8778,9 @@ function LibraryView({ user }) {
             “Read! In the name of your Lord who created.” — Surah Al-‘Alaq 96:1
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
-            <span className="iqra-pill">📚 {visible.length} books</span>
-            <span className="iqra-pill">🪵 {shelvesWithBooks.length} shelves</span>
-            <span className="iqra-pill">👆 Tap a book to open it</span>
+            <span className="iqra-pill"><Ico e="📚" /> {visible.length} {visible.length === 1 ? "book" : "books"}</span>
+            <span className="iqra-pill"><Ico e="🪵" /> {shelvesWithBooks.length} {shelvesWithBooks.length === 1 ? "shelf" : "shelves"}</span>
+            <span className="iqra-pill"><Ico e="👆" /> Tap a book to open it</span>
           </div>
         </div>
       </div>
@@ -8774,12 +8791,12 @@ function LibraryView({ user }) {
         return (
           <button className="iqra-daily" onClick={() => open(daily)}>
             <span className="iqra-daily-cover" style={{ "--c1": c1, "--c2": c2, color: fg }}>
-              {IQRA_SHELF[daily.shelf].emoji}
+              <Ico e={IQRA_SHELF[daily.shelf].emoji} size={26} style={{ verticalAlign: 0 }} />
             </span>
             <span style={{ minWidth: 0 }}>
-              <span className="iqra-daily-k">⭐ Book of the Day</span>
+              <span className="iqra-daily-k"><Ico e="⭐" /> Book of the Day</span>
               <span className="iqra-daily-t">{iqraSplitName(daily.name).title}</span>
-              <span className="iqra-daily-go">📖 Open and read →</span>
+              <span className="iqra-daily-go"><Ico e="📖" /> Open and read →</span>
             </span>
           </button>
         );
@@ -8790,33 +8807,33 @@ function LibraryView({ user }) {
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="🔍 Find a book…"
+          placeholder="Find a book…"
           aria-label="Find a book"
         />
         {canArrange && (
           <>
             <button className="iqra-tool" onClick={() => setAdding({ name: "", link: "", shelf: "" })}>
-              ➕ Add a book
+              <Ico e="➕" /> Add a book
             </button>
             <button
               className={"iqra-tool alt" + (arrange ? " on" : "")}
               onClick={() => setArrange((a) => !a)}
               title="Tap a book to choose its shelf"
             >
-              {arrange ? "✔ Done arranging" : "🛠️ Arrange shelves"}
+              {withIcons(arrange ? "✔ Done arranging" : "🛠️ Arrange shelves")}
             </button>
           </>
         )}
       </div>
       {arrange && (
         <div style={{ margin: "-2px 0 10px", fontSize: 13.5, fontWeight: 600, color: "#7a4a1d" }}>
-          🛠️ Arranging — tap any book to move it to another shelf. Students don’t see this.
+          <Ico e="🛠" /> Arranging — tap any book to move it to another shelf. Students don’t see this.
         </div>
       )}
       {shelvesWithBooks.length > 1 && (
         <div className="iqra-chips" role="tablist" aria-label="Shelves">
           <button className={"iqra-chip" + (!only ? " on" : "")} onClick={() => setOnly("")}>
-            ✨ All shelves
+            <Ico e="✨" /> All shelves
           </button>
           {shelvesWithBooks.map((s) => (
             <button
@@ -8824,7 +8841,7 @@ function LibraryView({ user }) {
               className={"iqra-chip" + (only === s.id ? " on" : "")}
               onClick={() => setOnly(only === s.id ? "" : s.id)}
             >
-              {s.emoji} {s.name}
+              <Ico e={s.emoji} /> {s.name}
             </button>
           ))}
         </div>
@@ -8832,21 +8849,21 @@ function LibraryView({ user }) {
 
       <div className="iqra-case">
         {books === null ? (
-          <div className="iqra-empty">📖 Opening the library…</div>
+          <div className="iqra-empty"><Ico e="📖" /> Opening the library…</div>
         ) : failed && !visible.length ? (
           <div className="iqra-empty">
             Could not reach the library right now.{" "}
-            <button className="iqra-chip" onClick={load}>🔄 Try again</button>
+            <button className="iqra-chip" onClick={load}><Ico e="🔄" /> Try again</button>
           </div>
         ) : !shelves.length ? (
           <div className="iqra-empty">
-            {visible.length ? "No book found — try another word 🔍" : "📭 The shelves are waiting for books!"}
+            {withIcons(visible.length ? "No book found — try another word 🔍" : "📭 The shelves are waiting for books!")}
           </div>
         ) : (
           shelves.map((s) => (
             <div key={s.id} className="iqra-shelf">
               <div className="iqra-plaque">
-                <span style={{ fontSize: 20 }}>{s.emoji}</span>
+                <Ico e={s.emoji} size={19} style={{ verticalAlign: 0, color: "#8a5629" }} />
                 {s.name}
                 <span className="iqra-count">{s.books.length}</span>
               </div>
@@ -8872,7 +8889,9 @@ function LibraryView({ user }) {
                       }}
                     >
                       <span className="iqra-spine" />
-                      <span className="iqra-emoji">{IQRA_SHELF[b.shelf].emoji}</span>
+                      <span className="iqra-emoji">
+                        <Ico e={IQRA_SHELF[b.shelf].emoji} size={30} strokeWidth={2.2} style={{ verticalAlign: 0 }} />
+                      </span>
                       <span className="iqra-btitle">{title}</span>
                       {age && <span className="iqra-age">{age}</span>}
                       {!b.link ? (
@@ -8880,7 +8899,7 @@ function LibraryView({ user }) {
                       ) : (
                         isNew(b) && <span className="iqra-flag">NEW</span>
                       )}
-                      {arrange && <span className="iqra-pen">✏️</span>}
+                      {arrange && <span className="iqra-pen"><Ico e="✏" /></span>}
                     </button>
                   );
                 })}
@@ -8903,7 +8922,7 @@ function LibraryView({ user }) {
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>{edit.book.name}</div>
           {edit.book.staff_only ? (
             <div style={{ fontSize: 13.5, color: C.muted }}>
-              Teacher guides always stay in the 🧑‍🏫 Teachers’ Corner — students never see them.
+              Teacher guides always stay in the <Ico e="🧑‍🏫" /> Teachers’ Corner — students never see them.
             </div>
           ) : (
             <>
@@ -8936,7 +8955,7 @@ function LibraryView({ user }) {
             )}
           </div>
           <div style={{ fontSize: 12.5, color: C.muted, marginTop: 12 }}>
-            To rename the book or change its link, use 📚 Academic Books.
+            To rename the book or change its link, use <Ico e="📚" /> Academic Books.
           </div>
         </Modal>
       )}
@@ -8979,7 +8998,7 @@ function LibraryView({ user }) {
             {saving ? "Adding…" : "➕ Add to the library"}
           </Btn>
           <div style={{ fontSize: 12.5, color: C.muted, marginTop: 10 }}>
-            The book also appears in 📚 Academic Books, where you can attach it to a course.
+            The book also appears in <Ico e="📚" /> Academic Books, where you can attach it to a course.
           </div>
         </Modal>
       )}
@@ -9077,7 +9096,7 @@ function BooksView({ db, user }) {
               color: C.emerald,
             }}
           >
-            📗 {g}
+            <Ico e="📗" /> {g}
           </div>
           <div
             style={{
@@ -9124,7 +9143,7 @@ function BooksView({ db, user }) {
                           textDecoration: "none",
                         }}
                       >
-                        ⬇ Download
+                        <Ico e="⬇" /> Download
                       </a>
                       {isDir(user) && (
                         <Btn sm kind="danger" onClick={() => del(b)}>
@@ -9299,7 +9318,7 @@ function NoticesView({ db, setDb, user }) {
                 gap: 8,
               }}
             >
-              <span>📌 {n.title}</span>
+              <span><Ico e="📌" /> {n.title}</span>
               {isDir(user) && (
                 <span style={{ display: "flex", gap: 6, flexShrink: 0 }}>
                   <Btn sm kind="soft" onClick={() => openEdit(n)}>
@@ -9394,7 +9413,7 @@ function RatingPopup({ courseName, onSubmit, onSkip }) {
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: 38 }}>🌟</div>
+        <div style={{ fontSize: 38 }}><Ico e="🌟" /></div>
         <h3
           style={{
             margin: "6px 0 2px",
@@ -9435,7 +9454,7 @@ function RatingPopup({ courseName, onSubmit, onSkip }) {
                 transition: "all .12s",
               }}
             >
-              ⭐
+              <Ico e="⭐" />
             </button>
           ))}
         </div>
@@ -9797,7 +9816,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
             fontSize: 26,
           }}
         >
-          👳
+          <Ico e="👳" />
         </div>
         <div style={{ flex: 1, minWidth: 180 }}>
           <div style={{ fontWeight: 800, fontSize: 16 }}>{t.name}</div>
@@ -9846,7 +9865,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
       <div style={{ display: "grid", gap: 14 }}>
         <div style={{ ...S.card }}>
           <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            🌟 Class quality — student evaluation
+            <Ico e="🌟" /> Class quality — student evaluation
           </div>
           {dist.map(({ n, c }) => (
             <div
@@ -9922,13 +9941,13 @@ function TeacherReportView({ db, setDb, courses, user }) {
                 color: C.muted,
               }}
             >
-              🔒 Which student gave which rating or comment is private — only admins can see it. You are seeing the overall report only.
+              <Ico e="🔒" /> Which student gave which rating or comment is private — only admins can see it. You are seeing the overall report only.
             </div>
           )}
         </div>
         <div style={{ ...S.card }}>
           <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            🗓️ My attendance record
+            <Ico e="🗓" /> My attendance record
           </div>
           <Table
             head={[
@@ -9966,7 +9985,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
               marginBottom: 10,
             }}
           >
-            <div style={{ fontWeight: 800 }}>💰 My Salary & Payments</div>
+            <div style={{ fontWeight: 800 }}><Ico e="💰" /> My Salary & Payments</div>
             <div style={{ fontSize: 13 }}>
               Monthly salary:{" "}
               <b>
@@ -10154,13 +10173,13 @@ function AdmissionsView({ db, setDb, user, refresh }) {
             </Tag>
           </div>
           <div style={{ fontSize: 12.5, color: C.muted, margin: "3px 0" }}>
-            Guardian: {a.guardian} · {a.country} · 📞 {a.contact} ·{" "}
+            Guardian: {a.guardian} · {a.country} · <Ico e="📞" /> {a.contact} ·{" "}
             {fmtDate(a.date)}
           </div>
           <div style={{ fontSize: 13 }}>{a.msg}</div>
           {a.status === "accepted" && (
             <div style={{ fontSize: 12, color: C.green, marginTop: 4 }}>
-              ✔ Accepted — login ID: <b>{a.newLogin}</b> · password:{" "}
+              <Ico e="✔" /> Accepted — login ID: <b>{a.newLogin}</b> · password:{" "}
               <b>{a.newPass}</b> (the director/admin will inform the guardian)
             </div>
           )}
@@ -10237,7 +10256,7 @@ function AdmissionsView({ db, setDb, user, refresh }) {
           color: C.gold,
         }}
       >
-        ⏳ Pending ({bn(pending.length)})
+        <Ico e="⏳" /> Pending ({bn(pending.length)})
       </div>
       <div style={{ display: "grid", gap: 10, marginBottom: 18 }}>
         {loading ? (
@@ -10300,7 +10319,7 @@ function BroadcastCard({ user }) {
   };
   return (
     <div style={{ ...S.card, border: `1.5px solid ${C.emerald}`, marginBottom: 14 }}>
-      <div style={{ fontWeight: 800, marginBottom: 4 }}>📢 Notify everyone</div>
+      <div style={{ fontWeight: 800, marginBottom: 4 }}><Ico e="📢" /> Notify everyone</div>
       <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
         The message goes to the notification bell in everyone's portal. Those who enabled phone notifications will receive it even when the app is closed.
       </div>
@@ -10352,7 +10371,7 @@ function BackupCard() {
         marginBottom: 14,
       }}
     >
-      <div style={{ fontWeight: 800, marginBottom: 4 }}>💾 Data Backup</div>
+      <div style={{ fontWeight: 800, marginBottom: 4 }}><Ico e="💾" /> Data Backup</div>
       <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
         Download all data (users, courses, fees, admissions, books, attendance, etc.) as a JSON file. Your data stays with you even if you change servers.
       </div>
@@ -10374,7 +10393,7 @@ function BackupCard() {
             fontWeight: 600,
           }}
         >
-          ✔ Download complete — keep the file somewhere safe.
+          <Ico e="✔" /> Download complete — keep the file somewhere safe.
         </div>
       )}
       {err && (
@@ -10411,7 +10430,7 @@ function TimezoneManagerCard() {
 
   return (
     <div style={{ ...S.card, marginBottom: 14 }}>
-      <div style={{ fontWeight: 800, marginBottom: 4 }}>🌍 Manage timezones</div>
+      <div style={{ fontWeight: 800, marginBottom: 4 }}><Ico e="🌍" /> Manage timezones</div>
       <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
         Add a timezone here to show a new country’s time in the class schedule form.
         Find timezone IDs:{" "}
@@ -10560,7 +10579,7 @@ function SchedulerHealthCard() {
         }}
       >
         <div style={{ fontSize: 13.5 }}>
-          {icon} <b>{info.title}</b>{" "}
+          {withIcons(icon)} <b>{info.title}</b>{" "}
           <span style={{ color, fontWeight: 600 }}>— {text}</span>
         </div>
         <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>
@@ -10573,7 +10592,7 @@ function SchedulerHealthCard() {
   };
   return (
     <div style={{ ...S.card, marginBottom: 14 }}>
-      <div style={{ fontWeight: 800, marginBottom: 8 }}>⏰ Automatic tasks</div>
+      <div style={{ fontWeight: 800, marginBottom: 8 }}><Ico e="⏰" /> Automatic tasks</div>
       {loadErr && <div style={{ color: C.red, fontSize: 13 }}>{loadErr}</div>}
       {!data && !loadErr && <div style={{ color: C.muted, fontSize: 13 }}>Loading…</div>}
       {data && data.jobs.map(line)}
@@ -10974,7 +10993,7 @@ function ManageView({ db, setDb, user, refresh }) {
         {u.role === "student" && exams.length > 0 && (
           <>
             <div style={{ fontWeight: 800, fontSize: 13.5, margin: "6px 0" }}>
-              📝 Exam results
+              <Ico e="📝" /> Exam results
             </div>
             <Table
               head={["Exams", "Marks"]}
@@ -10990,7 +11009,7 @@ function ManageView({ db, setDb, user, refresh }) {
             <div
               style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}
             >
-              🌟 Evaluations they submitted (visible to director/admin only)
+              <Ico e="🌟" /> Evaluations they submitted (visible to director/admin only)
             </div>
             <Table
               head={["Teacher", "Rating", "Remarks", "Date"]}
@@ -11008,7 +11027,7 @@ function ManageView({ db, setDb, user, refresh }) {
             <div
               style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}
             >
-              🌟 Student evaluations about them (with names and comments)
+              <Ico e="🌟" /> Student evaluations about them (with names and comments)
             </div>
             <Table
               head={["Student", "Rating", "Remarks", "Date"]}
@@ -11026,7 +11045,7 @@ function ManageView({ db, setDb, user, refresh }) {
             <div
               style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}
             >
-              💰 Salary payment
+              <Ico e="💰" /> Salary payment
             </div>
             <Table
               head={["Month", "Amount", "Date"]}
@@ -11045,7 +11064,7 @@ function ManageView({ db, setDb, user, refresh }) {
             <div
               style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}
             >
-              💳 Fee payment
+              <Ico e="💳" /> Fee payment
             </div>
             <Table
               head={["Month", "Amount", "Method", "Status"]}
@@ -11109,7 +11128,7 @@ function ManageView({ db, setDb, user, refresh }) {
       {loading && <Loader text="Loading user list" />}
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          👥 All users — with IDs, passwords and reports
+          <Ico e="👥" /> All users — with IDs, passwords and reports
         </div>
         <Table
           head={[
@@ -11167,10 +11186,10 @@ function ManageView({ db, setDb, user, refresh }) {
       </div>
       <div style={{ ...S.card, marginBottom: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 4 }}>
-          🔑 Special permission — correcting mistakes
+          <Ico e="🔑" /> Special permission — correcting mistakes
         </div>
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
-          Normally only an admin/director can clear a red cross (✘). If a teacher made a mistake, grant them temporary edit access:
+          Normally only an admin/director can clear a red cross (<Ico e="✘" />). If a teacher made a mistake, grant them temporary edit access:
         </div>
         {allUsers
           .filter((u) => u.role === "teacher")
@@ -11220,7 +11239,7 @@ function ManageView({ db, setDb, user, refresh }) {
       <TimezoneManagerCard />
       <div style={{ ...S.card, border: `1.5px solid #f3c9b8` }}>
         <div style={{ fontWeight: 800, marginBottom: 4, color: C.red }}>
-          ⚠️ Danger zone
+          <Ico e="⚠" /> Danger zone
         </div>
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
           Classes, exams, notices, books — every page has a separate "Delete" button for the director. In addition:
@@ -11474,7 +11493,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
           }}
         >
           <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>
-            {T("✨ এখনই দারস শুরু হবে — জয়েন করো!", "✨ Class is starting now — join in!")}
+            {withIcons(T("✨ এখনই দারস শুরু হবে — জয়েন করো!", "✨ Class is starting now — join in!"))}
           </div>
           <div style={{ fontSize: 14.5, fontWeight: 700, color: C.goldL }}>
             {course.name} · {T(`লেকচার ${bn(k.lectureNo)}`, `Lecture ${k.lectureNo}`)}
@@ -11485,7 +11504,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
             </div>
           )}
           <div style={{ fontSize: 12.5, color: "#cfe6d8", marginBottom: 16 }}>
-            🕐 {toZoneFullDateTime(k.date, k.time, zoneOf(user)).time}
+            <Ico e="🕐" /> {toZoneFullDateTime(k.date, k.time, zoneOf(user)).time}
             {zoneOf(user) !== "Asia/Dhaka" && ` (${zoneCity(zoneOf(user))} time)`} ·{" "}
             {T("Teacher", "Teacher")}: {course.teacher_name || userById(course.teacherId || course.teacher).name}
           </div>
@@ -11513,7 +11532,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
               boxSizing: "border-box",
             }}
           >
-            {T("🎥 এখনই জয়েন করুন — জুম খুলে যাবে", "🎥 Join Now — Zoom will open")}
+            {withIcons(T("🎥 এখনই জয়েন করুন — জুম খুলে যাবে", "🎥 Join Now — Zoom will open"))}
           </a>
           )}
           {rejoinOpen ? (
@@ -11537,7 +11556,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
                 boxSizing: "border-box",
               }}
             >
-              🔁 Rejoin — Zoom will open
+              <Ico e="🔁" /> Rejoin — Zoom will open
             </a>
           ) : hasJoinedOnce ? (
             <div
@@ -11553,7 +11572,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
                 textAlign: "center",
               }}
             >
-              ⏳ Teacher is joining, please wait
+              <Ico e="⏳" /> Teacher is joining, please wait
             </div>
           ) : null}
           <div
@@ -11564,7 +11583,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
               fontStyle: "italic",
             }}
           >
-            {T("জাযাকাল্লাহু খাইরান ফীদ-দ্বারাইন 🤲", "Jazakallahu Khairan Fid-darayn 🤲")}
+            {withIcons(T("জাযাকাল্লাহু খাইরান ফীদ-দ্বারাইন 🤲", "Jazakallahu Khairan Fid-darayn 🤲"))}
           </div>
         </div>
         <button
@@ -11743,7 +11762,7 @@ function StudentPaymentsView({ db, setDb, user }) {
             borderLeft: `4px solid ${C.red}`,
           }}
         >
-          <div style={{ fontWeight: 800, marginBottom: 10 }}>⏳ Due Fees</div>
+          <div style={{ fontWeight: 800, marginBottom: 10 }}><Ico e="⏳" /> Due Fees</div>
           {dues.map((m) => (
             <div
               key={m}
@@ -11777,7 +11796,7 @@ function StudentPaymentsView({ db, setDb, user }) {
       )}
       <div style={{ ...S.card }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          📜 Payment History
+          <Ico e="📜" /> Payment History
         </div>
         <Table
           loading={loading}
@@ -11801,7 +11820,7 @@ function StudentPaymentsView({ db, setDb, user }) {
                   whiteSpace: "nowrap",
                 }}
               >
-                ⏳ Pending
+                <Ico e="⏳" /> Pending
               </span>
             ) : (
               <span
@@ -11817,7 +11836,7 @@ function StudentPaymentsView({ db, setDb, user }) {
                   whiteSpace: "nowrap",
                 }}
               >
-                ✔ Verified
+                <Ico e="✔" /> Verified
               </span>
             ),
           ])}
@@ -11866,7 +11885,7 @@ function StudentPaymentsView({ db, setDb, user }) {
                   color: pf.method === m ? C.emerald : C.text,
                 }}
               >
-                {acct[m].icon}
+                {withIcons(acct[m].icon, { size: 20 })}
                 <br />
                 {acct[m].name}
               </button>
@@ -11907,7 +11926,7 @@ function StudentPaymentsView({ db, setDb, user }) {
                 textAlign: "center",
               }}
             >
-              <span style={{ fontSize: 24 }}>{pf.shot ? "✅" : "🖼️"}</span>
+              <span style={{ fontSize: 24 }}>{withIcons(pf.shot ? "✅" : "🖼️")}</span>
               <span style={{ fontSize: 12.5, fontWeight: 700 }}>
                 {pf.shot ? pf.shot.name : "Add a screenshot / photo"}
               </span>
@@ -11972,7 +11991,7 @@ function StudentPaymentsView({ db, setDb, user }) {
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: 40 }}>🤲</div>
+            <div style={{ fontSize: 40 }}><Ico e="🤲" /></div>
             <div
               style={{
                 fontFamily: "'Amiri', serif",
@@ -12002,7 +12021,7 @@ function StudentPaymentsView({ db, setDb, user }) {
                 fontSize: 13.5,
               }}
             >
-              ✔ Your payment has been submitted! It will show "Verified" once
+              <Ico e="✔" /> Your payment has been submitted! It will show "Verified" once
               the director confirms it, InshaAllah.
             </div>
             <Btn
@@ -12104,7 +12123,7 @@ function ReceiptMaker({ onClose, user }) {
               {u.name} ({f.kind === "Salary Payment Voucher" ? "Teacher" : "Student"})
             </option>
           ))}
-          <option value="custom">✏️ Someone else — type it yourself</option>
+          <option value="custom">Someone else — type it yourself</option>
         </select>
       </div>
       {f.who === "custom" && (
@@ -12200,7 +12219,7 @@ function ReceiptMaker({ onClose, user }) {
           marginTop: 8,
         }}
       >
-        A receipt preview opens — from there you can ⬇️ download or 📨 send it
+        A receipt preview opens — from there you can <Ico e="⬇" /> download or <Ico e="📨" /> send it
       </div>
     </Modal>
   );
@@ -12418,7 +12437,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
         }}
       >
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          ✅ Complete any month's payment directly
+          <Ico e="✅" /> Complete any month's payment directly
         </div>
         <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
           Even if the student has not submitted anything, you can save any month's payment (past or future) directly as "Paid" from here — any dues for that month are cleared automatically.
@@ -12485,7 +12504,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
         }}
       >
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          ⏳ Awaiting verification — check and click
+          <Ico e="⏳" /> Awaiting verification — check and click
         </div>
         {loading && <Loader text="Loading payments" />}
         {!loading && pending.length === 0 && (
@@ -12539,7 +12558,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
                   borderRadius: 99,
                 }}
               >
-                ⏳ Pending
+                <Ico e="⏳" /> Pending
               </span>
               <Btn sm onClick={() => verify(p.id)}>
                 ✔ Verify
@@ -12566,7 +12585,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
           }}
         >
           <div style={{ fontWeight: 800 }}>
-            📵 Students with outstanding fees — WhatsApp reminder
+            <Ico e="📵" /> Students with outstanding fees — WhatsApp reminder
           </div>
           {dueStudents.length > 0 && (
             <Btn sm kind="gold" onClick={sendAll}>
@@ -12655,7 +12674,7 @@ function DirectorPaymentsView({ db, setDb, user }) {
       </div>
       <div style={{ ...S.card }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          ✅ Verified payments
+          <Ico e="✅" /> Verified payments
         </div>
         <Table
           head={["Student", "Month", "Amount", "Method", "Date", "Status", ""]}
@@ -12931,7 +12950,7 @@ function RemarkBox({ studentId, studentName }) {
           lineHeight: 1,
         }}
       >
-        💬
+        <Ico e="💬" />
       </button>
       {open && (
         <Modal title={`💬 Remarks — ${studentName}`} onClose={() => setOpen(false)}>
@@ -13332,7 +13351,7 @@ function RoutineView({ db, setDb, courses, user }) {
                             {r.kind}
                           </Tag>
                         )}{" "}
-                        🕐 {r.localTime}
+                        <Ico e="🕐" /> {r.localTime}
                         {zone !== "Asia/Dhaka" && (
                           <span style={{ color: C.muted }}> ({zoneCity(zone)} time)</span>
                         )}{" "}
@@ -13341,7 +13360,7 @@ function RoutineView({ db, setDb, courses, user }) {
                         {canEdit && studNames.length > 0 && (
                           <span style={{ color: C.muted }}>
                             {" "}
-                            · 👥{" "}
+                            · <Ico e="👥" />{" "}
                             {studNames.map((n) => n.split(" ")[0]).join(", ")}
                           </span>
                         )}
@@ -13370,7 +13389,7 @@ function RoutineView({ db, setDb, courses, user }) {
                               cursor: "pointer",
                             }}
                           >
-                            ✏️
+                            <Ico e="✏" />
                           </button>
                         )}
                         {canEdit && (
@@ -13384,7 +13403,7 @@ function RoutineView({ db, setDb, courses, user }) {
                               fontWeight: 800,
                             }}
                           >
-                            ✕
+                            <Ico e="✕" />
                           </button>
                         )}
                       </span>
@@ -13420,7 +13439,7 @@ function RoutineView({ db, setDb, courses, user }) {
               marginBottom: 12,
             }}
           >
-            💡 Which student studies which course with which teacher, on which day and at what time — a permanent routine. For make-up or support classes after a missed class, use the schedule on the "Classes & Zoom Join" page.
+            <Ico e="💡" /> Which student studies which course with which teacher, on which day and at what time — a permanent routine. For make-up or support classes after a missed class, use the schedule on the "Classes & Zoom Join" page.
           </div>
           <div>
             <label style={S.label}>Course</label>
@@ -13533,7 +13552,7 @@ function RoutineView({ db, setDb, courses, user }) {
           {f.studentIds.length > 0 && (
             <div style={{ marginTop: 14 }}>
               <label style={S.label}>
-                🎓 Students' own times (optional — a different day/time for someone abroad)
+                <Ico e="🎓" /> Students' own times (optional — a different day/time for someone abroad)
               </label>
               <div style={{ display: "grid", gap: 8 }}>
                 {f.studentIds.map((sid) => {
@@ -14241,7 +14260,7 @@ function StudentLocalClock({ s }) {
     if (!s.country || s.country === "Bangladesh") return null;
     return (
       <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>
-        🕐 local time not known yet
+        <Ico e="🕐" /> local time not known yet
       </div>
     );
   }
@@ -14249,7 +14268,7 @@ function StudentLocalClock({ s }) {
   const dayDiffers = todayIn(zone) !== todayIn("Asia/Dhaka");
   return (
     <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2, whiteSpace: "nowrap" }}>
-      🕐 <b style={{ color: C.text }}>{fmtClock(zone, dayDiffers)}</b> {zoneCity(zone)}
+      <Ico e="🕐" /> <b style={{ color: C.text }}>{fmtClock(zone, dayDiffers)}</b> {zoneCity(zone)}
       {" · "}🇧🇩 {fmtClock("Asia/Dhaka", dayDiffers)}
     </div>
   );
@@ -14676,7 +14695,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                           padding: 0,
                         }}
                       >
-                        ✕
+                        <Ico e="✕" />
                       </button>
                     )}
                   </Tag>
@@ -14707,7 +14726,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             )}
             {myWaived.length > 0 && (
               <div style={{ fontSize: 11.5, color: "#8a5a00", marginTop: 4 }}>
-                🏝️ Waived:{" "}
+                <Ico e="🏝" /> Waived:{" "}
                 {myWaived
                   .map(
                     (w) =>
@@ -14720,7 +14739,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           </div>
         </div>
         <div style={{ fontWeight: 800, fontSize: 13.5, margin: "8px 0 6px" }}>
-          📚 What they study, who they study with
+          <Ico e="📚" /> What they study, who they study with
         </div>
         {cs.length === 0 && (
           <div style={{ fontSize: 13, color: C.muted }}>
@@ -14743,7 +14762,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
           </div>
         ))}
         <div style={{ fontWeight: 800, fontSize: 13.5, margin: "10px 0 6px" }}>
-          📅 How many days a week, which days, what times
+          <Ico e="📅" /> How many days a week, which days, what times
         </div>
         {routines.length === 0 && (
           <div style={{ fontSize: 13, color: C.muted }}>
@@ -14764,7 +14783,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               }}
             >
               <b>{c.name}</b> — {bn(r.days.length)} day(s)/week:{" "}
-              <b>{r.days.map((i) => DAY_BN[i]).join(", ")}</b> · 🕐 {r.time} (
+              <b>{r.days.map((i) => DAY_BN[i]).join(", ")}</b> · <Ico e="🕐" /> {r.time} (
               {bn(r.dur)} min) · Teacher:{" "}
               {userById(r.teacherId || c.teacherId).name}
             </div>
@@ -14894,7 +14913,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                     fontWeight: 800,
                   }}
                 >
-                  💬 Message
+                  <Ico e="💬" /> Message
                 </span>
               </a>
             )}
@@ -15024,7 +15043,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                     onChange={(e) => setEdit({ ...edit, tzOverride: e.target.value })}
                   >
                     <option value="">
-                      🔄 Auto from their device
+                      Auto from their device
                       {edit.timezone ? ` — now ${zoneCity(edit.timezone)}` : " — not reported yet"}
                     </option>
                     {edit.tzOverride && !zones.some((z) => z.zone === edit.tzOverride) && (
@@ -15149,7 +15168,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               })}
             </div>
             <div style={{ fontSize: 11.5, color: C.muted, marginTop: 5 }}>
-              💡 Useful for setting fees by number of days and for building the routine.
+              <Ico e="💡" /> Useful for setting fees by number of days and for building the routine.
             </div>
           </div>
           {/* ⚠️ আগে এখানে শর্ত ছিল {!edit.id && …} — অর্থাৎ কোর্স ও উস্তাদের
@@ -15165,7 +15184,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
             }}
           >
               <div>
-                <label style={S.label}>📚 What they study (course)</label>
+                <label style={S.label}><Ico e="📚" /> What they study (course)</label>
                 <select
                   style={S.input}
                   value={edit.courseId || ""}
@@ -15195,7 +15214,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
               </div>
               <div>
                 <label style={S.label}>
-                  👳 Who they study with (teacher)
+                  <Ico e="👳" /> Who they study with (teacher)
                   <span
                     style={{ color: C.muted, fontWeight: 600, fontSize: 11.5 }}
                   >
@@ -15238,7 +15257,7 @@ function AllStudentsView({ db, setDb, user, courses = [], refresh }) {
                         color: "#8a5a00",
                       }}
                     >
-                      ⚠️ This teacher is not linked to the selected course. If you save it this way, <b>they will see this student in their own list</b> (because the student studies with them), but{" "}
+                      <Ico e="⚠" /> This teacher is not linked to the selected course. If you save it this way, <b>they will see this student in their own list</b> (because the student studies with them), but{" "}
                       <b>Other teachers of the course will not see it</b>. That is fine if it is intentional.
                     </div>
                   )}
@@ -15430,7 +15449,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
   return (
     <div style={{ ...S.card, marginBottom: 16 }}>
       <div style={{ fontWeight: 800, marginBottom: 10 }}>
-        👳 Routine and classes by teacher
+        <Ico e="👳" /> Routine and classes by teacher
       </div>
       {user.role !== "teacher" && (
         <div
@@ -15461,7 +15480,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
           color: C.emerald,
         }}
       >
-        📚 Students who study with {t.name}:
+        <Ico e="📚" /> Students who study with {t.name}:
       </div>
       {loading && <Loader text="Loading" />}
       {!loading && myRoutines.length === 0 && (
@@ -15487,7 +15506,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
               fontSize: 12.5,
             }}
           >
-            👥{" "}
+            <Ico e="👥" />{" "}
             {studs.length ? (
               studs.map((sid, i) => (
                 <span key={sid} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
@@ -15514,7 +15533,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
           color: C.emerald,
         }}
       >
-        📅 Next class:
+        <Ico e="📅" /> Next class:
       </div>
       {!loading && upcoming.length === 0 && (
         <div style={{ fontSize: 12.5, color: C.muted }}>
@@ -15547,7 +15566,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
           >
             <span style={{ flex: 1, minWidth: 200 }}>
               <b>{k.course_name || c.name || "—"}</b> ·{" "}
-              {fmtDate(k.date)} · 🕐 {(k.time || "").slice(0, 5)} · 👥{" "}
+              {fmtDate(k.date)} · <Ico e="🕐" /> {(k.time || "").slice(0, 5)} · <Ico e="👥" />{" "}
               {studentNames}
             </span>
             {isAdm(user) && (
@@ -15578,7 +15597,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
               marginBottom: 12,
             }}
           >
-            💡 This changes only this one day's class — the whole routine stays unchanged. However, if you later edit the routine's time or day, this change is overwritten by the routine's values.
+            <Ico e="💡" /> This changes only this one day's class — the whole routine stays unchanged. However, if you later edit the routine's time or day, this change is overwritten by the routine's values.
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
@@ -15790,12 +15809,12 @@ function WaOutboxView({ user }) {
         >
           {apiOn ? (
             <>
-              ✅ <b>WhatsApp API connected</b> — the server sends messages by itself. Use the
+              <Ico e="✅" /> <b>WhatsApp API connected</b> — the server sends messages by itself. Use the
               buttons below only to retry a failed one.
             </>
           ) : (
             <>
-              ⚠️ <b>WhatsApp API not connected yet</b> — press the green button: WhatsApp opens
+              <Ico e="⚠" /> <b>WhatsApp API not connected yet</b> — press the green button: WhatsApp opens
               with the message ready, and it is marked as sent.
               {isDir(user) && (
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
@@ -15810,7 +15829,7 @@ function WaOutboxView({ user }) {
       {loadErr && <div style={{ color: C.red, fontSize: 13, marginBottom: 8 }}>{loadErr}</div>}
       {!loading && (
         <>
-          <div style={{ fontWeight: 800, margin: "4px 0 8px" }}>📤 To send ({toSend.length})</div>
+          <div style={{ fontWeight: 800, margin: "4px 0 8px" }}><Ico e="📤" /> To send ({toSend.length})</div>
           <div style={{ display: "grid", gap: 10 }}>
             {toSend.length === 0 && (
               <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
@@ -16155,7 +16174,7 @@ function CourseManagerView({ db, setDb, refresh }) {
               }}
             >
               <label style={{ ...S.label, marginBottom: 0 }}>
-                📚 Course books ({bn((edit.books || []).length)} selected)
+                <Ico e="📚" /> Course books ({bn((edit.books || []).length)} selected)
               </label>
               {!bookForm && (
                 <Btn
@@ -16189,7 +16208,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                     color: "#92400e",
                   }}
                 >
-                  📤 Upload a new book
+                  <Ico e="📤" /> Upload a new book
                 </div>
                 <input
                   style={S.input}
@@ -16214,7 +16233,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                   }}
                 >
                   <span style={{ fontSize: 20 }}>
-                    {bookForm.file ? "✅" : "📁"}
+                    {withIcons(bookForm.file ? "✅" : "📁")}
                   </span>
                   <span>
                     {bookForm.file
@@ -16262,7 +16281,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                   border: `1px dashed ${C.line}`,
                 }}
               >
-                📭 No academic books — click "+ Add new book" above to upload and select a book right here.
+                <Ico e="📭" /> No academic books — click "+ Add new book" above to upload and select a book right here.
               </div>
             ) : (
               <div
@@ -16307,7 +16326,7 @@ function CourseManagerView({ db, setDb, refresh }) {
                           })
                         }
                       />
-                      📖 <b>{b.name}</b>&nbsp;
+                      <Ico e="📖" /> <b>{b.name}</b>&nbsp;
                       <Tag color={C.blue} bg={C.blueBg}>
                         {bookExt(b.file?.name)}
                       </Tag>
@@ -16529,7 +16548,7 @@ function SyllabusView({ db, setDb, courses, user }) {
         <div
           style={{ ...S.card, textAlign: "center", color: C.muted, padding: 28 }}
         >
-          📜{" "}
+          <Ico e="📜" />{" "}
           {user.role === "teacher"
             ? "You are not enrolled in any course yet."
             : user.role === "student"
@@ -16806,7 +16825,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                                   marginTop: 2,
                                 }}
                               >
-                                ✕ Column
+                                <Ico e="✕" /> Column
                               </button>
                             </>
                           ) : (
@@ -16842,9 +16861,9 @@ function SyllabusView({ db, setDb, courses, user }) {
                             color: C.muted,
                           }}
                         >
-                          {canEdit
+                          {withIcons(canEdit
                             ? "Nothing written yet — press “➕ Add row” below to start"
-                            : "—"}
+                            : "—")}
                         </td>
                       </tr>
                     ) : (
@@ -16897,7 +16916,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                                   fontSize: 15,
                                 }}
                               >
-                                ✕
+                                <Ico e="✕" />
                               </button>
                             </td>
                           )}
@@ -17236,7 +17255,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
             : "Click to open — downloads once the first time, then opens directly from your device",
         )}
       >
-        {icon} {bookNameFor(b.name)}
+        {withIcons(icon)} {bookNameFor(b.name)}
         {msg && (
           <span
             style={{
@@ -17300,7 +17319,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
                   padding: 0,
                 }}
               >
-                ✏️
+                <Ico e="✏" />
               </button>
             )}
           </span>
@@ -17373,7 +17392,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
             padding: 28,
           }}
         >
-          📚{" "}
+          <Ico e="📚" />{" "}
           {isAdm(user)
             ? 'No books added yet — start with "+ Add book".'
             : T(
@@ -17399,7 +17418,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
                   color: c.color || C.emerald,
                 }}
               >
-                📗 {c.name}
+                <Ico e="📗" /> {c.name}
               </div>
               <div style={{ display: "grid", gap: 10 }}>{items.map(Card)}</div>
             </div>
@@ -17448,7 +17467,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
                 placeholder="https://drive.google.com/..."
               />
               <div style={{ fontSize: 11.5, color: C.muted, marginTop: 5 }}>
-                💡 Put the book on Google Drive, share it as "Anyone with the link" and paste the link here — even large books are added with no size limit.
+                <Ico e="💡" /> Put the book on Google Drive, share it as "Anyone with the link" and paste the link here — even large books are added with no size limit.
               </div>
             </div>
           ) : (
@@ -17469,7 +17488,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
                   textAlign: "center",
                 }}
               >
-                <span style={{ fontSize: 30 }}>{form.file ? "✅" : "📁"}</span>
+                <span style={{ fontSize: 30 }}>{withIcons(form.file ? "✅" : "📁")}</span>
                 <span style={{ fontSize: 13, fontWeight: 700 }}>
                   {form.file
                     ? form.file.name
@@ -17488,7 +17507,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
           {allCourses.length > 0 && (
             <div style={{ marginTop: 14 }}>
               <label style={S.label}>
-                📖 Which course to add it to? (optional — can also be added later from course edit)
+                <Ico e="📖" /> Which course to add it to? (optional — can also be added later from course edit)
               </label>
               <div
                 style={{
@@ -17546,7 +17565,7 @@ function AcademicBooksView({ db, setDb, user, courses }) {
               </div>
               {(form.courseIds || []).length > 0 && (
                 <div style={{ fontSize: 11.5, color: C.emerald, marginTop: 4 }}>
-                  ✔ Will be added to {bn((form.courseIds || []).length)} course(s)
+                  <Ico e="✔" /> Will be added to {bn((form.courseIds || []).length)} course(s)
                 </div>
               )}
             </div>
@@ -17710,7 +17729,7 @@ function Overview({ db, courses, user, goTo }) {
             background: C.amberBg,
           }}
         >
-          <div style={{ fontSize: 24 }}>🔔</div>
+          <div style={{ fontSize: 24 }}><Ico e="🔔" /></div>
           <div style={{ flex: 1, minWidth: 200, fontSize: 13 }}>
             {T(
               "এই ডিভাইসে নোটিফিকেশন চালু করুন — অ্যাপ বন্ধ থাকলেও ক্লাস/পেমেন্ট/জরুরি খবর সাথে সাথে জানতে পারবেন।",
@@ -17781,7 +17800,7 @@ function Overview({ db, courses, user, goTo }) {
           {T("তারবিয়াতুল কুরআন একাডেমি", "Tarbiyatul Quran Academy")}
         </div>
         <div style={{ fontSize: 21, fontWeight: 800, margin: "4px 0" }}>
-          {greet} 🌙
+          {greet} <Ico e="🌙" />
         </div>
         <div style={{ fontSize: 13, color: "#d7e9de" }}>
           {fmtDate(ovToday)} ·{" "}
@@ -17919,7 +17938,7 @@ function Overview({ db, courses, user, goTo }) {
                   background: "#fffdf6",
                 }}
               >
-                <div style={{ fontSize: 26 }}>🕐</div>
+                <div style={{ fontSize: 26 }}><Ico e="🕐" /></div>
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <div style={{ fontWeight: 800 }}>
                     {c.name} — {ovLocal(k).time}
@@ -17966,11 +17985,11 @@ function Overview({ db, courses, user, goTo }) {
             boxShadow: "0 6px 18px #0f2a4a33",
           }}
         >
-          <span style={{ fontSize: 38 }}>📚</span>
+          <span style={{ fontSize: 38 }}><Ico e="📚" /></span>
           <span style={{ flex: 1 }}>
             <span style={{ display: "block", fontSize: 19, fontWeight: 700 }}>Little Mu’min Library</span>
             <span style={{ display: "block", fontSize: 13.5, opacity: 0.9 }}>
-              Pick a book from the shelves and start reading! ✨
+              Pick a book from the shelves and start reading! <Ico e="✨" />
             </span>
           </span>
           <span style={{ fontSize: 22 }}>→</span>
@@ -17987,7 +18006,7 @@ function Overview({ db, courses, user, goTo }) {
         <div style={{ display: "grid", gap: 8 }}>
           {recentNotices.slice(0, 2).map((n) => (
             <div key={n.id} style={{ ...S.card, padding: 14 }}>
-              <b style={{ fontSize: 13.5 }}>📌 {n.title}</b>
+              <b style={{ fontSize: 13.5 }}><Ico e="📌" /> {n.title}</b>
               <div style={{ fontSize: 12.5, color: C.muted }}>{n.body}</div>
             </div>
           ))}
@@ -18390,11 +18409,11 @@ function TrialReportModal({ user, guest, courses, onClose, onSaved }) {
                 />
               </div>
               <div style={{ fontSize: 11.5, color: C.muted, marginTop: 7, lineHeight: 1.6 }}>
-                After saving, press “🎁 Send offer” and the guest will see it in
+                After saving, press “<Ico e="🎁" /> Send offer” and the guest will see it in
                 their own portal and can apply for admission in one click.
                 {rep?.accepted_at && (
                   <b style={{ color: C.green, display: "block", marginTop: 4 }}>
-                    ✅ The family agreed — it has moved to admission applications
+                    <Ico e="✅" /> The family agreed — it has moved to admission applications
                   </b>
                 )}
               </div>
@@ -19029,7 +19048,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
                 gap: 6,
               }}
             >
-              🧑‍🏫 What the teacher sees
+              <Ico e="🧑‍🏫" /> What the teacher sees
               <span style={{ fontWeight: 500, color: C.muted, fontSize: 11.5 }}>
                 — none of this reaches the student's screen
               </span>
@@ -19061,7 +19080,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
 
             <div>
               <Lbl>
-                🗣️ The teacher says — <b>These exact words</b> Say aloud (in English)
+                <Ico e="🗣" /> The teacher says — <b>These exact words</b> Say aloud (in English)
               </Lbl>
               <Area
                 value={d.teacher_says}
@@ -19072,7 +19091,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
               />
             </div>
             <div>
-              <Lbl>🤲 What the teacher does — not says, does</Lbl>
+              <Lbl><Ico e="🤲" /> What the teacher does — not says, does</Lbl>
               <Area
                 value={d.teacher_does}
                 onChange={(v) => set("teacher_does", v)}
@@ -19081,7 +19100,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
               />
             </div>
             <div>
-              <Lbl>🧒 What the student does</Lbl>
+              <Lbl><Ico e="🧒" /> What the student does</Lbl>
               <Area
                 value={d.student_does}
                 onChange={(v) => set("student_does", v)}
@@ -19090,12 +19109,12 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
               />
             </div>
             <div>
-              <Lbl>✅ Expected response — verify here</Lbl>
+              <Lbl><Ico e="✅" /> Expected response — verify here</Lbl>
               <Area value={d.expected} onChange={(v) => set("expected", v)} disabled={!canEdit} />
             </div>
             <div>
               <Lbl>
-                🔧 If they make a mistake — <b>Exactly what you will say</b> (in English)
+                <Ico e="🔧" /> If they make a mistake — <b>Exactly what you will say</b> (in English)
               </Lbl>
               <Area
                 value={d.correction}
@@ -19107,7 +19126,7 @@ function StepCard({ step, n, total, canEdit, onSave, onDelete, onMove }) {
             </div>
             <div>
               <Lbl>
-                📌 Teacher's notes — makhraj, references, notes for the guardian
+                <Ico e="📌" /> Teacher's notes — makhraj, references, notes for the guardian
               </Lbl>
               <Area value={d.note} onChange={(v) => set("note", v)} disabled={!canEdit} />
             </div>
@@ -19614,7 +19633,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
           </select>
           {sections.length === 0 && (
             <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
-              This course has no topics yet — set them up on the “📋 Lecture Plan” page and they will appear here.
+              This course has no topics yet — set them up on the “<Ico e="📋" /> Lecture Plan” page and they will appear here.
             </div>
           )}
 
@@ -19684,7 +19703,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
         }}
       >
         <div style={{ fontWeight: 800, fontSize: 15 }}>
-          📋 Teaching steps ({bn(steps.length)})
+          <Ico e="📋" /> Teaching steps ({bn(steps.length)})
         </div>
         {canEdit && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -19716,7 +19735,7 @@ function LessonEditor({ id, canEdit, onClose, onChanged, onTeach }) {
       <div style={{ display: "grid", gap: 10 }}>
         {steps.length === 0 && (
           <div style={{ ...S.card, color: C.muted, fontSize: 14 }}>
-            This lesson has no steps yet. Use “📥 Import external slides” to provide a PDF or PowerPoint (.pptx) — each page becomes one slide.
+            This lesson has no steps yet. Use “<Ico e="📥" /> Import external slides” to provide a PDF or PowerPoint (.pptx) — each page becomes one slide.
           </div>
         )}
         {steps.map((st, i) => (
@@ -19974,7 +19993,7 @@ function SectionBlock({ section, lessons, prog, canEdit, rowProps, onNew,
         {canEdit && (
           <span style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
             <button style={hb} onClick={onTopics} title="Add/edit/reorder topics">
-              ✏️ Topics
+              <Ico e="✏" /> Topics
             </button>
             <button style={hb} onClick={onRename} title="Rename heading">
               Name
@@ -19994,7 +20013,7 @@ function SectionBlock({ section, lessons, prog, canEdit, rowProps, onNew,
               ▼
             </button>
             <button style={hb} onClick={onDrop} title="Delete this heading">
-              🗑
+              <Ico e="🗑" />
             </button>
           </span>
         )}
@@ -20373,7 +20392,7 @@ function LessonsView({ user, courses }) {
             <div style={{ ...S.card, color: C.muted, fontSize: 14, lineHeight: 1.8 }}>
               This course has no lecture-plan headings yet.
               <br />
-              Start with “➕ New heading” below — for example “Memorized Surah”. Then add topics under it and write a class script for each. This list is the same as the “📋 Lecture Plan” page.
+              Start with “<Ico e="➕" /> New heading” below — for example “Memorized Surah”. Then add topics under it and write a class script for each. This list is the same as the “<Ico e="📋" /> Lecture Plan” page.
             </div>
           )}
 
@@ -20809,7 +20828,7 @@ function ProgressPanel({ lesson, atStep, onClose }) {
                 lineHeight: 1.7,
               }}
             >
-              ✔ Press “Mark as covered” and the lecture-plan topic{" "}
+              <Ico e="✔" /> Press “Mark as covered” and the lecture-plan topic{" "}
               <b>{lesson.topic_text || "this topic"}</b> is marked as covered for that student — it shows in the lecture plan at the same time. Each student is tracked separately.
             </div>
           ) : (
@@ -21661,12 +21680,12 @@ export function PresentWindow() {
 
       {err ? (
         <div style={{ textAlign: "center", padding: 24 }}>
-          <div style={{ fontSize: 40, marginBottom: 10 }}>🕌</div>
+          <div style={{ fontSize: 40, marginBottom: 10 }}><Ico e="🕌" /></div>
           <div style={{ fontSize: 15, color: "#ffffffbb" }}>{err}</div>
         </div>
       ) : ended ? (
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "clamp(40px,8vw,90px)" }}>🌟</div>
+          <div style={{ fontSize: "clamp(40px,8vw,90px)" }}><Ico e="🌟" /></div>
           <div
             style={{
               fontFamily: QURAN_FONT,
@@ -21683,7 +21702,7 @@ export function PresentWindow() {
         </div>
       ) : !stage ? (
         <div style={{ textAlign: "center", color: "#ffffff88" }}>
-          <div style={{ fontSize: 44, marginBottom: 12 }}>🕌</div>
+          <div style={{ fontSize: 44, marginBottom: 12 }}><Ico e="🕌" /></div>
           <div style={{ fontSize: 15 }}>Waiting for the teacher…</div>
         </div>
       ) : (
@@ -21710,7 +21729,7 @@ export function PresentWindow() {
             maxWidth: "92vw",
           }}
         >
-          🖥️ In Zoom <b>this window</b> Share · full screen in two clicks · this tip disappears on its own
+          <Ico e="🖥" /> In Zoom <b>this window</b> Share · full screen in two clicks · this tip disappears on its own
         </div>
       )}
     </div>
@@ -22028,7 +22047,7 @@ function TeacherMode({ id, onClose }) {
         }}
       >
         <button style={barBtn} onClick={() => setDrawer((d) => !d)}>
-          ☰ Steps
+          <Ico e="☰" /> Steps
         </button>
         <div style={{ flex: 1, minWidth: 120 }}>
           <div style={{ fontWeight: 800, fontSize: 14.5 }}>{lesson.title}</div>
@@ -22063,7 +22082,7 @@ function TeacherMode({ id, onClose }) {
           }}
           title="Time spent on this step / time allotted"
         >
-          ⏱ {mmss(inStep)}
+          <Ico e="⏱" /> {mmss(inStep)}
           {planned ? (
             <span style={{ color: over ? C.goldL : "#ffffff88" }}>
               {" "}
@@ -22079,7 +22098,7 @@ function TeacherMode({ id, onClose }) {
         </span>
 
         <button style={barBtn} onClick={() => setRunning((r) => !r)}>
-          {running ? "⏸" : "▶"}
+          {withIcons(running ? "⏸" : "▶")}
         </button>
         <button
           style={barBtn}
@@ -22108,7 +22127,7 @@ function TeacherMode({ id, onClose }) {
                 )
               }
             >
-              🔍−
+              <Ico e="🔍" />−
             </button>
             <button
               style={{ ...barBtn, minWidth: 56 }}
@@ -22126,13 +22145,13 @@ function TeacherMode({ id, onClose }) {
                 )
               }
             >
-              🔍+
+              <Ico e="🔍" />+
             </button>
           </>
         )}
         {lesson.objectives && (
           <button style={barBtn} onClick={() => setGoal((g) => !g)}>
-            🎯 Goal
+            <Ico e="🎯" /> Goal
           </button>
         )}
         <button
@@ -22144,7 +22163,7 @@ function TeacherMode({ id, onClose }) {
           onClick={openStage}
           title="Share this window in Zoom"
         >
-          {stageOk ? "🟢" : "🖥️"} Presentation
+          {withIcons(stageOk ? "🟢" : "🖥️")} Presentation
         </button>
         {/* ঢাকা পড়ে না, মিনিমাইজ লাগে না — তাই জুমের শেয়ার জমে যায় না */}
         <button
@@ -22160,16 +22179,16 @@ function TeacherMode({ id, onClose }) {
               : "Always-on-top floating window — never covered, so sharing stays clean"
           }
         >
-          {floatWin ? "🟢" : "🔝"} Floating window
+          {withIcons(floatWin ? "🟢" : "🔝")} Floating window
         </button>
         <button style={barBtn} onClick={() => setProg(true)}>
-          📈 Progress
+          <Ico e="📈" /> Progress
         </button>
         <button
           style={{ ...barBtn, background: "#ffffff26" }}
           onClick={onClose}
         >
-          ✕ Close
+          <Ico e="✕" /> Close
         </button>
       </div>
 
@@ -22194,7 +22213,7 @@ function TeacherMode({ id, onClose }) {
           }}
         >
           <span>
-            ⚠️ The screen is covered in Zoom. Students cannot see it — use the floating window.
+            <Ico e="⚠" /> The screen is covered in Zoom. Students cannot see it — use the floating window.
           </span>
           <button
             style={{
@@ -22204,7 +22223,7 @@ function TeacherMode({ id, onClose }) {
             }}
             onClick={openFloat}
           >
-            🔝 Open floating window
+            <Ico e="🔝" /> Open floating window
           </button>
         </div>
       )}
@@ -22324,7 +22343,7 @@ function TeacherMode({ id, onClose }) {
                   marginBottom: 16,
                 }}
               >
-                🗣️ {step.teacher_says}
+                <Ico e="🗣" /> {step.teacher_says}
               </div>
             ) : (
               <div
@@ -22390,7 +22409,7 @@ function TeacherMode({ id, onClose }) {
                 marginBottom: 8,
               }}
             >
-              🖥️ What the student is seeing now
+              <Ico e="🖥" /> What the student is seeing now
               {stageOk ? (
                 <span style={{ color: "#4ade80", marginLeft: 6 }}>
                   · Presentation window attached
@@ -22422,7 +22441,7 @@ function TeacherMode({ id, onClose }) {
                     marginBottom: 6,
                   }}
                 >
-                  ⏭️ Next — {steps[i + 1].section || "Untitled step"}
+                  <Ico e="⏭" /> Next — {steps[i + 1].section || "Untitled step"}
                 </div>
                 <div
                   style={{
@@ -22505,7 +22524,7 @@ function TeacherMode({ id, onClose }) {
             }}
             onClick={() => setProg(true)}
           >
-            ✓ Finish — progress and coverage
+            <Ico e="✓" /> Finish — progress and coverage
           </button>
         ) : (
           <button
@@ -23095,7 +23114,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
                     textDecoration: "underline",
                   }}
                 >
-                  ↩️ Restore the academy's four core criteria
+                  <Ico e="↩" /> Restore the academy's four core criteria
                 </span>{" "}
                 — only the missing ones are added; nothing you added or
                 renamed yourself is lost.
@@ -23472,7 +23491,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
               📧 Gmail — {sendFor.email || "No email"}
             </Btn>
             <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.6 }}>
-              If there is no number or email, add one via “✏️ Edit”.
+              If there is no number or email, add one via “<Ico e="✏" /> Edit”.
             </div>
           </div>
         </Modal>
@@ -23519,7 +23538,7 @@ function TrialView({ db, setDb, user, courses, refresh }) {
             </Btn>
           </div>
           <div style={{ fontSize: 12, color: C.muted, marginTop: 12, lineHeight: 1.6 }}>
-            The password can be viewed and sent again from this list later. If it is lost, press “🔄 Password” to generate a new one.
+            The password can be viewed and sent again from this list later. If it is lost, press “<Ico e="🔄" /> Password” to generate a new one.
           </div>
         </Modal>
       )}
@@ -23874,7 +23893,7 @@ function TrialPortal({ user }) {
       >
         <div style={{ flex: 1, minWidth: 200 }}>
           <div style={{ fontWeight: 800, color: C.gold }}>
-            🌱 Free trial
+            <Ico e="🌱" /> Free trial
             {daysLeft != null &&
               (daysLeft > 0
                 ? ` · ${daysLeft} day${daysLeft === 1 ? "" : "s"} left`
@@ -23970,9 +23989,9 @@ function TrialPortal({ user }) {
       </Section>
       {/* ───── তিনটি ট্যাব ───── */}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "4px 0 14px" }}>
-        {tabBtn("home", "🗂️ Trial Lesson Plan")}
-        {tabBtn("syllabus", "📜 Course Syllabus")}
-        {tabBtn("books", `📚 Books (${books.length})`)}
+        {withIcons(tabBtn("home", "🗂️ Trial Lesson Plan"))}
+        {withIcons(tabBtn("syllabus", "📜 Course Syllabus"))}
+        {withIcons(tabBtn("books", `📚 Books (${books.length})`))}
       </div>
 
       {tab === "home" && (
@@ -24039,7 +24058,7 @@ function TrialPortal({ user }) {
                       </span>
                       <span style={{ flex: 1 }}>{tp.text}</span>
                       {done && (
-                        <span style={{ color: C.emerald, fontWeight: 800 }}>✔</span>
+                        <span style={{ color: C.emerald, fontWeight: 800 }}><Ico e="✔" /></span>
                       )}
                     </div>
                     {openTopic[tp.id] && tp.content && (
@@ -24143,7 +24162,7 @@ function TrialPortal({ user }) {
                 }}
               >
                 <div style={{ flex: 1, minWidth: 160, fontWeight: 700 }}>
-                  📘 {b.name}
+                  <Ico e="📘" /> {b.name}
                 </div>
                 {b.file && (
                   <a
@@ -24316,7 +24335,7 @@ function AllTeachersView({ user, courses }) {
             style={{ background: "#fff", borderRadius: 14, padding: 24, width: "min(95vw,460px)", maxHeight: "85vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
               <h3 style={{ margin: 0 }}>{sel.name_bn}</h3>
-              <button onClick={() => setSel(null)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setSel(null)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer" }}><Ico e="✕" /></button>
             </div>
             <table style={{ width: "100%", fontSize: 14, borderCollapse: "collapse" }}>
               {[
@@ -24351,7 +24370,7 @@ function AllTeachersView({ user, courses }) {
             style={{ background: "#fff", borderRadius: 14, padding: 24, width: "min(95vw,480px)", maxHeight: "85vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
               <h3 style={{ margin: 0 }}>{edit.id ? "Edit teacher" : "New teacher"}</h3>
-              <button onClick={() => setEdit(null)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setEdit(null)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer" }}><Ico e="✕" /></button>
             </div>
             {[
               ["Name", "name", "text", "Full name in Bengali"],
@@ -24490,7 +24509,7 @@ function LoginSendView({ user }) {
                   style={{ background: "#25d366", color: "#fff", border: "none",
                     borderRadius: 8, padding: "6px 12px", fontSize: 13, cursor: "pointer",
                     opacity: sending === u.id ? .6 : 1 }}>
-                  {sending === u.id ? "Opening…" : "📲 WhatsApp"}
+                  {withIcons(sending === u.id ? "Opening…" : "📲 WhatsApp")}
                 </button>
               </div>
             ))}
@@ -24651,7 +24670,7 @@ function AmalView({ user }) {
                 <span style={{ fontWeight: 600, fontSize: 15 }}>{it.name}</span>
                 {(user?.role === "director" || user?.role === "admin") && adminItems && (
                   <button onClick={() => delItem(it.id)}
-                    style={{ background: "none", border: "none", color: "crimson", cursor: "pointer", fontSize: 18 }}>✕</button>
+                    style={{ background: "none", border: "none", color: "crimson", cursor: "pointer", fontSize: 18 }}><Ico e="✕" /></button>
                 )}
               </div>
               {it.kind === "prayer" ? (
@@ -24681,7 +24700,7 @@ function AmalView({ user }) {
                     color: values[it.id] === "done" ? "#1a5c3a" : "#6b7c73",
                     cursor: editable ? "pointer" : "default", fontSize: 14, fontWeight: 600,
                   }}>
-                  {values[it.id] === "done" ? "✔ Done" : "Missed"}
+                  {withIcons(values[it.id] === "done" ? "✔ Done" : "Missed")}
                 </button>
               )}
             </div>
@@ -24992,7 +25011,7 @@ function BlockingPopup({ icon, title, children, footer, zIndex = 305 }) {
           fontFamily: "'Hind Siliguri', sans-serif",
         }}
       >
-        <div style={{ fontSize: 40 }}>{icon}</div>
+        <div style={{ fontSize: 40 }}>{withIcons(icon)}</div>
         <div
           style={{ fontWeight: 800, fontSize: 17, color: C.emerald, marginTop: 6 }}
         >
@@ -25100,7 +25119,7 @@ function NewNotifToast({ user, notifs }) {
           marginBottom: 8,
         }}
       >
-        <span style={{ fontSize: 18 }}>🔔</span>
+        <span style={{ fontSize: 18 }}><Ico e="🔔" /></span>
         <span style={{ fontWeight: 800, fontSize: 14, color: C.emerald, flex: 1 }}>
           {en
             ? items.length > 1
@@ -25123,7 +25142,7 @@ function NewNotifToast({ user, notifs }) {
             lineHeight: 1,
           }}
         >
-          ✕
+          <Ico e="✕" />
         </button>
       </div>
       {items.map((n) => (
@@ -25185,7 +25204,7 @@ function RejoinBlockPopup({ k, user, onRejoin, onLater }) {
               boxSizing: "border-box",
             }}
           >
-            {en ? "🔁 Rejoin now — Zoom will open" : "🔁 Rejoin now"}
+            {withIcons(en ? "🔁 Rejoin now — Zoom will open" : "🔁 Rejoin now")}
           </a>
           {/* দ্বিতীয় পথ — এটা ছাড়া কেউ রিজয়েন করতে না চাইলে (যেমন ক্লাস
               শেষ হয়ে গেছে) পোর্টালে আটকে থাকতেন */}
@@ -25395,7 +25414,7 @@ function ReinstallNotice({ lang }) {
           fontFamily: "'Hind Siliguri', sans-serif",
         }}
       >
-        <div style={{ fontSize: 40 }}>📲</div>
+        <div style={{ fontSize: 40 }}><Ico e="📲" /></div>
         <div
           style={{ fontWeight: 800, fontSize: 17, color: C.emerald, marginTop: 6 }}
         >
@@ -25535,7 +25554,7 @@ function UpdateBanner({ lang }) {
           fontFamily: "'Hind Siliguri', sans-serif",
         }}
       >
-        <div style={{ fontSize: 40 }}>✨</div>
+        <div style={{ fontSize: 40 }}><Ico e="✨" /></div>
         <div
           style={{
             fontWeight: 800,
@@ -25880,7 +25899,20 @@ export default function App() {
               fontFamily: "'Hind Siliguri', sans-serif",
             }}
           >
-            <div style={{ fontSize: 34 }}>⚠️</div>
+            <div
+              style={{
+                width: 56,
+                height: 56,
+                margin: "0 auto",
+                borderRadius: "50%",
+                background: C.amberBg,
+                color: C.gold,
+                display: "grid",
+                placeItems: "center",
+              }}
+            >
+              <Ico e="⚠️" size={28} style={{ verticalAlign: 0 }} />
+            </div>
             <div
               style={{
                 fontSize: 14.5,
@@ -25893,7 +25925,7 @@ export default function App() {
                 whiteSpace: "pre-line",
               }}
             >
-              {confirmReq.message}
+              {withIcons(confirmReq.message)}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <Btn
@@ -25937,7 +25969,7 @@ export default function App() {
             fontFamily: "'Hind Siliguri', sans-serif",
           }}
         >
-          {toast}
+          {withIcons(toast)}
         </div>
       )}
     </>
@@ -26147,7 +26179,7 @@ export default function App() {
             fontSize: 16,
           }}
         >
-          ☰
+          <Ico e="☰" />
         </button>
         <div
           style={{
@@ -26202,7 +26234,7 @@ export default function App() {
               position: "relative",
             }}
           >
-            🔔
+            <Ico e="🔔" />
             {unread > 0 && (
               <span
                 style={{
@@ -26239,7 +26271,7 @@ export default function App() {
               <div
                 style={{ fontWeight: 800, fontSize: 13, padding: "4px 6px" }}
               >
-                {T("🔔 নোটিফিকেশন", "🔔 Notifications")}
+                {withIcons(T("🔔 নোটিফিকেশন", "🔔 Notifications"))}
               </div>
               {myNotifs.length === 0 && (
                 <div style={{ padding: 10, fontSize: 12.5, color: C.muted }}>
@@ -26429,9 +26461,17 @@ export default function App() {
               }}
             >
               {/* শিক্ষার্থীর কাছে কোনো কোনো পাতা অন্য নামে পরিচিত */}
-              <span>
-                {(user.role === "student" && n.studentIcon) || n.icon}
-              </span>{" "}
+              <span style={{ display: "grid", placeItems: "center", width: 20, flexShrink: 0 }}>
+                {(() => {
+                  const NI =
+                    (user.role === "student" && NAV_ICON[n.id + "Student"]) || NAV_ICON[n.id];
+                  return NI ? (
+                    <Ico as={NI} size={18} strokeWidth={2} style={{ verticalAlign: 0 }} />
+                  ) : (
+                    withIcons((user.role === "student" && n.studentIcon) || n.icon)
+                  );
+                })()}
+              </span>
               {user.role === "student"
                 ? n.studentLabelEn || n.labelEn || n.label
                 : n.labelEn || n.label}
