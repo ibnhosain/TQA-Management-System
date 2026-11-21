@@ -72,3 +72,13 @@ class NooraniDecks(TestCase):
         self.assertEqual(d.filename, "Lecture 01 - Noorani Qaida Course - Student.pptx")
         self.assertTrue(bytes(d.data[:2]) == b"PK", "pptx (zip) হওয়া উচিত")
         self.assertFalse(LectureDeck.objects.filter(course=easy).exists(), "Easy কোর্সে স্লাইড যাওয়া উচিত নয়")
+
+    def test_lectures_6_to_10_are_added_and_1_to_5_replaced(self):
+        from core.models import LectureDeck
+        course = Course.objects.create(name="Noorani Qaida Course")
+        LectureDeck.objects.create(course=course, no=1, audience="teacher", title="old", filename="old.pptx", size=3, data=b"old")
+        importlib.import_module("core.migrations.0089_seed_noorani_lectures_6_to_10").forwards(django_apps, None)
+        decks = LectureDeck.objects.filter(course=course)
+        self.assertEqual(decks.count(), 20)
+        self.assertNotEqual(bytes(decks.get(no=1, audience="teacher").data), b"old")
+        self.assertEqual(decks.get(no=10, audience="teacher").filename, "Lecture 10 - Noorani Qaida Course.pptx")
