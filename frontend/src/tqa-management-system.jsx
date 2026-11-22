@@ -17347,16 +17347,11 @@ function SyllabusView({ db, setDb, courses, user }) {
     <Section title={T("Course Syllabus", "Course Syllabus")} sub={roleNote}>
       {loading && <Loader text={T("Loading", "Loading")} />}
       {!loading && courseList.length === 0 && (
-        <div
-          style={{ ...S.card, textAlign: "center", color: C.muted, padding: 28 }}
-        >
-          <Ico e="📜" />{" "}
-          {user.role === "teacher"
-            ? "You are not enrolled in any course yet."
-            : user.role === "student"
-              ? "You are not enrolled in any course yet."
-              : "No courses created yet."}
-        </div>
+        <EmptyState
+          icon="📜"
+          title={isAdm(user) ? "No courses created yet" : "You are not enrolled in any course yet"}
+          text="The syllabus appears here once a course is set up."
+        />
       )}
 
       {!loading && activeCourse.id && (
@@ -17366,73 +17361,73 @@ function SyllabusView({ db, setDb, courses, user }) {
               (শিক্ষার্থীর পোর্টালে সাধারণত একটাই কোর্স থাকে)। তবে একাধিক
               কোর্স থাকলে মেনুটা থাকে — নইলে তিনি বাকিগুলো দেখতেই পেতেন না।
               পুরো বারটাই খালি হয়ে গেলে (এক কোর্সের শিক্ষার্থী) বারটাও দেখাই না। */}
-          {(showPicker || canEdit) && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                flexWrap: "wrap",
-                padding: "12px 16px",
-                background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`,
-                color: "#fff",
-              }}
-            >
-              {showPicker && (
-                <>
-                  <span style={{ fontWeight: 800, fontSize: 14 }}>
-                    {T("Course:", "Course:")}
-                  </span>
-                  <select
-                    value={selCourse || ""}
-                    onChange={(e) => setSelCourse(e.target.value)}
-                    style={{
-                      ...S.input,
-                      background: "#123f28",
-                      color: "#fff",
-                      border: "1px solid rgba(255,255,255,.35)",
-                      minWidth: 200,
-                      flex: "0 1 auto",
-                    }}
-                  >
-                    {courseList.map((c) => (
-                      <option
-                        key={c.id}
-                        value={c.id}
-                        style={{ background: "#123f28" }}
-                      >
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </>
-              )}
-              <div style={{ flex: 1 }} />
-              {canEdit && dirty && (
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.goldL }}>
-                  ● Unsaved changes
-                </span>
-              )}
-              {canEdit && (
-                <Btn
-                  sm
-                  kind="gold"
-                  onClick={saving ? undefined : save}
-                  style={{ opacity: saving ? 0.7 : 1 }}
-                >
-                  {saving ? "Saving…" : "💾 Save"}
-                </Btn>
-              )}
-            </div>
-          )}
-
-          {/* ছাপা কাগজের হুবহু লেআউট — হেডার + ব্যানার + মেটা + টেবিল */}
+          {/* উপরের টুলবার — কোর্স বাছাই (একাধিক হলে পিল), অসংরক্ষিত চিহ্ন, প্রিন্ট ও সংরক্ষণ।
+              কোর্স একটাই হলে বাছাইয়ের কিছু নেই — তখন কেবল কোর্সের নাম। */}
           <div
             style={{
-              margin: 14,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+              padding: "12px 16px",
+              background: "#f6f9f7",
+              borderBottom: `1px solid ${C.line}`,
+            }}
+          >
+            {showPicker ? (
+              courseList.map((c) => (
+                <button
+                  key={c.id}
+                  className={"tqa-pilltab" + (String(selCourse) === String(c.id) ? " on" : "")}
+                  onClick={() => setSelCourse(c.id)}
+                >
+                  <span className="dot" style={{ background: c.color || C.emerald }} />
+                  {c.name}
+                </button>
+              ))
+            ) : (
+              <b style={{ fontSize: 14.5 }}>
+                <Ico e="📜" style={{ color: C.emeraldL }} /> {activeCourse.name}
+              </b>
+            )}
+            <div style={{ flex: 1 }} />
+            {canEdit && dirty && (
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#a16207",
+                  background: C.amberBg,
+                  border: "1px solid #f1dfb5",
+                  borderRadius: 999,
+                  padding: "3px 10px",
+                }}
+              >
+                ● Unsaved changes
+              </span>
+            )}
+            <Btn sm kind="soft" onClick={doPrint}>
+              🖨️ Print / PDF
+            </Btn>
+            {canEdit && (
+              <Btn sm kind="gold" onClick={saving ? undefined : save} style={{ opacity: saving ? 0.7 : 1 }}>
+                {saving ? "Saving…" : "💾 Save"}
+              </Btn>
+            )}
+          </div>
+
+          {/* ছাপা কাগজের হুবহু লেআউট — হেডার + ব্যানার + মেটা + টেবিল; হালকা পটভূমিতে
+              ছায়াসহ সাদা পাতা, যেন সত্যিকারের কাগজ */}
+          <div style={{ background: "#eef2ef", padding: "18px 14px" }}>
+          <div
+            style={{
+              maxWidth: 1040,
+              margin: "0 auto",
+              background: "#fff",
               border: `2px solid ${C.emerald}`,
               borderRadius: 12,
               overflow: "hidden",
+              boxShadow: "0 10px 30px rgba(16,34,24,.12)",
             }}
           >
             <div
@@ -17444,14 +17439,6 @@ function SyllabusView({ db, setDb, courses, user }) {
                 position: "relative",
               }}
             >
-              {/* প্রিন্ট বাটন — এই ডিভের ডান-উপরের কোণে। ছাপার সময় এটা
-                  কাগজে যায় না, কারণ ছাপা হয় আলাদা করে তৈরি করা পরিচ্ছন্ন
-                  পাতা (sheetHTML), এই পর্দার অংশটা নয়। */}
-              <div style={{ position: "absolute", top: 10, right: 12 }}>
-                <Btn sm kind="soft" onClick={doPrint}>
-                  {T("🖨️ প্রিন্ট / PDF", "🖨️ Print / PDF")}
-                </Btn>
-              </div>
               <div
                 style={{
                   color: C.goldL,
@@ -17672,7 +17659,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                       rows.map((row, ri) => (
                         <tr key={ri}>
                           {headers.map((_, ci) => (
-                            <td key={ci} style={cellStyle}>
+                            <td key={ci} style={{ ...cellStyle, background: ri % 2 ? "#f7fbf8" : "#fff" }}>
                               {canEdit ? (
                                 <textarea
                                   value={row[ci] || ""}
@@ -17757,6 +17744,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                 </Btn>
               </div>
             )}
+          </div>
           </div>
         </div>
       )}
