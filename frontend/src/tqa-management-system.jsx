@@ -1160,6 +1160,31 @@ const CountPill = ({ n }) => (
     {n}
   </span>
 );
+/* ধাপে-ধাপে ফর্মের একেকটি অংশ — নম্বরসহ শিরোনাম, নিচে রেখা */
+const FormStep = ({ n, title, last, children }) => (
+  <div style={{ padding: "18px 20px", borderBottom: last ? "none" : `1px solid ${C.line}` }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+      <span
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: "50%",
+          display: "grid",
+          placeItems: "center",
+          fontSize: 12,
+          fontWeight: 700,
+          color: "#fff",
+          background: `linear-gradient(135deg, ${C.emeraldL}, ${C.emerald})`,
+          flexShrink: 0,
+        }}
+      >
+        {n}
+      </span>
+      <b style={{ fontSize: 14.5, letterSpacing: "-0.01em" }}>{title}</b>
+    </div>
+    {children}
+  </div>
+);
 /* খালি-অবস্থা — "কিছু নেই"-এর বদলে আইকনসহ পরিষ্কার বার্তা */
 const EmptyState = ({ icon = "📭", title, text, action }) => (
   <div style={{ ...S.card, textAlign: "center", padding: "26px 18px" }}>
@@ -1615,7 +1640,7 @@ function StudentPicker({ selected, onToggle, people }) {
             onChange={() => onToggle(s.id)}
           />
           <b>{s.name}</b>{" "}
-          <span style={{ color: C.muted, fontSize: 11.5 }}>({s.sub})</span>
+          {s.sub && <span style={{ color: C.muted, fontSize: 11.5 }}>({s.sub})</span>}
         </label>
       ))}
     </div>
@@ -4213,14 +4238,16 @@ function InstantClassView({ courses, user }) {
   // নেই), আজকের তারিখেই তৈরি হলে জয়েন অপশন সাথে সাথেই পোর্টালে চলে যায় —
   // শিডিউল করা সময়ের জন্য অপেক্ষা করতে হয় না
   const blankForm = () => {
-    const now = new Date();
+    // ⚠️ সময় বাংলাদেশের — আগে ডিভাইসের ঘড়ি নেওয়া হতো, বিদেশে থাকা পরিচালকের
+    // কাছে "এখন" তাই ভুল ঘণ্টায় বসত
+    const now = bdNowPlus(0);
     return {
       kind: "Makeup Class",
       courseId: courses[0]?.id,
       teacherId: courses[0]?.teacherId,
       studentIds: [],
-      date: todayISO(),
-      time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+      date: now.date,
+      time: now.time,
       dur: 60,
       lectureNo: 1,
       zoom: "https://zoom.us/j/",
@@ -4302,186 +4329,309 @@ function InstantClassView({ courses, user }) {
     notice(`✔ Sending WhatsApp to ${bn(targets.length)} recipient(s)`);
   };
 
+  // ── সারাংশ-কার্ডের হিসাব
+  const sc = courseById(courses, f.courseId);
+  const teacherName = teachers.find((t) => String(t.id) === String(f.teacherId))?.name;
+  const pickedNames = f.studentIds
+    .map((id) => students.find((x) => String(x.id) === String(id))?.name)
+    .filter(Boolean);
+  const wholeCount = (sc.studentIds || []).length;
+  const tm12 = fmt12(f.time);
+  const minsAway = f.date && f.time ? Math.round((classStartMs(f.date, f.time) - Date.now()) / 60000) : null;
+  const whenText =
+    minsAway == null
+      ? ""
+      : Math.abs(minsAway) <= 5
+        ? "Starts now"
+        : minsAway > 0
+          ? `Starts in ${minsAway < 60 ? `${minsAway} min` : `${Math.floor(minsAway / 60)}h ${minsAway % 60}m`}`
+          : `Started ${-minsAway < 60 ? `${-minsAway} min` : `${Math.floor(-minsAway / 60)}h`} ago`;
+  const zoomOk = /^https?:\/\/\S+\/\S+/.test((f.zoom || "").trim()) && f.zoom.trim() !== "https://zoom.us/j/";
+  const checks = [
+    [!!(f.courseId && f.teacherId), "Course and teacher chosen"],
+    [true, f.studentIds.length ? `${f.studentIds.length} student(s) selected` : `Whole course (${wholeCount}) — you'll be asked to confirm`],
+    [zoomOk, zoomOk ? "Zoom link added" : "Add the full Zoom link"],
+  ];
+  const setWhen = (addMin) => {
+    const t = bdNowPlus(addMin);
+    setF({ ...f, date: t.date, time: t.time });
+  };
+  const chip = {
+    border: `1px solid ${C.line}`,
+    background: "#fff",
+    borderRadius: 999,
+    padding: "5px 11px",
+    fontFamily: "inherit",
+    fontSize: 12.5,
+    fontWeight: 600,
+    color: C.emeraldD,
+    cursor: "pointer",
+  };
   return (
     <Section
       title="⚡ Instant Class"
-      sub="For emergency or sudden classes — create it for today's date and there's no waiting; the join option reaches the teacher's and student's portals immediately"
+      sub="For emergency or sudden classes — create it for today and there's no waiting; the join option reaches the teacher's and student's portals immediately"
     >
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <div>
-          <label style={S.label}>Class type</label>
-          <select
-            style={S.input}
-            value={f.kind}
-            onChange={(e) => setF({ ...f, kind: e.target.value })}
-          >
-            {CLASS_KINDS.map((x) => (
-              <option key={x}>{x}</option>
-            ))}
-          </select>
+      <style>{`
+        .ic-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:start}
+        @media(max-width:1000px){.ic-grid{grid-template-columns:minmax(0,1fr)}}
+        @media(min-width:1001px){.ic-aside{position:sticky;top:80px}}
+        .ic-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        @media(max-width:560px){.ic-2{grid-template-columns:1fr}}
+      `}</style>
+      <div className="ic-grid">
+        {/* ── ফর্ম: ধাপে ধাপে */}
+        <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+          <FormStep n={1} title="Class & course">
+            <div className="ic-2">
+              <div>
+                <label style={S.label}>Class type</label>
+                <select style={S.input} value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })}>
+                  {CLASS_KINDS.map((x) => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={S.label}>Course</label>
+                <select
+                  style={S.input}
+                  value={f.courseId || ""}
+                  onChange={(e) => {
+                    const c = courseById(courses, e.target.value);
+                    setF({ ...f, courseId: e.target.value, teacherId: c.teacherId || f.teacherId });
+                  }}
+                >
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </FormStep>
+
+          <FormStep n={2} title="Teacher & students">
+            <label style={S.label}>Teacher — who this is created for</label>
+            <select style={S.input} value={f.teacherId || ""} onChange={(e) => setF({ ...f, teacherId: e.target.value })}>
+              {teachers.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} {t.sub ? `(${t.sub})` : ""}
+                </option>
+              ))}
+            </select>
+            <div style={{ marginTop: 12 }}>
+              <label style={S.label}>
+                Students — pick one by one ({f.studentIds.length} selected; if none, everyone in the course)
+              </label>
+              <StudentPicker
+                selected={f.studentIds}
+                people={students}
+                onToggle={(id) =>
+                  setF({
+                    ...f,
+                    studentIds: f.studentIds.includes(id)
+                      ? f.studentIds.filter((x) => x !== id)
+                      : [...f.studentIds, id],
+                  })
+                }
+              />
+            </div>
+          </FormStep>
+
+          <FormStep n={3} title="When">
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: "#475569", alignSelf: "center", marginRight: 2 }}>
+                Quick:
+              </span>
+              {[[0, "Now"], [15, "+15 min"], [30, "+30 min"], [60, "+1 hour"]].map(([m, l]) => (
+                <button key={l} style={chip} onClick={() => setWhen(m)}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            <div className="ic-2">
+              <div>
+                <label style={S.label}>Date</label>
+                <input type="date" style={S.input} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
+              </div>
+              <div>
+                <label style={S.label}>Time (Bangladesh time)</label>
+                <input type="time" style={S.input} value={f.time} onChange={(e) => setF({ ...f, time: e.target.value })} />
+              </div>
+              <div>
+                <label style={S.label}>Duration (minutes)</label>
+                <input type="number" style={S.input} value={f.dur} onChange={(e) => setF({ ...f, dur: e.target.value })} />
+              </div>
+              <div>
+                <label style={S.label}>Lecture no. (optional)</label>
+                <input
+                  type="number"
+                  min="1"
+                  style={S.input}
+                  value={f.lectureNo}
+                  onChange={(e) => setF({ ...f, lectureNo: e.target.value })}
+                />
+              </div>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <label style={S.label}>
+                <Ico e="🌍" /> Timezone preview (optional — handy for telling someone abroad)
+              </label>
+              <select style={S.input} value={previewZone} onChange={(e) => setPreviewZone(e.target.value)}>
+                <option value="">— Choose —</option>
+                {allZones.map((z) => (
+                  <option key={z.zone} value={z.zone}>
+                    {z.label}
+                  </option>
+                ))}
+              </select>
+              {preview && (
+                <div style={{ marginTop: 6, fontSize: 12.5, color: C.muted }}>
+                  In {allZones.find((z) => z.zone === previewZone)?.label} time:{" "}
+                  <b>
+                    {fmtDate(preview.date)} · {fmt12(preview.time).t} {fmt12(preview.time).ap}
+                  </b>
+                </div>
+              )}
+            </div>
+          </FormStep>
+
+          <FormStep n={4} title="Zoom links">
+            <label style={S.label}>1st Zoom link</label>
+            <input
+              style={{ ...S.input, borderColor: f.zoom && !zoomOk ? "#efc6bb" : undefined }}
+              value={f.zoom}
+              onChange={(e) => setF({ ...f, zoom: e.target.value })}
+            />
+            <div style={{ marginTop: 12 }}>
+              <label style={S.label}>2nd Zoom link (rejoin — optional)</label>
+              <input
+                style={S.input}
+                value={f.zoom2}
+                onChange={(e) => setF({ ...f, zoom2: e.target.value })}
+                placeholder="Once the teacher and student have joined via the 1st link, this link is used to rejoin"
+              />
+            </div>
+          </FormStep>
+
+          <FormStep n={5} title="Notes" last>
+            <label style={S.label}>Guardian's requirements (optional)</label>
+            <textarea
+              rows={2}
+              style={{ ...S.input, resize: "vertical" }}
+              value={f.req}
+              onChange={(e) => setF({ ...f, req: e.target.value })}
+              placeholder="e.g. Focus more on recitation mistakes..."
+            />
+          </FormStep>
         </div>
-        <div>
-          <label style={S.label}>Course</label>
-          <select
-            style={S.input}
-            value={f.courseId || ""}
-            onChange={(e) => {
-              const c = courseById(courses, e.target.value);
-              setF({ ...f, courseId: e.target.value, teacherId: c.teacherId || f.teacherId });
-            }}
-          >
-            {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <label style={S.label}>Teacher — who this is created for</label>
-        <select
-          style={S.input}
-          value={f.teacherId || ""}
-          onChange={(e) => setF({ ...f, teacherId: e.target.value })}
-        >
-          {teachers.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name} {t.sub ? `(${t.sub})` : ""}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <label style={S.label}>
-          Select students — one by one ({bn(f.studentIds.length)} selected;
-          if none are chosen, everyone in the course)
-        </label>
-        <StudentPicker
-          selected={f.studentIds}
-          people={students}
-          onToggle={(id) =>
-            setF({
-              ...f,
-              studentIds: f.studentIds.includes(id)
-                ? f.studentIds.filter((x) => x !== id)
-                : [...f.studentIds, id],
-            })
-          }
-        />
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
-        <div>
-          <label style={S.label}>Date</label>
-          <input
-            type="date"
-            style={S.input}
-            value={f.date}
-            onChange={(e) => setF({ ...f, date: e.target.value })}
-          />
-        </div>
-        <div>
-          <label style={S.label}>Time (enter in Bangladesh time)</label>
-          <input
-            type="time"
-            style={S.input}
-            value={f.time}
-            onChange={(e) => setF({ ...f, time: e.target.value })}
-          />
-        </div>
-        <div>
-          <label style={S.label}>Duration (minutes)</label>
-          <input
-            type="number"
-            style={S.input}
-            value={f.dur}
-            onChange={(e) => setF({ ...f, dur: e.target.value })}
-          />
-        </div>
-        <div>
-          <label style={S.label}>Lecture no. (optional)</label>
-          <input
-            type="number"
-            min="1"
-            style={S.input}
-            value={f.lectureNo}
-            onChange={(e) => setF({ ...f, lectureNo: e.target.value })}
-          />
-        </div>
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <label style={S.label}><Ico e="🌍" /> Timezone preview (optional — handy for telling someone abroad)</label>
-        <select
-          style={S.input}
-          value={previewZone}
-          onChange={(e) => setPreviewZone(e.target.value)}
-        >
-          <option value="">— Choose —</option>
-          {allZones.map((z) => (
-            <option key={z.zone} value={z.zone}>
-              {z.label}
-            </option>
-          ))}
-        </select>
-        {preview && (
-          <div style={{ marginTop: 6, fontSize: 12.5, color: C.muted }}>
-            In {allZones.find((z) => z.zone === previewZone)?.label} time:{" "}
-            <b>{fmtDate(preview.date)} · {preview.time}</b>
+
+        {/* ── সারাংশ ও তৈরি */}
+        <div className="ic-aside" style={{ display: "grid", gap: 14 }}>
+          <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+            <div
+              style={{
+                padding: "16px 18px",
+                color: "#fff",
+                background: `${STAR_PATTERN}, linear-gradient(135deg, #0f3a26, ${C.emerald})`,
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.goldL }}>
+                {f.kind}
+              </div>
+              <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em", marginTop: 2 }}>
+                {sc.name || "Choose a course"}
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 8 }}>
+                <span style={{ fontSize: 30, fontWeight: 700, letterSpacing: "-0.02em" }}>{tm12.t}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, opacity: 0.85 }}>{tm12.ap}</span>
+                <span style={{ fontSize: 12.5, opacity: 0.85, marginLeft: 6 }}>
+                  {f.date ? shortDay(f.date) : ""} · {f.dur} min
+                </span>
+              </div>
+              {whenText && (
+                <div
+                  style={{
+                    display: "inline-block",
+                    marginTop: 8,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                    background: "rgba(240,195,85,.2)",
+                    border: "1px solid rgba(240,195,85,.45)",
+                  }}
+                >
+                  <Ico e="⏰" /> {whenText}
+                </div>
+              )}
+            </div>
+            <div style={{ padding: "14px 18px", display: "grid", gap: 8, fontSize: 13 }}>
+              <div>
+                <span style={{ color: C.muted }}>Teacher:</span> <b>{teacherName || "—"}</b>
+              </div>
+              <div>
+                <span style={{ color: C.muted }}>Students:</span>{" "}
+                <b>{f.studentIds.length ? pickedNames.join(", ") : `Everyone in the course (${wholeCount})`}</b>
+              </div>
+              <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: 10, marginTop: 2, display: "grid", gap: 6 }}>
+                {checks.map(([ok, text]) => (
+                  <div key={text} style={{ display: "flex", alignItems: "center", gap: 8, color: ok ? C.green : "#b45309" }}>
+                    <Ico e={ok ? "✅" : "⚠️"} />
+                    <span style={{ color: ok ? C.text : "#b45309", fontWeight: 500 }}>{text}</span>
+                  </div>
+                ))}
+              </div>
+              <Btn
+                style={{ marginTop: 6, width: "100%", justifyContent: "center", padding: "12px 18px", fontSize: 15, opacity: busy ? 0.6 : 1 }}
+                onClick={create}
+                disabled={busy}
+              >
+                {busy ? "⏳ Creating…" : "⚡ Create class now"}
+              </Btn>
+            </div>
           </div>
-        )}
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <label style={S.label}>1st Zoom link</label>
-        <input
-          style={S.input}
-          value={f.zoom}
-          onChange={(e) => setF({ ...f, zoom: e.target.value })}
-        />
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <label style={S.label}>2nd Zoom link (rejoin — optional)</label>
-        <input
-          style={S.input}
-          value={f.zoom2}
-          onChange={(e) => setF({ ...f, zoom2: e.target.value })}
-          placeholder="Once the teacher and student have joined via the 1st link, this link is used to rejoin"
-        />
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <label style={S.label}>Guardian's requirements (optional)</label>
-        <textarea
-          rows={2}
-          style={{ ...S.input, resize: "vertical" }}
-          value={f.req}
-          onChange={(e) => setF({ ...f, req: e.target.value })}
-          placeholder="e.g. Focus more on recitation mistakes..."
-        />
-      </div>
-      <Btn
-        style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: busy ? 0.6 : 1 }}
-        onClick={create}
-      >
-        {busy ? "⏳ Creating…" : "⚡ Create class now"}
-      </Btn>
-      {created && (
-        <div
-          style={{
-            marginTop: 14,
-            padding: "12px 14px",
-            borderRadius: 12,
-            background: C.greenBg,
-            border: `1.5px solid ${C.green}`,
-          }}
-        >
-          <div style={{ fontWeight: 800, marginBottom: 6 }}>
-            <Ico e="✔" /> Created — {created.courseName} · {fmtDate(created.date)} ·{" "}
-            {(created.time || "").slice(0, 5)}
-          </div>
-          <Btn kind="gold" onClick={notifyCreated}>
-            📨 Notify the teacher and student on WhatsApp now
-          </Btn>
+
+          {created && (
+            <div
+              style={{
+                ...S.card,
+                border: `1px solid ${C.green}40`,
+                background: "linear-gradient(180deg, #f1fbf5, #fff)",
+              }}
+            >
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    flexShrink: 0,
+                    background: C.greenBg,
+                    color: C.green,
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
+                  <Ico e="✔" size={20} style={{ verticalAlign: 0 }} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14.5 }}>Class created</div>
+                  <div style={{ fontSize: 13, color: C.muted }}>
+                    {created.courseName} · {fmtDate(created.date)} · {fmt12((created.time || "").slice(0, 5)).t}{" "}
+                    {fmt12((created.time || "").slice(0, 5)).ap}
+                  </div>
+                </div>
+              </div>
+              <Btn kind="gold" style={{ marginTop: 12, width: "100%", justifyContent: "center" }} onClick={notifyCreated}>
+                📨 Notify teacher & student on WhatsApp
+              </Btn>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </Section>
   );
 }
@@ -13233,6 +13383,11 @@ const shiftISO = (iso, n) => {
 const fmt12 = (hhmm) => {
   const [h, m] = String(hhmm || "0:0").split(":").map(Number);
   return { t: `${h % 12 || 12}:${String(m || 0).padStart(2, "0")}`, ap: h < 12 ? "AM" : "PM" };
+};
+// বাংলাদেশের এখনকার তারিখ-সময় (+মিনিট) — ফর্মে "Bangladesh time" বসাতে (UTC+৬, DST নেই)
+const bdNowPlus = (addMin = 0) => {
+  const iso = new Date(Date.now() + (DHAKA_OFFSET_HOURS * 60 + addMin) * 60000).toISOString();
+  return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
 };
 // "2026-11-22" → "Sun, 22 Nov"
 const shortDay = (iso) =>
