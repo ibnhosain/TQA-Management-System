@@ -1,10 +1,10 @@
 ﻿import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
 // ভাসমান পর্দাটি উস্তাদের উইন্ডোর ভেতর থেকেই আঁকা হয় — তাই portal
 import { createPortal } from "react-dom";
-import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
+import { api, approvalsApi, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
 // ইমোজির বদলে আসল আইকন — বিস্তারিত icons.jsx-এ
 import { Ico, withIcons, NAV_ICON } from "./icons";
-import { ALargeSmall, LogOut } from "lucide-react";
+import { ALargeSmall, LogOut, ChevronRight } from "lucide-react";
 // লেকচারের স্লাইড — Lesson Plan-এ টপিকে ক্লিক করলে চলে (আলাদা মেনু নেই; মালিকের নির্দেশ ২০২৬-১১-১৭)
 const PlanPlayer = lazy(() => import("./decks/PlanPlayer.jsx"));
 const SettingsView = lazy(() => import("./decks/SettingsView.jsx"));   // পরিচালকের Settings — চালু/বন্ধ
@@ -946,17 +946,35 @@ const Tag = ({ children, color = C.emerald, bg = C.greenBg }) => (
   </span>
 );
 
-const Stat = ({ icon, label, value, accent = C.emerald, note }) => (
+const Stat = ({ icon, label, value, accent = C.emerald, note, onClick }) => (
   <div
-    className="tqa-stat"
+    className={"tqa-stat" + (onClick ? " tqa-stat-link" : "")}
+    {...(onClick
+      ? {
+          role: "button",
+          tabIndex: 0,
+          onClick,
+          onKeyDown: (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onClick()),
+        }
+      : {})}
     style={{
       ...S.card,
       display: "flex",
       gap: 14,
       alignItems: "center",
       padding: 16,
+      position: "relative",
+      cursor: onClick ? "pointer" : "default",
     }}
   >
+    {onClick && (
+      <ChevronRight
+        className="tqa-stat-go"
+        size={16}
+        aria-hidden="true"
+        style={{ position: "absolute", top: 12, right: 12, color: "#9aa8a0" }}
+      />
+    )}
     <div
       style={{
         width: 46,
@@ -11789,7 +11807,7 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
           <div style={{ fontSize: 12.5, color: "#cfe6d8", marginBottom: 16 }}>
             <Ico e="🕐" /> {toZoneFullDateTime(k.date, k.time, zoneOf(user)).time}
             {zoneOf(user) !== "Asia/Dhaka" && ` (${zoneCity(zoneOf(user))} time)`} ·{" "}
-            {T("Teacher", "Teacher")}: {course.teacher_name || userById(course.teacherId || course.teacher).name}
+            {T("Teacher", "Teacher")}: {k.teacher_name || course.teacher_name || userById(course.teacherId || course.teacher).name}
           </div>
           {/* উস্তাদ রিজয়েন চালু করার পর ১ম লিংক আর দেখানো হয় না — নইলে
               শিক্ষার্থী ভুল করে পুরনো মিটিংয়ে ঢুকে পড়ত */}
@@ -17877,6 +17895,11 @@ function AcademicBooksView({ db, setDb, user, courses }) {
   );
 }
 
+/* ৮-কোণা ইসলামিক তারার অতি হালকা নকশা — গাঢ় সবুজ পটভূমিতে (ড্যাশবোর্ড ব্যানার, লাইব্রেরি কার্ড) */
+const STAR_PATTERN = `url("data:image/svg+xml,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'><g fill='none' stroke='white' stroke-opacity='.07'><rect x='16' y='16' width='24' height='24'/><rect x='16' y='16' width='24' height='24' transform='rotate(45 28 28)'/></g></svg>",
+)}")`;
+
 /* ═══════════════ ওভারভিউ ড্যাশবোর্ড ═══════════════ */
 function Overview({ db, courses, user, goTo }) {
   const T = (_bnText, enText) => enText;
@@ -17907,6 +17930,9 @@ function Overview({ db, courses, user, goTo }) {
   const [recentNotices, setRecentNotices] = useState(db.notices || []);
   const [completedThisMonth, setCompletedThisMonth] = useState(0);
   const [hasDue, setHasDue] = useState(false);
+  // "Needs attention" — অপেক্ষমাণ কাজের সংখ্যা (চাবি → সংখ্যা); কোনো অনুরোধ ব্যর্থ হলে সেটা চুপচাপ বাদ
+  const [att, setAtt] = useState({});
+  const [people, setPeople] = useState(null); // { students, teachers } — পরিচালক/এডমিন
   // নোটিফিকেশন এখনো চালু করা হয়নি এমন ডিভাইসেই একবার ব্যানারটা দেখাবে
   const [showPushBanner, setShowPushBanner] = useState(
     () =>
@@ -17948,6 +17974,7 @@ function Overview({ db, courses, user, goTo }) {
         .then(([fees, admissions]) => {
           if (cancelled) return;
           setIncome(fees.reduce((s, p) => s + (+p.amount || 0), 0));
+          setAtt((x) => ({ ...x, verify: fees.filter((p) => p.status === "pending").length }));
           setAdmissionsPending(admissions.filter((a) => a.status === "pending").length);
           setNewForms(
             admissions.filter(
@@ -17966,13 +17993,21 @@ function Overview({ db, courses, user, goTo }) {
     if (user.role !== "admin") {
       api
         .assignments()
-        .then(
-          (d) =>
-            !cancelled &&
-            setAssignmentsCount(
-              d.filter((a) => courseById(courses, a.course || a.courseId).id).length,
-            ),
-        )
+        .then((d) => {
+          if (cancelled) return;
+          const mine = d.filter((a) => courseById(courses, a.course || a.courseId).id);
+          setAssignmentsCount(mine.length);
+          if (user.role === "student")
+            setAtt((x) => ({
+              ...x,
+              homework: mine.filter((a) => !(a.submissions || []).some((sb) => sb.student === user.id)).length,
+            }));
+          if (user.role === "teacher")
+            setAtt((x) => ({
+              ...x,
+              toMark: mine.flatMap((a) => a.submissions || []).filter((sb) => sb.mark == null).length,
+            }));
+        })
         .catch(() => {});
     }
     if (user.role === "student") {
@@ -17992,6 +18027,31 @@ function Overview({ db, courses, user, goTo }) {
         .then((d) => !cancelled && setHasDue(d.length > 0))
         .catch(() => {});
     }
+    const settle = (p, fn) => p.then((d) => !cancelled && fn(d)).catch(() => {});
+    const put = (k, v) => setAtt((x) => ({ ...x, [k]: v }));
+    if (isAdm(user)) {
+      // এডমিন এডমিনের কাছে আসা আবেদন দেখেন; পরিচালক তাঁর কাছে পাঠানোগুলো (আর সরাসরি সিদ্ধান্তও দিতে পারেন)
+      settle(api.leaves(), (d) =>
+        put(
+          "leaves",
+          d.filter((l) =>
+            user.role === "director" ? ["forwarded", "pending_admin"].includes(l.status) : l.status === "pending_admin",
+          ).length,
+        ),
+      );
+      settle(approvalsApi.list(), (d) => put("approvals", (d?.pending || []).length));
+      settle(api.waOutbox(), (d) => put("wa", (Array.isArray(d) ? d : []).filter((m) => m.status === "queued").length));
+      settle(Promise.all([api.allStudents(), api.allTeachers()]), ([st, te]) =>
+        setPeople({ students: st.length, teachers: te.length }),
+      );
+    } else if (user.role === "teacher" || user.role === "student") {
+      settle(api.leaves(), (d) =>
+        put(
+          "myLeave",
+          d.filter((l) => l.applicant === user.id && ["pending_admin", "forwarded"].includes(l.status)).length,
+        ),
+      );
+    }
     return () => {
       cancelled = true;
     };
@@ -18008,27 +18068,132 @@ function Overview({ db, courses, user, goTo }) {
         : user.role === "teacher"
           ? `Assalamu Alaikum, ${user.name}`
           : `Assalamu Alaikum, ${user.name.split(" ")[0]}`;
+  // ── দ্রুত-পথ ও কার্ড-লিংক: কেবল এই ভূমিকার মেনুতে থাকা পাতাগুলোতেই যাওয়া যায়
+  const allowed = new Set(NAV.filter((n) => n.roles.includes(user.role)).map((n) => n.id));
+  const go = (id) => (allowed.has(id) ? () => goTo(id) : undefined);
+  const QUICK = (
+    {
+      director: [["classes", "Classes & Zoom"], ["instantclass", "Instant class"], ["allstudents", "All students"],
+        ["studentpayments", "Student payments"], ["admissions", "Admissions"], ["manage", "Management"]],
+      admin: [["classes", "Classes & Zoom"], ["instantclass", "Instant class"], ["allstudents", "All students"],
+        ["admissions", "Admissions"], ["attendance", "Attendance"], ["notices", "Notice board"]],
+      teacher: [["classes", "My classes"], ["lectures", "Lecture plan"], ["attendance", "Attendance"],
+        ["assignments", "Assignments"], ["teacherreport", "My report"], ["routine", "Class routine"]],
+      student: [["classes", "Join my class"], ["homework", "Homework"], ["routine", "Class routine"],
+        ["payments", "Payments"], ["library", "Library"], ["amal", "Daily Amal"]],
+    }[user.role] || []
+  ).filter(([id]) => allowed.has(id));
+  // ক্লাসের সময় দর্শকের বলয়ে, ১২ ঘণ্টার ঘড়িতে
+  const clock12 = (hhmm) => {
+    const [h, m] = String(hhmm || "0:0").split(":").map(Number);
+    return { t: `${h % 12 || 12}:${String(m || 0).padStart(2, "0")}`, ap: h < 12 ? "AM" : "PM" };
+  };
+  // ক্লাসের অবস্থা — চলছে / শুরু হবে / শেষ
+  const nowMs = Date.now();
+  const classState = (k) => {
+    const st = classStartMs(k.date, k.time);
+    const end = st + (k.duration_min || 60) * 60000;
+    if (k.teacher_finished) return { key: "done", text: "Completed", color: C.green, bg: C.greenBg };
+    if (nowMs >= st && nowMs <= end) return { key: "live", text: "Live now", color: "#c0392b", bg: "#fdeceb" };
+    if (nowMs < st) {
+      const m = Math.round((st - nowMs) / 60000);
+      const t = m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60 ? `${m % 60}m` : ""}`.trim();
+      return { key: "soon", text: `Starts in ${t}`, color: "#a16207", bg: C.amberBg };
+    }
+    return { key: "past", text: "Ended", color: C.muted, bg: "#f1f4f2" };
+  };
+  const liveNow = todayClasses.some((k) => classState(k).key === "live");
+  // আজকের পরের ক্লাস — ব্যানারে কাউন্টডাউন
+  const nextUp = todayClasses.map((k) => ({ k, st: classState(k) })).find((x) => x.st.key === "soon");
+  // "Needs attention" — [চাবি/সংখ্যা, আইকন, লেখা, পাতা, রং]; সংখ্যা ০ বা পাতা এই ভূমিকার নয় → বাদ
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  const ATTENTION = [
+    isAdm(user) && [admissionsPending, "🎓", plural(admissionsPending, "admission application", "admission applications") + " waiting", "admissions", C.gold],
+    isAdm(user) && [newForms, "📨", plural(newForms, "form", "forms") + " to answer", "forms", C.red],
+    [att.verify || 0, "💳", plural(att.verify || 0, "payment", "payments") + " to verify", "studentpayments", C.gold],
+    [att.leaves || 0, "✉️", plural(att.leaves || 0, "leave application", "leave applications") + " to decide", "leaves", C.blue],
+    [att.approvals || 0, "✅", plural(att.approvals || 0, "lecture", "lectures") + " waiting for approval", "approvals", C.emerald],
+    [att.wa || 0, "📤", plural(att.wa || 0, "WhatsApp message", "WhatsApp messages") + " to send", "waoutbox", C.green],
+    [att.toMark || 0, "📝", plural(att.toMark || 0, "submission", "submissions") + " to mark", "assignments", C.gold],
+    [att.homework || 0, "📝", plural(att.homework || 0, "assignment", "assignments") + " to submit", "assignments", C.blue],
+    user.role === "student" && [hasDue ? 1 : 0, "⚠️", "Your monthly fee is due", "payments", C.red],
+    [att.myLeave || 0, "✉️", "Your leave application is awaiting a decision", "leaves", C.blue],
+  ].filter((a) => a && a[0] > 0 && allowed.has(a[3]));
+  const heroChip = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 7,
+    padding: "6px 12px",
+    borderRadius: 999,
+    fontSize: 12.5,
+    fontWeight: 600,
+    background: "rgba(255,255,255,.12)",
+    border: "1px solid rgba(255,255,255,.18)",
+    color: "#eef6f1",
+  };
+  const panelHead = (title, action) => (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 12 }}>
+      <h3 style={{ margin: 0, fontSize: 16.5, fontWeight: 700, letterSpacing: "-0.01em", color: C.text }}>{title}</h3>
+      {action}
+    </div>
+  );
   return (
     <>
+      <style>{`
+        .tqa-dash-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:22px;align-items:start}
+        @media(max-width:1100px){.tqa-dash-grid{grid-template-columns:minmax(0,1fr)}}
+        .tqa-stat-link{transition:transform .15s,box-shadow .15s,border-color .15s}
+        .tqa-stat-link:hover{transform:translateY(-2px);border-color:#c9dccf !important;box-shadow:0 2px 4px rgba(16,34,24,.05),0 12px 26px rgba(16,34,24,.09) !important}
+        .tqa-stat-link:hover .tqa-stat-go{color:${C.emerald} !important}
+        .tqa-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+        @media(max-width:420px){.tqa-quick{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        .tqa-quick button{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px;border-radius:14px;cursor:pointer;
+          border:1px solid ${C.line};background:#fff;font:inherit;font-size:12.5px;font-weight:600;color:${C.text};text-align:center;
+          transition:transform .15s,border-color .15s,box-shadow .15s,background .15s}
+        .tqa-quick button:hover{transform:translateY(-2px);border-color:#b9d3c3;background:#f6fbf8;box-shadow:0 8px 20px rgba(16,34,24,.08);filter:none}
+        .tqa-quick .qi{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#e9f3ed;color:${C.emerald}}
+        .tqa-class-row{transition:box-shadow .15s,transform .15s}
+        .tqa-class-row:hover{transform:translateY(-1px);box-shadow:0 2px 4px rgba(16,34,24,.05),0 12px 26px rgba(16,34,24,.08) !important}
+        @media(max-width:560px){.tqa-class-cta{width:100%;padding:0 14px 14px !important}.tqa-class-cta button{width:100%;justify-content:center}}
+        @keyframes tqaLive{0%{box-shadow:0 0 0 0 rgba(192,57,43,.55)}70%{box-shadow:0 0 0 7px rgba(192,57,43,0)}100%{box-shadow:0 0 0 0 rgba(192,57,43,0)}}
+        .tqa-live-dot{width:8px;height:8px;border-radius:50%;background:#e74c3c;animation:tqaLive 1.6s infinite}
+        .tqa-att:hover{background:#f1f7f3 !important;filter:none}
+      `}</style>
+
       {showPushBanner && (
         <div
           style={{
             ...S.card,
             display: "flex",
             alignItems: "center",
-            gap: 12,
+            gap: 14,
             flexWrap: "wrap",
-            marginBottom: 14,
-            border: `1.5px solid ${C.gold}`,
-            background: C.amberBg,
+            marginBottom: 16,
+            padding: "14px 16px",
+            background: "linear-gradient(90deg, #fffaf0, #fff)",
+            border: "1px solid #f1dfb5",
+            borderLeft: `4px solid ${C.gold}`,
           }}
         >
-          <div style={{ fontSize: 24 }}><Ico e="🔔" /></div>
-          <div style={{ flex: 1, minWidth: 200, fontSize: 13 }}>
-            {T(
-              "এই ডিভাইসে নোটিফিকেশন চালু করুন — অ্যাপ বন্ধ থাকলেও ক্লাস/পেমেন্ট/জরুরি খবর সাথে সাথে জানতে পারবেন।",
-              "Enable notifications on this device — get instant alerts for classes, payments, and important updates even when the app is closed.",
-            )}
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 11,
+              background: "#fbefd2",
+              color: C.gold,
+              display: "grid",
+              placeItems: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Ico e="🔔" size={20} style={{ verticalAlign: 0 }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>Turn on notifications</div>
+            <div style={{ fontSize: 13, color: C.muted }}>
+              Get instant alerts for classes, payments and important updates — even when the app is closed.
+            </div>
           </div>
           <Btn
             sm
@@ -18038,275 +18203,507 @@ function Overview({ db, courses, user, goTo }) {
               if (ok) setShowPushBanner(false);
             }}
           >
-            {T("🔔 চালু করুন", "🔔 Enable")}
+            🔔 Enable
           </Btn>
           <Btn
             sm
-            kind="ghost"
+            kind="soft"
             onClick={() => {
               sessionStorage.setItem("tqa_push_dismissed", "1");
               setShowPushBanner(false);
             }}
           >
-            {T("বাদ দিন", "Dismiss")}
+            Not now
           </Btn>
         </div>
       )}
+
+      {/* ── স্বাগত-ব্যানার */}
       <div
         style={{
-          background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`,
-          borderRadius: 18,
-          padding: "22px 24px",
+          background: `radial-gradient(ellipse at 100% 0%, rgba(240,195,85,.24), transparent 52%), ${STAR_PATTERN}, linear-gradient(135deg, #0f3a26, ${C.emerald} 62%, #22714a)`,
+          borderRadius: 20,
+          padding: "26px 26px 24px",
           color: "#fff",
-          marginBottom: 18,
+          marginBottom: 20,
           position: "relative",
           overflow: "hidden",
+          boxShadow: "0 12px 30px rgba(18,63,40,.22)",
         }}
       >
-        <div
+        {/* সবুজ ব্যানারে সবুজ-ব্যাকগ্রাউন্ডের লোগো মিশে যেত — স্বচ্ছ সংস্করণ সাদা করে */}
+        <img
+          src="/brand/logo-mark.png"
+          alt=""
           style={{
             position: "absolute",
-            right: 18,
-            top: 8,
-            opacity: 0.28,
+            right: 22,
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: 128,
+            height: "auto",
+            opacity: 0.13,
+            filter: "brightness(0) invert(1)",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            fontSize: 11.5,
+            color: C.goldL,
+            fontWeight: 700,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
           }}
         >
-          {/* সবুজ ব্যানারে সবুজ-ব্যাকগ্রাউন্ডের লোগো মিশে যেত বলে এখানে
-              transparent-background ভার্সন সাদা করে (CSS filter) বসানো হলো */}
-          <img
-            src="/brand/logo-mark.png"
-            alt=""
-            style={{
-              width: 72,
-              height: 72,
-              filter: "brightness(0) invert(1)",
-            }}
-          />
+          Tarbiyatul Quran Academy
         </div>
         <div
           style={{
-            fontSize: 12.5,
-            color: C.goldL,
+            fontSize: 26,
             fontWeight: 700,
-            letterSpacing: 1,
+            letterSpacing: "-0.02em",
+            margin: "6px 0 14px",
+            position: "relative",
           }}
         >
-          {T("তারবিয়াতুল কুরআন একাডেমি", "Tarbiyatul Quran Academy")}
+          {greet} <Ico e="🌙" style={{ color: C.goldL }} />
         </div>
-        <div style={{ fontSize: 21, fontWeight: 800, margin: "4px 0" }}>
-          {greet} <Ico e="🌙" />
-        </div>
-        <div style={{ fontSize: 13, color: "#d7e9de" }}>
-          {fmtDate(ovToday)} ·{" "}
-          {T(
-            `আজ ${bn(todayClasses.length)}টি ক্লাস নির্ধারিত আছে`,
-            `${todayClasses.length} class(es) scheduled today`,
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, position: "relative" }}>
+          <span style={heroChip}>
+            <Ico e="📅" style={{ verticalAlign: 0 }} /> {fmtDate(ovToday)}
+          </span>
+          <span style={heroChip}>
+            <Ico e="🎥" style={{ verticalAlign: 0 }} /> {todayClasses.length}{" "}
+            {todayClasses.length === 1 ? "class" : "classes"} today
+          </span>
+          {liveNow && (
+            <span style={{ ...heroChip, background: "rgba(231,76,60,.22)", borderColor: "rgba(255,180,170,.45)" }}>
+              <span className="tqa-live-dot" /> A class is live now
+            </span>
+          )}
+          {nextUp && (
+            <span style={{ ...heroChip, background: "rgba(240,195,85,.18)", borderColor: "rgba(240,195,85,.45)" }}>
+              <Ico e="⏰" style={{ verticalAlign: 0, color: C.goldL }} /> Next:{" "}
+              {courseById(courses, nextUp.k.course || nextUp.k.courseId).name || nextUp.k.course_name} ·{" "}
+              {(() => {
+                const t = clock12(ovLocal(nextUp.k).time);
+                return `${t.t} ${t.ap}`;
+              })()}{" "}
+              ({nextUp.st.text.replace("Starts in ", "in ")})
+            </span>
           )}
         </div>
       </div>
+
+      {/* ── পরিসংখ্যান — চাপলে সংশ্লিষ্ট পাতা */}
       <div
         className="tqa-stats"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(205px, 1fr))",
           gap: 12,
-          marginBottom: 20,
+          marginBottom: 22,
         }}
       >
-        <Stat
-          icon="🎥"
-          label={T("আজকের ক্লাস", "Today's Classes")}
-          value={T(bn(todayClasses.length), todayClasses.length)}
-        />
+        <Stat icon="🎥" label="Today's Classes" value={todayClasses.length} onClick={go("classes")} />
         <Stat
           icon="📚"
-          label={T("চলমান কোর্স", "Active Courses")}
-          value={T(bn(courses.length), courses.length)}
+          label="Active Courses"
+          value={courses.length}
           accent={C.blue}
+          onClick={go(user.role === "director" ? "coursemgr" : "lectures")}
         />
         {user.role === "student" && (
           <Stat
             icon="✅"
-            label={T(
-              `${MONTHS_BN_FULL[new Date().getMonth()]}-এ সম্পন্ন ক্লাস`,
-              `Classes Completed in ${MONTHS_EN_FULL[new Date().getMonth()]}`,
-            )}
-            value={T(bn(completedThisMonth), completedThisMonth)}
+            label={`Classes Completed in ${MONTHS_EN_FULL[new Date().getMonth()]}`}
+            value={completedThisMonth}
             accent={C.emerald}
+            onClick={go("attendance")}
           />
         )}
         {user.role === "student" && (
           <Stat
             icon={hasDue ? "⚠️" : "💳"}
-            label={T("Payments", "Payment")}
-            value={
-              hasDue ? T("বাকি", "Due") : T("সম্পন্ন ✔", "Paid ✔")
-            }
+            label="Payment"
+            value={hasDue ? "Due" : "Paid ✔"}
             accent={hasDue ? C.red : C.emerald}
+            onClick={go("payments")}
           />
         )}
         {isAdm(user) && (
           <Stat
             icon="💰"
             label="Total fees collected"
-            value={`৳${bn(income.toLocaleString("en"))}`}
+            value={`৳${income.toLocaleString("en")}`}
             accent={C.gold}
+            onClick={go("studentpayments")}
           />
         )}
         {isAdm(user) && (
           <Stat
             icon="🎓"
             label="Admission Applications"
-            value={bn(admissionsPending)}
+            value={admissionsPending}
             accent={C.gold}
             note="Pending"
+            onClick={go("admissions")}
           />
         )}
         {user.role === "teacher" && (
           <Stat
             icon="🌟"
             label="Class quality"
-            value={`★ ${bn(teacherRating.count ? teacherRating.avg.toFixed(1) : "—")}`}
+            value={`★ ${teacherRating.count ? teacherRating.avg.toFixed(1) : "—"}`}
             accent={C.gold}
-            note={`${bn(teacherRating.count)} evaluations`}
+            note={`${teacherRating.count} evaluations`}
+            onClick={go("teacherreport")}
           />
         )}
         {isAdm(user) && (
-          <Stat
-            icon="📨"
-            label="New form"
-            value={bn(newForms)}
-            accent={C.red}
-            note="Answer pending"
-          />
+          <Stat icon="📨" label="New form" value={newForms} accent={C.red} note="Answer pending" onClick={go("forms")} />
+        )}
+        {isAdm(user) && people && (
+          <Stat icon="👥" label="Students" value={people.students} accent={C.blue} onClick={go("allstudents")} />
+        )}
+        {isAdm(user) && people && (
+          <Stat icon="🧑‍🏫" label="Teachers" value={people.teachers} accent={C.emerald} onClick={go("allteachers")} />
         )}
         {user.role !== "admin" && (
-          <Stat
-            icon="📝"
-            label={T("Assignments", "Assignments")}
-            value={T(bn(assignmentsCount), assignmentsCount)}
-            accent={C.gold}
-          />
+          <Stat icon="📝" label="Assignments" value={assignmentsCount} accent={C.gold} onClick={go("assignments")} />
         )}
         {missedTopics > 0 && (
           <Stat
             icon="✘"
-            label={T("বাদ পড়া টপিক", "Missed Topics")}
-            value={T(bn(missedTopics), missedTopics)}
+            label="Missed Topics"
+            value={missedTopics}
             accent={C.red}
-            note={T("এডমিন সংশোধনযোগ্য", "Fixable by admin")}
+            note="Fixable by admin"
+            onClick={go("lectures")}
           />
         )}
       </div>
-      <Section
-        title={T("আজকের ক্লাসে ফোকাস করুন", "Focus on Today's Classes")}
-        action={
-          <Btn sm kind="ghost" onClick={() => goTo("classes")}>
-            {T("সব ক্লাস দেখুন →", "View all classes →")}
-          </Btn>
-        }
-      >
-        <div style={{ display: "grid", gap: 10 }}>
-          {todayLoading && <Loader text={T("Loading", "Loading")} />}
-          {!todayLoading && todayClasses.length === 0 && (
-            <div style={{ ...S.card, textAlign: "center", color: C.muted }}>
-              {T(
-                "আজ আর কোনো ক্লাস বাকি নেই। আলহামদুলিল্লাহ।",
-                "No more classes today. Alhamdulillah.",
+
+      <div className="tqa-dash-grid">
+        {/* ── বাঁ দিক: আজকের ক্লাস */}
+        <div>
+          {panelHead(
+            "Today's classes",
+            go("classes") && (
+              <Btn sm kind="ghost" onClick={go("classes")}>
+                View all classes →
+              </Btn>
+            ),
+          )}
+          <div style={{ display: "grid", gap: 10 }}>
+            {todayLoading && <Loader text="Loading" />}
+            {!todayLoading && todayClasses.length === 0 && (
+              <div style={{ ...S.card, textAlign: "center", padding: "30px 18px" }}>
+                <div
+                  style={{
+                    width: 54,
+                    height: 54,
+                    margin: "0 auto",
+                    borderRadius: 16,
+                    background: C.greenBg,
+                    color: C.green,
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
+                  <Ico e="✅" size={26} style={{ verticalAlign: 0 }} />
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 15.5, marginTop: 12 }}>No more classes today</div>
+                <div style={{ fontSize: 13.5, color: C.muted, marginTop: 2 }}>Alhamdulillah — enjoy the rest of your day.</div>
+                {go("routine") && (
+                  <Btn sm kind="soft" style={{ marginTop: 14 }} onClick={go("routine")}>
+                    📅 View class routine
+                  </Btn>
+                )}
+              </div>
+            )}
+            {todayClasses.map((k) => {
+              const c = courseById(courses, k.course || k.courseId);
+              const lec = c.lectures?.[(k.lecture_no || k.lectureNo) - 1];
+              const st = classState(k);
+              const tm = clock12(ovLocal(k).time);
+              const who =
+                user.role === "student"
+                  ? k.teacher_name && `with ${k.teacher_name}`
+                  : user.role === "teacher"
+                    ? (k.student_names || []).length && `Students: ${(k.student_names || []).join(", ")}`
+                    : [k.teacher_name, (k.student_names || []).join(", ")].filter(Boolean).join(" · ");
+              return (
+                <div
+                  key={k.id}
+                  className="tqa-class-row"
+                  style={{
+                    ...S.card,
+                    padding: 0,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "stretch",
+                    overflow: "hidden",
+                    borderLeft: `4px solid ${st.key === "live" ? "#e74c3c" : st.key === "soon" ? C.gold : st.key === "done" ? C.green : "#cbd5d0"}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 92,
+                      flexShrink: 0,
+                      background: "#f6f9f7",
+                      borderRight: `1px solid ${C.line}`,
+                      display: "grid",
+                      placeContent: "center",
+                      textAlign: "center",
+                      padding: "12px 6px",
+                    }}
+                  >
+                    <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{tm.t}</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 600, color: C.muted, marginTop: 2 }}>{tm.ap}</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 180, padding: "14px 16px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <b style={{ fontSize: 15.5, letterSpacing: "-0.01em" }}>{c.name || k.course_name}</b>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          padding: "3px 9px",
+                          borderRadius: 999,
+                          color: st.color,
+                          background: st.bg,
+                          border: `1px solid ${st.color}26`,
+                        }}
+                      >
+                        {st.key === "live" && <span className="tqa-live-dot" />}
+                        {st.text}
+                      </span>
+                    </div>
+                    {lec && (
+                      <div style={{ fontSize: 13, color: "#475569", marginTop: 3 }}>
+                        Lecture {k.lecture_no || k.lectureNo}: {lec.title}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 12.5, color: C.muted, marginTop: 3 }}>
+                      {[who, `${k.duration_min || 60} min`, ovZone !== "Asia/Dhaka" && `${zoneCity(ovZone)} time`]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </div>
+                  </div>
+                  <div className="tqa-class-cta" style={{ display: "grid", placeItems: "center", padding: "0 16px" }}>
+                    <Btn kind={st.key === "live" ? "gold" : "ghost"} sm={st.key !== "live"} onClick={() => goTo("classes")}>
+                      {st.key === "live" ? "🎥 Join now" : "Open →"}
+                    </Btn>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── ডান দিক: মনোযোগ-দরকার, দ্রুত-পথ, লাইব্রেরি, নোটিশ */}
+        <div style={{ display: "grid", gap: 22 }}>
+          {user.role !== "trial" && (
+            <div>
+              {panelHead(
+                "Needs attention",
+                ATTENTION.length > 0 && (
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#fff",
+                      background: C.red,
+                      borderRadius: 999,
+                      padding: "2px 9px",
+                    }}
+                  >
+                    {ATTENTION.length}
+                  </span>
+                ),
               )}
+              <div style={{ ...S.card, padding: 6 }}>
+                {ATTENTION.length === 0 ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 12px" }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        background: C.greenBg,
+                        color: C.green,
+                        display: "grid",
+                        placeItems: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Ico e="✔" size={18} style={{ verticalAlign: 0 }} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 13.5 }}>You’re all caught up</div>
+                      <div style={{ fontSize: 12.5, color: C.muted }}>Nothing is waiting for you right now.</div>
+                    </div>
+                  </div>
+                ) : (
+                  ATTENTION.map(([n, icon, text, page, tone], i) => (
+                    <button
+                      key={page + i}
+                      className="tqa-att"
+                      onClick={() => goTo(page)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        width: "100%",
+                        padding: "11px 12px",
+                        border: "none",
+                        borderTop: i ? `1px solid ${C.line}` : "none",
+                        background: "transparent",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        fontFamily: "inherit",
+                        color: C.text,
+                        borderRadius: 10,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 10,
+                          flexShrink: 0,
+                          display: "grid",
+                          placeItems: "center",
+                          background: tone + "14",
+                          color: tone,
+                          border: `1px solid ${tone}26`,
+                        }}
+                      >
+                        <Ico e={icon} size={17} style={{ verticalAlign: 0 }} />
+                      </span>
+                      <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>{text}</span>
+                      <ChevronRight size={16} aria-hidden="true" style={{ color: "#9aa8a0", flexShrink: 0 }} />
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           )}
-          {todayClasses.map((k) => {
-            const c = courseById(courses, k.course || k.courseId);
-            const lec = c.lectures?.[(k.lecture_no || k.lectureNo) - 1];
-            return (
-              <div
-                key={k.id}
-                style={{
-                  ...S.card,
-                  padding: 16,
-                  display: "flex",
-                  gap: 12,
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  border: `1.5px solid ${C.goldL}`,
-                  background: "#fffdf6",
-                }}
-              >
-                <div style={{ fontSize: 26 }}><Ico e="🕐" /></div>
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ fontWeight: 800 }}>
-                    {c.name} — {ovLocal(k).time}
-                    {ovZone !== "Asia/Dhaka" && (
-                      <span style={{ color: C.muted, fontWeight: 600 }}>
-                        {" "}({zoneCity(ovZone)} time)
-                      </span>
-                    )}
-                  </div>
-                  {lec && (
-                    <div style={{ fontSize: 12.5, color: C.muted }}>
-                      {T(
-                        `লেকচার ${bn(k.lecture_no || k.lectureNo)}: ${lec.title}`,
-                        `Lecture ${k.lecture_no || k.lectureNo}: ${lec.title}`,
+          {QUICK.length > 0 && (
+            <div>
+              {panelHead("Quick actions")}
+              <div className="tqa-quick">
+                {QUICK.map(([id, label]) => (
+                  <button key={id} onClick={() => goTo(id)}>
+                    <span className="qi">
+                      <Ico as={NAV_ICON[id]} size={20} strokeWidth={2} style={{ verticalAlign: 0 }} />
+                    </span>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {user.role === "student" && (
+            <button
+              onClick={() => goTo("library")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                width: "100%",
+                padding: "16px 18px",
+                border: "none",
+                borderRadius: 18,
+                cursor: "pointer",
+                textAlign: "left",
+                color: "#fff",
+                fontFamily: "'Fredoka','Hind Siliguri',sans-serif",
+                background: `${STAR_PATTERN}, linear-gradient(135deg,#17466b,#1a5c3a)`,
+                boxShadow: "0 8px 22px #0f2a4a33",
+              }}
+            >
+              <span style={{ fontSize: 34, color: C.goldL }}>
+                <Ico e="🏮" />
+              </span>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: "block", fontSize: 18.5, fontWeight: 700 }}>Little Mu’min Library</span>
+                <span style={{ display: "block", fontSize: 13.5, opacity: 0.9 }}>
+                  Pick a book from the shelves and start reading! <Ico e="✨" />
+                </span>
+              </span>
+              <span style={{ fontSize: 22 }}>→</span>
+            </button>
+          )}
+          <div>
+            {panelHead(
+              "Recent notices",
+              go("notices") && (
+                <Btn sm kind="ghost" onClick={go("notices")}>
+                  View all →
+                </Btn>
+              ),
+            )}
+            <div style={{ ...S.card, padding: 6 }}>
+              {recentNotices.length === 0 ? (
+                <div style={{ textAlign: "center", color: C.muted, fontSize: 13.5, padding: "22px 12px" }}>
+                  <Ico e="📭" /> No notices yet
+                </div>
+              ) : (
+                recentNotices.slice(0, 3).map((n, i) => (
+                  <div
+                    key={n.id}
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      padding: "12px 12px",
+                      borderTop: i ? `1px solid ${C.line}` : "none",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 10,
+                        flexShrink: 0,
+                        background: C.amberBg,
+                        color: C.gold,
+                        display: "grid",
+                        placeItems: "center",
+                      }}
+                    >
+                      <Ico e="📌" size={16} style={{ verticalAlign: 0 }} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13.5 }}>{n.title}</div>
+                      <div
+                        style={{
+                          fontSize: 12.5,
+                          color: C.muted,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {n.body}
+                      </div>
+                      {n.created_at && (
+                        <div style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 3 }}>{fmtDate(n.created_at)}</div>
                       )}
                     </div>
-                  )}
-                </div>
-                <Btn kind="gold" onClick={() => goTo("classes")}>
-                  {T("ক্লাসে যান →", "Go to class →")}
-                </Btn>
-              </div>
-            );
-          })}
-        </div>
-      </Section>
-      {user.role === "student" && (
-        <button
-          onClick={() => goTo("library")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            width: "100%",
-            margin: "4px 0 18px",
-            padding: "16px 18px",
-            border: "none",
-            borderRadius: 18,
-            cursor: "pointer",
-            textAlign: "left",
-            color: "#fff",
-            fontFamily: "'Fredoka','Hind Siliguri',sans-serif",
-            background: "linear-gradient(135deg,#17466b,#1a5c3a)",
-            boxShadow: "0 6px 18px #0f2a4a33",
-          }}
-        >
-          <span style={{ fontSize: 38 }}><Ico e="📚" /></span>
-          <span style={{ flex: 1 }}>
-            <span style={{ display: "block", fontSize: 19, fontWeight: 700 }}>Little Mu’min Library</span>
-            <span style={{ display: "block", fontSize: 13.5, opacity: 0.9 }}>
-              Pick a book from the shelves and start reading! <Ico e="✨" />
-            </span>
-          </span>
-          <span style={{ fontSize: 22 }}>→</span>
-        </button>
-      )}
-      <Section
-        title={T("সাম্প্রতিক নোটিশ", "Recent Notices")}
-        action={
-          <Btn sm kind="ghost" onClick={() => goTo("notices")}>
-            {T("সব দেখুন →", "View all →")}
-          </Btn>
-        }
-      >
-        <div style={{ display: "grid", gap: 8 }}>
-          {recentNotices.slice(0, 2).map((n) => (
-            <div key={n.id} style={{ ...S.card, padding: 14 }}>
-              <b style={{ fontSize: 13.5 }}><Ico e="📌" /> {n.title}</b>
-              <div style={{ fontSize: 12.5, color: C.muted }}>{n.body}</div>
+                  </div>
+                ))
+              )}
             </div>
-          ))}
+          </div>
         </div>
-      </Section>
+      </div>
     </>
   );
 }
