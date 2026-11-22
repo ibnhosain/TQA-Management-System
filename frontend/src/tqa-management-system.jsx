@@ -4721,109 +4721,224 @@ function PostponedClassesView({ user }) {
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   };
 
+  // ── সারাংশ ও মাসভিত্তিক ভাগ (দর্শকের নিজের বলয়ে তারিখ-সময়)
+  const pzone = zoneOf(user);
+  const plocal = (k) => toZoneFullDateTime(k.date, (k.time || "").slice(0, 5), pzone);
+  const thisMonth = todayISO().slice(0, 7);
+  const daysWaiting = (k) => Math.max(0, Math.floor((Date.now() - classStartMs(k.date, k.time)) / 86400000));
+  const oldest = classes.length ? Math.max(...classes.map(daysWaiting)) : 0;
+  const groups = [];
+  sorted.forEach((k) => {
+    const ym = (k.date || "").slice(0, 7);
+    const g = groups.find((x) => x.ym === ym);
+    if (g) g.items.push(k);
+    else groups.push({ ym, items: [k] });
+  });
+  const monthTitle = (ym) => {
+    const [y, m] = ym.split("-").map(Number);
+    return y ? `${MONTHS_EN_FULL[m - 1]} ${y}` : "—";
+  };
   return (
     <Section
-      title={T("⛔ স্থগিত ক্লাস", "⛔ Postponed Classes")}
-      sub={T(
-        "অসুস্থতা বা অন্য কারণে স্থগিত হওয়া ক্লাসের তালিকা — সম্পন্ন না হওয়া পর্যন্ত এখানে থাকবে",
-        "Classes postponed due to illness or other reasons — shown here until completed",
-      )}
-      action={
-        isDir(user) && (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              style={{ ...S.input, padding: "8px 10px", width: 160 }}
-            />
-            <Btn sm kind="soft" onClick={exportExcel}>
-              📊 Excel
-            </Btn>
-          </div>
-        )
-      }
+      title="⛔ Postponed Classes"
+      sub="Classes postponed due to illness or other reasons — they stay here until the makeup class is completed"
     >
+      <style>{`
+        .pp-card{transition:box-shadow .15s}
+        .pp-card:hover{box-shadow:0 2px 4px rgba(16,34,24,.05),0 12px 28px rgba(16,34,24,.08) !important}
+        @media(max-width:600px){.pp-cta{width:100%;padding:0 14px 14px !important}.pp-cta > *{flex:1 1 auto}
+          .pp-cta a > button,.pp-cta > button{width:100%;justify-content:center}}
+      `}</style>
+      {/* ── সারাংশ */}
+      {!loading && classes.length > 0 && (
+        <div className="tqa-stats" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 16 }}>
+          <Stat icon="⛔" label="Waiting for makeup" value={classes.length} accent={C.red} />
+          <Stat
+            icon="📅"
+            label={`Postponed in ${MONTHS_EN_FULL[new Date().getMonth()]}`}
+            value={classes.filter((k) => (k.date || "").startsWith(thisMonth)).length}
+            accent={C.gold}
+          />
+          <Stat
+            icon="⏳"
+            label="Oldest still waiting"
+            value={`${oldest} ${oldest === 1 ? "day" : "days"}`}
+            accent={oldest > 14 ? C.red : C.blue}
+            note={oldest > 14 && isAdm(user) ? "Please schedule a makeup soon" : undefined}
+          />
+        </div>
+      )}
+      {/* ── ছাঁকনি: মাস (সবার জন্য), Excel (কেবল পরিচালক) */}
+      <div
+        style={{
+          ...S.card,
+          padding: "12px 14px",
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          flexWrap: "wrap",
+          marginBottom: 16,
+        }}
+      >
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: "#475569" }}>
+          <Ico e="📅" /> Month
+        </span>
+        <input
+          type="month"
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+          style={{ ...S.input, padding: "8px 10px", width: 170 }}
+        />
+        {month && (
+          <Btn sm kind="soft" onClick={() => setMonth("")}>
+            ✕ Clear
+          </Btn>
+        )}
+        <span style={{ fontSize: 12.5, color: C.muted }}>
+          {sorted.length} {sorted.length === 1 ? "class" : "classes"}
+          {month ? ` in ${monthTitle(month)}` : " in total"}
+        </span>
+        {isDir(user) && (
+          <Btn sm kind="soft" style={{ marginLeft: "auto" }} onClick={exportExcel}>
+            📊 Export to Excel
+          </Btn>
+        )}
+      </div>
+
       {loading ? (
-        <Loader text={T("Loading", "Loading")} />
+        <Loader text="Loading" />
       ) : sorted.length === 0 ? (
-        <div style={{ textAlign: "center", color: C.muted, padding: "24px 0", fontSize: 14 }}>
-          {T("কোনো স্থগিত ক্লাস নেই", "No postponed classes")}
-        </div>
+        <EmptyState
+          icon="✅"
+          title={month ? `No postponed classes in ${monthTitle(month)}` : "No postponed classes"}
+          text="Alhamdulillah — every class is on schedule."
+        />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {sorted.map((k) => {
-            const zoom1 = k.zoom_link || k.zoom || "";
-            const zoom2 = k.zoom_link_2 || k.zoom2 || "";
-            const hasZoom2 = zoom2 && zoom2 !== zoom1;
-            return (
-              <div
-                key={k.id}
-                style={{
-                  border: `1.5px solid ${C.line}`,
-                  borderLeft: `4px solid ${C.red}`,
-                  borderRadius: 10,
-                  padding: "12px 14px",
-                  background: C.redBg,
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 10,
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                }}
-              >
-                {/* বাম: ক্লাসের তথ্য */}
-                <div style={{ flex: "1 1 200px", minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
-                    {k.course_name || "—"}
-                  </div>
-                  <div style={{ fontSize: 12.5, color: C.muted }}>
-                    <Ico e="📅" /> {fmtDate(k.date)} · <Ico e="🕐" /> {(k.time || "").slice(0, 5)}
-                    {withIcons(k.teacher_name ? ` · 👳 ${k.teacher_name}` : "")}
-                  </div>
-                  {isAdm(user) && (k.student_names || []).length > 0 && (
-                    <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>
-                      <Ico e="👥" /> {(k.student_names || []).join(", ")}
+        groups.map((g) => (
+          <div key={g.ym} style={{ marginBottom: 18 }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: C.muted,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                margin: "0 0 8px 2px",
+              }}
+            >
+              {monthTitle(g.ym)} · {g.items.length}
+            </div>
+            <div style={{ display: "grid", gap: 10 }}>
+              {g.items.map((k) => {
+                const zoom1 = k.zoom_link || k.zoom || "";
+                const zoom2 = k.zoom_link_2 || k.zoom2 || "";
+                const hasZoom2 = zoom2 && zoom2 !== zoom1;
+                const lc = plocal(k);
+                const d = new Date(`${lc.date}T00:00:00`);
+                const tm = fmt12(lc.time);
+                const waited = daysWaiting(k);
+                return (
+                  <div
+                    key={k.id}
+                    className="pp-card"
+                    style={{ ...S.card, padding: 0, overflow: "hidden", borderLeft: `4px solid ${C.red}` }}
+                  >
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch" }}>
+                      {/* তারিখ-ব্লক */}
+                      <div
+                        style={{
+                          width: 86,
+                          flexShrink: 0,
+                          background: "#fff5f4",
+                          borderRight: `1px solid ${C.line}`,
+                          display: "grid",
+                          placeContent: "center",
+                          textAlign: "center",
+                          padding: "12px 6px",
+                        }}
+                      >
+                        <div style={{ fontSize: 11, fontWeight: 700, color: C.red, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                          {d.toLocaleDateString("en-GB", { month: "short" })}
+                        </div>
+                        <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{d.getDate()}</div>
+                        <div style={{ fontSize: 11.5, color: C.muted, fontWeight: 600 }}>
+                          {d.toLocaleDateString("en-GB", { weekday: "short" })}
+                        </div>
+                      </div>
+                      {/* তথ্য */}
+                      <div style={{ flex: 1, minWidth: 200, padding: "13px 16px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                          <b style={{ fontSize: 15.5, letterSpacing: "-0.01em" }}>{k.course_name || "—"}</b>
+                          <Tag color={C.red} bg={C.redBg}>
+                            ⛔ Postponed
+                          </Tag>
+                          <span
+                            style={{
+                              fontSize: 11.5,
+                              fontWeight: 600,
+                              padding: "2px 9px",
+                              borderRadius: 999,
+                              color: waited > 14 ? C.red : "#a16207",
+                              background: waited > 14 ? C.redBg : C.amberBg,
+                              border: `1px solid ${waited > 14 ? "#f3c7bd" : "#f1dfb5"}`,
+                            }}
+                          >
+                            {waited === 0 ? "Today" : `Waiting ${waited} ${waited === 1 ? "day" : "days"}`}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 12.5, color: C.muted, marginTop: 5, display: "flex", gap: 14, flexWrap: "wrap" }}>
+                          <span>
+                            <Ico e="🕐" /> {tm.t} {tm.ap}
+                            {pzone !== "Asia/Dhaka" ? ` (${zoneCity(pzone)} time)` : ""}
+                          </span>
+                          {k.teacher_name && (
+                            <span>
+                              <Ico e="👤" /> {k.teacher_name}
+                            </span>
+                          )}
+                          {isAdm(user) && (k.student_names || []).length > 0 && (
+                            <span>
+                              <Ico e="👥" /> {(k.student_names || []).join(", ")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {/* কাজ */}
+                      <div className="pp-cta" style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", padding: "13px 16px" }}>
+                        {zoom1 && (
+                          <a href={zoom1} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                            <Btn sm kind="primary">🔗 Join class</Btn>
+                          </a>
+                        )}
+                        {hasZoom2 && (
+                          <a href={zoom2} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                            <Btn sm kind="soft">🔁 Rejoin</Btn>
+                          </a>
+                        )}
+                        {isAdm(user) && (
+                          <Btn
+                            sm
+                            kind="ghost"
+                            onClick={() => complete(k)}
+                            disabled={completing === k.id}
+                            style={{ opacity: completing === k.id ? 0.6 : 1 }}
+                          >
+                            ✅ Mark complete
+                          </Btn>
+                        )}
+                        {isDir(user) && (
+                          <Btn sm kind="danger" onClick={() => remove(k)}>
+                            🗑️ Delete
+                          </Btn>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-                {/* ডান: বাটন */}
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                  {zoom1 && (
-                    <a href={zoom1} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-                      <Btn sm kind="primary">
-                        🔗 {T("জয়েন করুন", "Join Class")}
-                      </Btn>
-                    </a>
-                  )}
-                  {hasZoom2 && (
-                    <a href={zoom2} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-                      <Btn sm kind="soft">
-                        🔁 {T("রিজয়েন", "Rejoin")}
-                      </Btn>
-                    </a>
-                  )}
-                  {isAdm(user) && (
-                    <Btn
-                      sm
-                      kind="ghost"
-                      onClick={() => complete(k)}
-                      disabled={completing === k.id}
-                      style={{ opacity: completing === k.id ? 0.6 : 1 }}
-                    >
-                      ✅ {T("সম্পন্ন করুন", "Mark Complete")}
-                    </Btn>
-                  )}
-                  {isDir(user) && (
-                    <Btn sm kind="danger" onClick={() => remove(k)}>
-                      🗑️ {T("Delete", "Delete")}
-                    </Btn>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))
       )}
     </Section>
   );
