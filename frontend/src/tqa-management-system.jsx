@@ -26624,7 +26624,7 @@ export default function App() {
         button:not(:disabled):not([class*="iqra-"]):not([class*="bag-"]):active{transform:translateY(1px)}
         button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid ${C.gold};outline-offset:2px}
         input:focus,select:focus,textarea:focus{border-color:${C.emeraldL} !important;box-shadow:0 0 0 3px rgba(26,92,58,.14) !important}
-        .tqa-tr:hover td{background:#fafcfb}
+        .tqa-tr:hover td{background:#eef6f1}
         *{scrollbar-width:thin;scrollbar-color:#c5d3ca transparent}
         ::-webkit-scrollbar{width:10px;height:10px} ::-webkit-scrollbar-thumb{background:#c5d3ca;border-radius:99px;border:3px solid transparent;background-clip:content-box}
         @keyframes tqaFade{from{opacity:0}to{opacity:1}}
@@ -26942,8 +26942,11 @@ export default function App() {
             সবচেয়ে লম্বা নাম ("Teacher Report & Payment") যেন এক লাইনে ধরে — সেই মাপে প্রস্থ;
             তবু কোনোদিন না ধরলে "…" হয়ে কাটে, ভেঙে দুই লাইনে যায় না। */}
         <style>{`
-          .tqa-nav:not(.on):hover{background:#f1f7f3 !important;color:${C.emeraldD} !important}
+          /* মালিকের অভিযোগ (২০২৬-১১-২২): হোভার এত হালকা যে কোন মেনুতে আছি বোঝা যেত না —
+             এখন হোভারে স্পষ্ট সবুজ আভা + বাঁয়ে সবুজ দাগ; বাছাই করা পাতা ভরাট গাঢ় সবুজ */
+          .tqa-nav:not(.on):hover{background:#d6eadd !important;color:${C.emeraldD} !important;border-left-color:${C.emeraldL} !important;filter:none}
           .tqa-nav:not(.on):hover .tqa-nav-ico{color:${C.emerald} !important}
+          .tqa-nav.on:hover{filter:brightness(1.08)}
           @media(max-width:900px){.tqa-side{box-shadow:8px 0 30px rgba(18,63,40,.18)}}
         `}</style>
         <aside
@@ -26993,10 +26996,11 @@ export default function App() {
                   padding: "10px 12px",
                   borderRadius: 10,
                   marginBottom: 2,
-                  background: on ? "#e7f3ec" : "transparent",
-                  color: on ? C.emeraldD : "#334155",
-                  borderLeft: on ? `3px solid ${C.gold}` : "3px solid transparent",
-                  transition: "background .15s, color .15s",
+                  background: on ? `linear-gradient(90deg, #22714a, ${C.emerald})` : "transparent",
+                  color: on ? "#fff" : "#334155",
+                  borderLeft: on ? `3px solid ${C.goldL}` : "3px solid transparent",
+                  boxShadow: on ? "0 2px 8px rgba(26,92,58,.28)" : "none",
+                  transition: "background .12s, color .12s, border-color .12s",
                 }}
               >
                 <span
@@ -27006,7 +27010,7 @@ export default function App() {
                     placeItems: "center",
                     width: 22,
                     flexShrink: 0,
-                    color: on ? C.gold : C.emeraldL,
+                    color: on ? C.goldL : C.emeraldL,
                   }}
                 >
                   {NI ? (
