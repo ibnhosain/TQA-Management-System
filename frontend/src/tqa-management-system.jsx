@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
 // ইমোজির বদলে আসল আইকন — বিস্তারিত icons.jsx-এ
 import { Ico, withIcons, NAV_ICON } from "./icons";
-import { ALargeSmall } from "lucide-react";
+import { ALargeSmall, LogOut } from "lucide-react";
 // লেকচারের স্লাইড — Lesson Plan-এ টপিকে ক্লিক করলে চলে (আলাদা মেনু নেই; মালিকের নির্দেশ ২০২৬-১১-১৭)
 const PlanPlayer = lazy(() => import("./decks/PlanPlayer.jsx"));
 const SettingsView = lazy(() => import("./decks/SettingsView.jsx"));   // পরিচালকের Settings — চালু/বন্ধ
@@ -23,10 +23,11 @@ const C = {
   emeraldL: "#2a7a50",
   gold: "#c9962a",
   goldL: "#f0c355",
-  cream: "#f4f6f4",
-  text: "#1a1f2e",
-  muted: "#6b7280",
-  line: "#e5e9e5",
+  // ২০২৬-১১-২২: প্রিমিয়াম চেহারা — পটভূমি, লেখা ও রেখার সুর পরিচ্ছন্ন করা হয়েছে
+  cream: "#f4f7f5",
+  text: "#14221b",
+  muted: "#64748b",
+  line: "#e3e9e5",
   red: "#c2410c",
   redBg: "#fef2ee",
   green: "#1a7a44",
@@ -526,7 +527,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
             border: `2px solid ${C.emerald}`,
             borderRadius: 16,
             overflow: "hidden",
-            fontFamily: "'Hind Siliguri', sans-serif",
+            fontFamily: "'Inter', 'Hind Siliguri', sans-serif",
           }}
         >
           <div
@@ -830,19 +831,20 @@ const seedDB = () => ({
 });
 /* ─────────────── UI primitives ─────────────── */
 const S = {
+  // স্তরে স্তরে নরম ছায়া + সূক্ষ্ম কিনারা — পেশাদার ড্যাশবোর্ডের কার্ড
   card: {
     background: "#fff",
     border: `1px solid ${C.line}`,
     borderRadius: 16,
     padding: 20,
-    boxShadow: "0 2px 8px rgba(26,92,58,.06)",
+    boxShadow: "0 1px 2px rgba(16,34,24,.04), 0 6px 18px rgba(16,34,24,.05)",
   },
-  h2: { fontSize: 20, fontWeight: 700, color: C.text, margin: 0 },
-  sub: { fontSize: 13, color: C.muted },
+  h2: { fontSize: 21, fontWeight: 700, color: C.text, margin: 0, letterSpacing: "-0.02em" },
+  sub: { fontSize: 13.5, color: C.muted, marginTop: 3, lineHeight: 1.5 },
   input: {
     width: "100%",
-    padding: "10px 12px",
-    border: `1.5px solid ${C.line}`,
+    padding: "11px 13px",
+    border: "1px solid #d5dfd9",
     borderRadius: 10,
     fontSize: 14,
     fontFamily: "inherit",
@@ -850,13 +852,15 @@ const S = {
     background: "#fff",
     color: C.text,
     boxSizing: "border-box",
+    boxShadow: "0 1px 2px rgba(16,34,24,.04)",
+    transition: "border-color .15s, box-shadow .15s",
   },
   label: {
     fontSize: 12.5,
     fontWeight: 600,
-    color: C.muted,
+    color: "#475569",
     display: "block",
-    marginBottom: 5,
+    marginBottom: 6,
   },
 };
 
@@ -868,38 +872,50 @@ const Btn = ({ children, kind = "primary", sm, style, ...p }) => {
     fontWeight: 600,
     borderRadius: 10,
     fontSize: sm ? 12.5 : 14,
-    padding: sm ? "6px 12px" : "10px 18px",
-    transition: "all .15s",
+    padding: sm ? "7px 12px" : "10px 17px",
+    transition: "filter .15s, box-shadow .15s, transform .1s",
     display: "inline-flex",
     alignItems: "center",
-    gap: 6,
+    gap: 7,
+    letterSpacing: "-0.005em",
+    lineHeight: 1.2,
     // হালকা ছায়া — বাটনটা পাতার সাথে মিশে না গিয়ে একটু উঁচু দেখায়, ফলে
     // "এটা চাপা যায়" ব্যাপারটা এক নজরেই বোঝা যায়
-    boxShadow: "0 1px 2px rgba(18,63,40,.18)",
+    boxShadow: "0 1px 2px rgba(16,34,24,.12)",
   };
   /* ⚠️ আগে danger/soft/ghost — তিনটিরই পটভূমি এত হালকা ছিল যে সাদা কার্ডের
      উপর সেগুলো বাটন বলে চেনাই যেত না, নিছক লেখা মনে হতো। বিশেষ করে কনফার্ম
      পপআপে ("জুম হোস্ট অ্যাকাউন্ট" সতর্কতা ইত্যাদি) "No, cancel" ও "Yes, confirm"
      দুটোই ফ্যাকাসে দেখাত। এখন প্রতিটিরই স্পষ্ট রং ও কিনারা আছে। */
+  // সূক্ষ্ম ঢাল + ভেতরের আলো — চ্যাপ্টা রঙের বদলে "চাপা যায়" এমন প্রিমিয়াম বোতাম।
+  // ⚠️ হালকা বোতামগুলো (ghost/soft) স্পষ্ট কিনারা রাখে — নইলে নিছক লেখা মনে হতো।
   const kinds = {
-    primary: { background: C.emerald, color: "#fff" },
-    gold: { background: C.gold, color: "#fff" },
+    primary: {
+      background: `linear-gradient(180deg, #22714a, ${C.emerald})`,
+      color: "#fff",
+      boxShadow: "0 1px 2px rgba(18,63,40,.3), inset 0 1px 0 rgba(255,255,255,.14)",
+    },
+    gold: {
+      background: "linear-gradient(180deg, #d7a63c, #bf8a22)",
+      color: "#fff",
+      boxShadow: "0 1px 2px rgba(120,80,10,.3), inset 0 1px 0 rgba(255,255,255,.2)",
+    },
     ghost: {
       background: "#fff",
       color: C.emeraldD,
-      border: `2px solid ${C.emerald}`,
+      border: "1.5px solid #9fbfad",
     },
     // ধ্বংসাত্মক কাজ — ভরাট লাল, সাদা লেখা। ভুল করে চাপার আগেই চোখে পড়ে।
     danger: {
-      background: C.red,
+      background: "linear-gradient(180deg, #dc4c3c, #c13a2a)",
       color: "#fff",
-      border: `1.5px solid #9a330a`,
+      boxShadow: "0 1px 2px rgba(150,40,20,.3), inset 0 1px 0 rgba(255,255,255,.14)",
     },
-    // পাশের/দ্বিতীয় পছন্দের বাটন — ভরাট ধূসর-সবুজ, স্পষ্ট কিনারা
+    // পাশের/দ্বিতীয় পছন্দের বাটন — হালকা সবুজ-ধূসর, স্পষ্ট কিনারা
     soft: {
-      background: "#dde5e0",
+      background: "#eef3f0",
       color: C.emeraldD,
-      border: `1.5px solid #a9bcb0`,
+      border: "1.5px solid #c9d8cf",
     },
   };
   return (
@@ -915,9 +931,11 @@ const Tag = ({ children, color = C.emerald, bg = C.greenBg }) => (
       background: bg,
       color,
       fontSize: 11.5,
-      fontWeight: 700,
+      fontWeight: 600,
       padding: "3px 10px",
       borderRadius: 99,
+      border: `1px solid ${color}26`,
+      letterSpacing: "0.01em",
       whiteSpace: "nowrap",
       display: "inline-flex",
       alignItems: "center",
@@ -930,6 +948,7 @@ const Tag = ({ children, color = C.emerald, bg = C.greenBg }) => (
 
 const Stat = ({ icon, label, value, accent = C.emerald, note }) => (
   <div
+    className="tqa-stat"
     style={{
       ...S.card,
       display: "flex",
@@ -943,7 +962,8 @@ const Stat = ({ icon, label, value, accent = C.emerald, note }) => (
         width: 46,
         height: 46,
         borderRadius: 12,
-        background: accent + "14",
+        background: accent + "12",
+        border: `1px solid ${accent}24`,
         color: accent,
         display: "grid",
         placeItems: "center",
@@ -953,15 +973,17 @@ const Stat = ({ icon, label, value, accent = C.emerald, note }) => (
       {withIcons(icon, { size: 23, style: { verticalAlign: 0 } })}
     </div>
     <div style={{ minWidth: 0 }}>
-      <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>
+      <div style={{ fontSize: 12.5, color: C.muted, fontWeight: 600 }}>
         {withIcons(label)}
       </div>
       <div
         style={{
-          fontSize: 21,
-          fontWeight: 800,
+          fontSize: 22,
+          fontWeight: 700,
           color: C.text,
-          lineHeight: 1.2,
+          lineHeight: 1.25,
+          letterSpacing: "-0.02em",
+          fontVariantNumeric: "tabular-nums",
         }}
       >
         {withIcons(value)}
@@ -977,11 +999,14 @@ const Modal = ({ title, onClose, children, wide }) => (
     style={{
       position: "fixed",
       inset: 0,
-      background: "rgba(18,63,40,.45)",
+      background: "rgba(12,28,20,.42)",
+      backdropFilter: "blur(3px)",
+      WebkitBackdropFilter: "blur(3px)",
       zIndex: 90,
       display: "grid",
       placeItems: "center",
       padding: 16,
+      animation: "tqaFade .18s ease-out",
     }}
   >
     <div
@@ -989,6 +1014,9 @@ const Modal = ({ title, onClose, children, wide }) => (
       style={{
         background: "#fff",
         borderRadius: 18,
+        boxShadow: "0 24px 60px rgba(12,28,20,.28)",
+        border: "1px solid rgba(16,34,24,.06)",
+        animation: "tqaPop .22s cubic-bezier(.2,.9,.3,1.2)",
         width: "100%",
         maxWidth: wide ? 720 : 480,
         maxHeight: "calc(88vh / var(--tqa-z, 1))",
@@ -1033,6 +1061,7 @@ const Table = ({ head, rows, empty = "No data", loading = false }) => (
       overflowX: "auto",
       borderRadius: 12,
       border: `1px solid ${C.line}`,
+      background: "#fff",
     }}
   >
     <table
@@ -1050,11 +1079,14 @@ const Table = ({ head, rows, empty = "No data", loading = false }) => (
               key={i}
               style={{
                 textAlign: "left",
-                padding: "10px 12px",
-                background: C.cream,
-                color: C.muted,
-                fontSize: 12,
-                fontWeight: 700,
+                padding: "11px 14px",
+                background: "#f6f9f7",
+                color: "#475569",
+                fontSize: 11.5,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                borderBottom: `1px solid ${C.line}`,
                 whiteSpace: "nowrap",
               }}
             >
@@ -1075,9 +1107,9 @@ const Table = ({ head, rows, empty = "No data", loading = false }) => (
           </tr>
         )}
         {rows.map((r, i) => (
-          <tr key={i} style={{ borderTop: `1px solid ${C.line}` }}>
+          <tr key={i} className="tqa-tr" style={{ borderTop: i ? `1px solid ${C.line}` : "none" }}>
             {r.map((c, j) => (
-              <td key={j} style={{ padding: "10px 12px", color: C.text }}>
+              <td key={j} style={{ padding: "11px 14px", color: C.text }}>
                 {c}
               </td>
             ))}
@@ -1089,13 +1121,13 @@ const Table = ({ head, rows, empty = "No data", loading = false }) => (
 );
 
 const Section = ({ title, sub, action, children }) => (
-  <div style={{ marginBottom: 22 }}>
+  <div style={{ marginBottom: 26 }}>
     <div
       style={{
         display: "flex",
         justifyContent: "space-between",
         alignItems: "flex-end",
-        marginBottom: 12,
+        marginBottom: 14,
         gap: 10,
         flexWrap: "wrap",
       }}
@@ -1795,13 +1827,18 @@ function Login({ onLogin }) {
     <div
       style={{
         minHeight: "calc(100vh / var(--tqa-z, 1))",
-        background: "#fff",
+        // প্রিমিয়াম প্রবেশপথ: গভীর সবুজ ঢাল, অতি হালকা ইসলামিক জ্যামিতিক নকশা (৮-কোণা তারা),
+        // উপরে সোনালি আভা — তার উপর ভাসমান সাদা কার্ড
+        background: `radial-gradient(ellipse at 50% -10%, rgba(240,195,85,.22), transparent 55%), url("data:image/svg+xml,${encodeURIComponent(
+          "<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'><g fill='none' stroke='white' stroke-opacity='.07'><rect x='16' y='16' width='24' height='24'/><rect x='16' y='16' width='24' height='24' transform='rotate(45 28 28)'/></g></svg>",
+        )}"), linear-gradient(160deg, #0f3a26 0%, #154d33 50%, #0d2f20 100%)`,
         display: "grid",
         placeItems: "center",
         padding: 16,
       }}
     >
       <style>{`
+        @media(max-width:480px){.tqa-login-card{padding:30px 20px 26px !important;border-radius:20px !important}}
         .tqaRoleCard{transition:border-color .15s,background .15s,box-shadow .15s,transform .15s}
         .tqaRoleCard:hover{border-color:${C.emerald};background:#f2f7f4;box-shadow:0 4px 16px rgba(26,92,58,.12);transform:translateY(-2px)}
         .tqaRoleCard:hover .tqaRoleArrow{color:${C.emerald};transform:translateX(3px)}
@@ -1809,12 +1846,12 @@ function Login({ onLogin }) {
       <div style={{ width: "100%", maxWidth: 480 }}>
         <InstallBanner lang="en" />
         <div
+          className="tqa-login-card"
           style={{
-            background: "rgba(255,255,255,.97)",
+            background: "rgba(255,255,255,.98)",
             borderRadius: 24,
             padding: "44px 40px 40px",
-            boxShadow: "0 24px 64px rgba(0,0,0,.25)",
-            border: `1px solid ${C.line}`,
+            boxShadow: "0 30px 80px rgba(0,0,0,.35), 0 0 0 1px rgba(240,195,85,.25)",
             boxSizing: "border-box",
           }}
         >
@@ -4544,7 +4581,7 @@ const RT_BG_COLORS = [
 /* index.html-এ যে ফন্টগুলো সত্যিই লোড করা আছে, কেবল সেগুলোই — নইলে বেছে
    নিলেও কিছুই বদলাত না। শেষ তিনটি সব ডিভাইসেই থাকে। */
 const RT_FONTS = [
-  { v: "'Hind Siliguri', sans-serif", label: "Bengali (Hind Siliguri)" },
+  { v: "'Inter', 'Hind Siliguri', sans-serif", label: "Bengali (Hind Siliguri)" },
   { v: "Amiri, serif", label: "Arabic (Amiri)" },
   { v: "'Playfair Display', serif", label: "English heading (Playfair)" },
   { v: "Georgia, serif", label: "English serif (Georgia)" },
@@ -18068,11 +18105,12 @@ function Overview({ db, courses, user, goTo }) {
         </div>
       </div>
       <div
+        className="tqa-stats"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: 10,
-          marginBottom: 18,
+          gap: 12,
+          marginBottom: 20,
         }}
       >
         <Stat
@@ -21770,7 +21808,7 @@ function FloatBody({ slide, zoom = 1 }) {
         color: "#fff",
         display: "grid",
         placeItems: "center",
-        fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
+        fontFamily: "'Inter', 'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
         position: "relative",
         overflow: "hidden",
       }}
@@ -21906,7 +21944,7 @@ export function PresentWindow() {
         color: "#fff",
         display: "grid",
         placeItems: "center",
-        fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
+        fontFamily: "'Inter', 'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
         position: "relative",
         overflow: "hidden",
       }}
@@ -25440,7 +25478,7 @@ function BlockingPopup({ icon, title, children, footer, zIndex = 305 }) {
           overflowY: "auto",
           padding: 26,
           textAlign: "center",
-          fontFamily: "'Hind Siliguri', sans-serif",
+          fontFamily: "'Inter', 'Hind Siliguri', sans-serif",
         }}
       >
         <div style={{ fontSize: 40 }}>{withIcons(icon)}</div>
@@ -25538,7 +25576,7 @@ function NewNotifToast({ user, notifs }) {
         borderRadius: 16,
         boxShadow: "0 12px 32px rgba(0,0,0,.22)",
         padding: "14px 16px",
-        fontFamily: "'Hind Siliguri', sans-serif",
+        fontFamily: "'Inter', 'Hind Siliguri', sans-serif",
         maxHeight: "calc(60vh / var(--tqa-z, 1))",
         overflowY: "auto",
       }}
@@ -25843,7 +25881,7 @@ function ReinstallNotice({ lang }) {
           width: "100%",
           padding: 26,
           textAlign: "center",
-          fontFamily: "'Hind Siliguri', sans-serif",
+          fontFamily: "'Inter', 'Hind Siliguri', sans-serif",
         }}
       >
         <div style={{ fontSize: 40 }}><Ico e="📲" /></div>
@@ -25983,7 +26021,7 @@ function UpdateBanner({ lang }) {
           width: "100%",
           padding: 26,
           textAlign: "center",
-          fontFamily: "'Hind Siliguri', sans-serif",
+          fontFamily: "'Inter', 'Hind Siliguri', sans-serif",
         }}
       >
         <div style={{ fontSize: 40 }}><Ico e="✨" /></div>
@@ -26328,7 +26366,7 @@ export default function App() {
               width: "100%",
               padding: 24,
               textAlign: "center",
-              fontFamily: "'Hind Siliguri', sans-serif",
+              fontFamily: "'Inter', 'Hind Siliguri', sans-serif",
             }}
           >
             <div
@@ -26398,7 +26436,7 @@ export default function App() {
             fontWeight: 700,
             boxShadow: "0 8px 24px rgba(0,0,0,.3)",
             maxWidth: "calc(90vw / var(--tqa-z, 1))",
-            fontFamily: "'Hind Siliguri', sans-serif",
+            fontFamily: "'Inter', 'Hind Siliguri', sans-serif",
           }}
         >
           {withIcons(toast)}
@@ -26482,7 +26520,7 @@ export default function App() {
           minHeight: "calc(100vh / var(--tqa-z, 1))",
           display: "grid",
           placeItems: "center",
-          fontFamily: "'Hind Siliguri', sans-serif",
+          fontFamily: "'Inter', 'Hind Siliguri', sans-serif",
           background: "#f6faf7",
           color: "#1a5c3a",
         }}
@@ -26502,7 +26540,7 @@ export default function App() {
     return (
       <div
         style={{
-          fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
+          fontFamily: "'Inter', 'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
         }}
       >
         {/* ফন্ট এখন index.html head-এ লোড হয় */}
@@ -26574,7 +26612,7 @@ export default function App() {
   return (
     <div
       style={{
-        fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
+        fontFamily: "'Inter', 'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
         background: C.cream,
         minHeight: "calc(100vh / var(--tqa-z, 1))",
         color: C.text,
@@ -26582,6 +26620,19 @@ export default function App() {
     >
       <style>{`
         *{box-sizing:border-box} button:hover{filter:brightness(1.06)} ::selection{background:rgba(201,150,42,.22)}
+        body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+        button:not(:disabled):not([class*="iqra-"]):not([class*="bag-"]):active{transform:translateY(1px)}
+        button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid ${C.gold};outline-offset:2px}
+        input:focus,select:focus,textarea:focus{border-color:${C.emeraldL} !important;box-shadow:0 0 0 3px rgba(26,92,58,.14) !important}
+        .tqa-tr:hover td{background:#fafcfb}
+        *{scrollbar-width:thin;scrollbar-color:#c5d3ca transparent}
+        ::-webkit-scrollbar{width:10px;height:10px} ::-webkit-scrollbar-thumb{background:#c5d3ca;border-radius:99px;border:3px solid transparent;background-clip:content-box}
+        @keyframes tqaFade{from{opacity:0}to{opacity:1}}
+        @media(max-width:560px){.tqa-stats{grid-template-columns:1fr 1fr !important}
+          .tqa-stats .tqa-stat{flex-direction:column;align-items:flex-start !important;gap:10px !important;padding:14px !important}}
+        @media(max-width:480px){.tqa-user-text{display:none}}
+        @keyframes tqaPop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+        @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
         @media(max-width:900px){.tqa-side{position:fixed;left:0;top:0;bottom:0;z-index:80;transform:translateX(${menu ? "0" : "-105%"});transition:transform .25s;overflow-y:auto}}
         @media(min-width:901px){.tqa-side{position:sticky;top:57px;height:calc(calc(100vh / var(--tqa-z, 1)) - 57px)}}`}</style>
 
@@ -26591,8 +26642,11 @@ export default function App() {
           position: "sticky",
           top: 0,
           zIndex: 70,
-          background: "#fff",
+          background: "rgba(255,255,255,.86)",
+          backdropFilter: "saturate(180%) blur(12px)",
+          WebkitBackdropFilter: "saturate(180%) blur(12px)",
           borderBottom: `1px solid ${C.line}`,
+          boxShadow: "0 1px 3px rgba(16,34,24,.04)",
           display: "flex",
           alignItems: "center",
           gap: 12,
@@ -26635,6 +26689,7 @@ export default function App() {
           <style>{`
             @media(max-width:560px){.tqa-brand-sub{display:none}
               html[data-tqa-big="1"] .tqa-brand-text{display:none}}
+            @media(max-width:480px){.tqa-brand-text{display:none}}
           `}</style>
           <div className="tqa-brand-text" style={{ minWidth: 0, overflow: "hidden" }}>
             <div
@@ -26736,18 +26791,13 @@ export default function App() {
             </div>
           )}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              textAlign: "right",
-              display: window.innerWidth < 480 ? "none" : "block",
-            }}
-          >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="tqa-user-text" style={{ textAlign: "right", lineHeight: 1.25 }}>
             <div
               style={{
-                fontSize: 12.5,
-                fontWeight: 700,
-                maxWidth: 140,
+                fontSize: 13,
+                fontWeight: 600,
+                maxWidth: 150,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -26755,13 +26805,42 @@ export default function App() {
             >
               {user.name}
             </div>
-            <span style={{ fontSize: 10.5, fontWeight: 800, color: roleColor }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: roleColor }}>
               {roleLabel}
             </span>
+          </div>
+          {/* নামের আদ্যক্ষর — সোনালি আংটিসহ গোল ছবি */}
+          <div
+            aria-hidden="true"
+            title={user.name}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: "50%",
+              flexShrink: 0,
+              display: "grid",
+              placeItems: "center",
+              background: `linear-gradient(135deg, ${C.emeraldL}, ${C.emeraldD})`,
+              color: "#fff",
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: "0.02em",
+              boxShadow: `0 0 0 2px #fff, 0 0 0 3.5px ${C.goldL}`,
+            }}
+          >
+            {String(user.name || "?")
+              .trim()
+              .split(/\s+/)
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((w) => w[0])
+              .join("")
+              .toUpperCase() || "?"}
           </div>
           <Btn
             sm
             kind="soft"
+            title="Log out"
             onClick={() => {
               // একমাত্র এখানেই keepDrafts:false — ব্যবহারকারী নিজে লগআউট
               // চাপলে তবেই খোলা ফর্মের লেখা মোছা হয়। স্বয়ংক্রিয় লগআউটে
@@ -26776,6 +26855,7 @@ export default function App() {
               setUser(null);
             }}
           >
+            <LogOut size={15} strokeWidth={2.2} aria-hidden="true" />
             {T("লগ আউট", "Log Out")}
           </Btn>
         </div>
