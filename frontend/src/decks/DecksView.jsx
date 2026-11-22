@@ -93,7 +93,7 @@ export default function DecksView({ user, courses }) {
       </div>
       {edit && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 1500, display: "grid", placeItems: "center" }}>
-          <div style={{ background: "#fff", borderRadius: 16, padding: 18, width: "min(760px, 94vw)", maxHeight: "90vh", overflow: "auto" }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 18, width: "min(760px, calc(94vw / var(--tqa-z, 1)))", maxHeight: "calc(90vh / var(--tqa-z, 1))", overflow: "auto" }}>
             <h3 style={{ margin: "0 0 6px" }}>Lecture {edit.no} · Student note</h3>
             <div style={{ fontSize: 12, color: "#5B6B62", marginBottom: 6 }}>Students see this in Homework after the teacher finishes the slides.</div>
             <textarea value={edit.note} onChange={(e) => setEdit({ ...edit, note: e.target.value })} rows={14} style={{ width: "100%", boxSizing: "border-box", font: "inherit", padding: 10, borderRadius: 10, border: "1px solid #CFE0D5" }} />

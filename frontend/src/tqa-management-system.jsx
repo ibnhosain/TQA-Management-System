@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
 // ইমোজির বদলে আসল আইকন — বিস্তারিত icons.jsx-এ
 import { Ico, withIcons, NAV_ICON } from "./icons";
+import { ALargeSmall } from "lucide-react";
 // লেকচারের স্লাইড — Lesson Plan-এ টপিকে ক্লিক করলে চলে (আলাদা মেনু নেই; মালিকের নির্দেশ ২০২৬-১১-১৭)
 const PlanPlayer = lazy(() => import("./decks/PlanPlayer.jsx"));
 const SettingsView = lazy(() => import("./decks/SettingsView.jsx"));   // পরিচালকের Settings — চালু/বন্ধ
@@ -990,7 +991,7 @@ const Modal = ({ title, onClose, children, wide }) => (
         borderRadius: 18,
         width: "100%",
         maxWidth: wide ? 720 : 480,
-        maxHeight: "88vh",
+        maxHeight: "calc(88vh / var(--tqa-z, 1))",
         overflowY: "auto",
         padding: 22,
       }}
@@ -1793,7 +1794,7 @@ function Login({ onLogin }) {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "calc(100vh / var(--tqa-z, 1))",
         background: "#fff",
         display: "grid",
         placeItems: "center",
@@ -5631,7 +5632,7 @@ function LecturePlan({ db, courses, user, refresh }) {
               You have no students in this course — they will appear here once the director adds them.
             </div>
           ) : (
-            <div style={{ display: "grid", gap: 6, maxHeight: "46vh", overflowY: "auto" }}>
+            <div style={{ display: "grid", gap: 6, maxHeight: "calc(46vh / var(--tqa-z, 1))", overflowY: "auto" }}>
               {courseStudents.map((st) => (
                 <button
                   key={st.id}
@@ -8455,8 +8456,8 @@ const IQRA_CSS = `
 .iqra-moon{position:absolute;right:22px;top:16px;font-size:44px;animation:iqraFloat 5s ease-in-out infinite;
   filter:drop-shadow(0 0 14px #ffd54f66)}
 @keyframes iqraFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-.iqra-name{font-size:clamp(32px,7vw,50px);font-weight:700;line-height:1;letter-spacing:.5px;text-shadow:0 3px 0 #0b1f36}
-.iqra-arabic{font-family:'Amiri',serif;font-size:clamp(22px,4.6vw,30px);color:#ffd54f;line-height:1.5}
+.iqra-name{font-size:clamp(32px,calc(7vw / var(--tqa-z, 1)),50px);font-weight:700;line-height:1;letter-spacing:.5px;text-shadow:0 3px 0 #0b1f36}
+.iqra-arabic{font-family:'Amiri',serif;font-size:clamp(22px,calc(4.6vw / var(--tqa-z, 1)),30px);color:#ffd54f;line-height:1.5}
 .iqra-tag{font-size:14px;opacity:.92;max-width:560px}
 .iqra-pill{display:inline-flex;align-items:center;gap:6px;background:#ffffff22;border:1px solid #ffffff38;
   border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600}
@@ -8656,7 +8657,7 @@ const BAG_CSS = `
 .bag-name{font-weight:700;font-size:15.5px;text-align:center;line-height:1.2}
 .bag-sub{font-size:12.5px;font-weight:600;color:#8a7763;margin-top:-4px}
 .bag-overlay{position:fixed;inset:0;z-index:90;background:rgba(20,28,24,.6);display:grid;place-items:center;padding:14px}
-.bag-open{width:min(840px,100%);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+.bag-open{width:min(840px,100%);max-height:calc(88vh / var(--tqa-z, 1));display:flex;flex-direction:column;overflow:hidden;
   border-radius:28px 28px 22px 22px;background:var(--bag);box-shadow:0 26px 60px rgba(0,0,0,.45);
   font-family:'Fredoka','Hind Siliguri',sans-serif;animation:bagPop .3s cubic-bezier(.3,1.4,.5,1)}
 @keyframes bagPop{from{transform:scale(.86) translateY(30px);opacity:0}to{transform:none;opacity:1}}
@@ -17003,7 +17004,7 @@ function SyllabusView({ db, setDb, courses, user }) {
                 style={{
                   overflowX: "auto",
                   overflowY: "auto",
-                  maxHeight: "60vh",
+                  maxHeight: "calc(60vh / var(--tqa-z, 1))",
                 }}
               >
                 <table
@@ -21589,7 +21590,7 @@ function StageSlide({ slide, fixed }) {
   const sl = slide || null;
   if (!sl)
     return (
-      <div style={{ color: "#ffffff44", fontSize: "clamp(14px,2vw,20px)" }}>
+      <div style={{ color: "#ffffff44", fontSize: "clamp(14px,calc(2vw / var(--tqa-z, 1)),20px)" }}>
         ⬛
       </div>
     );
@@ -21614,7 +21615,7 @@ function StageSlide({ slide, fixed }) {
           style={{
             width: "100%",
             height: fixed ? FIT_H : "auto",
-            maxHeight: fixed ? FIT_H : "70vh",
+            maxHeight: fixed ? FIT_H : "calc(70vh / var(--tqa-z, 1))",
             objectFit: "contain",
           }}
         />
@@ -21625,11 +21626,11 @@ function StageSlide({ slide, fixed }) {
     <div
       style={{
         display: "grid",
-        gap: fixed ? FIXED.gap : "clamp(14px,2.4vh,34px)",
+        gap: fixed ? FIXED.gap : "clamp(14px,calc(2.4vh / var(--tqa-z, 1)),34px)",
         width: "100%",
         maxWidth: 1200,
         textAlign: "center",
-        padding: fixed ? `0 ${FIXED.pad}px` : "0 4vw",
+        padding: fixed ? `0 ${FIXED.pad}px` : "0 calc(4vw / var(--tqa-z, 1))",
         position: "relative",
         zIndex: 1,
       }}
@@ -21637,7 +21638,7 @@ function StageSlide({ slide, fixed }) {
       {sl.heading && (
         <div
           style={{
-            fontSize: fixed ? FIXED.heading : "clamp(22px,4.4vw,54px)",
+            fontSize: fixed ? FIXED.heading : "clamp(22px,calc(4.4vw / var(--tqa-z, 1)),54px)",
             fontWeight: 800,
             color: C.goldL,
             lineHeight: 1.3,
@@ -21651,7 +21652,7 @@ function StageSlide({ slide, fixed }) {
           dir="rtl"
           style={{
             fontFamily: QURAN_FONT,
-            fontSize: fixed ? FIXED.arabic : "clamp(30px,7vw,92px)",
+            fontSize: fixed ? FIXED.arabic : "clamp(30px,calc(7vw / var(--tqa-z, 1)),92px)",
             lineHeight: 2,
             whiteSpace: "pre-wrap",
             color: "#fff",
@@ -21663,7 +21664,7 @@ function StageSlide({ slide, fixed }) {
       {sl.translit && (
         <div
           style={{
-            fontSize: fixed ? FIXED.translit : "clamp(15px,2.4vw,30px)",
+            fontSize: fixed ? FIXED.translit : "clamp(15px,calc(2.4vw / var(--tqa-z, 1)),30px)",
             fontStyle: "italic",
             color: "#ffffffc0",
           }}
@@ -21677,7 +21678,7 @@ function StageSlide({ slide, fixed }) {
           alt=""
           style={{
             maxWidth: "100%",
-            maxHeight: fixed ? FIXED.img : "45vh",
+            maxHeight: fixed ? FIXED.img : "calc(45vh / var(--tqa-z, 1))",
             borderRadius: 16,
             margin: "0 auto",
           }}
@@ -21686,7 +21687,7 @@ function StageSlide({ slide, fixed }) {
       {sl.text && (
         <div
           style={{
-            fontSize: fixed ? FIXED.text : "clamp(17px,3vw,40px)",
+            fontSize: fixed ? FIXED.text : "clamp(17px,calc(3vw / var(--tqa-z, 1)),40px)",
             whiteSpace: "pre-wrap",
             lineHeight: 1.55,
             color: "#fff",
@@ -21762,7 +21763,7 @@ function FloatBody({ slide, zoom = 1 }) {
   return (
     <div
       style={{
-        height: "100vh",
+        height: "calc(100vh / var(--tqa-z, 1))",
         width: "100%",
         background: artOf(slide?.kind)[0],
         transition: "background 700ms ease",
@@ -21897,7 +21898,7 @@ export function PresentWindow() {
     <div
       onDoubleClick={full}
       style={{
-        minHeight: "100vh",
+        minHeight: "calc(100vh / var(--tqa-z, 1))",
         // ⚠️ পটভূমি স্লাইডের ধরন অনুযায়ী বদলায় — শোনার সময় শান্ত নীল,
         // শাবাশে সোনালি। ধীরে বদলায় যাতে চোখে ধাক্কা না লাগে।
         background: artOf(cur?.slide?.kind)[0],
@@ -21941,18 +21942,18 @@ export function PresentWindow() {
         </div>
       ) : ended ? (
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "clamp(40px,8vw,90px)" }}><Ico e="🌟" /></div>
+          <div style={{ fontSize: "clamp(40px,calc(8vw / var(--tqa-z, 1)),90px)" }}><Ico e="🌟" /></div>
           <div
             style={{
               fontFamily: QURAN_FONT,
-              fontSize: "clamp(24px,5vw,60px)",
+              fontSize: "clamp(24px,calc(5vw / var(--tqa-z, 1)),60px)",
               color: C.goldL,
               marginTop: 10,
             }}
           >
             بَارَكَ ٱللَّهُ فِيكَ
           </div>
-          <div style={{ fontSize: "clamp(15px,2.4vw,26px)", marginTop: 12 }}>
+          <div style={{ fontSize: "clamp(15px,calc(2.4vw / var(--tqa-z, 1)),26px)", marginTop: 12 }}>
             Jazakumullahu Khairan!
           </div>
         </div>
@@ -21982,7 +21983,7 @@ export function PresentWindow() {
             color: "#ffffffcc",
             cursor: "pointer",
             textAlign: "center",
-            maxWidth: "92vw",
+            maxWidth: "calc(92vw / var(--tqa-z, 1))",
           }}
         >
           <Ico e="🖥" /> In Zoom <b>this window</b> Share · full screen in two clicks · this tip disappears on its own
@@ -22505,7 +22506,7 @@ function TeacherMode({ id, onClose }) {
             borderBottom: "1px solid #ffffff1f",
             fontSize: 13.5,
             lineHeight: 1.85,
-            maxHeight: "30vh",
+            maxHeight: "calc(30vh / var(--tqa-z, 1))",
             overflowY: "auto",
             flexShrink: 0,
           }}
@@ -24588,7 +24589,7 @@ function AllTeachersView({ user, courses }) {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
           onClick={() => setSel(null)}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background: "#fff", borderRadius: 14, padding: 24, width: "min(95vw,460px)", maxHeight: "85vh", overflowY: "auto" }}>
+            style={{ background: "#fff", borderRadius: 14, padding: 24, width: "min(calc(95vw / var(--tqa-z, 1)),460px)", maxHeight: "calc(85vh / var(--tqa-z, 1))", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
               <h3 style={{ margin: 0 }}>{sel.name_bn}</h3>
               <button onClick={() => setSel(null)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer" }}><Ico e="✕" /></button>
@@ -24623,7 +24624,7 @@ function AllTeachersView({ user, courses }) {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}
           onClick={() => setEdit(null)}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background: "#fff", borderRadius: 14, padding: 24, width: "min(95vw,480px)", maxHeight: "85vh", overflowY: "auto" }}>
+            style={{ background: "#fff", borderRadius: 14, padding: 24, width: "min(calc(95vw / var(--tqa-z, 1)),480px)", maxHeight: "calc(85vh / var(--tqa-z, 1))", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
               <h3 style={{ margin: 0 }}>{edit.id ? "Edit teacher" : "New teacher"}</h3>
               <button onClick={() => setEdit(null)} style={{ border: "none", background: "none", fontSize: 20, cursor: "pointer" }}><Ico e="✕" /></button>
@@ -25230,6 +25231,180 @@ const NAV = [
   { id: "manage", icon: "🛠️", label: "Management", labelEn: "Management", roles: ["director"] },
 ];
 
+/* ═══════════════ লেখার আকার — প্রত্যেকে নিজের মতো (ফোন, ট্যাব, পিসি) ═══════════════
+   মালিকের নির্দেশ: যার যার ইচ্ছামতো লেখা বড়-ছোট করার অপশন।
+   অ্যাপের সব মাপ px-এ লেখা, তাই পুরো পাতাকে CSS zoom দিয়ে বড়-ছোট করা হয় —
+   লেখার সাথে আইকন, বোতাম, ফাঁকও একই অনুপাতে (ব্রাউজারের জুমের মতো)।
+   ⚠️ zoom vh/vw-কেও বাড়িয়ে দেয় (১২৫%-এ ১০০vh-এর জিনিস পর্দার নিচে ছাড়িয়ে যেত) —
+   তাই অ্যাপের সব vh/vw লেখা হয় calc(Nvh / var(--tqa-z, 1))। নতুন কোথাও vh/vw
+   লিখলে এভাবেই লিখুন।
+   সংরক্ষণ: এই ডিভাইসে, ব্যবহারকারী অনুযায়ী (localStorage) — ফোন, ট্যাব আর পিসিতে
+   আলাদা আলাদা মাপ রাখা যায়; লগআউটে আবার স্বাভাবিক। */
+const TEXT_ZOOM_MIN = 0.8;
+const TEXT_ZOOM_MAX = 1.4;
+const TEXT_ZOOM_PRESETS = [
+  ["Small", 0.9],
+  ["Normal", 1],
+  ["Large", 1.15],
+  ["Extra large", 1.3],
+];
+const textZoomKey = (u) => `tqa_text_zoom:${u?.username || u?.id || "user"}`;
+const readTextZoom = (u) => {
+  try {
+    const v = parseFloat(localStorage.getItem(textZoomKey(u)));
+    return v >= TEXT_ZOOM_MIN && v <= TEXT_ZOOM_MAX ? v : 1;
+  } catch {
+    return 1;
+  }
+};
+const applyTextZoom = (z) => {
+  const r = document.documentElement;
+  // ফোনে বড় লেখায় টপবারে জায়গা কম — তখন একাডেমির নাম লুকিয়ে কেবল লোগো (CSS: data-tqa-big)
+  if (z > 1.05) r.dataset.tqaBig = "1";
+  else delete r.dataset.tqaBig;
+  if (z === 1) {
+    r.style.removeProperty("zoom");
+    r.style.removeProperty("--tqa-z");
+  } else {
+    r.style.zoom = String(z);
+    r.style.setProperty("--tqa-z", String(z));
+  }
+};
+
+// ⚠️ ব্যবহারকারী বদলালে নতুন করে বসাতে হয় — ডাকার জায়গায় key={user.username} দেওয়া আছে
+function TextSizeControl({ user }) {
+  const [z, setZ] = useState(() => readTextZoom(user));
+  const [open, setOpen] = useState(false);
+  const wrap = useRef(null);
+  useEffect(() => {
+    applyTextZoom(z);
+  }, [z]);
+  useEffect(() => () => applyTextZoom(1), []); // লগআউট/অন্য ব্যবহারকারী — স্বাভাবিক মাপে ফেরা
+  useEffect(() => {
+    if (!open) return;
+    const away = (e) => {
+      if (wrap.current && !wrap.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [open]);
+  const set = (v) => {
+    const nz = Math.round(Math.min(TEXT_ZOOM_MAX, Math.max(TEXT_ZOOM_MIN, v)) * 100) / 100;
+    setZ(nz);
+    try {
+      localStorage.setItem(textZoomKey(user), String(nz));
+    } catch {
+      /* সংরক্ষণ না হলেও এই বারের জন্য বদলাবে */
+    }
+  };
+  const round = {
+    border: `1.5px solid ${C.line}`,
+    background: "#fff",
+    borderRadius: 10,
+    height: 40,
+    cursor: "pointer",
+    fontFamily: "inherit",
+    fontWeight: 800,
+    color: C.emeraldD,
+  };
+  return (
+    <div ref={wrap} style={{ position: "relative" }}>
+      <style>{`
+        .tqa-tsz-pop{position:absolute;right:0;top:44px;width:270px}
+        @media(max-width:560px){.tqa-tsz-pop{position:fixed;left:12px;right:12px;top:76px;width:auto}}
+      `}</style>
+      <button
+        onClick={() => setOpen(!open)}
+        title="Text size"
+        aria-label="Text size"
+        aria-expanded={open}
+        style={{
+          border: "none",
+          background: open ? "#e7f3ec" : C.cream,
+          color: C.emerald,
+          borderRadius: 8,
+          width: 36,
+          height: 36,
+          cursor: "pointer",
+          display: "grid",
+          placeItems: "center",
+        }}
+      >
+        <ALargeSmall size={19} strokeWidth={2.1} aria-hidden="true" />
+      </button>
+      {open && (
+        <div
+          role="dialog"
+          aria-label="Text size"
+          className="tqa-tsz-pop"
+          style={{
+            background: "#fff",
+            border: `1px solid ${C.line}`,
+            borderRadius: 14,
+            boxShadow: "0 12px 30px rgba(18,63,40,.18)",
+            padding: 14,
+            zIndex: 85,
+          }}
+        >
+          <div style={{ fontWeight: 800, fontSize: 14.5, marginBottom: 10, color: C.text }}>Text size</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              style={{ ...round, width: 46, fontSize: 13, opacity: z <= TEXT_ZOOM_MIN ? 0.4 : 1 }}
+              disabled={z <= TEXT_ZOOM_MIN}
+              onClick={() => set(z - 0.1)}
+              aria-label="Smaller text"
+            >
+              A−
+            </button>
+            <div style={{ flex: 1, textAlign: "center", fontWeight: 800, fontSize: 18, color: C.emeraldD }}>
+              {Math.round(z * 100)}%
+            </div>
+            <button
+              style={{ ...round, width: 46, fontSize: 19, opacity: z >= TEXT_ZOOM_MAX ? 0.4 : 1 }}
+              disabled={z >= TEXT_ZOOM_MAX}
+              onClick={() => set(z + 0.1)}
+              aria-label="Bigger text"
+            >
+              A+
+            </button>
+          </div>
+          <input
+            type="range"
+            min={TEXT_ZOOM_MIN * 100}
+            max={TEXT_ZOOM_MAX * 100}
+            step={5}
+            value={Math.round(z * 100)}
+            onChange={(e) => set(Number(e.target.value) / 100)}
+            aria-label="Text size"
+            style={{ width: "100%", marginTop: 12, accentColor: C.emerald }}
+          />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 8 }}>
+            {TEXT_ZOOM_PRESETS.map(([name, v]) => (
+              <button
+                key={name}
+                onClick={() => set(v)}
+                style={{
+                  ...round,
+                  height: 36,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  background: Math.abs(z - v) < 0.001 ? "#e7f3ec" : "#fff",
+                  borderColor: Math.abs(z - v) < 0.001 ? C.emerald : C.line,
+                }}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 11.5, color: C.muted, marginTop: 10, lineHeight: 1.5 }}>
+            Saved on this device for you — your phone, tablet and computer can each keep their own size.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ═══════════════ নতুন সংস্করণ এসেছে কিনা জানানো ═══════════════
    লগইন থাকা অবস্থায় ট্যাবটা আর কখনো নিজে থেকে রিলোড হয় না (কাজ যেন না হারায়,
    সেটা ইচ্ছাকৃত) — কিন্তু এর ফলে নতুন সংস্করণও আপনাআপনি নামে না, পুরনো কোডই
@@ -25261,7 +25436,7 @@ function BlockingPopup({ icon, title, children, footer, zIndex = 305 }) {
           borderRadius: 18,
           maxWidth: 400,
           width: "100%",
-          maxHeight: "86vh",
+          maxHeight: "calc(86vh / var(--tqa-z, 1))",
           overflowY: "auto",
           padding: 26,
           textAlign: "center",
@@ -25364,7 +25539,7 @@ function NewNotifToast({ user, notifs }) {
         boxShadow: "0 12px 32px rgba(0,0,0,.22)",
         padding: "14px 16px",
         fontFamily: "'Hind Siliguri', sans-serif",
-        maxHeight: "60vh",
+        maxHeight: "calc(60vh / var(--tqa-z, 1))",
         overflowY: "auto",
       }}
     >
@@ -26222,7 +26397,7 @@ export default function App() {
             fontSize: 13.5,
             fontWeight: 700,
             boxShadow: "0 8px 24px rgba(0,0,0,.3)",
-            maxWidth: "90vw",
+            maxWidth: "calc(90vw / var(--tqa-z, 1))",
             fontFamily: "'Hind Siliguri', sans-serif",
           }}
         >
@@ -26304,7 +26479,7 @@ export default function App() {
     return (
       <div
         style={{
-          minHeight: "100vh",
+          minHeight: "calc(100vh / var(--tqa-z, 1))",
           display: "grid",
           placeItems: "center",
           fontFamily: "'Hind Siliguri', sans-serif",
@@ -26401,14 +26576,14 @@ export default function App() {
       style={{
         fontFamily: "'Hind Siliguri', 'Noto Sans Bengali', sans-serif",
         background: C.cream,
-        minHeight: "100vh",
+        minHeight: "calc(100vh / var(--tqa-z, 1))",
         color: C.text,
       }}
     >
       <style>{`
         *{box-sizing:border-box} button:hover{filter:brightness(1.06)} ::selection{background:rgba(201,150,42,.22)}
         @media(max-width:900px){.tqa-side{position:fixed;left:0;top:0;bottom:0;z-index:80;transform:translateX(${menu ? "0" : "-105%"});transition:transform .25s;overflow-y:auto}}
-        @media(min-width:901px){.tqa-side{position:sticky;top:57px;height:calc(100vh - 57px)}}`}</style>
+        @media(min-width:901px){.tqa-side{position:sticky;top:57px;height:calc(calc(100vh / var(--tqa-z, 1)) - 57px)}}`}</style>
 
       {/* টপবার */}
       <div
@@ -26457,7 +26632,11 @@ export default function App() {
               flexShrink: 0,
             }}
           />
-          <div style={{ minWidth: 0 }}>
+          <style>{`
+            @media(max-width:560px){.tqa-brand-sub{display:none}
+              html[data-tqa-big="1"] .tqa-brand-text{display:none}}
+          `}</style>
+          <div className="tqa-brand-text" style={{ minWidth: 0, overflow: "hidden" }}>
             <div
               style={{
                 fontWeight: 800,
@@ -26469,11 +26648,15 @@ export default function App() {
             >
               Tarbiyatul Quran Academy
             </div>
-            <div style={{ fontSize: 11, color: C.muted }}>
+            <div
+              className="tqa-brand-sub"
+              style={{ fontSize: 11, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+            >
               Management System
             </div>
           </div>
         </div>
+        <TextSizeControl key={user.username || user.id} user={user} />
         <div style={{ position: "relative" }}>
           <button
             onClick={() => {
@@ -26687,12 +26870,12 @@ export default function App() {
           className="tqa-side"
           style={{
             width: 286,
-            maxWidth: "86vw", // খুব ছোট ফোনে ড্রয়ার যেন পুরো পর্দা না ঢাকে
+            maxWidth: "calc(86vw / var(--tqa-z, 1))", // খুব ছোট ফোনে ড্রয়ার যেন পুরো পর্দা না ঢাকে
             scrollbarWidth: "thin",
             flexShrink: 0,
             background: "#fff",
             borderRight: `1px solid ${C.line}`,
-            minHeight: "calc(100vh - 57px)",
+            minHeight: "calc(calc(100vh / var(--tqa-z, 1)) - 57px)",
             padding: "14px 10px",
             overflowY: "auto",
           }}

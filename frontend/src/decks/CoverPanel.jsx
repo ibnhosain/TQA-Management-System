@@ -39,7 +39,7 @@ export default function CoverPanel({ deck, preselect, onBack, onDone }) {
     setSaving(false);
   };
 
-  const box = { width: "min(720px, 94vw)", maxHeight: "88vh", overflow: "auto", background: "#fff", color: "#1f2a24", borderRadius: 18, padding: 20, boxShadow: "0 10px 50px rgba(0,0,0,.5)" };
+  const box = { width: "min(720px, calc(94vw / var(--tqa-z, 1)))", maxHeight: "calc(88vh / var(--tqa-z, 1))", overflow: "auto", background: "#fff", color: "#1f2a24", borderRadius: 18, padding: 20, boxShadow: "0 10px 50px rgba(0,0,0,.5)" };
   const b = { border: "1px solid #CFE0D5", background: "#fff", color: "#123F28", borderRadius: 10, padding: "9px 16px", cursor: "pointer", font: "inherit" };
   const go = { ...b, background: "#1A5C3A", color: "#fff", borderColor: "#1A5C3A", fontWeight: 700 };
   const row = (on) => ({ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 10, cursor: "pointer",
