@@ -13964,141 +13964,154 @@ function RoutineView({ db, setDb, courses, user }) {
         )
       }
     >
-      <TeacherWiseBoard db={db} setDb={setDb} user={user} />
-      {routinesLoading && (
-        <Loader text={T("রুটিন লোড হচ্ছে", "Loading routine")} />
-      )}
+      <style>{`
+        /* অ্যাপের কনটেন্ট সর্বোচ্চ ১২৮০px — ৭ কলামে ঘর খুব সরু হয়ে আইকন কেটে যেত, তাই সর্বোচ্চ ৪ */
+        .rt-week{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:22px}
+        @media(max-width:900px){.rt-week{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media(max-width:560px){.rt-week{grid-template-columns:minmax(0,1fr)}}
+        .rt-day{background:#fff;border:1px solid ${C.line};border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:120px;
+          box-shadow:0 1px 2px rgba(16,34,24,.04)}
+        .rt-day.today{border-color:${C.emeraldL};box-shadow:0 0 0 3px rgba(42,122,80,.14)}
+        .rt-block{border-radius:10px;border:1px solid ${C.line};background:#fff;padding:8px 10px;transition:box-shadow .15s,transform .15s}
+        .rt-block:hover{box-shadow:0 6px 16px rgba(16,34,24,.08);transform:translateY(-1px)}
+        .rt-ico{border:none;background:transparent;cursor:pointer;padding:3px 4px;border-radius:6px;color:#64748b;line-height:0}
+        .rt-ico:hover{background:#eef3f0;color:${C.emerald};filter:none}
+        .rt-ico.del:hover{background:${C.redBg};color:${C.red}}
+      `}</style>
+      {routinesLoading && <Loader text="Loading routine" />}
       {/* রুটিন লোড হওয়ার আগে সাত বারের ঘরে "— ক্লাস নেই —" দেখাত, যা ভুল ধারণা
           দিত — এখন লোড শেষ হলেই সপ্তাহের ছকটা দেখানো হয় */}
-      <div style={{ display: routinesLoading ? "none" : "grid", gap: 10 }}>
+      <div className="rt-week" style={{ display: routinesLoading ? "none" : "grid" }}>
         {WEEK_ORDER.map((wd) => {
           const items = localSchedule[wd] || [];
+          const isTodayCol = wd === dowOf(todayIn(zone));
           return (
-            <div
-              key={wd}
-              style={{
-                ...S.card,
-                padding: 14,
-                borderLeft: `4px solid ${items.length ? C.emerald : C.line}`,
-              }}
-            >
+            <div key={wd} className={"rt-day" + (isTodayCol ? " today" : "")}>
               <div
                 style={{
+                  padding: "10px 12px",
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
-                  flexWrap: "wrap",
+                  justifyContent: "space-between",
+                  gap: 6,
+                  borderBottom: `1px solid ${C.line}`,
+                  background: isTodayCol ? `linear-gradient(135deg, ${C.emeraldL}, ${C.emerald})` : "#f6f9f7",
+                  color: isTodayCol ? "#fff" : C.text,
                 }}
               >
-                <b
-                  style={{
-                    width: 110,
-                    fontSize: 14,
-                    color: items.length ? C.emerald : C.muted,
-                  }}
-                >
-                  {T(DAY_BN[wd], DAY_EN[wd])}
-                </b>
-                <div
-                  style={{ flex: 1, display: "flex", gap: 8, flexWrap: "wrap" }}
-                >
-                  {items.length === 0 && (
-                    <span style={{ fontSize: 12.5, color: C.muted }}>
-                      {T("— ক্লাস নেই —", "— No class —")}
+                <b style={{ fontSize: 13.5 }}>{DAY_EN[wd]}</b>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  {isTodayCol && <span style={{ fontSize: 11.5, fontWeight: 600 }}>Today</span>}
+                  {items.length > 0 && (
+                    <span
+                      title={`${items.length} ${items.length === 1 ? "class" : "classes"}`}
+                      style={{
+                        minWidth: 20,
+                        height: 20,
+                        padding: "0 6px",
+                        borderRadius: 999,
+                        display: "inline-grid",
+                        placeItems: "center",
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        background: isTodayCol ? "rgba(255,255,255,.22)" : "#e3eee7",
+                        color: isTodayCol ? "#fff" : C.emerald,
+                      }}
+                    >
+                      {items.length}
                     </span>
                   )}
-                  {items.map((r) => {
-                    const c = courseById(courses, r.courseId);
-                    const studNames =
-                      r.studentNames && r.studentNames.length
-                        ? r.studentNames
-                        : (r.studentIds || []).map((s) => nameOf(s));
-                    return (
-                      <span
-                        key={r.id}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 8,
-                          background: C.greenBg,
-                          border: `1px solid ${C.line}`,
-                          borderRadius: 10,
-                          padding: "7px 12px",
-                          fontSize: 12.5,
-                        }}
-                      >
-                        <b style={{ color: c.color || C.emerald }}>
-                          {c.name || r.courseName}
-                        </b>{" "}
-                        {r.kind && r.kind !== "Regular Class" && (
+                </span>
+              </div>
+              <div style={{ padding: 8, display: "grid", gap: 8, flex: 1, alignContent: "start" }}>
+                {items.length === 0 && (
+                  <div style={{ fontSize: 12.5, color: "#94a3b8", textAlign: "center", padding: "16px 4px" }}>No class</div>
+                )}
+                {items.map((r) => {
+                  const c = courseById(courses, r.courseId);
+                  const col = c.color || C.emerald;
+                  const tm = fmt12(r.localTime);
+                  const studNames =
+                    r.studentNames && r.studentNames.length
+                      ? r.studentNames
+                      : (r.studentIds || []).map((x) => nameOf(x));
+                  return (
+                    <div key={r.id} className="rt-block" style={{ borderLeft: `4px solid ${col}` }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                        <b style={{ fontSize: 15, letterSpacing: "-0.01em" }}>{tm.t}</b>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: C.muted }}>{tm.ap}</span>
+                        <span style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap" }}>· {r.dur}m</span>
+                        {canEdit && (
+                          <span style={{ marginLeft: "auto", display: "inline-flex", gap: 2 }}>
+                            <button
+                              className="rt-ico"
+                              title="Edit routine"
+                              aria-label="Edit routine"
+                              onClick={() => {
+                                setF({
+                                  courseId: r.courseId,
+                                  days: [...r.days],
+                                  time: r.time,
+                                  dur: r.dur,
+                                  zoom: r.zoom,
+                                  zoom2: r.zoom2 || "",
+                                  kind: "Regular Class",
+                                  teacherId: r.teacherId,
+                                  studentIds: r.studentIds || [],
+                                  studentSchedule: r.studentSchedule || {},
+                                });
+                                setEditId(r.id);
+                                setShow(true);
+                              }}
+                            >
+                              <Ico e="✏" size={14} style={{ verticalAlign: 0 }} />
+                            </button>
+                            <button
+                              className="rt-ico del"
+                              title="Delete routine"
+                              aria-label="Delete routine"
+                              onClick={() => del(r.id)}
+                            >
+                              <Ico e="🗑" size={14} style={{ verticalAlign: 0 }} />
+                            </button>
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: col, marginTop: 2, lineHeight: 1.3 }}>
+                        {c.name || r.courseName}
+                      </div>
+                      {r.kind && r.kind !== "Regular Class" && (
+                        <div style={{ marginTop: 3 }}>
                           <Tag color={C.red} bg={C.redBg}>
                             {r.kind}
                           </Tag>
-                        )}{" "}
-                        <Ico e="🕐" /> {r.localTime}
-                        {zone !== "Asia/Dhaka" && (
-                          <span style={{ color: C.muted }}> ({zoneCity(zone)} time)</span>
-                        )}{" "}
-                        · {T(`${bn(r.dur)} মি`, `${r.dur} min`)} ·{" "}
-                        {r.teacherName || nameOf(r.teacherId || c.teacherId)}
-                        {canEdit && studNames.length > 0 && (
-                          <span style={{ color: C.muted }}>
-                            {" "}
-                            · <Ico e="👥" />{" "}
-                            {studNames.map((n) => n.split(" ")[0]).join(", ")}
-                          </span>
-                        )}
-                        {canEdit && (
-                          <button
-                            title="Edit — admin only"
-                            onClick={() => {
-                              setF({
-                                courseId: r.courseId,
-                                days: [...r.days],
-                                time: r.time,
-                                dur: r.dur,
-                                zoom: r.zoom,
-                                zoom2: r.zoom2 || "",
-                                kind: "Regular Class",
-                                teacherId: r.teacherId,
-                                studentIds: r.studentIds || [],
-                                studentSchedule: r.studentSchedule || {},
-                              });
-                              setEditId(r.id);
-                              setShow(true);
-                            }}
-                            style={{
-                              border: "none",
-                              background: "transparent",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <Ico e="✏" />
-                          </button>
-                        )}
-                        {canEdit && (
-                          <button
-                            onClick={() => del(r.id)}
-                            style={{
-                              border: "none",
-                              background: "transparent",
-                              color: C.red,
-                              cursor: "pointer",
-                              fontWeight: 800,
-                            }}
-                          >
-                            <Ico e="✕" />
-                          </button>
-                        )}
-                      </span>
-                    );
-                  })}
-                </div>
+                        </div>
+                      )}
+                      <div
+                        title={r.teacherName || nameOf(r.teacherId || c.teacherId)}
+                        style={{ fontSize: 12, color: C.muted, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                      >
+                        <Ico e="👤" /> {r.teacherName || nameOf(r.teacherId || c.teacherId)}
+                      </div>
+                      {canEdit && studNames.length > 0 && (
+                        <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>
+                          <Ico e="👥" /> {studNames.map((n) => n.split(" ")[0]).join(", ")}
+                        </div>
+                      )}
+                      {(zone !== "Asia/Dhaka" || r.manual) && (
+                        <div style={{ fontSize: 10.5, color: C.muted, marginTop: 2 }}>
+                          {r.manual ? "Set by the academy for you" : `${zoneCity(zone)} time`}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
         })}
       </div>
+      <TeacherWiseBoard db={db} setDb={setDb} user={user} />
       {show && (
         <Modal
           title={
@@ -16132,8 +16145,21 @@ function TeacherWiseBoard({ db, setDb, user }) {
   if (user.role === "student") return null;
   return (
     <div style={{ ...S.card, marginBottom: 16 }}>
-      <div style={{ fontWeight: 800, marginBottom: 10 }}>
-        <Ico e="👳" /> Routine and classes by teacher
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+        <span
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            background: "#e9f3ed",
+            color: C.emerald,
+            display: "grid",
+            placeItems: "center",
+          }}
+        >
+          <Ico e="👳" size={18} style={{ verticalAlign: 0 }} />
+        </span>
+        <b style={{ fontSize: 16, letterSpacing: "-0.01em" }}>Routine and classes by teacher</b>
       </div>
       {user.role !== "teacher" && (
         <div
@@ -16183,11 +16209,12 @@ function TeacherWiseBoard({ db, setDb, user }) {
           <div
             key={r.id}
             style={{
-              padding: "8px 12px",
+              padding: "9px 12px",
               borderRadius: 10,
-              background: C.cream,
+              background: "#f8faf9",
+              border: `1px solid ${C.line}`,
               marginBottom: 6,
-              fontSize: 12.5,
+              fontSize: 13,
             }}
           >
             <Ico e="👥" />{" "}
@@ -16204,7 +16231,7 @@ function TeacherWiseBoard({ db, setDb, user }) {
             )}{" "}
             — {c.name || r.course_name || "—"} ·{" "}
             {(r.days || [])
-              .map((i) => `${DAY_BN[i]} ${r.time}`)
+              .map((i) => `${DAY_EN[i].slice(0, 3)} ${fmt12(r.time).t} ${fmt12(r.time).ap}`)
               .join(", ")}
           </div>
         );
@@ -16240,17 +16267,19 @@ function TeacherWiseBoard({ db, setDb, user }) {
               display: "flex",
               alignItems: "center",
               gap: 10,
-              padding: "8px 12px",
+              padding: "9px 12px",
               borderRadius: 10,
-              background: C.greenBg,
+              background: "#fff",
+              border: `1px solid ${C.line}`,
+              borderLeft: `4px solid ${C.emeraldL}`,
               marginBottom: 6,
-              fontSize: 12.5,
+              fontSize: 13,
               flexWrap: "wrap",
             }}
           >
             <span style={{ flex: 1, minWidth: 200 }}>
-              <b>{k.course_name || c.name || "—"}</b> ·{" "}
-              {fmtDate(k.date)} · <Ico e="🕐" /> {(k.time || "").slice(0, 5)} · <Ico e="👥" />{" "}
+              <b>{k.course_name || c.name || "—"}</b> · {shortDay(k.date)} · <Ico e="🕐" />{" "}
+              {fmt12((k.time || "").slice(0, 5)).t} {fmt12((k.time || "").slice(0, 5)).ap} · <Ico e="👥" />{" "}
               {studentNames}
             </span>
             {isAdm(user) && (
