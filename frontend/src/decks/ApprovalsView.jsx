@@ -1,63 +1,303 @@
 /* এডমিন/পরিচালকের "Lecture Approvals" — উস্তাদ যে শিক্ষার্থীর একটা লেকচারের সব টপিক টিক দিয়েছেন, সেগুলো এখানে আসে।
    দেখা যায়: কোন দিন টিক, সেই দিনগুলোর ক্লাসে শিক্ষার্থী ও উস্তাদ কত মিনিট ছিলেন, কোন অংশের স্লাইড কত মিনিট চলেছে।
-   Approve দিলে তবেই ওই শিক্ষার্থীর পরের লেকচার খোলে। */
+   Approve দিলে তবেই ওই শিক্ষার্থীর পরের লেকচার খোলে।
+
+   ২০২৬-১১-২২: মূল অ্যাপের প্রিমিয়াম চেহারায় সাজানো (রং মূল অ্যাপের C-এর সাথে মেলানো)।
+   ব্রাউজারের window.confirm-এর বদলে কার্ডের ভেতরেই "নিশ্চিত করুন / বাতিল"।
+   ⚠️ মূল ফাইল (tqa-management-system.jsx) থেকে কিছু import করা হয়নি — এই পাতা সেখান
+   থেকেই lazy-load হয়, উল্টো import করলে বৃত্তাকার নির্ভরতা হতো। */
 import { useEffect, useState } from "react";
 import { api, approvalsApi } from "../api";
 import { Ico, withIcons } from "../icons";
 
-const G = "#1A5C3A", GOLD = "#C9962A", MUTED = "#5B6B62", RED = "#b00020";
-const fmt = (d) => (d ? new Date(d).toLocaleDateString("en-GB") : "");
+const G = "#1a5c3a", GD = "#123f28", GL = "#2a7a50", GOLD = "#c9962a", MUTED = "#64748b", TEXT = "#14221b";
+const RED = "#c0392b", LINE = "#e3e9e5";
+const fmt = (d) => (d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
+const card = {
+  background: "#fff",
+  border: `1px solid ${LINE}`,
+  borderRadius: 16,
+  boxShadow: "0 1px 2px rgba(16,34,24,.04), 0 6px 18px rgba(16,34,24,.05)",
+};
+const btn = (kind = "primary") => ({
+  border: kind === "ghost" ? "1.5px solid #c9d8cf" : "none",
+  background:
+    kind === "primary" ? `linear-gradient(180deg, #22714a, ${G})` : kind === "danger" ? "#fdeceb" : kind === "ghost" ? "#fff" : "#eef3f0",
+  color: kind === "primary" ? "#fff" : kind === "danger" ? RED : GD,
+  borderRadius: 10,
+  padding: "10px 16px",
+  fontWeight: 600,
+  fontSize: 14,
+  cursor: "pointer",
+  font: "inherit",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 7,
+  boxShadow: kind === "primary" ? "0 1px 2px rgba(18,63,40,.3), inset 0 1px 0 rgba(255,255,255,.14)" : "none",
+});
+const initials = (n) =>
+  String(n || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
+const CSS = `
+.apv details > summary{list-style:none;cursor:pointer}
+.apv details > summary::-webkit-details-marker{display:none}
+.apv details[open] .apv-chev{transform:rotate(90deg)}
+.apv-chev{display:inline-block;transition:transform .15s}
+.apv table{border-collapse:collapse;width:100%;font-size:13.5px}
+.apv th{text-align:left;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#475569;
+  background:#f6f9f7;padding:9px 12px;border-bottom:1px solid ${LINE}}
+.apv td{padding:9px 12px;border-bottom:1px solid ${LINE};color:${TEXT}}
+.apv tr:last-child td{border-bottom:none}
+.apv select,.apv input{border:1px solid #d5dfd9;border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;background:#fff;color:${TEXT}}
+.apv select:focus,.apv input:focus{outline:none;border-color:${GL};box-shadow:0 0 0 3px rgba(26,92,58,.14)}
+`;
+
+function Metric({ label, value, ok, icon }) {
+  const col = ok === "warn" ? "#a16207" : ok ? G : RED;
+  const bg = ok === "warn" ? "#fdf6e7" : ok ? "#f1faf4" : "#fff6f4";
+  return (
+    <div style={{ background: bg, border: `1px solid ${col}22`, borderRadius: 12, padding: "10px 14px", minWidth: 150, flex: "1 1 150px" }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "#475569", display: "flex", alignItems: "center", gap: 6 }}>
+        <Ico e={icon} style={{ color: col }} /> {label}
+      </div>
+      <div style={{ fontSize: 21, fontWeight: 700, color: col, letterSpacing: "-0.02em", marginTop: 2 }}>{value}</div>
+    </div>
+  );
+}
 
 function Card({ p, onApprove, busy }) {
+  const [confirm, setConfirm] = useState(false);
   const marked = p.topics.filter((t) => t.covered === "covered").length;
   const missed = p.topics.length - marked;
   const classMin = p.classes.reduce((a, c) => a + (c.student_min || 0), 0);
-  const cell = { padding: "4px 8px", borderBottom: "1px solid #EEF3F0", fontSize: 14 };
+  const warnings = [
+    !classMin && "No class attendance was found on the days the topics were ticked.",
+    !p.slides_total_min && "No slides were played for this student.",
+  ].filter(Boolean);
   return (
-    <div style={{ background: "#fff", border: "1px solid #DCE9E0", borderRadius: 14, padding: 14, display: "grid", gap: 10 }}>
-      <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}>
-        <b style={{ fontSize: 17 }}>{p.student_name}</b>
-        <span style={{ color: G, fontWeight: 700 }}>Lecture {p.no} finished</span>
-        <span style={{ color: MUTED, fontSize: 13 }}>{p.course_name} · teacher: {p.teacher_name || "—"}{p.ticked_by.length ? ` · ticked by ${p.ticked_by.join(", ")}` : ""}</span>
-      </div>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        {[["Topics", `${marked} ✔${missed ? ` · ${missed} ✘` : ""}`, missed ? GOLD : G],
-          ["Class time (student)", `${classMin} min`, classMin ? G : RED],
-          ["Slides played", `${p.slides_total_min} min`, p.slides_total_min ? G : RED]].map(([k, v, c]) => (
-          <div key={k} style={{ background: "#F6FAF7", borderRadius: 10, padding: "8px 12px", minWidth: 150 }}>
-            <div style={{ fontSize: 12, color: MUTED }}>{k}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: c }}>{v}</div>
+    <div style={{ ...card, overflow: "hidden" }}>
+      <div style={{ padding: "16px 18px", display: "grid", gap: 14 }}>
+        {/* কে, কোন লেকচার */}
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <span
+            aria-hidden="true"
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: "50%",
+              flexShrink: 0,
+              display: "grid",
+              placeItems: "center",
+              fontWeight: 700,
+              fontSize: 14,
+              color: "#fff",
+              background: `linear-gradient(135deg, ${GL}, ${GD})`,
+            }}
+          >
+            {initials(p.student_name)}
+          </span>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <b style={{ fontSize: 17, letterSpacing: "-0.01em" }}>{p.student_name}</b>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: "3px 10px",
+                  borderRadius: 999,
+                  color: G,
+                  background: "#eaf5ee",
+                  border: `1px solid ${G}26`,
+                }}
+              >
+                Lecture {p.no} finished
+              </span>
+            </div>
+            <div style={{ color: MUTED, fontSize: 13, marginTop: 2 }}>
+              {p.course_name} · Teacher: {p.teacher_name || "—"}
+              {p.ticked_by.length ? ` · Ticked by ${p.ticked_by.join(", ")}` : ""}
+            </div>
           </div>
-        ))}
-      </div>
-      <details>
-        <summary style={{ cursor: "pointer", color: G, fontWeight: 600 }}>Details</summary>
-        <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
-          <div>
-            <b>Ticked on:</b> {p.days.map(fmt).join(", ") || "—"}
-          </div>
-          <table style={{ borderCollapse: "collapse", width: "100%" }}>
-            <thead><tr>{["Class date", "Student min", "Teacher min", "Planned min"].map((h) => <th key={h} style={{ ...cell, textAlign: "left", color: MUTED }}>{h}</th>)}</tr></thead>
-            <tbody>
-              {p.classes.length === 0 && <tr><td style={{ ...cell, color: RED }} colSpan={4}>No class attendance found on these days.</td></tr>}
-              {p.classes.map((c, i) => <tr key={i}><td style={cell}>{fmt(c.date)}</td><td style={cell}>{c.student_min}</td><td style={cell}>{c.teacher_min ?? "—"}</td><td style={cell}>{c.planned_min ?? "—"}</td></tr>)}
-            </tbody>
-          </table>
-          <table style={{ borderCollapse: "collapse", width: "100%" }}>
-            <thead><tr>{["Slide part", "Minutes"].map((h) => <th key={h} style={{ ...cell, textAlign: "left", color: MUTED }}>{h}</th>)}</tr></thead>
-            <tbody>
-              {p.slides.length === 0 && <tr><td style={{ ...cell, color: RED }} colSpan={2}>No slides were played for this student.</td></tr>}
-              {p.slides.map((s, i) => <tr key={i}><td style={cell}>{s.part}</td><td style={cell}>{s.minutes}</td></tr>)}
-            </tbody>
-          </table>
-          <div>{p.topics.map((t, i) => <div key={i} style={{ fontSize: 14 }}>{withIcons(t.covered === "covered" ? "✔" : "✘")} {t.text}</div>)}</div>
         </div>
-      </details>
-      <div>
-        <button disabled={busy} onClick={() => onApprove(p)}
-          style={{ border: "none", background: G, color: "#fff", borderRadius: 10, padding: "10px 18px", fontWeight: 700, cursor: "pointer", font: "inherit" }}>
-          <Ico e="✅" /> Approve — open Lecture {p.no + 1}
-        </button>
+
+        {/* মাপ */}
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Metric
+            icon="📋"
+            label="Topics"
+            value={withIcons(`${marked} ✔${missed ? ` · ${missed} ✘` : ""}`, { size: 16, style: { verticalAlign: "-0.15em" } })}
+            ok={missed ? "warn" : true}
+          />
+          <Metric icon="🕐" label="Class time (student)" value={`${classMin} min`} ok={!!classMin} />
+          <Metric icon="🎞" label="Slides played" value={`${p.slides_total_min} min`} ok={!!p.slides_total_min} />
+        </div>
+
+        {warnings.length > 0 && (
+          <div
+            style={{
+              display: "grid",
+              gap: 4,
+              padding: "10px 12px",
+              borderRadius: 10,
+              background: "#fff6f4",
+              border: "1px solid #f3c7bd",
+              color: RED,
+              fontSize: 13,
+              fontWeight: 500,
+            }}
+          >
+            {warnings.map((w) => (
+              <div key={w}>
+                <Ico e="⚠️" /> {w}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* বিস্তারিত */}
+        <details>
+          <summary style={{ color: G, fontWeight: 600, fontSize: 14, display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span className="apv-chev">›</span> Details
+          </summary>
+          <div style={{ display: "grid", gap: 12, marginTop: 10 }}>
+            <div style={{ fontSize: 13.5 }}>
+              <b>Ticked on:</b>{" "}
+              {p.days.length
+                ? p.days.map((d) => (
+                    <span
+                      key={d}
+                      style={{
+                        display: "inline-block",
+                        margin: "2px 4px 2px 0",
+                        padding: "2px 9px",
+                        borderRadius: 999,
+                        background: "#eef3f0",
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {fmt(d)}
+                    </span>
+                  ))
+                : "—"}
+            </div>
+            <div style={{ border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden", overflowX: "auto" }}>
+              <table>
+                <thead>
+                  <tr>
+                    {["Class date", "Student min", "Teacher min", "Planned min"].map((h) => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {p.classes.length === 0 && (
+                    <tr>
+                      <td style={{ color: RED }} colSpan={4}>
+                        No class attendance found on these days.
+                      </td>
+                    </tr>
+                  )}
+                  {p.classes.map((c, i) => (
+                    <tr key={i}>
+                      <td>{fmt(c.date)}</td>
+                      <td>{c.student_min}</td>
+                      <td>{c.teacher_min ?? "—"}</td>
+                      <td>{c.planned_min ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden" }}>
+              <table>
+                <thead>
+                  <tr>
+                    {["Slide part", "Minutes"].map((h) => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {p.slides.length === 0 && (
+                    <tr>
+                      <td style={{ color: RED }} colSpan={2}>
+                        No slides were played for this student.
+                      </td>
+                    </tr>
+                  )}
+                  {p.slides.map((s, i) => (
+                    <tr key={i}>
+                      <td>{s.part}</td>
+                      <td>{s.minutes}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: "grid", gap: 6 }}>
+              {p.topics.map((t, i) => {
+                const ok = t.covered === "covered";
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+                    <span
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: "50%",
+                        flexShrink: 0,
+                        display: "grid",
+                        placeItems: "center",
+                        background: ok ? G : RED,
+                        color: "#fff",
+                      }}
+                    >
+                      <Ico e={ok ? "✔" : "✘"} size={12} style={{ verticalAlign: 0 }} />
+                    </span>
+                    {t.text}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </details>
+      </div>
+
+      {/* অনুমোদন — কার্ডের ভেতরেই নিশ্চিতকরণ */}
+      <div
+        style={{
+          padding: "12px 18px",
+          borderTop: `1px solid ${LINE}`,
+          background: confirm ? "#f1faf4" : "#fafcfb",
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
+        {!confirm ? (
+          <button disabled={busy} onClick={() => setConfirm(true)} style={btn("primary")}>
+            <Ico e="✅" /> Approve — open Lecture {p.no + 1}
+          </button>
+        ) : (
+          <>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: GD, flex: "1 1 240px" }}>
+              Open Lecture {p.no + 1} for {p.student_name} only?
+            </span>
+            <button
+              disabled={busy}
+              onClick={async () => {
+                await onApprove(p);
+                setConfirm(false);
+              }}
+              style={{ ...btn("primary"), opacity: busy ? 0.6 : 1 }}
+            >
+              {busy ? "Approving…" : "Yes, approve"}
+            </button>
+            <button onClick={() => setConfirm(false)} style={btn("ghost")}>
+              Cancel
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -69,26 +309,74 @@ function ManualUnlock({ courses, onDone }) {
   const [students, setStudents] = useState([]);
   const [student, setStudent] = useState("");
   const [no, setNo] = useState(2);
+  const [confirm, setConfirm] = useState(false);
+  const [err, setErr] = useState("");
   useEffect(() => {
     if (!course) return;
     api.courseStudents(course).then((r) => { setStudents(r || []); setStudent(r?.[0]?.id || ""); }).catch(() => setStudents([]));
   }, [course]);
-  const box = { border: "1px solid #CFE0D5", borderRadius: 10, padding: "8px 10px", font: "inherit" };
-  const go = async () => {
-    const st = students.find((x) => String(x.id) === String(student));
-    if (!st || !(Number(no) >= 2)) return alert("Please choose a student and a lecture (2 or more).");
-    if (!window.confirm(`Unlock Lecture ${no} for ${st.name} only?`)) return;
-    onDone(course, st.id, Number(no) - 1, `✅ Lecture ${no} is now open for ${st.name} (only).`);
+  const st = students.find((x) => String(x.id) === String(student));
+  const ask = () => {
+    if (!st || !(Number(no) >= 2)) return setErr("Please choose a student and a lecture (2 or more).");
+    setErr("");
+    setConfirm(true);
   };
   return (
-    <div style={{ background: "#fff", border: "1px solid #DCE9E0", borderRadius: 14, padding: 14, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-      <b style={{ width: "100%" }}>Unlock a lecture for one student</b>
-      <select value={course} onChange={(e) => setCourse(e.target.value)} style={box}>{(courses || []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
-      <select value={student} onChange={(e) => setStudent(e.target.value)} style={{ ...box, minWidth: 180 }}>{students.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
-      <span>Lecture</span><input type="number" min="2" value={no} onChange={(e) => setNo(e.target.value)} style={{ ...box, width: 80 }} />
-      <button onClick={go} style={{ border: "none", background: G, color: "#fff", borderRadius: 10, padding: "9px 16px", fontWeight: 700, cursor: "pointer", font: "inherit" }}>Unlock</button>
-      <span style={{ fontSize: 12, color: MUTED, width: "100%" }}>Usually you approve from the list below after checking the times. Use this only when you need to open a lecture by hand.</span>
-    </div>
+    <details style={{ ...card, padding: "14px 18px" }}>
+      <summary style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span
+          style={{ width: 34, height: 34, borderRadius: 10, background: "#e9f3ed", color: G, display: "grid", placeItems: "center" }}
+        >
+          <Ico e="🔑" size={17} style={{ verticalAlign: 0 }} />
+        </span>
+        <span style={{ flex: 1 }}>
+          <b style={{ fontSize: 15 }}>Unlock a lecture by hand</b>
+          <span style={{ display: "block", fontSize: 12.5, color: MUTED }}>
+            Usually you approve from the list below after checking the times. Use this only when you need to open a lecture by hand.
+          </span>
+        </span>
+        <span className="apv-chev" style={{ color: MUTED, fontSize: 20 }}>›</span>
+      </summary>
+      <div className="apv-unlock" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 14 }}>
+        <select value={course} onChange={(e) => { setCourse(e.target.value); setConfirm(false); }}>
+          {(courses || []).map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        <select value={student} onChange={(e) => { setStudent(e.target.value); setConfirm(false); }} style={{ minWidth: 180 }}>
+          {students.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.name}
+            </option>
+          ))}
+        </select>
+        <span style={{ fontSize: 13.5, fontWeight: 600, color: "#475569" }}>Lecture</span>
+        <input type="number" min="2" value={no} onChange={(e) => { setNo(e.target.value); setConfirm(false); }} style={{ width: 80 }} />
+        {!confirm ? (
+          <button onClick={ask} style={btn("primary")}>
+            Unlock
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={async () => {
+                await onDone(course, st.id, Number(no) - 1, `✅ Lecture ${no} is now open for ${st.name} (only).`);
+                setConfirm(false);
+              }}
+              style={btn("primary")}
+            >
+              Yes, unlock Lecture {no} for {st?.name}
+            </button>
+            <button onClick={() => setConfirm(false)} style={btn("ghost")}>
+              Cancel
+            </button>
+          </>
+        )}
+      </div>
+      {err && <div style={{ color: RED, fontSize: 13, marginTop: 8 }}>{err}</div>}
+    </details>
   );
 }
 
@@ -101,28 +389,117 @@ export default function ApprovalsView({ courses }) {
   };
   useEffect(() => { load(); }, []);
   const approve = async (p) => {
-    if (!window.confirm(`Approve Lecture ${p.no} for ${p.student_name}? Lecture ${p.no + 1} will open for this student.`)) return;
     setBusy(true);
     try { setData(await approvalsApi.approve(p.course, p.student, p.no)); setMsg(`✅ Lecture ${p.no + 1} is now open for ${p.student_name}.`); }
     catch (e) { setMsg("Could not approve — " + (e?.data?.error || e?.message || "")); }
     setBusy(false);
   };
+  const ok = msg.startsWith("✅");
+  const pending = data?.pending || [];
   return (
-    <div style={{ display: "grid", gap: 14, maxWidth: 980 }}>
-      <h2 style={{ margin: 0 }}><Ico e="✅" /> Lecture Approvals</h2>
-      <div style={{ color: MUTED }}>Everything here is per student: approving opens the next lecture for that one student only, not for anyone else. When a teacher ticks every topic of a lecture for a student, it waits here — check the class time and slide time, then approve.</div>
-      {msg && <div style={{ color: msg.startsWith("✅") ? G : RED }}>{msg}</div>}
-      <ManualUnlock courses={courses} onDone={async (c, st, prev, ok) => {
-        try { setData(await approvalsApi.approve(c, st, prev)); setMsg(ok); } catch (e) { setMsg("Could not unlock — " + (e?.data?.error || e?.message || "")); }
-      }} />
-      {!data && <div>Loading…</div>}
-      {data && data.pending.length === 0 && <div style={{ color: MUTED }}>Nothing is waiting for approval.</div>}
-      {(data?.pending || []).map((p) => <Card key={`${p.course}-${p.student}-${p.no}`} p={p} onApprove={approve} busy={busy} />)}
+    <div className="apv" style={{ display: "grid", gap: 16, maxWidth: 980 }}>
+      <style>{CSS}</style>
+      <div>
+        <h2 style={{ margin: 0, fontSize: 21, fontWeight: 700, letterSpacing: "-0.02em", color: TEXT, display: "flex", alignItems: "center", gap: 8 }}>
+          <Ico e="✅" style={{ color: GL }} /> Lecture Approvals
+          {data && (
+            <span
+              style={{
+                minWidth: 24,
+                height: 22,
+                padding: "0 8px",
+                borderRadius: 999,
+                display: "inline-grid",
+                placeItems: "center",
+                fontSize: 12,
+                fontWeight: 700,
+                background: pending.length ? "#fdf6e7" : "#e9f3ed",
+                color: pending.length ? "#a16207" : G,
+              }}
+            >
+              {pending.length}
+            </span>
+          )}
+        </h2>
+        <div style={{ color: MUTED, fontSize: 13.5, marginTop: 4, lineHeight: 1.5 }}>
+          Everything here is per student: approving opens the next lecture for that one student only. When a teacher ticks every
+          topic of a lecture for a student, it waits here — check the class time and slide time, then approve.
+        </div>
+      </div>
+
+      {msg && (
+        <div
+          role="status"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "11px 14px",
+            borderRadius: 12,
+            background: ok ? "#f1faf4" : "#fff6f4",
+            border: `1px solid ${ok ? "#bfe1cb" : "#f3c7bd"}`,
+            color: ok ? G : RED,
+            fontWeight: 600,
+            fontSize: 14,
+          }}
+        >
+          <span style={{ flex: 1 }}>{withIcons(msg)}</span>
+          <button onClick={() => setMsg("")} aria-label="Dismiss" style={{ border: "none", background: "transparent", cursor: "pointer", color: "inherit" }}>
+            <Ico e="✕" />
+          </button>
+        </div>
+      )}
+
+      <ManualUnlock
+        courses={courses}
+        onDone={async (c, st, prev, okMsg) => {
+          try { setData(await approvalsApi.approve(c, st, prev)); setMsg(okMsg); } catch (e) { setMsg("Could not unlock — " + (e?.data?.error || e?.message || "")); }
+        }}
+      />
+
+      {!data && <div style={{ ...card, padding: 24, textAlign: "center", color: MUTED }}>Loading…</div>}
+      {data && pending.length === 0 && (
+        <div style={{ ...card, padding: "28px 18px", textAlign: "center" }}>
+          <div
+            style={{ width: 52, height: 52, margin: "0 auto", borderRadius: 16, background: "#eaf5ee", color: G, display: "grid", placeItems: "center" }}
+          >
+            <Ico e="✅" size={24} style={{ verticalAlign: 0 }} />
+          </div>
+          <div style={{ fontWeight: 700, fontSize: 15.5, marginTop: 10 }}>Nothing is waiting for approval</div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>Finished lectures appear here once a teacher ticks every topic.</div>
+        </div>
+      )}
+      {pending.map((p) => (
+        <Card key={`${p.course}-${p.student}-${p.no}`} p={p} onApprove={approve} busy={busy} />
+      ))}
+
       {data?.recent?.length > 0 && (
-        <details>
-          <summary style={{ cursor: "pointer", color: G, fontWeight: 600 }}>Recently approved</summary>
-          <div style={{ display: "grid", gap: 4, marginTop: 8 }}>
-            {data.recent.map((r, i) => <div key={i} style={{ fontSize: 14 }}>{fmt(r.at)} · {r.student_name} · {r.course_name} · Lecture {r.no} · by {r.by || "—"}</div>)}
+        <details style={{ ...card, padding: "14px 18px" }}>
+          <summary style={{ color: G, fontWeight: 600, fontSize: 14.5, display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="apv-chev">›</span> Recently approved
+            <span style={{ fontSize: 12, color: MUTED, fontWeight: 600 }}>({data.recent.length})</span>
+          </summary>
+          <div style={{ border: `1px solid ${LINE}`, borderRadius: 12, overflow: "hidden", overflowX: "auto", marginTop: 12 }}>
+            <table>
+              <thead>
+                <tr>
+                  {["Date", "Student", "Course", "Lecture", "By"].map((h) => (
+                    <th key={h}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.recent.map((r, i) => (
+                  <tr key={i}>
+                    <td style={{ whiteSpace: "nowrap" }}>{fmt(r.at)}</td>
+                    <td>{r.student_name}</td>
+                    <td>{r.course_name}</td>
+                    <td>Lecture {r.no}</td>
+                    <td>{r.by || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </details>
       )}
