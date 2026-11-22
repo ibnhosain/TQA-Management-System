@@ -1138,6 +1138,51 @@ const Table = ({ head, rows, empty = "No data", loading = false }) => (
   </div>
 );
 
+/* শিরোনামের পাশে ছোট গণনা — "Today's Classes (2)" */
+const CountPill = ({ n }) => (
+  <span
+    style={{
+      display: "inline-grid",
+      placeItems: "center",
+      minWidth: 24,
+      height: 22,
+      padding: "0 7px",
+      marginLeft: 4,
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: 700,
+      verticalAlign: "3px",
+      background: "#e9f3ed",
+      color: C.emerald,
+      letterSpacing: 0,
+    }}
+  >
+    {n}
+  </span>
+);
+/* খালি-অবস্থা — "কিছু নেই"-এর বদলে আইকনসহ পরিষ্কার বার্তা */
+const EmptyState = ({ icon = "📭", title, text, action }) => (
+  <div style={{ ...S.card, textAlign: "center", padding: "26px 18px" }}>
+    <div
+      style={{
+        width: 48,
+        height: 48,
+        margin: "0 auto",
+        borderRadius: 14,
+        background: "#eef4f0",
+        color: C.emeraldL,
+        display: "grid",
+        placeItems: "center",
+      }}
+    >
+      <Ico e={icon} size={22} style={{ verticalAlign: 0 }} />
+    </div>
+    <div style={{ fontWeight: 700, fontSize: 15, marginTop: 10, color: C.text }}>{title}</div>
+    {text && <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{text}</div>}
+    {action && <div style={{ marginTop: 12 }}>{action}</div>}
+  </div>
+);
+
 const Section = ({ title, sub, action, children }) => (
   <div style={{ marginBottom: 26 }}>
     <div
@@ -3450,316 +3495,384 @@ function ClassesView({
       joined: isJoined,
       rejoinActive: alreadyBothJoined,
     });
+    /* ── অবস্থা — আগে বোতামের সারির ভেতরে IIFE-তে হিসাব হতো; এখন আগেই, যাতে
+       অবস্থার চিহ্ন (ট্যাগ) শিরোনামে আর অবস্থা বদলের ঘর (select) পরিচালকের
+       টুলবারে আলাদা বসানো যায়। শর্তগুলো হুবহু আগের মতো। */
+    // আজকের ক্লাস এডমিন/পরিচালক কেউ "Completed" চিহ্নিত না করলে সময় পার হয়ে
+    // "বিগত"-এ চলে যাওয়ার পরও status="upcoming"-ই থেকে যায় — তখন সেটাকে
+    // "আসন্ন" (যা এখন আর সত্যি না) না বলে "অসম্পন্ন" দেখানো হচ্ছে
+    // ⚠️ উস্তাদ শেষ করে দিলে সেটা "অসম্পন্ন" নয় — শুধু কর্তৃপক্ষের যাচাই বাকি
+    const incomplete =
+      k.status === "upcoming" && localDate(k) < tdy && !k.teacherFinished;
+    // উস্তাদ শেষ করেছেন, কর্তৃপক্ষের যাচাই এখনো বাকি
+    const awaitingReview = k.teacherFinished && k.status !== "done";
+    // আজকের ক্লাস "Completed" চিহ্নিত করা এডমিন+পরিচালক দুজনেই পারবেন, কিন্তু
+    // বিগত (পুরনো) ক্লাসের স্ট্যাটাস সংশোধন কেবল পরিচালকের এখতিয়ার
+    const canEditStatus = localDate(k) === tdy ? isAdm(user) : isDir(user);
+    const showStatusSelect =
+      !joinable && localDate(k) <= tdy && canEditStatus && k.status !== "postponed";
+    // উস্তাদ শেষ করেছেন অথচ যাচাই বাকি — তখন "যাচাই বাকি" ট্যাগটাই যথেষ্ট;
+    // যাচাই হয়ে গেলে ওই ট্যাগ সরে যায়, তখন "Completed" দেখাতেই হবে
+    const showStatusTag =
+      !showStatusSelect && !joinable && k.status !== "postponed" && !awaitingReview;
+    // সময়ের হিসাবে এই মুহূর্তে চলছে (ব্যাজের জন্য — জয়েনের নিয়মে এর কোনো ভূমিকা নেই)
+    const timeLive =
+      isToday && k.status === "upcoming" && !k.teacherFinished &&
+      inClassWindow(k.date, k.time, k.dur, 0, 0);
+    const lc = loc.get(k.id);
+    const tm = fmt12(lc.time);
+    const accent = c.color || C.emerald;
+    const lecturePill = {
+      fontSize: 11.5,
+      fontWeight: 600,
+      padding: "2px 9px",
+      borderRadius: 999,
+      background: "#eef3f0",
+      color: "#475569",
+      border: `1px solid ${C.line}`,
+    };
+    // জয়েনের মূল বোতাম — লাল, বড়, চোখে পড়ার মতো
+    const JOIN = {
+      background: "linear-gradient(180deg, #e5484d, #c9302c)",
+      color: "#fff",
+      padding: "11px 18px",
+      fontSize: 14.5,
+      boxShadow: "0 4px 14px rgba(201,48,44,.28), inset 0 1px 0 rgba(255,255,255,.18)",
+    };
+    const REJOIN = { padding: "11px 18px", fontSize: 14.5 };
     return (
       <div
         key={k.id}
+        className="cls-card"
         style={{
           ...S.card,
-          padding: 16,
-          display: "flex",
-          gap: 14,
-          alignItems: "center",
-          flexWrap: "wrap",
-          borderLeft: `4px solid ${c.color || C.emerald}`,
+          padding: 0,
+          overflow: "hidden",
+          borderLeft: `4px solid ${timeLive ? "#e5484d" : accent}`,
         }}
       >
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ fontWeight: 800, fontSize: 15 }}>
-            {c.name || k.courseName}{" "}
-            <span style={{ color: C.muted, fontWeight: 600, fontSize: 12.5 }}>
-              · {T(`লেকচার ${bn(k.lectureNo)}`, `Lecture ${k.lectureNo}`)}
-            </span>{" "}
-            {k.kind && k.kind !== "Regular Class" && (
-              <Tag color={C.red} bg={C.redBg}>
-                {k.kind}
-              </Tag>
-            )}
-          </div>
-          <div style={{ fontSize: 12.5, color: C.muted }}>
-            {lec?.title} · {T("Teacher", "Teacher")}:{" "}
-            {k.teacherName || nameOf(k.teacherId || c.teacherId)}
-          </div>
-          {user.role !== "student" && (
-            <div style={{ fontSize: 12, color: C.muted }}>
-              <Ico e="👥" /> Students:{" "}
-              {(k.studentNames && k.studentNames.length
-                ? k.studentNames
-                : kStudents.map((s) => nameOf(s))
-              ).join(", ") || "—"}
-            </div>
-          )}
-          {k.req && user.role !== "student" && (
-            <div style={{ fontSize: 12, color: "#a16207", marginTop: 2 }}>
-              <Ico e="📌" /> Guardian's requirement: {k.req}
-            </div>
-          )}
-          {k.status === "postponed" && (
-            <div
-              style={{
-                fontSize: 12.5,
-                color: C.red,
-                marginTop: 4,
-                background: C.redBg,
-                padding: "6px 10px",
-                borderRadius: 8,
-              }}
-            >
-              {withIcons(T(
-                "⛔ ক্লাসটি অনিবার্য কারণে / উস্তাদ-উস্তাদা অসুস্থ থাকার দরুন স্থগিত করা হয়েছে। পরবর্তীতে শিডিউল করে মেকআপ করা হবে ইনশাআল্লাহ।",
-                "⛔ This class has been postponed due to unavoidable circumstances / the teacher being unwell. A makeup class will be scheduled soon, InshaAllah.",
-              ))}
-            </div>
-          )}
-          <div style={{ fontSize: 12.5, color: C.text, marginTop: 2 }}>
-            <Ico e="📅" /> {fmtDate(loc.get(k.id).date)} · <Ico e="🕐" /> {loc.get(k.id).time}
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch" }}>
+          {/* ── সময় — দর্শকের নিজের বলয়ে, ১২ ঘণ্টার ঘড়িতে */}
+          <div
+            className="cls-time"
+            style={{
+              width: 98,
+              flexShrink: 0,
+              background: timeLive ? "#fff5f4" : "#f6f9f7",
+              borderRight: `1px solid ${C.line}`,
+              display: "grid",
+              placeContent: "center",
+              textAlign: "center",
+              padding: "14px 6px",
+            }}
+          >
+            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{tm.t}</div>
+            <div style={{ fontSize: 11.5, fontWeight: 600, color: C.muted }}>{tm.ap}</div>
+            <div style={{ fontSize: 11.5, fontWeight: 600, color: "#475569", marginTop: 6 }}>{shortDay(lc.date)}</div>
+            <div style={{ fontSize: 11, color: C.muted }}>{k.dur} min</div>
             {zone !== "Asia/Dhaka" && (
-              <span style={{ color: C.muted }}> ({zoneCity(zone)} time)</span>
-            )}{" "}
-            · {T(`${bn(k.dur)} মিনিট`, `${k.dur} min`)}
+              <div style={{ fontSize: 10.5, color: C.muted }}>{zoneCity(zone)} time</div>
+            )}
           </div>
-          {isAdm(user) && (teacherLive || liveStudentCount > 0) && (
-            <div
-              style={{
-                fontSize: 12.5,
-                fontWeight: 800,
-                color: C.green,
-                marginTop: 4,
-                background: C.greenBg,
-                padding: "5px 10px",
-                borderRadius: 8,
-                display: "inline-block",
-              }}
-            >
-              <Ico e="🔴" /> Class in progress — {teacherLive ? "Teacher is in" : "No teacher"}
-              {" · "}
-              {liveStudentCount > 0
-                ? `${bn(liveStudentCount)} student(s) present`
-                : "No students"}
+
+          {/* ── ক্লাসের তথ্য */}
+          <div style={{ flex: 1, minWidth: 210, padding: "14px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+              <b style={{ fontSize: 16, letterSpacing: "-0.01em" }}>{c.name || k.courseName}</b>
+              {k.lectureNo ? <span style={lecturePill}>Lecture {k.lectureNo}</span> : null}
+              {k.kind && k.kind !== "Regular Class" && (
+                <Tag color={C.red} bg={C.redBg}>
+                  {k.kind}
+                </Tag>
+              )}
+              {timeLive && (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    padding: "3px 9px",
+                    borderRadius: 999,
+                    color: "#c0392b",
+                    background: "#fdeceb",
+                    border: "1px solid #c0392b26",
+                  }}
+                >
+                  <span className="tqa-live-dot" /> Live now
+                </span>
+              )}
+              {k.status === "postponed" && (
+                <Tag color={C.red} bg={C.redBg}>
+                  ⛔ Postponed
+                </Tag>
+              )}
+              {/* উস্তাদ শেষ করেছেন, কিন্তু কর্তৃপক্ষের যাচাই এখনো বাকি — তাই
+                  ক্লাসটি আজকের তালিকাতেই আছে, শুধু এই চিহ্নটি নিয়ে */}
+              {awaitingReview && (
+                <Tag color={C.green} bg={C.greenBg}>
+                  ✅ Class completed — awaiting review
+                </Tag>
+              )}
+              {showStatusTag && (
+                <Tag
+                  color={k.status === "done" ? C.green : incomplete ? C.red : C.blue}
+                  bg={k.status === "done" ? C.greenBg : incomplete ? C.redBg : C.blueBg}
+                >
+                  {k.status === "done" ? "Done" : incomplete ? "Incomplete" : "Upcoming"}
+                </Tag>
+              )}
             </div>
-          )}
-          {isJoined && (
-            <LiveClassPanel
-              k={k}
-              user={user}
-              usingApi={usingApi}
-              onExit={onPanelExit}
-              /* পর্ব শেষ হওয়ার খবর সার্ভারে পৌঁছানোর পর তালিকা আবার আনি —
-                 নইলে উস্তাদের কাছে "🔁 রিজয়েন করুন" অবস্থাটা পুরনোই থেকে যেত */
-              onFinished={loadClasses}
-            />
-          )}
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {/* জয়েন (লাল) ও রিজয়েন (হলুদ) — একসাথে কখনো নয়, উস্তাদ ও
-              শিক্ষার্থী কারও কাছেই। যেকোনো মুহূর্তে ঠিক একটিই পথ খোলা থাকে,
-              তাই কোনটা চাপবেন তা নিয়ে সংশয় থাকে না। */}
-          {/* ১ম (জয়েন) লিংক — উস্তাদ সবসময় দেখেন, তাই ডিভাইস/নেট সমস্যা হলে
-              যতবার খুশি ১ম লিংকেই ফিরতে পারেন। শিক্ষার্থী দেখেন যতক্ষণ না উস্তাদ
-              রিজয়েন চালু করেন — খুলে গেলে তাদের কাছ থেকে ১ম লিংক সরে যায়, যাতে
-              কেউ ভুল করে পুরনো মিটিংয়ে ঢুকে না পড়ে */}
-          {/* উস্তাদের জয়েন — আগে হোস্ট-অ্যাকাউন্ট মনে করিয়ে দেওয়ার পপআপ, তারপর
-              জুম খোলে। শিক্ষার্থীর জয়েন আগের মতোই সরাসরি লিংক (তাদের হোস্ট
-              অ্যাকাউন্টের ব্যাপার নেই) */}
-          {/* ⚠️ উস্তাদ ইতিমধ্যে জয়েন করে থাকলে (isJoined) বা ১ম পর্ব শেষ
-              হয়ে গিয়ে থাকলে (alreadyBothJoined = সার্ভারের rejoin_active)
-              "জয়েন" আর দেখানো হয় না — তখন ফেরার পথ "রিজয়েন"।
-
-              আগে উস্তাদের দুটো বাটনেরই শর্ত হুবহু এক ছিল, তাই জয়েন করার
-              পরেও চারটি বাটন একসাথে থাকত আর "জয়েন" ও "রিজয়েন" পাশাপাশি
-              দেখা যেত — কোনটা চাপবেন তা বোঝার উপায় ছিল না।
-
-              ⚠️ isJoined রিফ্রেশেও টেকে — এটি কেবল এই ট্যাবের স্মৃতি নয়,
-              সার্ভারের হাজিরা (segment_start এখনো সক্রিয়) থেকেও আসে। */}
-          {isTeacherOf && teacherAction === "join" && (
-              <Btn
-                style={{ background: C.red, color: "#fff" }}
-                onClick={() => confirmJoin(k)}
-              >
-                {T("🎥 Join Zoom", "🎥 Join Zoom")}
-              </Btn>
+            {lec?.title && (
+              <div style={{ fontSize: 13.5, color: "#334155", marginTop: 4 }}>{lec.title}</div>
             )}
-          {stillJoinable && k.status !== "postponed" && !isTeacherOf &&
-            !alreadyBothJoined && (
-              <a
-                href={k.zoom}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => join(k)}
-                style={{ textDecoration: "none" }}
-              >
-                <Btn style={{ background: C.red, color: "#fff" }}>
-                  {T("🎥 Join Zoom", "🎥 Join Zoom")}
-                </Btn>
-              </a>
+            <div style={{ fontSize: 12.5, color: C.muted, marginTop: 4, display: "flex", gap: 14, flexWrap: "wrap" }}>
+              <span>
+                <Ico e="👤" /> {k.teacherName || nameOf(k.teacherId || c.teacherId)}
+              </span>
+              {user.role !== "student" && (
+                <span>
+                  <Ico e="👥" />{" "}
+                  {(k.studentNames && k.studentNames.length
+                    ? k.studentNames
+                    : kStudents.map((s) => nameOf(s))
+                  ).join(", ") || "—"}
+                </span>
+              )}
+            </div>
+            {k.req && user.role !== "student" && (
+              <div style={{ fontSize: 12.5, color: "#a16207", marginTop: 6, background: C.amberBg, padding: "6px 10px", borderRadius: 8 }}>
+                <Ico e="📌" /> Guardian's requirement: {k.req}
+              </div>
             )}
-          {/* ⚠️ "জয়েন"-এর ঠিক উল্টো শর্ত — তাই দুটো কখনো একসাথে দেখা যায়
-              না, আবার কোনো অবস্থাতেই দুটোই উধাও হয় না।
-
-              জয়েন করা অবস্থাতেও দেখানো হয়, কারণ উস্তাদ ক্লাস চলাকালীনই ২য়
-              লিংকে সরে যেতে পারেন — এটি আগের নকশারই অংশ। */}
-          {isTeacherOf && teacherAction === "rejoin" && (
-              <Btn kind="gold" onClick={() => confirmRejoin(k)}>
-                {T("🔁 রিজয়েন করুন", "🔁 Rejoin")}
-              </Btn>
-            )}
-          {stillJoinable && k.status !== "postponed" && !isTeacherOf &&
-            (alreadyBothJoined ? (
-              <a
-                href={k.zoom2 || k.zoom}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => join(k)}
-                style={{ textDecoration: "none" }}
-              >
-                <Btn kind="gold">{T("🔁 রিজয়েন করুন", "🔁 Rejoin")}</Btn>
-              </a>
-            ) : isJoined && !meetingDone ? (
-              /* এই লেখাটা রিজয়েন বাটনের জায়গা ধরে রাখে — উস্তাদ রিজয়েন চালু
-                 করলে ঠিক এখানেই "🔁 Rejoin" বাটন হয়ে যায়।
-                 উস্তাদের সাথে দেখা হয়ে হাজিরা নিশ্চিত হয়ে গেলে (meetingDone)
-                 লেখাটা সরে যায় — তখন "Teacher is joining, please wait" পড়ে
-                 শিক্ষার্থী ভাবতেন উস্তাদ এখনো আসেননি, অথচ ক্লাস চলছে।
-                 তাই এটা দেখানো হয় কেবল শিক্ষার্থী ক্লাসে ঢোকার পর, যখন
-                 রিজয়েনের প্রশ্নটাই প্রাসঙ্গিক। জয়েন করার আগে (অর্থাৎ যখন
-                 সামনে শুধু "🎥 Join Zoom" বাটনটাই থাকার কথা) এটা আর আসবে না —
-                 আগে "একবার জয়েন করেছে কিনা" দিয়ে যাচাই হতো বলে আগের দিনের/
-                 আগের বারের হাজিরার সারি থাকলেই জয়েনের সময়েও দেখাত */
-              <span
+            {k.status === "postponed" && (
+              <div
                 style={{
-                  alignSelf: "center",
                   fontSize: 12.5,
-                  fontWeight: 700,
-                  color: C.gold,
-                  whiteSpace: "nowrap",
+                  color: C.red,
+                  marginTop: 6,
+                  background: C.redBg,
+                  padding: "7px 10px",
+                  borderRadius: 8,
                 }}
               >
-                <Ico e="⏳" /> Teacher is joining, please wait
-              </span>
-            ) : null)}
-          {/* পরিচালক/এডমিন যেকোনো সময় যেকোনো উস্তাদের ক্লাসে ঢুকে দেখতে
-              পারেন। উস্তাদ/শিক্ষার্থীর মতো "জয়েন" নয় — শুধু দেখা, তাই
-              হাজিরার কোনো হিসাবে এটি ঢোকে না (watchClass) */}
-          {isAdm(user) && k.status !== "postponed" && k.zoom && (
-            <>
-              <Btn sm kind="soft" onClick={() => watchClass(k.zoom)}>
-                👁️ Open the 1st link
-              </Btn>
-              {k.zoom2 && (
-                <Btn sm kind="soft" onClick={() => watchClass(k.zoom2)}>
-                  👁️ Open the 2nd link
-                </Btn>
-              )}
-            </>
-          )}
-          {/* ট্রায়াল ক্লাসের উস্তাদ এখান থেকেই মূল্যায়ন লিখতে পারেন —
-              তাঁর আলাদা কোনো পর্দা নেই, তাই ক্লাসের পাশেই */}
-          {k.kind === "Trial Class" &&
-            isTeacherOf &&
-            (kStudents || []).length > 0 && (
-              <Btn
-                sm
-                kind="gold"
-                onClick={() =>
-                  setTrialReportFor({
-                    id: kStudents[0],
-                    name: (k.studentNames || [])[0] || "Trial guest",
-                    trial_course: k.courseId,
-                  })
-                }
+                {withIcons(
+                  "⛔ This class has been postponed due to unavoidable circumstances / the teacher being unwell. A makeup class will be scheduled soon, InshaAllah.",
+                )}
+              </div>
+            )}
+            {isAdm(user) && (teacherLive || liveStudentCount > 0) && (
+              <div
+                style={{
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  color: C.green,
+                  marginTop: 6,
+                  background: C.greenBg,
+                  padding: "5px 10px",
+                  borderRadius: 8,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                }}
               >
-                📋 Evaluation
+                <span className="tqa-live-dot" /> Class in progress — {teacherLive ? "Teacher is in" : "No teacher"}
+                {" · "}
+                {liveStudentCount > 0 ? `${liveStudentCount} student(s) present` : "No students"}
+              </div>
+            )}
+            {isJoined && (
+              <LiveClassPanel
+                k={k}
+                user={user}
+                usingApi={usingApi}
+                onExit={onPanelExit}
+                /* পর্ব শেষ হওয়ার খবর সার্ভারে পৌঁছানোর পর তালিকা আবার আনি —
+                   নইলে উস্তাদের কাছে "🔁 রিজয়েন করুন" অবস্থাটা পুরনোই থেকে যেত */
+                onFinished={loadClasses}
+              />
+            )}
+          </div>
+
+          {/* ── মূল কাজ: জয়েন / রিজয়েন / অপেক্ষা
+              জয়েন (লাল) ও রিজয়েন (সোনালি) — একসাথে কখনো নয়, উস্তাদ ও
+              শিক্ষার্থী কারও কাছেই। যেকোনো মুহূর্তে ঠিক একটিই পথ খোলা থাকে।
+              ১ম (জয়েন) লিংক উস্তাদ সবসময় দেখেন (ডিভাইস/নেট সমস্যায় ফেরার পথ);
+              শিক্ষার্থী দেখেন যতক্ষণ না উস্তাদ রিজয়েন চালু করেন। উস্তাদের জয়েনে
+              আগে হোস্ট-অ্যাকাউন্টের পপআপ, শিক্ষার্থীর জয়েন সরাসরি লিংক।
+              ⚠️ উস্তাদ ইতিমধ্যে জয়েন করে থাকলে (isJoined — রিফ্রেশেও টেকে, সার্ভারের
+              হাজিরা থেকে) বা ১ম পর্ব শেষ হলে (alreadyBothJoined) জয়েন আর নয়,
+              ফেরার পথ রিজয়েন। */}
+          <div className="cls-cta" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", padding: "14px 16px" }}>
+            {isTeacherOf && teacherAction === "join" && (
+              <Btn style={JOIN} onClick={() => confirmJoin(k)}>
+                🎥 Join Zoom
               </Btn>
             )}
-          {isToday && isAdm(user) && k.status !== "postponed" && (
-            <Btn
-              sm
-              kind="soft"
-              onClick={() => notifyAll(k, c, kStudents)}
-            >
-              📨 Notify the teacher and student
-            </Btn>
-          )}
-          {isToday && isAdm(user) && k.status !== "postponed" && (
-            <>
-              {/* পরিচালক/এডমিনের কাছে জয়েন ও রিজয়েন — দুটোই সবসময় পাশাপাশি
-                  থাকে, তাই এক ক্লিকেই যেকোনোটায় যাওয়া যায়। আগে যেটা চালু
-                  থাকত সেটা লুকিয়ে যেত, ফলে দুটো একসাথে দেখা যেত না। এখন
-                  চালু থাকা বাটনটা সোনালি ✓ দিয়ে চেনা যায় — নইলে দুটোই একরকম
-                  দেখানোয় কোনটা এখন চালু তা বোঝার উপায় থাকত না */}
-              <Btn
-                sm
-                kind={k.joinModeOverride === "join" ? "gold" : "soft"}
-                onClick={() => setJoinMode(k, "join")}
-              >
-                {k.joinModeOverride === "join" ? "✓ " : ""}🎥 Force join link on
+            {stillJoinable && k.status !== "postponed" && !isTeacherOf &&
+              !alreadyBothJoined && (
+                <a
+                  href={k.zoom}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => join(k)}
+                  style={{ textDecoration: "none" }}
+                >
+                  <Btn style={JOIN}>🎥 Join Zoom</Btn>
+                </a>
+              )}
+            {/* ⚠️ "জয়েন"-এর ঠিক উল্টো শর্ত — দুটো কখনো একসাথে দেখা যায় না,
+                আবার কোনো অবস্থাতেই দুটোই উধাও হয় না। জয়েন করা অবস্থাতেও
+                দেখানো হয়, কারণ উস্তাদ ক্লাস চলাকালীনই ২য় লিংকে সরে যেতে পারেন। */}
+            {isTeacherOf && teacherAction === "rejoin" && (
+              <Btn kind="gold" style={REJOIN} onClick={() => confirmRejoin(k)}>
+                🔁 Rejoin
               </Btn>
-              <Btn
-                sm
-                kind={k.joinModeOverride === "rejoin" ? "gold" : "soft"}
-                onClick={() => setJoinMode(k, "rejoin")}
-              >
-                {k.joinModeOverride === "rejoin" ? "✓ " : ""}🔁 Force rejoin link on
-              </Btn>
-              {/* "স্বয়ংক্রিয়ে ফিরিয়ে দিন" কেবল একটা আনডু — জোর করে চালু করা
-                  অবস্থাটা এই ক্লাসের জন্যই বাতিল করে। পরের দিনের ক্লাসের জন্য
-                  এটা চাপার দরকার নেই: প্রতিটি ক্লাস আলাদা রেকর্ড, আর নতুন ক্লাস
-                  তৈরির সময় join_mode_override পাঠানোই হয় না (tasks.py), তাই
-                  মডেলের ডিফল্ট "auto"-ই বসে — নতুন দিন নিজে থেকেই স্বয়ংক্রিয় */}
-              {k.joinModeOverride !== "auto" && (
-                <Btn sm kind="soft" onClick={() => setJoinMode(k, "auto")}>
-                  ↩️ Revert to automatic
+            )}
+            {stillJoinable && k.status !== "postponed" && !isTeacherOf &&
+              (alreadyBothJoined ? (
+                <a
+                  href={k.zoom2 || k.zoom}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => join(k)}
+                  style={{ textDecoration: "none" }}
+                >
+                  <Btn kind="gold" style={REJOIN}>🔁 Rejoin</Btn>
+                </a>
+              ) : isJoined && !meetingDone ? (
+                /* রিজয়েন বাটনের জায়গা ধরে রাখে — উস্তাদ রিজয়েন চালু করলে ঠিক
+                   এখানেই "🔁 Rejoin" হয়ে যায়। উস্তাদের সাথে দেখা হয়ে হাজিরা নিশ্চিত
+                   হলে (meetingDone) সরে যায়; জয়েন করার আগে কখনো দেখায় না। */
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#a16207",
+                    background: C.amberBg,
+                    border: "1px solid #f1dfb5",
+                    padding: "8px 12px",
+                    borderRadius: 10,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <Ico e="⏳" /> Teacher is joining, please wait
+                </span>
+              ) : null)}
+            {/* ট্রায়াল ক্লাসের উস্তাদ এখান থেকেই মূল্যায়ন লিখতে পারেন —
+                তাঁর আলাদা কোনো পর্দা নেই, তাই ক্লাসের পাশেই */}
+            {k.kind === "Trial Class" &&
+              isTeacherOf &&
+              (kStudents || []).length > 0 && (
+                <Btn
+                  sm
+                  kind="gold"
+                  onClick={() =>
+                    setTrialReportFor({
+                      id: kStudents[0],
+                      name: (k.studentNames || [])[0] || "Trial guest",
+                      trial_course: k.courseId,
+                    })
+                  }
+                >
+                  📋 Evaluation
                 </Btn>
               )}
-            </>
-          )}
-          {isDir(user) && !isJoined && (
-            <Btn sm kind="soft" onClick={() => setAttnMark(k)}>
-              ✋ Attendance
-            </Btn>
-          )}
-          {isAdm(user) && (
+          </div>
+        </div>
+
+        {/* ── পরিচালক/এডমিনের টুলবার — নিয়ন্ত্রণগুলো জয়েনের বোতাম থেকে আলাদা */}
+        {isAdm(user) && (
+          <div
+            className="cls-tools"
+            style={{
+              display: "flex",
+              gap: 6,
+              flexWrap: "wrap",
+              alignItems: "center",
+              padding: "10px 14px",
+              borderTop: `1px solid ${C.line}`,
+              background: "#fafcfb",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: C.muted,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                marginRight: 4,
+              }}
+            >
+              Manage
+            </span>
+            {/* পরিচালক/এডমিন যেকোনো সময় যেকোনো উস্তাদের ক্লাসে ঢুকে দেখতে
+                পারেন — শুধু দেখা, হাজিরার কোনো হিসাবে ঢোকে না (watchClass) */}
+            {k.status !== "postponed" && k.zoom && (
+              <>
+                <Btn sm kind="soft" onClick={() => watchClass(k.zoom)}>
+                  👁️ 1st link
+                </Btn>
+                {k.zoom2 && (
+                  <Btn sm kind="soft" onClick={() => watchClass(k.zoom2)}>
+                    👁️ 2nd link
+                  </Btn>
+                )}
+              </>
+            )}
+            {isToday && k.status !== "postponed" && (
+              <Btn sm kind="soft" onClick={() => notifyAll(k, c, kStudents)}>
+                📨 Notify teacher & student
+              </Btn>
+            )}
+            {isToday && k.status !== "postponed" && (
+              <>
+                {/* জয়েন ও রিজয়েন — দুটোই সবসময় পাশাপাশি; চালু থাকাটা সোনালি ✓ দিয়ে
+                    চেনা যায়। "Revert" কেবল এই ক্লাসের জোর-করা অবস্থা বাতিল করে —
+                    নতুন ক্লাস তৈরিতে join_mode_override পাঠানোই হয় না (tasks.py),
+                    তাই নতুন দিন নিজে থেকেই স্বয়ংক্রিয় */}
+                <Btn
+                  sm
+                  kind={k.joinModeOverride === "join" ? "gold" : "soft"}
+                  onClick={() => setJoinMode(k, "join")}
+                >
+                  {k.joinModeOverride === "join" ? "✓ " : ""}🎥 Force join link
+                </Btn>
+                <Btn
+                  sm
+                  kind={k.joinModeOverride === "rejoin" ? "gold" : "soft"}
+                  onClick={() => setJoinMode(k, "rejoin")}
+                >
+                  {k.joinModeOverride === "rejoin" ? "✓ " : ""}🔁 Force rejoin link
+                </Btn>
+                {k.joinModeOverride !== "auto" && (
+                  <Btn sm kind="soft" onClick={() => setJoinMode(k, "auto")}>
+                    ↩️ Revert to automatic
+                  </Btn>
+                )}
+              </>
+            )}
+            {isDir(user) && !isJoined && (
+              <Btn sm kind="soft" onClick={() => setAttnMark(k)}>
+                ✋ Attendance
+              </Btn>
+            )}
             <Btn sm kind="soft" onClick={() => startEdit(k)}>
               ✏️ Edit
             </Btn>
-          )}
-          {isDir(user) && (
-            <Btn sm kind="danger" onClick={() => delClass(k.id)}>
-              Delete
-            </Btn>
-          )}
-          {k.status === "upcoming" && isAdm(user) && (
-            <Btn sm kind="danger" onClick={() => postponeOne(k)}>
-              ⛔ Postpone
-            </Btn>
-          )}
-          {k.status === "postponed" && (
-            <Tag color={C.red} bg={C.redBg}>
-              {T("⛔ স্থগিত", "⛔ Postponed")}
-            </Tag>
-          )}
-          {/* উস্তাদ শেষ করেছেন, কিন্তু কর্তৃপক্ষের যাচাই এখনো বাকি — তাই
-              ক্লাসটি আজকের তালিকাতেই আছে, শুধু এই চিহ্নটি নিয়ে */}
-          {k.teacherFinished && k.status !== "done" && (
-            <Tag color={C.green} bg={C.greenBg}>
-              {T("✅ ক্লাস সম্পন্ন — যাচাই বাকি", "✅ Class completed — awaiting review")}
-            </Tag>
-          )}
-          {(() => {
-            // আজকের ক্লাস এডমিন/পরিচালক কেউ "Completed" চিহ্নিত না করলে সময় পার হয়ে
-            // "বিগত"-এ চলে যাওয়ার পরও status="upcoming"-ই থেকে যায় — তখন সেটাকে
-            // "আসন্ন" (যা এখন আর সত্যি না) না বলে "অসম্পন্ন" দেখানো হচ্ছে
-            // ⚠️ উস্তাদ শেষ করে দিলে সেটা "অসম্পন্ন" নয় — শুধু কর্তৃপক্ষের
-            // যাচাই বাকি। নইলে পুরনো দিনের যাচাই-না-হওয়া ক্লাসে একসাথে
-            // "✅ ক্লাস সম্পন্ন — যাচাই বাকি" আর লাল "অসম্পন্ন" দুটোই দেখাত
-            const incomplete =
-              k.status === "upcoming" && localDate(k) < tdy && !k.teacherFinished;
-            // উস্তাদ শেষ করেছেন, কর্তৃপক্ষের যাচাই এখনো বাকি
-            const awaitingReview = k.teacherFinished && k.status !== "done";
-            // আজকের ক্লাস "Completed" চিহ্নিত করা এডমিন+পরিচালক দুজনেই পারবেন, কিন্তু
-            // বিগত (পুরনো) ক্লাসের স্ট্যাটাস সংশোধন কেবল পরিচালকের এখতিয়ার
-            const canEditStatus = localDate(k) === tdy ? isAdm(user) : isDir(user);
-            if (!joinable && localDate(k) <= tdy && canEditStatus && k.status !== "postponed") {
-              return (
+            {k.status === "upcoming" && (
+              <Btn sm kind="soft" style={{ color: C.red, borderColor: "#efc6bb" }} onClick={() => postponeOne(k)}>
+                ⛔ Postpone
+              </Btn>
+            )}
+            {showStatusSelect && (
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, color: "#475569" }}>
+                Status
                 <select
                   style={{ ...S.input, width: "auto", padding: "6px 10px", fontSize: 12.5 }}
                   /* উস্তাদ শেষ করেছেন অথচ যাচাই বাকি — এটা কোনো স্ট্যাটাস নয়,
@@ -3771,41 +3884,23 @@ function ClassesView({
                 >
                   {awaitingReview && (
                     <option value="review" disabled>
-                      {T("যাচাই বাকি", "Awaiting review")}
+                      Awaiting review
                     </option>
                   )}
                   <option value="upcoming">
-                    {awaitingReview
-                      ? T("আবার চালু করুন", "Reopen class")
-                      : incomplete
-                        ? T("অসম্পন্ন", "Incomplete")
-                        : T("আসন্ন", "Upcoming")}
+                    {awaitingReview ? "Reopen class" : incomplete ? "Incomplete" : "Upcoming"}
                   </option>
-                  <option value="done">{T("Completed", "Done")}</option>
+                  <option value="done">Done</option>
                 </select>
-              );
-            }
-            // উস্তাদ শেষ করেছেন অথচ যাচাই বাকি — এই অবস্থায় উপরে
-            // "✅ ক্লাস সম্পন্ন — যাচাই বাকি" ট্যাগটাই আছে, তাই এখানে আবার
-            // একই কথা লেখা হয় না। কিন্তু যাচাই হয়ে গেলে ওই ট্যাগটা সরে যায়,
-            // তখন এখানে "Completed" দেখাতেই হবে — নইলে কোনো চিহ্নই থাকত না।
-            if (!joinable && k.status !== "postponed" && !awaitingReview) {
-              return (
-                <Tag
-                  color={k.status === "done" ? C.green : incomplete ? C.red : C.blue}
-                  bg={k.status === "done" ? C.greenBg : incomplete ? C.redBg : C.blueBg}
-                >
-                  {k.status === "done"
-                    ? T("Completed", "Done")
-                    : incomplete
-                      ? T("অসম্পন্ন", "Incomplete")
-                      : T("আসন্ন", "Upcoming")}
-                </Tag>
-              );
-            }
-            return null;
-          })()}
-        </div>
+              </label>
+            )}
+            {isDir(user) && (
+              <Btn sm kind="danger" style={{ marginLeft: "auto" }} onClick={() => delClass(k.id)}>
+                🗑 Delete
+              </Btn>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -3854,8 +3949,19 @@ function ClassesView({
           </Btn>
         </div>
       )}
+      <style>{`
+        .cls-card{transition:box-shadow .15s}
+        .cls-card:hover{box-shadow:0 2px 4px rgba(16,34,24,.05),0 12px 28px rgba(16,34,24,.08) !important}
+        @media(max-width:600px){
+          .cls-cta{width:100%;padding:0 14px 14px !important}
+          .cls-cta > *{flex:1 1 auto}
+          .cls-cta a > button,.cls-cta > button{width:100%;justify-content:center}
+        }
+        @keyframes tqaLive{0%{box-shadow:0 0 0 0 rgba(192,57,43,.55)}70%{box-shadow:0 0 0 7px rgba(192,57,43,0)}100%{box-shadow:0 0 0 0 rgba(192,57,43,0)}}
+        .tqa-live-dot{width:8px;height:8px;border-radius:50%;background:#e74c3c;animation:tqaLive 1.6s infinite;display:inline-block}
+      `}</style>
       <Section
-        title={T("আজকের ক্লাস", "Today's Classes")}
+        title={<>Today's Classes <CountPill n={today.length} /></>}
         sub={T(
           "সময় হলে এক ক্লিকে জুম মিটিং খুলে যাবে · কমপক্ষে ২০ মিনিট থাকলে হাজিরা গণ্য হয়, তবে পুরো ৪৫ মিনিট ক্লাস করাই কাম্য",
           "The Zoom meeting opens with one click when it's time · Attendance counts from 20 minutes, but staying the full 45 is what we expect",
@@ -3868,37 +3974,36 @@ function ClassesView({
       >
         <div style={{ display: "grid", gap: 10 }}>
           {!classesLoading && today.length === 0 && (
-            <div style={{ ...S.card, textAlign: "center", color: C.muted }}>
-              {T("আজ কোনো ক্লাস নেই।", "No classes today.")}
-            </div>
+            <EmptyState icon="🎥" title="No classes today" text="Your next classes are listed below." />
           )}
           {today.map((k) => Row(k, user.role === "teacher" || user.role === "student", true))}
         </div>
       </Section>
       <Section
-        title={T("আসন্ন ক্লাস", "Upcoming Classes")}
+        title={<>Upcoming Classes <CountPill n={upcoming.length} /></>}
         sub={T("সামনের ৭ দিনের ক্লাস", "Classes in the next 7 days")}
       >
         <div style={{ display: "grid", gap: 10 }}>
           {classesLoading ? (
             <Loader text={T("Loading", "Loading")} />
           ) : upcoming.length === 0 ? (
-            <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
-              {T("কিছু নেই", "Nothing yet")}
-            </div>
+            <EmptyState icon="📅" title="Nothing scheduled yet" text="Classes for the next 7 days will appear here." />
           ) : (
             upcoming.map((k) => Row(k, false))
           )}
         </div>
       </Section>
       <Section
-        title={T("বিগত ক্লাস", "Past Classes")}
+        title={<>Past Classes <CountPill n={past.length} /></>}
         sub={T(
           "গত ৩ দিনের হিস্টরি — পুরনো ক্লাসের তথ্য ডাটাবেসে সংরক্ষিতই থাকে, শুধু এখানে কম দেখানো হয়",
           "Last 3 days of history — older class records stay saved in the database, just not shown here",
         )}
       >
         <div style={{ display: "grid", gap: 10 }}>
+          {!classesLoading && past.length === 0 && (
+            <EmptyState icon="🕐" title="No classes in the last 3 days" />
+          )}
           {past.map((k) => Row(k, false))}
         </div>
       </Section>
@@ -13124,6 +13229,14 @@ const shiftISO = (iso, n) => {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 };
+// "14:05" → { t: "2:05", ap: "PM" } — ক্লাসের সময় বড় করে দেখাতে
+const fmt12 = (hhmm) => {
+  const [h, m] = String(hhmm || "0:0").split(":").map(Number);
+  return { t: `${h % 12 || 12}:${String(m || 0).padStart(2, "0")}`, ap: h < 12 ? "AM" : "PM" };
+};
+// "2026-11-22" → "Sun, 22 Nov"
+const shortDay = (iso) =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 // "Europe/London" → "London" — সময়ের পাশে ছোট করে বলয় দেখাতে
 const zoneCity = (zone) => zone.split("/").pop().replace(/_/g, " ");
 
