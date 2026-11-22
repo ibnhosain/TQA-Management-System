@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { api, approvalsApi, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
 // ইমোজির বদলে আসল আইকন — বিস্তারিত icons.jsx-এ
 import { Ico, withIcons, NAV_ICON } from "./icons";
-import { ALargeSmall, LogOut, ChevronRight } from "lucide-react";
+import { ALargeSmall, LogOut, ChevronRight, Play, ChevronUp, ChevronDown } from "lucide-react";
 // লেকচারের স্লাইড — Lesson Plan-এ টপিকে ক্লিক করলে চলে (আলাদা মেনু নেই; মালিকের নির্দেশ ২০২৬-১১-১৭)
 const PlanPlayer = lazy(() => import("./decks/PlanPlayer.jsx"));
 const SettingsView = lazy(() => import("./decks/SettingsView.jsx"));   // পরিচালকের Settings — চালু/বন্ধ
@@ -1160,6 +1160,33 @@ const CountPill = ({ n }) => (
     {n}
   </span>
 );
+/* বৃত্তাকার অগ্রগতি — মাঝে শতাংশ */
+const ProgressRing = ({ pct = 0, size = 72, stroke = 8, color = C.emerald }) => {
+  const r = (size - stroke) / 2;
+  const len = 2 * Math.PI * r;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${pct}% done`}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e6eee9" strokeWidth={stroke} />
+      {pct > 0 && (
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={`${(len * Math.min(100, Math.max(0, pct))) / 100} ${len}`}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{ transition: "stroke-dasharray .5s" }}
+      />
+      )}
+      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" fontSize={size * 0.24} fontWeight="700" fill={C.text}>
+        {pct}%
+      </text>
+    </svg>
+  );
+};
 /* ধাপে-ধাপে ফর্মের একেকটি অংশ — নম্বরসহ শিরোনাম, নিচে রেখা */
 const FormStep = ({ n, title, last, children }) => (
   <div style={{ padding: "18px 20px", borderBottom: last ? "none" : `1px solid ${C.line}` }}>
@@ -5610,6 +5637,12 @@ function LecturePlan({ db, courses, user, refresh }) {
      কভারের টিক প্রতি শিক্ষার্থীর আলাদা, আগের মতোই। */
   const T = (_bnText, enText) => enText;
   const [sel, setSel] = useState(courses[0]?.id);
+  // ⚠️ কোর্স-তালিকা প্রায়ই পাতা খোলার পরে আসে — তখন প্রথম কোর্সটি বেছে নিই,
+  // নইলে কোনো কোর্স বাছা থাকত না আর পাতা "0 topics" দেখাত
+  useEffect(() => {
+    if (courses.length && !courses.some((c) => String(c.id) === String(sel))) setSel(courses[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courses]);
   /* কোন পরিকল্পনাটি দেখা/সাজানো হচ্ছে — নিয়মিত, নাকি ট্রায়াল অতিথিদের জন্য
      পরিচালকের আলাদা করে সাজানো ছোট পরিকল্পনা। ট্যাবটা কেবল পরিচালকের কাছে;
      উস্তাদ ও শিক্ষার্থীর পর্দা হুবহু আগের মতোই থাকে। */
@@ -5845,30 +5878,25 @@ function LecturePlan({ db, courses, user, refresh }) {
 
   return (
     <Section
-      title={T("দৈনিক পাঠ পরিকল্পনা ও টপিক কভারেজ", "Daily Lesson Plan & Topic Coverage")}
-      sub={T(
-        "বিষয় অনুযায়ী হেডিং · প্রতিটির নিচে টপিক · কভার করা ✔ সবুজ · বাদ পড়া ✘ লাল",
-        "Topics grouped by subject · covered ✔ green · missed ✘ red",
-      )}
+      title={user.role === "student" ? "My Lessons" : "Daily Lesson Plan & Topic Coverage"}
+      sub={
+        user.role === "student"
+          ? "Your lessons by heading — tap a topic to play its slides · covered ✔ green · missed ✘ red"
+          : "Topics grouped by heading · tap a topic to play its slides · covered ✔ green · missed ✘ red"
+      }
       action={isDir(user) && <Btn onClick={addSection}>+ Add heading</Btn>}
     >
       {isDir(user) && (
         <div style={{ marginBottom: 14 }}>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Btn
-              sm
-              kind={trialTab ? "soft" : "primary"}
-              onClick={() => setTrialTab(false)}
-            >
-              Regular lesson plan
-            </Btn>
-            <Btn
-              sm
-              kind={trialTab ? "gold" : "soft"}
-              onClick={() => setTrialTab(true)}
-            >
-              🌱 Trial lesson plan
-            </Btn>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <div className="tqa-seg" role="tablist" aria-label="Which lesson plan">
+              <button className={trialTab ? "" : "on"} onClick={() => setTrialTab(false)}>
+                {withIcons("📖 Regular lesson plan")}
+              </button>
+              <button className={trialTab ? "on gold" : ""} onClick={() => setTrialTab(true)}>
+                {withIcons("🌱 Trial lesson plan")}
+              </button>
+            </div>
             {!trialTab && (
               <Btn
                 sm
@@ -5920,14 +5948,10 @@ function LecturePlan({ db, courses, user, refresh }) {
       )}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         {courses.map((c) => (
-          <Btn
-            key={c.id}
-            sm
-            kind={sel === c.id ? "primary" : "soft"}
-            onClick={() => setSel(c.id)}
-          >
+          <button key={c.id} className={"tqa-pilltab" + (sel === c.id ? " on" : "")} onClick={() => setSel(c.id)}>
+            <span className="dot" style={{ background: c.color || C.emerald }} />
             {c.name}
-          </Btn>
+          </button>
         ))}
       </div>
 
@@ -5935,16 +5959,17 @@ function LecturePlan({ db, courses, user, refresh }) {
       {user.role === "teacher" && (
         <div
           style={{
-            padding: "9px 14px",
-            background: C.amberBg,
-            borderRadius: 10,
-            border: `1px solid ${C.goldL}`,
-            marginBottom: 10,
-            fontSize: 12.5,
+            padding: "10px 14px",
+            background: "linear-gradient(90deg, #fffaf0, #fff)",
+            borderRadius: 12,
+            border: "1px solid #f1dfb5",
+            borderLeft: `4px solid ${C.gold}`,
+            marginBottom: 12,
+            fontSize: 13,
             color: C.text,
           }}
         >
-          <Ico e="📋" /> <b style={{ color: C.gold }}>Today's class topics</b> — showing the topics the director has set for today.
+          <Ico e="📋" style={{ color: C.gold }} /> <b>Today's class topics</b> — showing the topics the director has set for today.
           {allTopics.length === 0 && (
             <span style={{ color: C.muted, marginLeft: 6 }}>
               (no topic assigned yet)
@@ -5963,20 +5988,13 @@ function LecturePlan({ db, courses, user, refresh }) {
           flexWrap: "wrap",
         }}
       >
+        <ProgressRing pct={pct} />
         <div style={{ flex: 1, minWidth: 180 }}>
-          <div style={{ fontWeight: 800 }}>{course.name}</div>
+          <div style={{ fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>{course.name}</div>
           <div style={S.sub}>
-            {T(`মোট টপিক: ${bn(allTopics.length)}`, `Total topics: ${allTopics.length}`)}
+            {allTopics.length} topics · {sections.length} headings
           </div>
-        </div>
-        <div style={{ minWidth: 200, flex: 1 }}>
-          <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>
-            {T(
-              `অগ্রগতি — ${bn(pct)}% (${bn(done)}/${bn(allTopics.length)})`,
-              `Progress — ${pct}% (${done}/${allTopics.length})`,
-            )}
-          </div>
-          <div style={{ height: 10, background: C.cream, borderRadius: 99 }}>
+          <div style={{ height: 8, background: "#e6eee9", borderRadius: 99, marginTop: 8, maxWidth: 420 }}>
             <div
               style={{
                 width: pct + "%",
@@ -5987,6 +6005,18 @@ function LecturePlan({ db, courses, user, refresh }) {
               }}
             />
           </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {[
+            ["Covered", done, C.green, C.greenBg],
+            ["Missed", allTopics.filter((t) => t.covered === "missed").length, C.red, C.redBg],
+            ["Remaining", allTopics.filter((t) => t.covered !== "covered" && t.covered !== "missed").length, "#475569", "#f1f5f3"],
+          ].map(([l, n, col, bg]) => (
+            <div key={l} style={{ textAlign: "center", padding: "8px 14px", borderRadius: 12, background: bg, minWidth: 82 }}>
+              <div style={{ fontSize: 19, fontWeight: 700, color: col, letterSpacing: "-0.02em" }}>{n}</div>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: "#475569" }}>{l}</div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -5999,16 +6029,33 @@ function LecturePlan({ db, courses, user, refresh }) {
             alignItems: "center",
             gap: 10,
             flexWrap: "wrap",
-            padding: "9px 14px",
+            padding: "10px 14px",
             borderRadius: 12,
-            background: C.greenBg,
-            border: `1.5px solid ${C.emerald}`,
-            marginBottom: 10,
+            background: "#f1f8f4",
+            border: `1px solid #cfe3d6`,
+            borderLeft: `4px solid ${C.emerald}`,
+            marginBottom: 12,
             fontSize: 13,
           }}
         >
-          <span style={{ fontWeight: 800, color: C.emerald }}><Ico e="👤" /> Ticking for:</span>
-          <span style={{ fontWeight: 800 }}>{forStudent.name}</span>
+          <span
+            aria-hidden="true"
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: "50%",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 12,
+              fontWeight: 700,
+              color: "#fff",
+              background: `linear-gradient(135deg, ${C.emeraldL}, ${C.emeraldD})`,
+            }}
+          >
+            {String(forStudent.name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}
+          </span>
+          <span style={{ fontWeight: 600, color: "#475569" }}>Ticking for</span>
+          <span style={{ fontWeight: 700 }}>{forStudent.name}</span>
           {forStudent.student_id && (
             <span style={{ color: C.muted, fontSize: 12 }}>({forStudent.student_id})</span>
           )}
@@ -6094,66 +6141,90 @@ function LecturePlan({ db, courses, user, refresh }) {
 
       {loading && <Loader text={T("Loading", "Loading")} />}
       {!loading && sections.length === 0 && (
-        <div style={{ ...S.card, textAlign: "center", color: C.muted, padding: 28 }}>
-          {withIcons(T(
-            "📋 এই কোর্সের দারস পরিকল্পনা এখনো তৈরি হয়নি।",
-            "📋 The lesson plan for this course hasn't been created yet.",
-          ))}
-        </div>
+        <EmptyState
+          icon="📋"
+          title="No lesson plan yet"
+          text="The lesson plan for this course hasn't been created yet."
+          action={isDir(user) && <Btn sm onClick={addSection}>+ Add heading</Btn>}
+        />
       )}
 
       {/* ── হেডিং ধরে টপিক ── */}
       <div style={{ display: "grid", gap: 14 }}>
         {sections.map((sec, si) => (
           <div key={sec.id} style={{ ...S.card, padding: 0, overflow: "hidden" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                flexWrap: "wrap",
-                padding: "10px 14px",
-                background: `linear-gradient(135deg, ${C.emeraldD}, ${C.emerald})`,
-                color: "#fff",
-              }}
-            >
-              <span style={{ fontWeight: 800, fontSize: 15, flex: 1, minWidth: 140 }}>
-                {withIcons(sec.lock ? "🔒 " : "")}{sec.name}
-                {sec.lock && (
-                  <span style={{ fontWeight: 600, fontSize: 12, opacity: 0.85, marginLeft: 8 }}>{sec.lock}</span>
-                )}
-              </span>
-              <span
-                style={{
-                  background: "rgba(255,255,255,.18)",
-                  borderRadius: 99,
-                  fontSize: 11.5,
-                  fontWeight: 800,
-                  padding: "2px 9px",
-                }}
-              >
-                {T(bn((sec.topics || []).length), (sec.topics || []).length)}
-              </span>
-              {isDir(user) && (
-                <>
-                  <Btn sm kind="soft" onClick={() => openTopicEditor(sec)}>
-                    ✏️ Topics
-                  </Btn>
-                  <Btn sm kind="soft" onClick={() => renameSection(sec)}>
-                    Name
-                  </Btn>
-                  <Btn sm kind="soft" onClick={() => moveSection(si, -1)}>
-                    ▲
-                  </Btn>
-                  <Btn sm kind="soft" onClick={() => moveSection(si, 1)}>
-                    ▼
-                  </Btn>
-                  <Btn sm kind="danger" onClick={() => delSection(sec)}>
-                    🗑
-                  </Btn>
-                </>
-              )}
-            </div>
+            {(() => {
+              const tps = sec.topics || [];
+              const cov = tps.filter((t) => t.covered === "covered").length;
+              const secPct = tps.length ? Math.round((cov / tps.length) * 100) : 0;
+              const lecNo = /lecture\s*(\d+)/i.exec(sec.name || "")?.[1];
+              return (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    padding: "12px 14px",
+                    background: "#f6f9f7",
+                    borderBottom: `1px solid ${C.line}`,
+                    borderLeft: `4px solid ${sec.lock ? "#cbd5d0" : C.emerald}`,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      flexShrink: 0,
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: lecNo ? 15 : 13,
+                      fontWeight: 700,
+                      color: "#fff",
+                      background: sec.lock ? "#94a3b8" : `linear-gradient(135deg, ${C.emeraldL}, ${C.emeraldD})`,
+                    }}
+                  >
+                    {sec.lock ? <Ico e="🔒" size={16} style={{ verticalAlign: 0 }} /> : lecNo || si + 1}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 150 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15.5, letterSpacing: "-0.01em" }}>{sec.name}</div>
+                    <div style={{ fontSize: 12.5, color: C.muted, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 2 }}>
+                      <span>
+                        {cov}/{tps.length} covered
+                      </span>
+                      <span style={{ width: 70, height: 5, borderRadius: 99, background: "#e1e9e4", display: "inline-block", overflow: "hidden" }}>
+                        <span style={{ display: "block", width: `${secPct}%`, height: "100%", background: C.green }} />
+                      </span>
+                      {sec.lock && (
+                        <span style={{ color: "#a16207", fontWeight: 600 }}>
+                          <Ico e="🔒" /> {sec.lock}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {isDir(user) && (
+                    <span style={{ display: "inline-flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                      <Btn sm kind="soft" onClick={() => openTopicEditor(sec)}>
+                        ✏️ Topics
+                      </Btn>
+                      <Btn sm kind="soft" onClick={() => renameSection(sec)}>
+                        Rename
+                      </Btn>
+                      <Btn sm kind="soft" title="Move up" onClick={() => moveSection(si, -1)} style={{ padding: "7px 8px" }}>
+                        <ChevronUp size={15} aria-hidden="true" />
+                      </Btn>
+                      <Btn sm kind="soft" title="Move down" onClick={() => moveSection(si, 1)} style={{ padding: "7px 8px" }}>
+                        <ChevronDown size={15} aria-hidden="true" />
+                      </Btn>
+                      <Btn sm kind="danger" title="Delete heading" onClick={() => delSection(sec)} style={{ padding: "7px 9px" }}>
+                        🗑
+                      </Btn>
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
 
             <div style={{ padding: 12, display: "grid", gap: 6 }}>
               {(sec.topics || []).length === 0 ? (
@@ -6177,33 +6248,50 @@ function LecturePlan({ db, courses, user, refresh }) {
                           display: "flex",
                           alignItems: "center",
                           gap: 10,
-                          padding: "9px 12px",
-                          borderRadius: 10,
+                          padding: "10px 12px",
+                          borderRadius: 12,
                           opacity: sec.lock ? 0.55 : 1,
                           flexWrap: "wrap",
                           // todayPlanMode চালু থাকলে আজকের পাঠ হলে সোনালি, কভার হলে সবুজ, বাদ পড়লে লাল, বাকি থাকলে সাদা
-                          background: todayPlanMode && isToday ? C.amberBg : isDone ? C.greenBg : isMissed ? C.redBg : "#fff",
-                          border: `1.5px solid ${
-                            todayPlanMode && isToday ? C.gold : isDone ? C.green : isMissed ? C.red : C.line
+                          background: todayPlanMode && isToday ? C.amberBg : isDone ? "#f1faf4" : isMissed ? "#fff6f4" : "#fff",
+                          border: `1px solid ${
+                            todayPlanMode && isToday ? C.gold : isDone ? "#bfe1cb" : isMissed ? "#f3c7bd" : C.line
                           }`,
                         }}
+                        className="lp-topic"
                       >
-                        <span style={{ color: C.emerald, fontWeight: 800, fontSize: 13, width: 14 }}>{withIcons(sec.lock ? "🔒" : "▶")}</span>
                         <span
+                          aria-hidden="true"
                           style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: 6,
+                            width: 28,
+                            height: 28,
+                            borderRadius: "50%",
+                            flexShrink: 0,
+                            display: "grid",
+                            placeItems: "center",
+                            background: sec.lock ? "#e2e8e4" : "#e9f3ed",
+                            color: sec.lock ? "#94a3b8" : C.emerald,
+                          }}
+                        >
+                          {sec.lock ? <Ico e="🔒" size={14} style={{ verticalAlign: 0 }} /> : <Play size={13} strokeWidth={2.6} fill="currentColor" />}
+                        </span>
+                        <span
+                          title={isDone ? "Covered" : isMissed ? "Missed" : "Not yet"}
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: "50%",
+                            flexShrink: 0,
                             display: "grid",
                             placeItems: "center",
                             fontWeight: 900,
                             fontSize: 13,
-                            background: "#fff",
-                            color: isDone ? C.green : isMissed ? C.red : C.muted,
-                            border: `1.5px solid ${isDone ? C.green : isMissed ? C.red : C.line}`,
+                            background: isDone ? C.green : isMissed ? C.red : "#fff",
+                            color: isDone || isMissed ? "#fff" : "#94a3b8",
+                            border: `1.5px solid ${isDone ? C.green : isMissed ? C.red : "#cbd5d0"}`,
                           }}
                         >
-                          {withIcons(isDone ? "✔" : isMissed ? "✘" : "–")}
+                          {withIcons(isDone ? "✔" : isMissed ? "✘" : "–", { size: 13, style: { verticalAlign: 0 } })}
                         </span>
                         <span
                           style={{
@@ -6211,8 +6299,9 @@ function LecturePlan({ db, courses, user, refresh }) {
                             minWidth: 140,
                             // টগলের শিরোনাম H2-এর মতো বড় ও মোটা — খুলে না
                             // দেখেও তালিকা এক নজরে পড়া যায়
-                            fontSize: 18.5,
-                            fontWeight: 800,
+                            fontSize: 17.5,
+                            fontWeight: 700,
+                            letterSpacing: "-0.01em",
                             lineHeight: 1.45,
                             color: isMissed ? C.red : C.text,
                           }}
@@ -27436,6 +27525,18 @@ export default function App() {
         .tqa-tr:hover td{background:#eef6f1}
         *{scrollbar-width:thin;scrollbar-color:#c5d3ca transparent}
         ::-webkit-scrollbar{width:10px;height:10px} ::-webkit-scrollbar-thumb{background:#c5d3ca;border-radius:99px;border:3px solid transparent;background-clip:content-box}
+        .lp-topic{transition:box-shadow .15s,transform .15s}
+        .lp-topic:hover{box-shadow:0 6px 16px rgba(16,34,24,.08);transform:translateY(-1px)}
+        .tqa-seg{display:inline-flex;flex-wrap:wrap;background:#eef3f0;border:1px solid ${C.line};border-radius:12px;padding:3px;gap:2px}
+        .tqa-seg button{border:none;background:transparent;padding:7px 13px;border-radius:9px;font:inherit;font-size:13px;font-weight:600;color:#475569;cursor:pointer}
+        .tqa-seg button:hover{color:${C.emeraldD};filter:none}
+        .tqa-seg button.on{background:#fff;color:${C.emeraldD};box-shadow:0 1px 3px rgba(16,34,24,.14)}
+        .tqa-seg button.on.gold{background:${C.gold};color:#fff}
+        .tqa-pilltab{display:inline-flex;align-items:center;gap:8px;border:1px solid ${C.line};background:#fff;border-radius:999px;padding:7px 14px;
+          font:inherit;font-size:13px;font-weight:600;color:#334155;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+        .tqa-pilltab:hover{border-color:#b9d3c3;filter:none}
+        .tqa-pilltab.on{border-color:${C.emeraldL};background:#eef7f1;color:${C.emeraldD};box-shadow:0 0 0 3px rgba(42,122,80,.12)}
+        .tqa-pilltab .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
         @keyframes tqaFade{from{opacity:0}to{opacity:1}}
         @media(max-width:560px){.tqa-stats{grid-template-columns:1fr 1fr !important}
           .tqa-stats .tqa-stat{flex-direction:column;align-items:flex-start !important;gap:10px !important;padding:14px !important}}
