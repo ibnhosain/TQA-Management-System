@@ -26674,73 +26674,98 @@ export default function App() {
 
       <div style={{ display: "flex", maxWidth: 1280, margin: "0 auto" }}>
         {/* সাইডবার */}
+        {/* ⚠️ মালিকের নির্দেশ (২০২৬-১১-২২): মেনুর লেখা বড়, কিন্তু কখনো দুই লাইনে নয়;
+            সবুজের উপর ফ্যাকাসে লেখা পড়তে কষ্ট হতো — তাই সাদা মেনু, গাঢ় লেখা, সবুজ আইকন।
+            সবচেয়ে লম্বা নাম ("Teacher Report & Payment") যেন এক লাইনে ধরে — সেই মাপে প্রস্থ;
+            তবু কোনোদিন না ধরলে "…" হয়ে কাটে, ভেঙে দুই লাইনে যায় না। */}
+        <style>{`
+          .tqa-nav:not(.on):hover{background:#f1f7f3 !important;color:${C.emeraldD} !important}
+          .tqa-nav:not(.on):hover .tqa-nav-ico{color:${C.emerald} !important}
+          @media(max-width:900px){.tqa-side{box-shadow:8px 0 30px rgba(18,63,40,.18)}}
+        `}</style>
         <aside
           className="tqa-side"
           style={{
-            width: 232,
+            width: 286,
+            maxWidth: "86vw", // খুব ছোট ফোনে ড্রয়ার যেন পুরো পর্দা না ঢাকে
+            scrollbarWidth: "thin",
             flexShrink: 0,
-            background: `linear-gradient(180deg, ${C.emeraldD}, ${C.emerald})`,
+            background: "#fff",
+            borderRight: `1px solid ${C.line}`,
             minHeight: "calc(100vh - 57px)",
-            padding: "16px 10px",
+            padding: "14px 10px",
             overflowY: "auto",
           }}
         >
-          {nav.map((n) => (
-            <button
-              key={n.id}
-              onClick={() => {
-                // নামাজ শিক্ষা অ্যাপের ভেতরে নয় — আলাদা লুকানো পেজে খোলে (লগইন ছাড়া চলে না)
-                if (n.id === "salah") { window.location.assign("/salah-learn"); return; }
-                setView(n.id);
-                setMenu(false);
-              }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                width: "100%",
-                border: "none",
-                cursor: "pointer",
-                textAlign: "left",
-                fontFamily: "inherit",
-                fontSize: 13.5,
-                fontWeight: 600,
-                padding: "10px 14px",
-                borderRadius: 12,
-                marginBottom: 4,
-                background:
-                  view === n.id ? "rgba(255,255,255,.14)" : "transparent",
-                color: view === n.id ? C.goldL : "#d7e9de",
-                borderLeft:
-                  view === n.id
-                    ? `3px solid ${C.gold}`
-                    : "3px solid transparent",
-              }}
-            >
-              {/* শিক্ষার্থীর কাছে কোনো কোনো পাতা অন্য নামে পরিচিত */}
-              <span style={{ display: "grid", placeItems: "center", width: 20, flexShrink: 0 }}>
-                {(() => {
-                  const NI =
-                    (user.role === "student" && NAV_ICON[n.id + "Student"]) || NAV_ICON[n.id];
-                  return NI ? (
-                    <Ico as={NI} size={18} strokeWidth={2} style={{ verticalAlign: 0 }} />
+          {nav.map((n) => {
+            const on = view === n.id;
+            // শিক্ষার্থীর কাছে কোনো কোনো পাতা অন্য নামে পরিচিত
+            const label =
+              user.role === "student"
+                ? n.studentLabelEn || n.labelEn || n.label
+                : n.labelEn || n.label;
+            const NI = (user.role === "student" && NAV_ICON[n.id + "Student"]) || NAV_ICON[n.id];
+            return (
+              <button
+                key={n.id}
+                className={"tqa-nav" + (on ? " on" : "")}
+                title={label}
+                onClick={() => {
+                  // নামাজ শিক্ষা অ্যাপের ভেতরে নয় — আলাদা লুকানো পেজে খোলে (লগইন ছাড়া চলে না)
+                  if (n.id === "salah") { window.location.assign("/salah-learn"); return; }
+                  setView(n.id);
+                  setMenu(false);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  width: "100%",
+                  border: "none",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  fontFamily: "inherit",
+                  fontSize: 15,
+                  fontWeight: on ? 700 : 600,
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  marginBottom: 2,
+                  background: on ? "#e7f3ec" : "transparent",
+                  color: on ? C.emeraldD : "#334155",
+                  borderLeft: on ? `3px solid ${C.gold}` : "3px solid transparent",
+                  transition: "background .15s, color .15s",
+                }}
+              >
+                <span
+                  className="tqa-nav-ico"
+                  style={{
+                    display: "grid",
+                    placeItems: "center",
+                    width: 22,
+                    flexShrink: 0,
+                    color: on ? C.gold : C.emeraldL,
+                  }}
+                >
+                  {NI ? (
+                    <Ico as={NI} size={19} strokeWidth={2} style={{ verticalAlign: 0 }} />
                   ) : (
                     withIcons((user.role === "student" && n.studentIcon) || n.icon)
-                  );
-                })()}
-              </span>
-              {user.role === "student"
-                ? n.studentLabelEn || n.labelEn || n.label
-                : n.labelEn || n.label}
-            </button>
-          ))}
+                  )}
+                </span>
+                <span style={{ minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
           <div
             style={{
               marginTop: 18,
               padding: "12px 14px",
               borderRadius: 12,
-              background: "rgba(255,255,255,.07)",
-              color: "#cfe6d8",
+              background: "#f4f8f5",
+              border: `1px solid #e1ece5`,
+              color: C.emerald,
               fontSize: 11.5,
               lineHeight: 1.6,
             }}
