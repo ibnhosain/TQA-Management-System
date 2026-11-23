@@ -107,3 +107,11 @@ class NooraniDecks(TestCase):
         decks = LectureDeck.objects.filter(course=course)
         self.assertEqual(decks.count(), 10)
         self.assertEqual(sorted(set(decks.values_list("no", flat=True))), [21, 22, 23, 24, 25])
+
+    def test_lectures_26_to_30_are_added(self):
+        from core.models import LectureDeck
+        course = Course.objects.create(name="Noorani Qaida Course")
+        importlib.import_module("core.migrations.0095_seed_noorani_lectures_26_to_30").forwards(django_apps, None)
+        decks = LectureDeck.objects.filter(course=course)
+        self.assertEqual(decks.count(), 10)
+        self.assertEqual(sorted(set(decks.values_list("no", flat=True))), [26, 27, 28, 29, 30])
