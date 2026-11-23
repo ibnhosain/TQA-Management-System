@@ -126,3 +126,12 @@ class NooraniDecks(TestCase):
         self.assertEqual(sorted(set(decks.values_list("no", flat=True))), [22, 23, 30, 31, 32, 33, 34, 35])
         self.assertNotEqual(bytes(decks.get(no=30, audience="student").data), b"old")
         self.assertEqual(decks.get(no=35, audience="teacher").filename, "Lecture 35 - Noorani Qaida Course.pptx")
+
+    def test_lectures_36_to_40_are_added(self):
+        from core.models import LectureDeck
+        course = Course.objects.create(name="Noorani Qaida Course")
+        importlib.import_module("core.migrations.0097_seed_noorani_lectures_36_to_40").forwards(django_apps, None)
+        decks = LectureDeck.objects.filter(course=course)
+        self.assertEqual(decks.count(), 10)
+        self.assertEqual(sorted(set(decks.values_list("no", flat=True))), [36, 37, 38, 39, 40])
+        self.assertEqual(decks.get(no=40, audience="student").filename, "Lecture 40 - Noorani Qaida Course - Student.pptx")
