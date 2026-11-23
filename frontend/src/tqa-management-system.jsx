@@ -6591,62 +6591,160 @@ th{background:#eef5f0}
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
+  // ── ছাঁকনি ও সারাংশ
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState("all"); // all | present | absent
+  const all = rows || [];
+  const nq = q.trim().toLowerCase();
+  const shown = all.filter(
+    (r) =>
+      (status === "all" || (status === "present" ? r.present : !r.present)) &&
+      (!nq || `${r.user_name} ${r.course_name} ${r.teacher_name}`.toLowerCase().includes(nq)),
+  );
+  const presentN = all.filter((r) => r.present).length;
+  const rate = all.length ? Math.round((presentN / all.length) * 100) : 0;
+  const avgMin = all.length ? Math.round(all.reduce((a, r) => a + (r.minutes || 0), 0) / all.length) : 0;
+  const shiftMonth = (n) => {
+    const [y, m] = month.split("-").map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + n, 1));
+    setMonth(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+  };
+  const thisMonth = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  })();
+  // মিনিটের ছোট দাগ — ২০ মিনিট থেকে হাজিরা গণ্য, ৪৫ মিনিট লক্ষ্য
+  const MinBar = ({ m }) => {
+    const v = m || 0;
+    const col = v >= 45 ? C.green : v >= 20 ? C.gold : C.red;
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, whiteSpace: "nowrap" }}>
+        <b style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{v} min</b>
+        <span style={{ width: 54, height: 5, borderRadius: 99, background: "#e6eee9", overflow: "hidden", display: "inline-block" }}>
+          <span style={{ display: "block", height: "100%", width: `${Math.min(100, (v / 45) * 100)}%`, background: col }} />
+        </span>
+      </span>
+    );
+  };
+  const statusTag = (r) =>
+    r.present ? (
+      <Tag key="t">✔ Present</Tag>
+    ) : (
+      <Tag key="t" color={C.red} bg={C.redBg}>
+        ✘ Absent
+      </Tag>
+    );
+  const actions = (r) => (
+    <div key="act" style={{ display: "flex", gap: 6 }}>
+      <Btn sm kind="soft" onClick={() => toggle(r)}>
+        {r.present ? "✘ Mark absent" : "✔ Mark present"}
+      </Btn>
+      <Btn sm kind="danger" title="Delete record" onClick={() => remove(r)} style={{ padding: "7px 9px" }}>
+        🗑️
+      </Btn>
+    </div>
+  );
   const head = [
-    T("Name", "Name"),
-    T("Course", "Course"),
-    T("Teacher", "Teacher"),
-    T("Date", "Date"),
-    ...(showMinutes ? [T("Minutes", "Minutes")] : []),
-    T("Status", "Status"),
+    "Name",
+    "Course",
+    "Teacher",
+    "Date",
+    ...(showMinutes ? ["Minutes"] : []),
+    "Status",
     ...(isDirector ? ["Action"] : []),
   ];
-  const tableRows = (rows || []).map((r) => [
-    r.user_name || "—",
+  const tableRows = shown.map((r) => [
+    <b key="n" style={{ fontWeight: 600 }}>{r.user_name || "—"}</b>,
     r.course_name || "—",
     r.teacher_name || "—",
     r.class_date ? fmtDate(r.class_date) : "—",
-    ...(showMinutes ? [T(`${bn(r.minutes ?? 0)} মিনিট`, `${r.minutes ?? 0} min`)] : []),
-    r.present ? (
-      <Tag key="t">{T("Present ✔", "Present ✔")}</Tag>
-    ) : (
-      <Tag key="t" color={C.red} bg={C.redBg}>
-        {T("Absent", "Absent")}
-      </Tag>
-    ),
-    ...(isDirector
-      ? [
-          <div key="act" style={{ display: "flex", gap: 4 }}>
-            <Btn sm kind="soft" onClick={() => toggle(r)}>
-              {r.present ? "❌ Mark absent" : "✔️ Mark present"}
-            </Btn>
-            <Btn sm kind="danger" onClick={() => remove(r)}>
-              🗑️
-            </Btn>
-          </div>,
-        ]
-      : []),
+    ...(showMinutes ? [<MinBar key="m" m={r.minutes} />] : []),
+    statusTag(r),
+    ...(isDirector ? [actions(r)] : []),
   ]);
+  const chip = (id, label, n) => (
+    <button key={id} className={status === id ? "on" : ""} onClick={() => setStatus(id)}>
+      {label} <span style={{ opacity: 0.7 }}>{n}</span>
+    </button>
+  );
 
   return (
     <Section
-      title={T("হাজিরা রিপোর্ট", "Attendance Report")}
-      sub={T(
-        "কমপক্ষে ২০ মিনিট থাকলে হাজিরা গণ্য হয়, তবে পুরো ৪৫ মিনিট ক্লাস করাই কাম্য · এই তালিকা কখনো মোছা হয় না (পুরনো ক্লাস-শিডিউল ৬০ দিন পর মুছলেও হাজিরা টিকে থাকে)",
-        "Attendance counts from 20 minutes, but staying the full 45 is what we expect · This record is never deleted (it stays even after the old class schedule is removed after 60 days)",
-      )}
-      action={
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      title="Attendance Report"
+      sub="Attendance counts from 20 minutes, but staying the full 45 is what we expect · This record is never deleted (it stays even after the old class schedule is removed after 60 days)"
+    >
+      <style>{`
+        /* ⚠️ display এখানেই — ঘরে inline display দিলে এই লুকানোর নিয়ম কাজ করত না */
+        .att-cards{display:grid;gap:8px}
+        @media(max-width:640px){.att-table{display:none}}
+        @media(min-width:641px){.att-cards{display:none}}
+      `}</style>
+      {/* ── সারাংশ */}
+      <div style={{ ...S.card, display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", marginBottom: 14 }}>
+        <ProgressRing pct={rate} color={rate >= 80 ? C.green : rate >= 50 ? C.gold : C.red} />
+        <div style={{ flex: "1 1 160px" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Attendance rate
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>{monthLabel}</div>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {[
+            ["Records", all.length, "#475569", "#f1f5f3"],
+            ["Present", presentN, C.green, C.greenBg],
+            ["Absent", all.length - presentN, C.red, C.redBg],
+            ...(showMinutes ? [["Avg minutes", avgMin, C.blue, C.blueBg]] : []),
+          ].map(([l, n, col, bg]) => (
+            <div key={l} style={{ textAlign: "center", padding: "8px 14px", borderRadius: 12, background: bg, minWidth: 84 }}>
+              <div style={{ fontSize: 19, fontWeight: 700, color: col, letterSpacing: "-0.02em" }}>{n}</div>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: "#475569" }}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── টুলবার: মাস, খোঁজা, অবস্থা, রপ্তানি */}
+      <div style={{ ...S.card, padding: "12px 14px", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+          <Btn sm kind="soft" title="Previous month" onClick={() => shiftMonth(-1)} style={{ padding: "7px 9px" }}>
+            ‹
+          </Btn>
           <input
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
             style={{ ...S.input, padding: "8px 10px", width: 160 }}
           />
+          <Btn sm kind="soft" title="Next month" onClick={() => shiftMonth(1)} style={{ padding: "7px 9px" }}>
+            ›
+          </Btn>
+          {month !== thisMonth && (
+            <Btn sm kind="ghost" onClick={() => setMonth(thisMonth)}>
+              This month
+            </Btn>
+          )}
+        </div>
+        {user.role !== "student" && (
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search name, course or teacher…"
+            aria-label="Search attendance"
+            style={{ ...S.input, flex: "1 1 200px", minWidth: 0, padding: "8px 12px" }}
+          />
+        )}
+        <div className="tqa-seg" role="tablist" aria-label="Status">
+          {chip("all", "All", all.length)}
+          {chip("present", "Present", presentN)}
+          {chip("absent", "Absent", all.length - presentN)}
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginLeft: "auto" }}>
           <Btn sm kind="soft" onClick={exportExcel}>
             📊 Excel
           </Btn>
           <Btn sm kind="soft" onClick={printReport}>
-            {T("🖨️ প্রিন্ট", "🖨️ Print")}
+            🖨️ Print
           </Btn>
           {isAdm(user) && (
             <Btn sm kind="soft" onClick={sendWhatsApp}>
@@ -6654,19 +6752,53 @@ th{background:#eef5f0}
             </Btn>
           )}
         </div>
-      }
-    >
+      </div>
+
       {rows === null ? (
-        <Loader text={T("হাজিরা লোড হচ্ছে", "Loading attendance")} />
-      ) : (
-        <Table
-          head={head}
-          rows={tableRows}
-          empty={T(
-            `${monthLabel}-এ কোনো হাজিরা রেকর্ড নেই`,
-            `No attendance records for ${monthLabel}`,
-          )}
+        <Loader text="Loading attendance" />
+      ) : shown.length === 0 ? (
+        <EmptyState
+          icon="🗓"
+          title={all.length ? "No records match" : `No attendance records for ${monthLabel}`}
+          text={all.length ? "Try another word or status." : "Records appear here after each class."}
         />
+      ) : (
+        <>
+          <div className="att-table">
+            <Table head={head} rows={tableRows} />
+          </div>
+          {/* ফোনে টেবিলের বদলে কার্ড */}
+          <div className="att-cards">
+            {shown.map((r) => (
+              <div
+                key={r.id}
+                style={{
+                  ...S.card,
+                  padding: "12px 14px",
+                  borderLeft: `4px solid ${r.present ? C.green : C.red}`,
+                  display: "grid",
+                  gap: 6,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "space-between" }}>
+                  <b style={{ fontSize: 14.5 }}>{user.role === "student" ? r.course_name || "—" : r.user_name || "—"}</b>
+                  {statusTag(r)}
+                </div>
+                <div style={{ fontSize: 12.5, color: C.muted }}>
+                  {[
+                    r.class_date ? fmtDate(r.class_date) : null,
+                    user.role !== "student" ? r.course_name : null,
+                    r.teacher_name,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+                {showMinutes && <MinBar m={r.minutes} />}
+                {isDirector && actions(r)}
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </Section>
   );
