@@ -135,3 +135,16 @@ class NooraniDecks(TestCase):
         self.assertEqual(decks.count(), 10)
         self.assertEqual(sorted(set(decks.values_list("no", flat=True))), [36, 37, 38, 39, 40])
         self.assertEqual(decks.get(no=40, audience="student").filename, "Lecture 40 - Noorani Qaida Course - Student.pptx")
+
+    def test_lectures_41_to_45_are_added_and_all_45_exist(self):
+        import os
+        from core.models import LectureDeck
+        course = Course.objects.create(name="Noorani Qaida Course")
+        importlib.import_module("core.migrations.0098_seed_noorani_lectures_41_to_45").forwards(django_apps, None)
+        decks = LectureDeck.objects.filter(course=course)
+        self.assertEqual(decks.count(), 10)
+        self.assertEqual(sorted(set(decks.values_list("no", flat=True))), [41, 42, 43, 44, 45])
+        seed = os.path.join(os.path.dirname(os.path.abspath(__file__)), "deck_seed")
+        for no in range(1, 46):
+            for suffix in ("", "-student"):
+                self.assertTrue(os.path.exists(os.path.join(seed, f"noorani-qaida-lecture-{no:02d}{suffix}.pptx")), f"lecture {no}{suffix}")
