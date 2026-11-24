@@ -7793,6 +7793,7 @@ function ExamsView({ db, setDb, courses, user }) {
   const [qs, setQs] = usePersistedState("exam_qs", []);
   const [exams, setExams] = useState(db.exams);
   const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
+  const [exTab, setExTab] = useState(""); // "" = ভূমিকার প্রথম ট্যাব
 
   const adaptExam = (e) => ({
     id: e.id,
@@ -7915,139 +7916,216 @@ function ExamsView({ db, setDb, courses, user }) {
       );
     }
   };
+  // ⚠️ আগে চাপলেই মুছে যেত; আর সার্ভারে মোছা ব্যর্থ হলেও তালিকা থেকে সরিয়ে দিত — মনে হতো মুছে গেছে
+  const delExam = (ex) =>
+    askConfirm(`Delete the exam "${ex.title}"? All answers and results for it will be deleted too.`, async () => {
+      try {
+        await api.deleteExam(ex.id);
+        await loadData();
+        notice("✔ Exam deleted.");
+      } catch (e) {
+        notice("Could not delete exam —" + (e?.data?.error || e?.message || "Please check your server connection and try again"));
+      }
+    });
+  // ── ট্যাব ও সারাংশ
+  const resultOf = (ex) => ex.marks[user.id];
+  const pendOf = (ex) => (ex.subs || []).filter((x) => x.mark == null).length;
+  const graded = list.filter((ex) => resultOf(ex) != null);
+  const avgPct = graded.length
+    ? Math.round((graded.reduce((a, ex) => a + resultOf(ex) / (ex.total || 1), 0) / graded.length) * 100)
+    : 0;
+  const tabs =
+    user.role === "student"
+      ? [
+          ["upcoming", "Upcoming", list.filter((ex) => resultOf(ex) == null).length],
+          ["results", "Results", graded.length],
+          ["all", "All", list.length],
+        ]
+      : [
+          ["all", "All", list.length],
+          ["marking", "Needs marking", list.filter((ex) => pendOf(ex) > 0).length],
+        ];
+  const tab = tabs.some(([k]) => k === exTab) ? exTab : tabs[0][0];
+  const shownEx = list
+    .filter((ex) =>
+      tab === "all" ? true : tab === "upcoming" ? resultOf(ex) == null : tab === "results" ? resultOf(ex) != null : pendOf(ex) > 0,
+    )
+    .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")) * (tab === "results" ? -1 : 1));
+  const whenText = (ex) => {
+    const d = Math.round((Date.parse(`${ex.date}T00:00:00Z`) - Date.parse(`${todayISO()}T00:00:00Z`)) / 86400000);
+    if (isNaN(d)) return null;
+    return d === 0 ? "Today" : d === 1 ? "Tomorrow" : d > 1 ? `In ${d} days` : `${-d} ${d === -1 ? "day" : "days"} ago`;
+  };
   return (
     <Section
-      title={T("পরীক্ষা — মাসিক MCQ ও লাইভ টেস্ট", "Exams — Monthly MCQ & Live Tests")}
-      sub="By form (MCQ/written) or photo — once evaluated, results go automatically to the student portal"
+      title="Exams — Monthly MCQ & Live Tests"
+      sub={
+        user.role === "student"
+          ? "Your exams and results — take each exam on its date; results appear here once checked"
+          : "By form (MCQ/written) or photo — once evaluated, results go automatically to the student portal"
+      }
       action={
         canCreate && (
           <Btn onClick={() => setShow(true)}>+ Create new exam</Btn>
         )
       }
     >
+      {user.role === "student" && graded.length > 0 && (
+        <div style={{ ...S.card, display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", marginBottom: 14 }}>
+          <ProgressRing pct={avgPct} color={avgPct >= 80 ? C.green : avgPct >= 50 ? C.gold : C.red} />
+          <div style={{ flex: "1 1 180px" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Your average
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>
+              {avgPct >= 80 ? "Mumtaz — excellent work!" : avgPct >= 50 ? "Jayyid — keep going!" : "Keep practising, insha'Allah"}
+            </div>
+            <div style={{ fontSize: 13, color: C.muted }}>
+              Based on {graded.length} {graded.length === 1 ? "exam" : "exams"} with results
+            </div>
+          </div>
+        </div>
+      )}
+      {!loading && list.length > 0 && (
+        <div className="tqa-seg" role="tablist" aria-label="Filter exams" style={{ marginBottom: 14 }}>
+          {tabs.map(([k, l, n]) => (
+            <button key={k} className={tab === k ? "on" : ""} onClick={() => setExTab(k)}>
+              {l} <span style={{ opacity: 0.7 }}>{n}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div style={{ display: "grid", gap: 10 }}>
-        {loading && <Loader text={T("Loading", "Loading")} />}
-        {list.map((ex) => {
+        {loading && <Loader text="Loading" />}
+        {!loading && list.length === 0 && (
+          <EmptyState
+            icon="🏅"
+            title="No exams yet"
+            text={canCreate ? "Create one with “+ Create new exam”." : "Your exams will appear here."}
+          />
+        )}
+        {!loading && list.length > 0 && shownEx.length === 0 && (
+          <EmptyState
+            icon="✅"
+            title={tab === "upcoming" ? "No upcoming exams" : tab === "marking" ? "Everything is marked" : "No results yet"}
+          />
+        )}
+        {shownEx.map((ex) => {
           const c = courseById(courses, ex.courseId);
-          const myMark = ex.marks[user.id];
-          const mySub = ex.subs?.find((s) => s.studentId === user.id);
-          const pendingEval = (ex.subs || []).filter(
-            (s) => s.mark == null,
-          ).length;
+          const myMark = resultOf(ex);
+          const mySub = ex.subs?.find((x) => x.studentId === user.id);
+          const pendingEval = pendOf(ex);
+          const isMcq = ex.type === "mcq";
+          const when = whenText(ex);
+          const pct = myMark != null ? Math.round((myMark / (ex.total || 1)) * 100) : 0;
           return (
-            <div key={ex.id} style={{ ...S.card, padding: 16 }}>
-              <div
+            <div key={ex.id} style={{ ...S.card, padding: 16, display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center" }}>
+              <span
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  flexWrap: "wrap",
-                  alignItems: "center",
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  flexShrink: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  background: isMcq ? C.blueBg : C.amberBg,
+                  color: isMcq ? C.blue : C.gold,
                 }}
               >
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ fontWeight: 800 }}>
-                    {ex.title}{" "}
-                    {ex.type === "mcq" ? (
-                      <Tag color={C.blue} bg={C.blueBg}>
-                        MCQ
-                      </Tag>
-                    ) : (
-                      <Tag color={C.gold} bg={C.amberBg}>
-                        {T("লাইভ টেস্ট", "Live Test")}
-                      </Tag>
-                    )}{" "}
-                    <Tag
-                      color={ex.mode === "form" ? C.emerald : C.gold}
-                      bg={ex.mode === "form" ? C.greenBg : C.amberBg}
-                    >
-                      {T(
-                        ex.mode === "form" ? "📋 Form" : "📷 Photo/notebook",
-                        ex.mode === "form" ? "📋 Form" : "📷 Photo/Answer sheet",
-                      )}
+                <Ico e={isMcq ? "📋" : "🎥"} size={21} style={{ verticalAlign: 0 }} />
+              </span>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                  <b style={{ fontSize: 15.5, letterSpacing: "-0.01em" }}>{ex.title}</b>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      padding: "2px 9px",
+                      borderRadius: 999,
+                      background: "#f1f5f3",
+                      color: "#475569",
+                      border: `1px solid ${C.line}`,
+                    }}
+                  >
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color || C.emerald }} />
+                    {c.name}
+                  </span>
+                  {isMcq ? (
+                    <Tag color={C.blue} bg={C.blueBg}>
+                      MCQ
                     </Tag>
-                  </div>
-                  <div style={{ fontSize: 12.5, color: C.muted }}>
-                    {c.name} · {fmtDate(ex.date)} ·{" "}
-                    {T(`পূর্ণমান ${bn(ex.total)}`, `Total marks ${ex.total}`)}
-                    {canCreate && pendingEval > 0 && (
-                      <span style={{ color: C.red }}>
-                        {" "}
-                        · Pending evaluation: {bn(pendingEval)}
-                      </span>
-                    )}
-                  </div>
+                  ) : (
+                    <Tag color={C.gold} bg={C.amberBg}>
+                      Live Test
+                    </Tag>
+                  )}
+                  <Tag color={ex.mode === "form" ? C.emerald : C.gold} bg={ex.mode === "form" ? C.greenBg : C.amberBg}>
+                    {ex.mode === "form" ? "📋 Form" : "📷 Photo/Answer sheet"}
+                  </Tag>
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 6,
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  {user.role === "student" &&
-                    (myMark != null ? (
-                      <div style={{ textAlign: "right" }}>
-                        <div
-                          style={{
-                            fontSize: 22,
-                            fontWeight: 900,
-                            color: C.emerald,
-                          }}
-                        >
+                <div style={{ fontSize: 12.5, color: C.muted, marginTop: 6, display: "flex", gap: 14, flexWrap: "wrap" }}>
+                  <span>
+                    <Ico e="📅" /> {fmtDate(ex.date)}
+                    {when && <b style={{ fontWeight: 600, color: when === "Today" ? "#a16207" : C.muted }}> · {when}</b>}
+                  </span>
+                  <span>
+                    <Ico e="🎯" /> {ex.total} marks
+                  </span>
+                  {user.role !== "student" && (
+                    <span>
+                      <Ico e="📥" /> {(ex.subs || []).length} submitted
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                {user.role === "student" &&
+                  (myMark != null ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <ProgressRing pct={pct} size={52} stroke={6} color={pct >= 80 ? C.green : C.gold} />
+                      <div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: C.emerald, letterSpacing: "-0.02em" }}>
                           {myMark}
-                          <span style={{ fontSize: 13, color: C.muted }}>
-                            /{ex.total}
-                          </span>
+                          <span style={{ fontSize: 13, color: C.muted, fontWeight: 600 }}> / {ex.total}</span>
                         </div>
-                        <Tag
-                          color={myMark / ex.total >= 0.8 ? C.green : C.gold}
-                          bg={myMark / ex.total >= 0.8 ? C.greenBg : C.amberBg}
-                        >
-                          {myMark / ex.total >= 0.8
-                            ? "Mumtaz (Excellent)"
-                            : "Jayyid (Good)"}
+                        <Tag color={myMark / ex.total >= 0.8 ? C.green : C.gold} bg={myMark / ex.total >= 0.8 ? C.greenBg : C.amberBg}>
+                          {myMark / ex.total >= 0.8 ? "Mumtaz (Excellent)" : "Jayyid (Good)"}
                         </Tag>
                       </div>
-                    ) : mySub ? (
-                      <Tag color={C.gold} bg={C.amberBg}>
-                        Submitted — awaiting result
-                      </Tag>
-                    ) : (
-                      <Btn sm kind="gold" onClick={() => setDoSub(ex)}>
-                        {ex.mode === "form"
-                          ? "📋 Take Exam"
-                          : "📷 Submit Answer Sheet Photo"}
-                      </Btn>
-                    ))}
-                  {canCreate && (
-                    <Btn sm kind="ghost" onClick={() => setEvalFor(ex)}>
-                      🔍 Evaluate ({bn((ex.subs || []).length)})
+                    </div>
+                  ) : mySub ? (
+                    <Tag color={C.gold} bg={C.amberBg}>
+                      ⏳ Submitted — awaiting result
+                    </Tag>
+                  ) : (
+                    <Btn kind="gold" onClick={() => setDoSub(ex)}>
+                      {ex.mode === "form" ? "📋 Take exam" : "📷 Submit answer sheet"}
                     </Btn>
-                  )}
-                  {canCreate && (
-                    <Btn sm kind="soft" onClick={() => setMarksFor(ex)}>
-                      Direct mark entry
-                    </Btn>
-                  )}
-                  {isDir(user) && (
-                    <Btn
-                      sm
-                      kind="danger"
-                      onClick={async () => {
-                        try {
-                          await api.deleteExam(ex.id);
-                          await loadData();
-                        } catch {
-                          setExams((p) => p.filter((x) => x.id !== ex.id));
-                        }
-                      }}
-                    >
-                      Delete
-                    </Btn>
-                  )}
-                </div>
+                  ))}
+                {canCreate && pendingEval > 0 && (
+                  <Tag color={C.red} bg={C.redBg}>
+                    {pendingEval} to mark
+                  </Tag>
+                )}
+                {canCreate && (
+                  <Btn sm kind="ghost" onClick={() => setEvalFor(ex)}>
+                    🔍 Evaluate ({(ex.subs || []).length})
+                  </Btn>
+                )}
+                {canCreate && (
+                  <Btn sm kind="soft" onClick={() => setMarksFor(ex)}>
+                    ✏️ Direct marks
+                  </Btn>
+                )}
+                {isDir(user) && (
+                  <Btn sm kind="danger" title="Delete exam" onClick={() => delExam(ex)} style={{ padding: "7px 9px" }}>
+                    🗑️
+                  </Btn>
+                )}
               </div>
             </div>
           );
