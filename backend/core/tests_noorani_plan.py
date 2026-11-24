@@ -148,3 +148,14 @@ class NooraniDecks(TestCase):
         for no in range(1, 46):
             for suffix in ("", "-student"):
                 self.assertTrue(os.path.exists(os.path.join(seed, f"noorani-qaida-lecture-{no:02d}{suffix}.pptx")), f"lecture {no}{suffix}")
+
+    def test_lectures_1_to_10_are_refreshed(self):
+        from core.models import LectureDeck
+        course = Course.objects.create(name="Noorani Qaida Course")
+        LectureDeck.objects.create(course=course, no=1, audience="teacher", title="old", filename="old.pptx", size=3, data=b"old")
+        importlib.import_module("core.migrations.0099_refresh_noorani_lectures_1_to_10").forwards(django_apps, None)
+        decks = LectureDeck.objects.filter(course=course)
+        self.assertEqual(decks.count(), 20)
+        self.assertEqual(sorted(set(decks.values_list("no", flat=True))), list(range(1, 11)))
+        self.assertNotEqual(bytes(decks.get(no=1, audience="teacher").data), b"old")
+        self.assertEqual(decks.get(no=10, audience="student").filename, "Lecture 10 - Noorani Qaida Course - Student.pptx")
