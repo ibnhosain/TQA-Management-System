@@ -7318,6 +7318,7 @@ function AssignmentsView({ db, setDb, courses, user }) {
   const [qs, setQs] = usePersistedState("asg_qs", []);
   const [assignments, setAssignments] = useState(db.assignments);
   const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
+  const [asgTab, setAsgTab] = useState(""); // "" = ভূমিকার প্রথম ট্যাব
 
   const adaptAssignment = (a) => ({
     id: a.id,
@@ -7397,18 +7398,20 @@ function AssignmentsView({ db, setDb, courses, user }) {
     setShow(false);
     setQs([]);
   };
-  const del = async (id) => {
-    try {
-      await api.deleteAssignment(id);
-      await loadData();
-      notice("✔ Assignment deleted.");
-    } catch (e) {
-      notice(
-        "Could not delete assignment —" +
-          (e?.data?.error || e?.message || "Please check your server connection and try again"),
-      );
-    }
-  };
+  // ⚠️ আগে চাপলেই মুছে যেত, জমা পড়া কাজসহ — এখন আগে নিশ্চিতকরণ
+  const del = (id) =>
+    askConfirm("Delete this assignment? All submitted work and marks for it will be deleted too.", async () => {
+      try {
+        await api.deleteAssignment(id);
+        await loadData();
+        notice("✔ Assignment deleted.");
+      } catch (e) {
+        notice(
+          "Could not delete assignment —" +
+            (e?.data?.error || e?.message || "Please check your server connection and try again"),
+        );
+      }
+    });
   const submitWork = async (a, payload) => {
     try {
       await api.submitAssignment(a.id, payload);
@@ -7442,113 +7445,206 @@ function AssignmentsView({ db, setDb, courses, user }) {
   };
   return (
     <Section
-      title={T("Assignments", "Assignments")}
-      sub="Build a form or ask for a photo submission — once evaluated, the marks go to the student portal"
+      title="Assignments"
+      sub={
+        user.role === "student"
+          ? "Your homework tasks — submit before the due date; your marks appear here once checked"
+          : "Build a form or ask for a photo submission — once evaluated, the marks go to the student portal"
+      }
       action={
         canCreate && (
           <Btn onClick={() => setShow(true)}>+ New assignment</Btn>
         )
       }
     >
-      <div style={{ display: "grid", gap: 10 }}>
-        {loading && <Loader text={T("Loading", "Loading")} />}
-        {!loading && list.length === 0 && (
-          <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
-            {T("এখনো কোনো অ্যাসাইনমেন্ট নেই।", "No assignments yet.")}
-          </div>
-        )}
-        {list.map((a) => {
-          const c = courseById(courses, a.courseId);
-          const mySub = a.subs.find((s) => s.studentId === user.id);
-          const pendingEval = a.subs.filter((s) => s.mark == null).length;
-          return (
-            <div key={a.id} style={{ ...S.card, padding: 16 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  flexWrap: "wrap",
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 220 }}>
-                  <div style={{ fontWeight: 800 }}>
-                    {a.title}{" "}
-                    <Tag color={C.blue} bg={C.blueBg}>
-                      {c.name}
-                    </Tag>{" "}
-                    <Tag
-                      color={a.mode === "form" ? C.emerald : C.gold}
-                      bg={a.mode === "form" ? C.greenBg : C.amberBg}
-                    >
-                      {T(
-                      a.mode === "form" ? "📋 Form" : "📷 Photo submission",
-                      a.mode === "form" ? "📋 Form" : "📷 Photo Submission",
-                    )}
-                    </Tag>
-                  </div>
-                  <div
-                    style={{ fontSize: 13, color: C.muted, margin: "5px 0" }}
-                  >
-                    {a.desc}
-                  </div>
-                  <div style={{ fontSize: 12 }}>
-                    {withIcons(T("📅 শেষ তারিখ", "📅 Due date"))}:{" "}
-                    <b>{fmtDate(a.due)}</b> ·{" "}
-                    {T("পূর্ণমান", "Total marks")}: <b>{T(bn(a.total), a.total)}</b> ·{" "}
-                    {T("Submitted", "Submitted")}:{" "}
-                    <b>{T(bn(a.subs.length), a.subs.length)}</b>{" "}
-                    {T("জন", "")}
-                    {canCreate && pendingEval > 0 && (
-                      <span style={{ color: C.red }}>
-                        {" "}
-                        · Pending evaluation: {bn(pendingEval)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 6,
-                    alignItems: "flex-start",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  {user.role === "student" &&
-                    (mySub ? (
-                      mySub.mark != null ? (
-                        <Tag>
-                          Marks obtained: {mySub.mark}/{a.total} ✔
-                        </Tag>
-                      ) : (
-                        <Tag color={C.gold} bg={C.amberBg}>
-                          Submitted — awaiting evaluation
-                        </Tag>
-                      )
-                    ) : (
-                      <Btn sm kind="gold" onClick={() => setDoSub(a)}>
-                        {a.mode === "form"
-                          ? "📋 Fill & Submit Form"
-                          : "📷 Take Photo & Submit"}
-                      </Btn>
-                    ))}
-                  {canCreate && (
-                    <Btn sm kind="ghost" onClick={() => setEvalFor(a)}>
-                      🔍 Evaluate ({bn(a.subs.length)})
-                    </Btn>
-                  )}
-                  {isAdm(user) && (
-                    <Btn sm kind="danger" onClick={() => del(a.id)}>
-                      Delete
-                    </Btn>
-                  )}
-                </div>
+      {(() => {
+        // ── অবস্থা অনুযায়ী ভাগ: শিক্ষার্থী — করতে বাকি / জমা / নম্বর পাওয়া; কর্মী — সব / নম্বর বাকি
+        const stOf = (a) => {
+          const my = a.subs.find((x) => x.studentId === user.id);
+          return !my ? "todo" : my.mark == null ? "submitted" : "graded";
+        };
+        const pendOf = (a) => a.subs.filter((x) => x.mark == null).length;
+        const tabs =
+          user.role === "student"
+            ? [
+                ["todo", "To do", list.filter((a) => stOf(a) === "todo").length],
+                ["submitted", "Submitted", list.filter((a) => stOf(a) === "submitted").length],
+                ["graded", "Graded", list.filter((a) => stOf(a) === "graded").length],
+                ["all", "All", list.length],
+              ]
+            : [
+                ["all", "All", list.length],
+                ["marking", "Needs marking", list.filter((a) => pendOf(a) > 0).length],
+              ];
+        const tab = tabs.some(([k]) => k === asgTab) ? asgTab : tabs[0][0];
+        const shownA = list
+          .filter((a) =>
+            tab === "all" ? true : user.role === "student" ? stOf(a) === tab : pendOf(a) > 0,
+          )
+          .sort((a, b) => String(a.due || "").localeCompare(String(b.due || "")));
+        const dueText = (a, done) => {
+          const d = Math.round((Date.parse(`${a.due}T00:00:00Z`) - Date.parse(`${todayISO()}T00:00:00Z`)) / 86400000);
+          if (isNaN(d)) return [null, C.muted];
+          if (d === 0) return ["Due today", done ? C.muted : "#a16207"];
+          if (d === 1) return ["Due tomorrow", done ? C.muted : "#a16207"];
+          if (d > 1) return [`Due in ${d} days`, C.muted];
+          return [`${-d} ${d === -1 ? "day" : "days"} past due`, done ? C.muted : C.red];
+        };
+        return (
+          <>
+            {!loading && list.length > 0 && (
+              <div className="tqa-seg" role="tablist" aria-label="Filter assignments" style={{ marginBottom: 14 }}>
+                {tabs.map(([k, l, n]) => (
+                  <button key={k} className={tab === k ? "on" : ""} onClick={() => setAsgTab(k)}>
+                    {l} <span style={{ opacity: 0.7 }}>{n}</span>
+                  </button>
+                ))}
               </div>
+            )}
+            <div style={{ display: "grid", gap: 10 }}>
+              {loading && <Loader text="Loading" />}
+              {!loading && list.length === 0 && (
+                <EmptyState
+                  icon="📝"
+                  title="No assignments yet"
+                  text={canCreate ? "Create one with “+ New assignment”." : "Your teacher's assignments will appear here."}
+                />
+              )}
+              {!loading && list.length > 0 && shownA.length === 0 && (
+                <EmptyState
+                  icon="✅"
+                  title={tab === "todo" ? "All done — nothing to submit" : tab === "marking" ? "Everything is marked" : "Nothing here"}
+                />
+              )}
+              {shownA.map((a) => {
+                const c = courseById(courses, a.courseId);
+                const mySub = a.subs.find((x) => x.studentId === user.id);
+                const pendingEval = pendOf(a);
+                const isForm = a.mode === "form";
+                const [due, dueCol] = dueText(a, user.role === "student" ? !!mySub : pendingEval === 0);
+                return (
+                  <div key={a.id} className="asg-card" style={{ ...S.card, padding: 16, display: "flex", gap: 14, flexWrap: "wrap" }}>
+                    <span
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 12,
+                        flexShrink: 0,
+                        display: "grid",
+                        placeItems: "center",
+                        background: isForm ? "#e9f3ed" : C.amberBg,
+                        color: isForm ? C.emerald : C.gold,
+                      }}
+                    >
+                      <Ico e={isForm ? "📋" : "📷"} size={21} style={{ verticalAlign: 0 }} />
+                    </span>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                        <b style={{ fontSize: 15.5, letterSpacing: "-0.01em" }}>{a.title}</b>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            fontSize: 11.5,
+                            fontWeight: 600,
+                            padding: "2px 9px",
+                            borderRadius: 999,
+                            background: "#f1f5f3",
+                            color: "#475569",
+                            border: `1px solid ${C.line}`,
+                          }}
+                        >
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color || C.emerald }} />
+                          {c.name}
+                        </span>
+                        <Tag color={isForm ? C.emerald : C.gold} bg={isForm ? C.greenBg : C.amberBg}>
+                          {isForm ? "📋 Form" : "📷 Photo submission"}
+                        </Tag>
+                      </div>
+                      {a.desc && (
+                        <div
+                          style={{
+                            fontSize: 13,
+                            color: "#475569",
+                            margin: "5px 0 0",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {a.desc}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 12.5, color: C.muted, marginTop: 7, display: "flex", gap: 14, flexWrap: "wrap" }}>
+                        <span>
+                          <Ico e="📅" /> {fmtDate(a.due)}
+                          {due && <b style={{ color: dueCol, fontWeight: 600 }}> · {due}</b>}
+                        </span>
+                        <span>
+                          <Ico e="🎯" /> {a.total} marks
+                        </span>
+                        {user.role !== "student" && (
+                          <span>
+                            <Ico e="📥" /> {a.subs.length} submitted
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      {user.role === "student" &&
+                        (mySub ? (
+                          mySub.mark != null ? (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "baseline",
+                                gap: 3,
+                                padding: "8px 14px",
+                                borderRadius: 12,
+                                background: C.greenBg,
+                                border: `1px solid ${C.green}33`,
+                                color: C.green,
+                              }}
+                              title="Marks obtained"
+                            >
+                              <b style={{ fontSize: 19, letterSpacing: "-0.02em" }}>{mySub.mark}</b>
+                              <span style={{ fontSize: 12.5, fontWeight: 600 }}>/ {a.total}</span>
+                            </span>
+                          ) : (
+                            <Tag color={C.gold} bg={C.amberBg}>
+                              ⏳ Submitted — awaiting marks
+                            </Tag>
+                          )
+                        ) : (
+                          <Btn kind="gold" onClick={() => setDoSub(a)}>
+                            {isForm ? "📋 Fill & submit" : "📷 Take photo & submit"}
+                          </Btn>
+                        ))}
+                      {canCreate && pendingEval > 0 && (
+                        <Tag color={C.red} bg={C.redBg}>
+                          {pendingEval} to mark
+                        </Tag>
+                      )}
+                      {canCreate && (
+                        <Btn sm kind="ghost" onClick={() => setEvalFor(a)}>
+                          🔍 Evaluate ({a.subs.length})
+                        </Btn>
+                      )}
+                      {isAdm(user) && (
+                        <Btn sm kind="danger" title="Delete assignment" onClick={() => del(a.id)} style={{ padding: "7px 9px" }}>
+                          🗑️
+                        </Btn>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+          </>
+        );
+      })()}
       {doSub && (
         <SubmitWork
           item={doSub}
