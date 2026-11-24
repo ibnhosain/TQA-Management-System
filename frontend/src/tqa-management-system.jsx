@@ -1073,7 +1073,8 @@ const Modal = ({ title, onClose, children, wide }) => (
 
 // loading=true দিলে ডেটা আসার আগে "কোনো তথ্য নেই" না দেখিয়ে "Loading…" দেখায় —
 // নইলে প্রতিবার পেজ খোলার সময় এক ঝলক ভুল করে "কিছু নেই" দেখাত
-const Table = ({ head, rows, empty = "No data", loading = false }) => (
+// minWidth: সরু কলামে (যেমন দুই-কলামের পাতায়) ছোট টেবিলের জন্য ০ দিন — তখন লেখা ভাঁজ হয়, স্ক্রল লাগে না
+const Table = ({ head, rows, empty = "No data", loading = false, minWidth = 540 }) => (
   <div
     style={{
       overflowX: "auto",
@@ -1087,7 +1088,7 @@ const Table = ({ head, rows, empty = "No data", loading = false }) => (
         width: "100%",
         borderCollapse: "collapse",
         fontSize: 13.5,
-        minWidth: 540,
+        minWidth,
       }}
     >
       <thead>
@@ -8347,6 +8348,7 @@ function ProgressView({ db, setDb, courses, user }) {
   const [pay, setPay] = useState(false);
   const [maker, setMaker] = useState(false);
   const [pf, setPf] = useState({ method: "bKash", trx: "" });
+  const [pq, setPq] = useState(""); // শিক্ষার্থী খোঁজা (কর্মীদের)
   const [sel, setSel] = useState(allStudents[0]?.id || user.id);
   // তালিকা লোড হলে সিলেকশন প্রথম স্টুডেন্টে বসাই (আগে খালি থাকলে)
   useEffect(() => {
@@ -8511,11 +8513,8 @@ function ProgressView({ db, setDb, courses, user }) {
   };
   return (
     <Section
-      title={T("শিক্ষার্থীর অগ্রগতি ও রিপোর্ট", "Student Progress & Report")}
-      sub={T(
-        "অগ্রগতি · ফি · মিসিং ক্লাস · মেকআপ ক্লাস — সব এক জায়গায়",
-        "Progress · Fees · Missed classes · Makeup classes — all in one place",
-      )}
+      title={user.role === "student" ? "My Progress & Fees" : "Student Progress & Report"}
+      sub="Progress · Fees · Missed classes · Makeup classes — all in one place"
       action={
         isAdm(user) && (
           <Btn kind="gold" sm onClick={() => setMaker(true)}>
@@ -8525,39 +8524,142 @@ function ProgressView({ db, setDb, courses, user }) {
       }
     >
       {maker && <ReceiptMaker user={user} onClose={() => setMaker(false)} />}
+      <style>{`
+        .pg-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+        @media(max-width:1000px){.pg-grid{grid-template-columns:minmax(0,1fr)}}
+        .pg-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15.5px;letter-spacing:-0.01em;margin-bottom:12px}
+      `}</style>
+      {/* ── শিক্ষার্থী বাছাই (কর্মী) — অনেক শিক্ষার্থী হলেও খুঁজে নেওয়া যায় */}
       {user.role !== "student" && (
+        <div style={{ ...S.card, padding: "12px 14px", marginBottom: 14 }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+            <b style={{ fontSize: 13.5 }}>
+              <Ico e="👥" style={{ color: C.emeraldL }} /> Student
+            </b>
+            <input
+              type="search"
+              value={pq}
+              onChange={(e) => setPq(e.target.value)}
+              placeholder="Search a student…"
+              aria-label="Search a student"
+              style={{ ...S.input, padding: "8px 12px", flex: "1 1 200px", minWidth: 0 }}
+            />
+            <span style={{ fontSize: 12.5, color: C.muted }}>{allStudents.length} students</span>
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", maxHeight: 124, overflowY: "auto", padding: 2 }}>
+            {allStudents
+              .filter((x) => !pq.trim() || String(x.name || "").toLowerCase().includes(pq.trim().toLowerCase()))
+              .map((x) => (
+                <button
+                  key={x.id}
+                  className={"tqa-pilltab" + (String(sel) === String(x.id) ? " on" : "")}
+                  onClick={() => setSel(x.id)}
+                  style={{ padding: "5px 12px 5px 5px" }}
+                >
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: "50%",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "#fff",
+                      background: `linear-gradient(135deg, ${C.emeraldL}, ${C.emeraldD})`,
+                    }}
+                  >
+                    {String(x.name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}
+                  </span>
+                  {x.name}
+                </button>
+              ))}
+          </div>
+        </div>
+      )}
+      {/* ── প্রোফাইল */}
+      {st?.name && (
         <div
           style={{
+            ...S.card,
             display: "flex",
-            gap: 8,
+            gap: 14,
+            alignItems: "center",
             flexWrap: "wrap",
             marginBottom: 14,
+            background: "linear-gradient(135deg, #f6fbf8, #fff)",
           }}
         >
-          {allStudents.map((s) => (
-            <Btn
-              key={s.id}
-              sm
-              kind={String(sel) === String(s.id) ? "primary" : "soft"}
-              onClick={() => setSel(s.id)}
-            >
-              {s.name}
-            </Btn>
-          ))}
+          <span
+            aria-hidden="true"
+            style={{
+              width: 54,
+              height: 54,
+              borderRadius: "50%",
+              flexShrink: 0,
+              display: "grid",
+              placeItems: "center",
+              fontSize: 18,
+              fontWeight: 700,
+              color: "#fff",
+              background: `linear-gradient(135deg, ${C.emeraldL}, ${C.emeraldD})`,
+              boxShadow: `0 0 0 3px #fff, 0 0 0 4.5px ${C.goldL}`,
+            }}
+          >
+            {String(st.name).trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}
+          </span>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>{st.name}</div>
+            {st.sub && <div style={{ fontSize: 13, color: C.muted }}>{st.sub}</div>}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+              {stCourses.map((c) => (
+                <span
+                  key={c.id}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    padding: "2px 9px",
+                    borderRadius: 999,
+                    background: "#fff",
+                    color: "#475569",
+                    border: `1px solid ${C.line}`,
+                  }}
+                >
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: c.color || C.emerald }} />
+                  {c.name}
+                </span>
+              ))}
+            </div>
+          </div>
+          {(st.fee || st.monthly_fee) ? (
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Monthly fee</div>
+              <div style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.02em" }}>
+                {(st?.fee_currency || "BDT") === "USD" ? "$" : "৳"}
+                {Number(st.fee || st.monthly_fee).toLocaleString("en")}
+              </div>
+            </div>
+          ) : null}
         </div>
       )}
       <div
+        className="tqa-stats"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-          gap: 10,
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: 12,
           marginBottom: 14,
         }}
       >
         <Stat
           icon="✅"
-          label={T("উপস্থিত ক্লাস", "Classes Attended")}
-          value={T(bn(present), present)}
+          label="Classes Attended"
+          value={present}
+          note={present + missed ? `${Math.round((present / (present + missed)) * 100)}% attendance` : undefined}
         />
         <Stat
           icon="❌"
@@ -8583,11 +8685,14 @@ function ProgressView({ db, setDb, courses, user }) {
           note={dueMonths.join(", ") || T("None", "None")}
         />
       </div>
-      <div style={{ display: "grid", gap: 14 }}>
+      <div className="pg-grid">
         <div style={{ ...S.card }}>
-          <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            {withIcons(T("📈 কোর্সভিত্তিক সিলেবাস অগ্রগতি", "📈 Syllabus Progress by Course"))}
+          <div className="pg-title">
+            <Ico e="📈" style={{ color: C.emeraldL }} /> Syllabus progress by course
           </div>
+          {stCourses.length === 0 && (
+            <div style={{ color: C.muted, fontSize: 13, textAlign: "center", padding: 10 }}>No courses yet</div>
+          )}
           {stCourses.map((c) => {
             const cv = progress[c.id] || { done: 0, total: 0, pct: 0 };
             return (
@@ -8596,22 +8701,28 @@ function ProgressView({ db, setDb, courses, user }) {
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    fontSize: 13,
-                    marginBottom: 4,
+                    alignItems: "baseline",
+                    gap: 8,
+                    fontSize: 13.5,
+                    marginBottom: 5,
                   }}
                 >
-                  <span>{c.name}</span>
-                  <b>{bn(cv.pct)}%</b>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontWeight: 600 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: c.color || C.emerald }} />
+                    {c.name}
+                  </span>
+                  <span style={{ fontSize: 12.5, color: C.muted }}>
+                    {cv.done}/{cv.total} topics · <b style={{ color: C.text }}>{cv.pct}%</b>
+                  </span>
                 </div>
-                <div
-                  style={{ height: 9, background: C.cream, borderRadius: 99 }}
-                >
+                <div style={{ height: 9, background: "#e6eee9", borderRadius: 99, overflow: "hidden" }}>
                   <div
                     style={{
                       width: cv.pct + "%",
                       height: "100%",
-                      background: c.color,
+                      background: c.color || C.emerald,
                       borderRadius: 99,
+                      transition: "width .4s",
                     }}
                   />
                 </div>
@@ -8629,8 +8740,8 @@ function ProgressView({ db, setDb, courses, user }) {
               marginBottom: 10,
             }}
           >
-            <div style={{ fontWeight: 800 }}>
-              {withIcons(T("💳 ফি পরিশোধের ইতিহাস", "💳 Fee Payment History"))}
+            <div className="pg-title" style={{ marginBottom: 0 }}>
+              <Ico e="💳" style={{ color: C.emeraldL }} /> Fee payment history
             </div>
             <span style={{ display: "flex", gap: 8 }}>
               {user.role === "student" && due > 0 && (
@@ -8646,6 +8757,7 @@ function ProgressView({ db, setDb, courses, user }) {
             </span>
           </div>
           <Table
+            minWidth={0}
             head={T(
               ["Month", "Amount", "Date", "Method", "Status"],
               ["Month", "Amount", "Date", "Method", "Status"],
@@ -8653,7 +8765,7 @@ function ProgressView({ db, setDb, courses, user }) {
             rows={myFees.map((p) => [
               p.month,
               `${(p.currency || st?.fee_currency || "BDT") === "USD" ? "$" : "৳"}${bn((+p.amount).toLocaleString("en"))}`,
-              fmtDate(p.date),
+              compactDate(p.date),
               p.method,
               p.status === "pending" ? (
                 isDir(user) ? (
@@ -8763,32 +8875,42 @@ function ProgressView({ db, setDb, courses, user }) {
           )}
         </div>
         <div style={{ ...S.card }}>
-          <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            {withIcons(T("📝 পরীক্ষার ফলাফল", "📝 Exam Results"))}
+          <div className="pg-title">
+            <Ico e="📝" style={{ color: C.emeraldL }} /> Exam results
           </div>
           <Table
-            head={T(["Exams", "Date", "Marks obtained"], ["Exam", "Date", "Marks Obtained"])}
-            rows={exams.map((e) => [
-              e.title,
-              fmtDate(e.date),
-              T(`${bn(e.marks[sel])}/${bn(e.total)}`, `${e.marks[sel]}/${e.total}`),
-            ])}
-            empty={T("এখনো কোনো ফল নেই", "No results yet")}
+            minWidth={0}
+            head={["Exam", "Date", "Marks", "Grade"]}
+            rows={exams.map((e) => {
+              const r = (e.marks[sel] || 0) / (e.total || 1);
+              return [
+                <b key="n" style={{ fontWeight: 600 }}>{e.title}</b>,
+                compactDate(e.date),
+                `${e.marks[sel]}/${e.total} (${Math.round(r * 100)}%)`,
+                <Tag key="g" color={r >= 0.8 ? C.green : C.gold} bg={r >= 0.8 ? C.greenBg : C.amberBg}>
+                  {r >= 0.8 ? "Mumtaz" : "Jayyid"}
+                </Tag>,
+              ];
+            })}
+            empty="No results yet"
           />
         </div>
         {user.role === "student" && (
           <div style={{ ...S.card }}>
-            <div style={{ fontWeight: 800, marginBottom: 10 }}>
-              {withIcons(T("💬 টিচারের মন্তব্য", "💬 Teacher's Comment"))}
+            <div className="pg-title">
+              <Ico e="💬" style={{ color: C.emeraldL }} /> Teacher's comment
             </div>
             {remarks.length > 0 ? (
               <div
                 style={{
-                  padding: "12px 14px",
-                  borderRadius: 10,
-                  background: C.cream,
-                  fontSize: 13.5,
-                  lineHeight: 1.6,
+                  padding: "14px 16px",
+                  borderRadius: 12,
+                  background: "#f6fbf8",
+                  borderLeft: `4px solid ${C.gold}`,
+                  fontSize: 14.5,
+                  lineHeight: 1.65,
+                  fontStyle: "italic",
+                  color: "#334155",
                 }}
               >
                 {remarks[0].text}
@@ -8804,17 +8926,18 @@ function ProgressView({ db, setDb, courses, user }) {
           </div>
         )}
         <div style={{ ...S.card }}>
-          <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            {withIcons(T("🔁 মেকআপ ক্লাস", "🔁 Makeup Classes"))}
+          <div className="pg-title">
+            <Ico e="🔁" style={{ color: C.emeraldL }} /> Makeup classes
           </div>
           <Table
+            minWidth={0}
             head={T(
               ["Course", "Date & time", "Status"],
               ["Course", "Date & Time", "Status"],
             )}
             rows={makeups.map((m) => [
               courseById(courses, m.course || m.courseId).name,
-              `${fmtDate(m.date)} · ${m.time}`,
+              `${compactDate(m.date)} · ${fmt12((m.time || "").slice(0, 5)).t} ${fmt12((m.time || "").slice(0, 5)).ap}`,
               <Tag key="t" color={C.blue} bg={C.blueBg}>
                 {T(
                   m.status === "done"
@@ -13899,6 +14022,11 @@ const bdNowPlus = (addMin = 0) => {
   const iso = new Date(Date.now() + (DHAKA_OFFSET_HOURS * 60 + addMin) * 60000).toISOString();
   return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
 };
+// "2026-11-22" বা পুরো সময়-চিহ্ন → "22 Nov 2026" — সরু টেবিলে জায়গা বাঁচাতে
+const compactDate = (iso) =>
+  iso
+    ? new Date(`${String(iso).slice(0, 10)}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+    : "—";
 // "2026-11-22" → "Sun, 22 Nov"
 const shortDay = (iso) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
