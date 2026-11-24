@@ -245,3 +245,15 @@ class LectureApprovalSettingsTests(TestCase):
         api.post("/api/app-settings/", {"key": "lecture_lock", "enabled": False}, format="json")
         api.force_authenticate(s)
         self.assertIsNone(locks()["Lecture 3"])
+        # সুইচ বন্ধ: সবার জন্য সব লেকচার খোলা — স্লাইডও
+        self.assertTrue(all(v is None for v in locks().values()))
+        self.assertEqual(api.get(f"/api/decks/find/?course={c.id}&no=3").status_code, 200)
+        api.force_authenticate(t)
+        self.assertTrue(all(v is None for v in locks(f"&student={s.id}").values()))
+        # সুইচ আবার চালু: আগের নিয়ম — অনুমোদিত (লেকচার ২) খোলা, বাকিগুলো আবার তালা
+        api.force_authenticate(d)
+        api.post("/api/app-settings/", {"key": "lecture_lock", "enabled": True}, format="json")
+        api.force_authenticate(s)
+        L = locks()
+        self.assertIsNone(L["Lecture 1"]); self.assertIsNone(L["Lecture 2"]); self.assertIsNotNone(L["Lecture 3"])
+        self.assertEqual(api.get(f"/api/decks/find/?course={c.id}&no=3").status_code, 403)
