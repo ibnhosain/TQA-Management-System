@@ -638,6 +638,8 @@ export const settingsApi = {
 export const approvalsApi = {
   list: () => request("/lecture-approvals/"),
   approve: (course, student, no) => request("/lecture-approvals/", { method: "POST", body: { course, student, no } }),
+  // একসাথে অনেক: student = id বা "all"; প্রত্যেকের এখনো-বন্ধ পরের `count`টি লেকচার খোলে
+  unlockMany: (course, student, count) => request("/lecture-approvals/", { method: "POST", body: { course, student, count } }),
   playStart: (course, no, part, student) => request("/deck-plays/", { method: "POST", body: { course, no, part, student } }),
   playTick: (id, seconds) => request("/deck-plays/", { method: "PATCH", body: { id, seconds } }),
 };

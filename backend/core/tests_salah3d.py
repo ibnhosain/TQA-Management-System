@@ -257,3 +257,40 @@ class LectureApprovalSettingsTests(TestCase):
         L = locks()
         self.assertIsNone(L["Lecture 1"]); self.assertIsNone(L["Lecture 2"]); self.assertIsNotNone(L["Lecture 3"])
         self.assertEqual(api.get(f"/api/decks/find/?course={c.id}&no=3").status_code, 403)
+
+
+class BulkUnlockTests(TestCase):
+    """একসাথে অনেক লেকচার খোলা: একজন বা কোর্সের সবাই, যে যেখানে আছে সেখান থেকে পরের N-টি; শেষ লেকচারের পরে নয়।"""
+    def test_bulk(self):
+        from .models import Course, LessonSection, LectureApproval
+        mk = lambda n, r, **k: User.objects.create_user(username=n, password="x12345678", role=r, name_bn=n, **k)
+        d, t = mk("d", "director"), mk("t", "teacher")
+        s1, s2 = mk("s1", "student", teacher=t), mk("s2", "student", teacher=t)
+        c = Course.objects.create(name="Noorani Qaida Course", teacher=t)
+        c.students.add(s1, s2)
+        for n in range(1, 13):
+            LessonSection.objects.create(course=c, name=f"Lecture {n}", order=n)
+        LessonSection.objects.create(course=c, name="Lecture 40", order=99, is_trial=True)   # ট্রায়াল গোনা হয় না
+        LectureApproval.objects.create(course=c, student=s2, no=1)                            # s2-র লেকচার ২ আগেই খোলা
+        api = APIClient()
+        locks = lambda: {x["name"]: x["lock"] for x in api.get(f"/api/lesson-sections/?course={c.id}").json()}
+        post = lambda **b: api.post("/api/lecture-approvals/", {"course": c.id, **b}, format="json")
+        api.force_authenticate(t)
+        self.assertEqual(post(student=s1.id, count=10).status_code, 403)                     # উস্তাদ পারেন না
+        api.force_authenticate(d)
+        self.assertEqual(post(student=s1.id, count=0).status_code, 400)
+        self.assertEqual(post(student="x", count=3).status_code, 400)
+        r = post(student=s1.id, count=10).json()["unlocked"]
+        self.assertEqual([(x["opened"], x["from"], x["to"]) for x in r], [(10, 2, 11)])
+        api.force_authenticate(s1)
+        L = locks()
+        self.assertTrue(all(L[f"Lecture {n}"] is None for n in range(1, 12)))
+        self.assertIsNotNone(L["Lecture 12"])
+        api.force_authenticate(d)
+        r = {x["student_name"]: (x["opened"], x["from"], x["to"]) for x in post(student="all", count=10).json()["unlocked"]}
+        self.assertEqual(r, {"s1": (1, 12, 12), "s2": (10, 3, 12)})                         # শেষ লেকচার ১২-তে থামে
+        api.force_authenticate(s2)
+        self.assertTrue(all(v is None for v in locks().values()))
+        api.force_authenticate(d)
+        r = post(student="all", count=5).json()["unlocked"]
+        self.assertTrue(all(x["opened"] == 0 for x in r))                                   # সব খোলা — কিছুই বাড়ে না

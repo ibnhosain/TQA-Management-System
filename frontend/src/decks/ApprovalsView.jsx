@@ -49,6 +49,13 @@ const CSS = `
 .apv tr:last-child td{border-bottom:none}
 .apv select,.apv input{border:1px solid #d5dfd9;border-radius:10px;padding:10px 12px;font:inherit;font-size:14px;background:#fff;color:${TEXT}}
 .apv select:focus,.apv input:focus{outline:none;border-color:${GL};box-shadow:0 0 0 3px rgba(26,92,58,.14)}
+.apv-seg{display:inline-flex;gap:2px;padding:3px;border-radius:12px;background:#eef3f0;border:1px solid ${LINE}}
+.apv-seg button{border:none;background:transparent;padding:7px 14px;border-radius:9px;font:inherit;font-size:13.5px;font-weight:600;color:#475569;cursor:pointer}
+.apv-seg button.on{background:#fff;color:${G};box-shadow:0 1px 2px rgba(16,34,24,.12)}
+.apv-chip{border:1px solid #d5dfd9;background:#fff;border-radius:999px;padding:7px 13px;font:inherit;font-size:13px;font-weight:600;color:#475569;cursor:pointer}
+.apv-chip.on{background:#e9f3ed;border-color:${GL};color:${G}}
+.apv-unlock label{display:block}
+@media(max-width:560px){.apv-unlock label{flex:1 1 100%}.apv-unlock select{width:100%}}
 `;
 
 function Metric({ label, value, ok, icon }) {
@@ -303,24 +310,70 @@ function Card({ p, onApprove, busy }) {
   );
 }
 
-// এডমিন নিজে বাছাই করে খোলেন: কোর্স → শিক্ষার্থী → লেকচার। শুধু ওই শিক্ষার্থীর জন্য খোলে, অন্য কারও নয়।
-function ManualUnlock({ courses, onDone }) {
+// এডমিন নিজে বাছাই করে খোলেন — দুই রকম (পরিচালকের নির্দেশ, ২০২৬-১১-২৫):
+//  • একসাথে অনেক: কোর্স → শিক্ষার্থী বা কোর্সের সবাই → কয়টি (যে সংখ্যা ইচ্ছা)। যে যেখানে আছে সেখান থেকে পরের অতগুলো খোলে।
+//  • একটি লেকচার: কোর্স → শিক্ষার্থী → লেকচার নম্বর।
+const ALL_LEFT = 500; // "All" — কোর্সের বাকি সব লেকচার (সার্ভার শেষ লেকচারে থামে)
+function ManualUnlock({ courses, onOne, onMany }) {
+  const [mode, setMode] = useState("many");
   const [course, setCourse] = useState(courses?.[0]?.id || "");
   const [students, setStudents] = useState([]);
-  const [student, setStudent] = useState("");
+  const [student, setStudent] = useState("all");
   const [no, setNo] = useState(2);
+  const [count, setCount] = useState(10);
   const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // কোর্সের তালিকা পরে এলে প্রথমটি বাছাই
+  useEffect(() => {
+    if (!course && courses?.length) setCourse(courses[0].id);
+  }, [courses]);
   useEffect(() => {
     if (!course) return;
-    api.courseStudents(course).then((r) => { setStudents(r || []); setStudent(r?.[0]?.id || ""); }).catch(() => setStudents([]));
+    api
+      .courseStudents(course)
+      .then((r) => {
+        const rows = r || [];
+        setStudents(rows);
+        setStudent((cur) =>
+          cur === "all" || !rows.some((x) => String(x.id) === String(cur)) ? (mode === "many" ? "all" : rows[0]?.id || "") : cur,
+        );
+      })
+      .catch(() => setStudents([]));
   }, [course]);
   const st = students.find((x) => String(x.id) === String(student));
+  const all = student === "all";
+  const n = Number(count);
+  const howMany = n >= ALL_LEFT ? "every remaining lecture" : `the next ${n} ${n === 1 ? "lecture" : "lectures"}`;
+  const who = all ? `all ${students.length} ${students.length === 1 ? "student" : "students"} of this course` : st?.name;
+  const change = (f) => (e) => {
+    f(e.target.value);
+    setConfirm(false);
+    setErr("");
+  };
+  const pickMode = (m) => {
+    setMode(m);
+    setConfirm(false);
+    setErr("");
+    if (m === "one" && all) setStudent(students[0]?.id || "");
+  };
   const ask = () => {
-    if (!st || !(Number(no) >= 2)) return setErr("Please choose a student and a lecture (2 or more).");
+    if (mode === "many") {
+      if (!all && !st) return setErr("Please choose a student.");
+      if (all && !students.length) return setErr("This course has no students.");
+      if (!(Number.isInteger(n) && n >= 1)) return setErr("How many lectures? Write a number — 1 or more.");
+    } else if (!st || !(Number(no) >= 2)) return setErr("Please choose a student and a lecture (2 or more).");
     setErr("");
     setConfirm(true);
   };
+  const go = async () => {
+    setBusy(true);
+    if (mode === "many") await onMany(course, all ? "all" : st.id, Math.min(n, ALL_LEFT), all ? null : st.name);
+    else await onOne(course, st.id, Number(no) - 1, `✅ Lecture ${no} is now open for ${st.name} (only).`);
+    setBusy(false);
+    setConfirm(false);
+  };
+  const lbl = { fontSize: 12, fontWeight: 600, color: "#475569", display: "block", marginBottom: 5 };
   return (
     <details style={{ ...card, padding: "14px 18px" }}>
       <summary style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -330,46 +383,103 @@ function ManualUnlock({ courses, onDone }) {
           <Ico e="🔑" size={17} style={{ verticalAlign: 0 }} />
         </span>
         <span style={{ flex: 1 }}>
-          <b style={{ fontSize: 15 }}>Unlock a lecture by hand</b>
+          <b style={{ fontSize: 15 }}>Unlock lectures by hand</b>
           <span style={{ display: "block", fontSize: 12.5, color: MUTED }}>
-            Usually you approve from the list below after checking the times. Use this only when you need to open a lecture by hand.
+            Open many lectures at once — for one student or a whole course — or a single lecture.
           </span>
         </span>
         <span className="apv-chev" style={{ color: MUTED, fontSize: 20 }}>›</span>
       </summary>
-      <div className="apv-unlock" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 14 }}>
-        <select value={course} onChange={(e) => { setCourse(e.target.value); setConfirm(false); }}>
-          {(courses || []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <select value={student} onChange={(e) => { setStudent(e.target.value); setConfirm(false); }} style={{ minWidth: 180 }}>
-          {students.map((x) => (
-            <option key={x.id} value={x.id}>
-              {x.name}
-            </option>
-          ))}
-        </select>
-        <span style={{ fontSize: 13.5, fontWeight: 600, color: "#475569" }}>Lecture</span>
-        <input type="number" min="2" value={no} onChange={(e) => { setNo(e.target.value); setConfirm(false); }} style={{ width: 80 }} />
+
+      <div className="apv-seg" role="tablist" aria-label="Unlock mode" style={{ marginTop: 14 }}>
+        {[
+          ["many", "Many at once"],
+          ["one", "One lecture"],
+        ].map(([k, l]) => (
+          <button key={k} role="tab" aria-selected={mode === k} className={mode === k ? "on" : ""} onClick={() => pickMode(k)}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      <div className="apv-unlock" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", marginTop: 12 }}>
+        <label>
+          <span style={lbl}>Course</span>
+          <select value={course} onChange={change(setCourse)}>
+            {(courses || []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span style={lbl}>Student</span>
+          <select value={student} onChange={change(setStudent)} style={{ minWidth: 200 }}>
+            {mode === "many" && <option value="all">All students ({students.length})</option>}
+            {students.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {mode === "many" ? (
+          <label>
+            <span style={lbl}>How many lectures</span>
+            <input
+              type="number"
+              min="1"
+              inputMode="numeric"
+              value={n >= ALL_LEFT ? "" : count}
+              placeholder={n >= ALL_LEFT ? "All" : ""}
+              onChange={change(setCount)}
+              style={{ width: 96 }}
+            />
+          </label>
+        ) : (
+          <label>
+            <span style={lbl}>Lecture</span>
+            <input type="number" min="2" inputMode="numeric" value={no} onChange={change(setNo)} style={{ width: 96 }} />
+          </label>
+        )}
+        {mode === "many" && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", paddingBottom: 4 }}>
+            {[5, 10, 20, ALL_LEFT].map((k) => (
+              <button
+                key={k}
+                className={"apv-chip" + (n === k ? " on" : "")}
+                onClick={() => {
+                  setCount(k);
+                  setConfirm(false);
+                  setErr("");
+                }}
+              >
+                {k === ALL_LEFT ? "All" : k}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div style={{ fontSize: 12.5, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>
+        {mode === "many"
+          ? "Each student starts from where they are now — already open lectures are skipped, and nothing opens past the course's last lecture."
+          : "Opens only this lecture, for this one student."}{" "}
+        This matters only while “Lectures unlock only after approval” is on in Settings — when it is off, every lecture is open anyway.
+      </div>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
         {!confirm ? (
           <button onClick={ask} style={btn("primary")}>
-            Unlock
+            <Ico e="🔓" /> Unlock
           </button>
         ) : (
           <>
-            <button
-              onClick={async () => {
-                await onDone(course, st.id, Number(no) - 1, `✅ Lecture ${no} is now open for ${st.name} (only).`);
-                setConfirm(false);
-              }}
-              style={btn("primary")}
-            >
-              Yes, unlock Lecture {no} for {st?.name}
+            <button onClick={go} disabled={busy} style={{ ...btn("primary"), opacity: busy ? 0.6 : 1 }}>
+              {busy ? "Unlocking…" : mode === "many" ? `Yes, unlock ${howMany} for ${who}` : `Yes, unlock Lecture ${no} for ${st?.name}`}
             </button>
-            <button onClick={() => setConfirm(false)} style={btn("ghost")}>
+            <button onClick={() => setConfirm(false)} disabled={busy} style={btn("ghost")}>
               Cancel
             </button>
           </>
@@ -452,8 +562,32 @@ export default function ApprovalsView({ courses }) {
 
       <ManualUnlock
         courses={courses}
-        onDone={async (c, st, prev, okMsg) => {
+        onOne={async (c, st, prev, okMsg) => {
           try { setData(await approvalsApi.approve(c, st, prev)); setMsg(okMsg); } catch (e) { setMsg("Could not unlock — " + (e?.data?.error || e?.message || "")); }
+        }}
+        onMany={async (c, st, n, name) => {
+          try {
+            const r = await approvalsApi.unlockMany(c, st, n);
+            setData(r);
+            const rows = r?.unlocked || [];
+            const got = rows.filter((x) => x.opened > 0);
+            const range = (x) => (x.from === x.to ? `Lecture ${x.from}` : `Lectures ${x.from}–${x.to}`);
+            if (name)
+              setMsg(
+                got.length
+                  ? `✅ ${range(got[0])} ${got[0].from === got[0].to ? "is" : "are"} now open for ${name}.`
+                  : `✅ Nothing to unlock — ${name} already has every lecture open (up to Lecture ${r.last_lecture}).`,
+              );
+            else
+              setMsg(
+                `✅ Unlocked for ${got.length} of ${rows.length} ${rows.length === 1 ? "student" : "students"}, each from where they were` +
+                  (got.length ? ` (${got.slice(0, 4).map((x) => `${x.student_name}: ${range(x)}`).join(" · ")}${got.length > 4 ? " · …" : ""})` : "") +
+                  "." +
+                  (rows.length - got.length ? ` ${rows.length - got.length} already had every lecture open.` : ""),
+              );
+          } catch (e) {
+            setMsg("Could not unlock — " + (e?.data?.error || e?.message || ""));
+          }
         }}
       />
 

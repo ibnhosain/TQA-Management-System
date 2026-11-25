@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .app_flags import FLAGS, all_flags, flag
-from .models import (AppSetting, Attendance, Course, DeckPlay, LectureApproval, LectureTopic, TopicCoverage, User)
+from .models import (AppSetting, Attendance, Course, DeckPlay, LectureApproval, LectureTopic, LessonSection, TopicCoverage, User)
 
 ADMINS = ("director", "admin")
 
@@ -125,6 +125,8 @@ class LectureApprovalsView(APIView):
     def post(self, request):
         if request.user.role not in ADMINS:
             return Response({"error": "Permission denied"}, status=403)
+        if request.data.get("count") not in (None, ""):
+            return self._bulk(request)
         try:
             course = Course.objects.get(pk=request.data.get("course"))
             st = course.students.get(pk=request.data.get("student"))
@@ -133,6 +135,51 @@ class LectureApprovalsView(APIView):
             return Response({"error": "Please give the course, student and lecture"}, status=400)
         LectureApproval.objects.get_or_create(course=course, student=st, no=no, defaults={"approved_by": request.user})
         return self.get(request)
+
+    def _bulk(self, request):
+        """একসাথে অনেক লেকচার খোলা (পরিচালকের নির্দেশ, ২০২৬-১১-২৫): {course, student: id বা "all", count}।
+        প্রতিটি শিক্ষার্থীর ক্ষেত্রে তার এখনো-বন্ধ পরের `count`টি লেকচার খোলে — যে যেখানে আছে সেখান থেকে।
+        কোর্সের শেষ লেকচারের পরে কিছু খোলে না।"""
+        try:
+            course = Course.objects.get(pk=request.data.get("course"))
+            count = int(request.data.get("count"))
+        except Exception:
+            return Response({"error": "Please give the course and how many lectures"}, status=400)
+        if not 1 <= count <= 500:
+            return Response({"error": "How many lectures: give a number from 1 to 500"}, status=400)
+        nos = {n for n in (lecture_no(x) for x in LessonSection.objects.filter(course=course, is_trial=False)
+                           .values_list("name", flat=True)) if n}
+        if not nos:
+            return Response({"error": "This course has no lectures yet"}, status=400)
+        last = max(nos)
+        studs = course.students.filter(role="student").order_by("name_bn")
+        who = request.data.get("student")
+        if who == "all":
+            studs = studs.filter(is_active=True)
+        else:
+            try:
+                studs = studs.filter(pk=int(who))
+            except (TypeError, ValueError):
+                studs = studs.none()
+            if not studs.exists():
+                return Response({"error": "This student is not in this course"}, status=400)
+        done, new = [], []
+        for st in studs:
+            ok = _approved(course, st.id)
+            opened = []
+            for n in range(2, last + 1):          # লেকচার n খোলে যখন n-1 অনুমোদিত
+                if len(opened) == count:
+                    break
+                if (n - 1) not in ok:
+                    opened.append(n)
+                    new.append(LectureApproval(course=course, student=st, no=n - 1, approved_by=request.user))
+            done.append({"student": st.id, "student_name": st.name_bn, "opened": len(opened),
+                         "from": opened[0] if opened else None, "to": opened[-1] if opened else None})
+        LectureApproval.objects.bulk_create(new, ignore_conflicts=True)
+        data = self.get(request).data
+        data["unlocked"] = done
+        data["last_lecture"] = last
+        return Response(data)
 
 
 class DeckPlayView(APIView):
