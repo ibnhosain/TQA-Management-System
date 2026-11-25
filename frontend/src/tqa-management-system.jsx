@@ -5687,8 +5687,10 @@ function LecturePlan({ db, courses, user, refresh }) {
   const canMark = user.role === "teacher" || isAdmin;
   const course = courseById(courses, sel);
 
-  const load = async () => {
+  const loadSeq = useRef(0); // শেষের অনুরোধের উত্তরই বসবে — কোর্স বদলের মাঝে পুরনো উত্তর এসে না চাপে
+  const load = async (quiet) => {
     if (!sel) return setLoading(false);
+    const my = ++loadSeq.current;
     try {
       let rows = await api.lessonSections(sel, forStudent?.id, trialTab, user.role === "teacher");
       // কোর্সে এখনো হেডিং না থাকলে সাতটি ডিফল্ট বানিয়ে নিই (কেবল পরিচালক)।
@@ -5696,8 +5698,10 @@ function LecturePlan({ db, courses, user, refresh }) {
       // অন্যটির ডিফল্টগুলো ঠিকই তৈরি হবে।
       if (!rows.length && isDir(user))
         rows = await api.ensureSections(sel, trialTab);
+      if (my !== loadSeq.current) return;
       setSections(rows || []);
     } catch (e) {
+      if (quiet || my !== loadSeq.current) return; // পেছনের নীরব হালনাগাদ ব্যর্থ — যা দেখাচ্ছে তা-ই থাকুক
       setSections([]);
       notice(
         T(
@@ -5714,6 +5718,21 @@ function LecturePlan({ db, courses, user, refresh }) {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel, forStudent, trialTab]);
+  // পরিচালক Settings-এ লেকচারের তালা বদলালে, বা অনুমোদন দিলে — আগে থেকে খোলা পাতায়
+  // (অন্য ট্যাব/ফোন) পুরনো 🔒 থেকে যেত, রিলোড লাগত। এখন পাতায় ফিরলেই, আর প্রতি মিনিটে, নীরবে নতুন অবস্থা।
+  const loadRef = useRef(load);
+  loadRef.current = load;
+  useEffect(() => {
+    const refresh = () => document.visibilityState === "visible" && loadRef.current(true);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    const t = setInterval(refresh, 60000);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+      clearInterval(t);
+    };
+  }, []);
 
   // কোর্স বদলালে আগের শিক্ষার্থী আর প্রযোজ্য নয়
   useEffect(() => {
