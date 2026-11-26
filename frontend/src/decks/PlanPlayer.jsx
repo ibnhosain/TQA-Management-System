@@ -42,7 +42,7 @@ export default function PlanPlayer({ course, no, part, topicId, student, forStud
       </div>
     );
   return (
-    <DeckPlayer buffer={play.buffer} part={part} autoFinish={play.auto} title={`Lecture ${no}${part?.label ? " · " + part.label : ""}${student ? " · My Practice" : ""}`} onClose={close}
+    <DeckPlayer buffer={play.buffer} part={part} autoFinish={play.auto} floating={!student} title={`Lecture ${no}${part?.label ? " · " + part.label : ""}${student ? " · My Practice" : ""}`} onClose={close}
       finish={student ? undefined : (back) => <CoverPanel deck={play.deck} preselect={topicId} onBack={back} onDone={close} />} />
   );
 }

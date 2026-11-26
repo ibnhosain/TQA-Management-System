@@ -107,7 +107,7 @@ export default function DecksView({ user, courses }) {
           </div>
         </div>
       )}
-      {play && <DeckPlayer buffer={play.buffer} title={play.title}
+      {play && <DeckPlayer buffer={play.buffer} title={play.title} floating
         finish={(back) => <CoverPanel deck={play.deck} onBack={back} onDone={() => { setPlay(null); if (document.fullscreenElement) document.exitFullscreen(); }} />}
         onClose={() => { setPlay(null); if (document.fullscreenElement) document.exitFullscreen(); }} />}
     </div>

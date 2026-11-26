@@ -1,8 +1,16 @@
 /* Full-screen in-app player for a lecture's .pptx: click / tap / → to go on, ← to go back, Esc to close.
    Entrance animations and slide transitions play as in PowerPoint (fade, pop, zoom, fly, bounce, spin, wipe, wheel, float). */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { PictureInPicture2 } from "lucide-react";
 import { loadPptx } from "./pptx";
 import { Ico } from "../icons";
+
+/* 🔝 ভাসমান পর্দা (Document Picture-in-Picture, Chrome/Edge) — সবসময় সবার উপরে ভাসে, ভেতরে শুধু স্লাইড।
+   উস্তাদ জুমে শুধু এই পর্দাটা শেয়ার করেন → শিক্ষার্থীরা কেবল স্লাইড দেখে, উস্তাদের স্ক্রিনের আর কিছু না;
+   জুম শিক্ষার্থীর পর্দা অনুযায়ী নিজেই বড়-ছোট করে। ঢাকা পড়ে না বলে শেয়ার জমেও যায় না (আগের দারস-ব্যবস্থার মতো)।
+   পর্দা যত ছোট-বড় করা হোক, স্লাইড পুরোটা মাপমতো বসে। এটি এই প্লেয়ারেরই অংশ (portal) — নেক্সট চাপলে সাথে সাথে বদলায়। */
+const pipReady = () => typeof window !== "undefined" && "documentPictureInPicture" in window;
 
 const CSS = `
 @keyframes dk-fade{from{opacity:0}to{opacity:1}}
@@ -136,7 +144,20 @@ function rangeOf(deck, part) {
   return [from, nxt ? nxt.start : deck.slides.length];
 }
 
-export default function DeckPlayer({ buffer, title, onClose, finish, part, autoFinish = true }) {
+/* একটি স্লাইড, `scale` মাপে — প্লেয়ারের পর্দা আর ভাসমান পর্দা দুটোই এটাই আঁকে */
+function Stage({ deck, slide, state, scale, shadow = true }) {
+  return (
+    <div className="dk-stage" style={{ position: "relative", flexShrink: 0, width: deck.W * scale, height: deck.H * scale, background: slide.bg, overflow: "hidden",
+      boxShadow: shadow ? "0 8px 40px rgba(0,0,0,.5)" : "none", animation: transitionCss(slide.transition) }}>
+      {slide.items.map((it, i) => {
+        const sst = !it.under ? state[it.id] : null;
+        return <Item key={i} it={it} s={scale} anim={sst?.anim} hidden={sst?.hidden} />;
+      })}
+    </div>
+  );
+}
+
+export default function DeckPlayer({ buffer, title, onClose, finish, part, autoFinish = true, floating = false }) {
   const [done, setDone] = useState(false);   // শেষ স্লাইডের পর — কভার-টিকের প্যানেল নিজে থেকে আসে
   const [deck, setDeck] = useState(null);
   const [err, setErr] = useState("");
@@ -167,20 +188,64 @@ export default function DeckPlayer({ buffer, title, onClose, finish, part, autoF
   const next = () => { if (!deck) return; if (step < clicks) setStep(step + 1); else if (n < to - 1) { setN(n + 1); setStep(0); } else if (finish && autoFinish) setDone(true); };
   const prev = () => { if (!deck) return; if (step > 0) setStep(step - 1); else if (n > from) { const p = deck.slides[n - 1]; setN(n - 1); setStep(p.steps.clicks.length); } };
 
+  // 🔝 ভাসমান পর্দা — উইন্ডো আর তার ভেতরের মাপ
+  const [floatWin, setFloatWin] = useState(null);
+  const [fsz, setFsz] = useState({ w: 960, h: 540 });
+  const [floatMsg, setFloatMsg] = useState("");
+  // ⚠️ requestWindow ডাকতে হয় ক্লিকের ভেতর থেকেই, নইলে ব্রাউজার আটকে দেয়
+  const openFloat = async () => {
+    if (floatWin) { try { floatWin.focus(); } catch { /* আগেই বন্ধ */ } return; }
+    if (!pipReady()) { setFloatMsg("This browser has no floating screen — please use Chrome or Edge on a computer."); return; }
+    try {
+      const W = 960, H = Math.round(960 * (deck ? deck.H / deck.W : 9 / 16));
+      const w = await window.documentPictureInPicture.requestWindow({ width: W, height: H });
+      const d = w.document;
+      d.title = "TQA Slides";
+      const st = d.createElement("style");
+      st.textContent = CSS + "html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#000;user-select:none}";
+      d.head.appendChild(st);
+      // ফন্ট (Amiri ইত্যাদি) — নতুন উইন্ডোর নিজের document, তাই সাথে নিতে হয়
+      document.querySelectorAll('link[rel="stylesheet"]').forEach((l) => {
+        const c = d.createElement("link"); c.rel = "stylesheet"; c.href = l.href; d.head.appendChild(c);
+      });
+      const r = () => setFsz({ w: w.innerWidth, h: w.innerHeight });
+      r();
+      w.addEventListener("resize", r);
+      w.addEventListener("pagehide", () => setFloatWin(null));   // উস্তাদ নিজে বন্ধ করলে
+      setFloatMsg("");
+      setFloatWin(w);
+    } catch (e) { setFloatMsg("Could not open the floating screen — " + (e?.message || "")); }
+  };
+  // প্লেয়ার বন্ধ হলে ভাসমান পর্দাও যায়
+  useEffect(() => () => { try { floatWin && floatWin.close(); } catch { /* আগেই বন্ধ */ } }, [floatWin]);
+
   useEffect(() => {
-    const k = (e) => {
+    const k = (e, inFloat) => {
       if (done) return;
       if (["ArrowRight", "ArrowDown", "PageDown", " ", "Enter"].includes(e.key)) { e.preventDefault(); next(); }
       else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); prev(); }
-      else if (e.key === "Escape") onClose && onClose();
+      else if (e.key === "Escape" && !inFloat) onClose && onClose();
     };
+    const kf = (e) => k(e, true);
     window.addEventListener("keydown", k);
-    return () => window.removeEventListener("keydown", k);
+    floatWin?.addEventListener("keydown", kf);   // ভাসমান পর্দায় ক্লিক করে রাখলেও তীর-চাবি চলে
+    return () => { window.removeEventListener("keydown", k); floatWin?.removeEventListener("keydown", kf); };
   });
 
   const notesH = notes ? Math.min(220, size.h * 0.28) : 0;
   const barH = 52;
-  const scale = deck ? Math.min((size.w - 156) / deck.W, (size.h - barH - notesH) / deck.H) : 1;   // দুই পাশে তীরের জায়গা
+  // স্লাইডের জায়গা যতটুকু আসলে খালি (উপরের পট্টি, নির্দেশনা, নোট বাদে) — সেটাই মেপে বসানো
+  const area = useRef(null);
+  const [box, setBox] = useState(null);
+  useEffect(() => {
+    const el = area.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(() => setBox({ w: el.clientWidth, h: el.clientHeight }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const avail = box || { w: size.w, h: size.h - barH - notesH };
+  const scale = deck ? Math.max(1e-6, Math.min((avail.w - 156) / deck.W, avail.h / deck.H)) : 1;   // দুই পাশে তীরের জায়গা (মাপ EMU-তে, তাই খুব ছোট সংখ্যা)
 
   // which items are hidden/animating at this step
   const state = useMemo(() => {
@@ -205,11 +270,26 @@ export default function DeckPlayer({ buffer, title, onClose, finish, part, autoF
         <button style={btn} onClick={prev}>‹</button>
         <button style={btn} onClick={next}>›</button>
         <button style={btn} onClick={() => setNotes((v) => !v)}>{notes ? "Hide notes" : "Notes"}</button>
+        {floating && (
+          <button title="A slide-only window that stays on top — share just this window in Zoom" onClick={openFloat}
+            style={{ ...btn, display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700,
+              ...(floatWin ? { background: "#1a7a44", borderColor: "#4ade80" } : { background: "#c9962a", borderColor: "#e9c46a" }) }}>
+            <PictureInPicture2 size={16} strokeWidth={2.4} aria-hidden="true" /> {floatWin ? "Floating screen on" : "Floating screen"}
+          </button>
+        )}
         <button style={btn} onClick={() => (document.fullscreenElement ? document.exitFullscreen() : wrap.current.requestFullscreen?.())}><Ico e="⛶" /></button>
         {finish && <button style={btn} onClick={() => setDone(true)}><Ico e="✓" /> Topics</button>}
         <button style={btn} onClick={onClose}><Ico e="✕" /></button>
       </div>
-      <div onClick={next} style={{ flex: 1, display: "grid", placeItems: "center", overflow: "hidden", cursor: "pointer", position: "relative" }}>
+      {floating && (floatWin || floatMsg) && (
+        <div style={{ padding: "7px 14px", fontSize: 13.5, lineHeight: 1.5, color: floatWin ? "#d9f7e4" : "#ffe1a8",
+          background: floatWin ? "rgba(26,122,68,.35)" : "rgba(201,150,42,.25)", borderTop: "1px solid rgba(255,255,255,.12)" }}>
+          {floatWin
+            ? <>The floating screen is on. In Zoom: <b>Share Screen → choose the “TQA Slides” window</b> (not your whole screen) — students will see only the slide. Drag its corner to any size; the slide always fits. Change slides here or in the floating screen.</>
+            : floatMsg}
+        </div>
+      )}
+      <div ref={area} onClick={next} style={{ flex: 1, minHeight: 0, display: "grid", placeItems: "center", overflow: "hidden", cursor: "pointer", position: "relative" }}>
         {/* iPad/ফোনে আঙুল দিয়ে চালানোর বড় তীর — বামে আগের, ডানে পরের */}
         {deck && [["‹", prev, { left: 10 }], ["›", next, { right: 10 }]].map(([t, fn, side]) => (
           <button key={t} aria-label={t === "‹" ? "Previous" : "Next"} onClick={(e) => { e.stopPropagation(); fn(); }}
@@ -219,16 +299,16 @@ export default function DeckPlayer({ buffer, title, onClose, finish, part, autoF
         ))}
         {err && <div style={{ color: "#fff", padding: 20 }}>Could not open this file: {err}</div>}
         {!deck && !err && <div style={{ color: "#fff" }}>Opening…</div>}
-        {slide && (
-          <div key={n} className="dk-stage" style={{ position: "relative", width: deck.W * scale, height: deck.H * scale, background: slide.bg, overflow: "hidden",
-            boxShadow: "0 8px 40px rgba(0,0,0,.5)", animation: transitionCss(slide.transition) }}>
-            {slide.items.map((it, i) => {
-              const sst = !it.under ? state[it.id] : null;
-              return <Item key={i} it={it} s={scale} anim={sst?.anim} hidden={sst?.hidden} />;
-            })}
-          </div>
-        )}
+        {slide && <Stage key={n} deck={deck} slide={slide} state={state} scale={scale} />}
       </div>
+      {/* ভাসমান পর্দা — শুধু স্লাইড, পর্দার মাপে পুরোটা; ক্লিক = পরের, ডান-ক্লিক = আগের */}
+      {floatWin && slide && createPortal(
+        <div onClick={next} onContextMenu={(e) => { e.preventDefault(); prev(); }}
+          style={{ width: "100vw", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "#000", cursor: "pointer" }}>
+          <Stage key={n} deck={deck} slide={slide} state={state} shadow={false} scale={Math.min(fsz.w / deck.W, fsz.h / deck.H)} />
+        </div>,
+        floatWin.document.body,
+      )}
       {done && finish && finish(() => setDone(false))}
       {notes && slide && (
         <div style={{ height: notesH, overflow: "auto", background: "#fff8e6", color: "#1f2a24", padding: "10px 16px", whiteSpace: "pre-wrap", fontSize: 15, borderTop: "3px solid #c9962a" }}>
