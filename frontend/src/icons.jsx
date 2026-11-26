@@ -22,7 +22,7 @@ import {
   Save, ScrollText, Search, Send, SendHorizontal, Settings, Shield, SkipForward, Smartphone,
   Smile, Sparkles, Speech, Sprout, Star, Tag, Target, Timer, Trash2, TreePalm, TrendingUp,
   TriangleAlert, Upload, User, UserRound, Users, Video, Wallet, Wrench, X, Zap, Layers,
-  ShieldCheck, Clapperboard, Footprints, CalendarClock, ListChecks, BookCheck, IdCard, Undo2, Backpack,
+  ShieldCheck, Clapperboard, Footprints, CalendarClock, BookCheck, IdCard, Undo2, Backpack,
 } from "lucide-react";
 
 /* Lucide-এ নেই এমন কয়েকটি — একই ধাঁচে (২৪×২৪, রেখা, গোল প্রান্ত) হাতে আঁকা */
@@ -115,7 +115,7 @@ export const EMOJI_ICON = {
 /* মেনুর আইকন — পাতার id অনুযায়ী (ইমোজির চেয়ে অর্থ স্পষ্ট করে বাছা) */
 export const NAV_ICON = {
   overview: LayoutDashboard, classes: Video, instantclass: Zap, postponed: CalendarClock,
-  routine: CalendarDays, lectures: ClipboardList, approvals: ListChecks, settings: Settings,
+  routine: CalendarDays, lectures: ClipboardList, settings: Settings,
   syllabus: ScrollText, attendance: CalendarCheck, assignments: NotebookPen, homework: BookCheck,
   exams: Medal, progress: TrendingUp, payments: CreditCard, studentpayments: Banknote,
   waoutbox: MessagesSquare, teacherreport: Star, coursemgr: BookOpen, allstudents: Users,

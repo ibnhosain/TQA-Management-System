@@ -836,11 +836,6 @@ class LectureViewSet(viewsets.ModelViewSet):
             # ⚠️ উস্তাদ কেবল নিজের শিক্ষার্থীর জন্যই টিক দিতে পারবেন। এক
             # কোর্সে একাধিক উস্তাদ থাকায় এটা না থাকলে একজন উস্তাদ অন্যজনের
             # শিক্ষার্থীর হিসাবে টিক দিয়ে ফেলতে পারতেন।
-            from .app_settings_views import lecture_lock, lecture_no
-            if topic.section_id and not topic.section.is_trial:
-                why = lecture_lock(u, topic.section.course, lecture_no(topic.section.name), sid)
-                if why:
-                    return Response({"detail": why}, status=403)
             if u.role not in ("director", "admin") and not _is_own_student(u, sid, topic.lecture.course):
                 return Response(
                     {"detail": "This student does not study with you"}, status=403)

@@ -1,14 +1,13 @@
 ﻿import React, { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
 // ভাসমান পর্দাটি উস্তাদের উইন্ডোর ভেতর থেকেই আঁকা হয় — তাই portal
 import { createPortal } from "react-dom";
-import { api, approvalsApi, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
+import { api, login, logout, getMe, hasToken, downloadBackup, hasPendingWrites } from "./api";
 // ইমোজির বদলে আসল আইকন — বিস্তারিত icons.jsx-এ
 import { Ico, withIcons, NAV_ICON } from "./icons";
 import { ALargeSmall, LogOut, ChevronRight, Play, ChevronUp, ChevronDown } from "lucide-react";
 // লেকচারের স্লাইড — Lesson Plan-এ টপিকে ক্লিক করলে চলে (আলাদা মেনু নেই; মালিকের নির্দেশ ২০২৬-১১-১৭)
 const PlanPlayer = lazy(() => import("./decks/PlanPlayer.jsx"));
 const SettingsView = lazy(() => import("./decks/SettingsView.jsx"));   // পরিচালকের Settings — চালু/বন্ধ
-const ApprovalsView = lazy(() => import("./decks/ApprovalsView.jsx")); // এডমিন দেখে অনুমোদন দিলে পরের লেকচার খোলে
 const HomeworkNotes = lazy(() => import("./decks/HomeworkNotes.jsx"));  // শিক্ষার্থীর Homework — স্লাইডের নোট
 
 
@@ -5659,7 +5658,6 @@ function LecturePlan({ db, courses, user, refresh }) {
   const partOf = (tp) => DECK_PART[(tp.text || "").split(" — ")[0].trim()];
   const [play, setPlay] = useState(null);   // { no, part, topicId }
   const playLecture = (sec, tp) => {
-    if (sec.lock) return notice("🔒 " + sec.lock);
     const m = /lecture\s*(\d+)/i.exec(sec.name || "");
     if (!m || trialTab) return notice("No slides for this heading.");
     const key = partOf(tp);
@@ -5718,8 +5716,8 @@ function LecturePlan({ db, courses, user, refresh }) {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel, forStudent, trialTab]);
-  // পরিচালক Settings-এ লেকচারের তালা বদলালে, বা অনুমোদন দিলে — আগে থেকে খোলা পাতায়
-  // (অন্য ট্যাব/ফোন) পুরনো 🔒 থেকে যেত, রিলোড লাগত। এখন পাতায় ফিরলেই, আর প্রতি মিনিটে, নীরবে নতুন অবস্থা।
+  // অন্য কেউ (উস্তাদ/পরিচালক, অন্য ট্যাব বা ফোনে) টিক দিলে বা টপিক বদলালে — খোলা পাতায় পুরনো অবস্থা
+  // থেকে যেত, রিলোড লাগত। এখন পাতায় ফিরলেই, আর প্রতি মিনিটে, নীরবে নতুন অবস্থা।
   const loadRef = useRef(load);
   loadRef.current = load;
   useEffect(() => {
@@ -6188,7 +6186,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                     padding: "12px 14px",
                     background: "#f6f9f7",
                     borderBottom: `1px solid ${C.line}`,
-                    borderLeft: `4px solid ${sec.lock ? "#cbd5d0" : C.emerald}`,
+                    borderLeft: `4px solid ${C.emerald}`,
                   }}
                 >
                   <span
@@ -6202,10 +6200,10 @@ function LecturePlan({ db, courses, user, refresh }) {
                       fontSize: lecNo ? 15 : 13,
                       fontWeight: 700,
                       color: "#fff",
-                      background: sec.lock ? "#94a3b8" : `linear-gradient(135deg, ${C.emeraldL}, ${C.emeraldD})`,
+                      background: `linear-gradient(135deg, ${C.emeraldL}, ${C.emeraldD})`,
                     }}
                   >
-                    {sec.lock ? <Ico e="🔒" size={16} style={{ verticalAlign: 0 }} /> : lecNo || si + 1}
+                    {lecNo || si + 1}
                   </span>
                   <div style={{ flex: 1, minWidth: 150 }}>
                     <div style={{ fontWeight: 700, fontSize: 15.5, letterSpacing: "-0.01em" }}>{sec.name}</div>
@@ -6216,11 +6214,6 @@ function LecturePlan({ db, courses, user, refresh }) {
                       <span style={{ width: 70, height: 5, borderRadius: 99, background: "#e1e9e4", display: "inline-block", overflow: "hidden" }}>
                         <span style={{ display: "block", width: `${secPct}%`, height: "100%", background: C.green }} />
                       </span>
-                      {sec.lock && (
-                        <span style={{ color: "#a16207", fontWeight: 600 }}>
-                          <Ico e="🔒" /> {sec.lock}
-                        </span>
-                      )}
                     </div>
                   </div>
                   {isDir(user) && (
@@ -6262,7 +6255,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                     <div key={tp.id}>
                       <div
                         onClick={() => playLecture(sec, tp)}
-                        title={sec.lock ? "" + sec.lock : "Play the slides"}
+                        title="Play the slides"
                         style={{
                           cursor: "pointer",
                           display: "flex",
@@ -6270,7 +6263,6 @@ function LecturePlan({ db, courses, user, refresh }) {
                           gap: 10,
                           padding: "10px 12px",
                           borderRadius: 12,
-                          opacity: sec.lock ? 0.55 : 1,
                           flexWrap: "wrap",
                           // todayPlanMode চালু থাকলে আজকের পাঠ হলে সোনালি, কভার হলে সবুজ, বাদ পড়লে লাল, বাকি থাকলে সাদা
                           background: todayPlanMode && isToday ? C.amberBg : isDone ? "#f1faf4" : isMissed ? "#fff6f4" : "#fff",
@@ -6289,11 +6281,11 @@ function LecturePlan({ db, courses, user, refresh }) {
                             flexShrink: 0,
                             display: "grid",
                             placeItems: "center",
-                            background: sec.lock ? "#e2e8e4" : "#e9f3ed",
-                            color: sec.lock ? "#94a3b8" : C.emerald,
+                            background: "#e9f3ed",
+                            color: C.emerald,
                           }}
                         >
-                          {sec.lock ? <Ico e="🔒" size={14} style={{ verticalAlign: 0 }} /> : <Play size={13} strokeWidth={2.6} fill="currentColor" />}
+                          <Play size={13} strokeWidth={2.6} fill="currentColor" />
                         </span>
                         <span
                           title={isDone ? "Covered" : isMissed ? "Missed" : "Not yet"}
@@ -6328,7 +6320,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                         >
                           {tp.text}
                         </span>
-                        {(canMark || isAdmin) && !sec.lock && (
+                        {(canMark || isAdmin) && (
                           <span
                             onClick={(e) => e.stopPropagation()}
                             style={{ display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "flex-end" }}
@@ -18981,7 +18973,6 @@ function Overview({ db, courses, user, goTo }) {
           ).length,
         ),
       );
-      settle(approvalsApi.list(), (d) => put("approvals", (d?.pending || []).length));
       settle(api.waOutbox(), (d) => put("wa", (Array.isArray(d) ? d : []).filter((m) => m.status === "queued").length));
       settle(Promise.all([api.allStudents(), api.allTeachers()]), ([st, te]) =>
         setPeople({ students: st.length, teachers: te.length }),
@@ -19054,7 +19045,6 @@ function Overview({ db, courses, user, goTo }) {
     isAdm(user) && [newForms, "📨", plural(newForms, "form", "forms") + " to answer", "forms", C.red],
     [att.verify || 0, "💳", plural(att.verify || 0, "payment", "payments") + " to verify", "studentpayments", C.gold],
     [att.leaves || 0, "✉️", plural(att.leaves || 0, "leave application", "leave applications") + " to decide", "leaves", C.blue],
-    [att.approvals || 0, "✅", plural(att.approvals || 0, "lecture", "lectures") + " waiting for approval", "approvals", C.emerald],
     [att.wa || 0, "📤", plural(att.wa || 0, "WhatsApp message", "WhatsApp messages") + " to send", "waoutbox", C.green],
     [att.toMark || 0, "📝", plural(att.toMark || 0, "submission", "submissions") + " to mark", "assignments", C.gold],
     [att.homework || 0, "📝", plural(att.homework || 0, "assignment", "assignments") + " to submit", "assignments", C.blue],
@@ -26421,14 +26411,6 @@ const NAV = [
     roles: ["director", "admin", "teacher", "student"],
   },
   {
-    // উস্তাদ সব টপিক টিক দিলে এখানে আসে; ক্লাস ও স্লাইডের সময় দেখে অনুমোদন দিলে পরের লেকচার খোলে
-    id: "approvals",
-    icon: "✅",
-    label: "Lecture Approvals",
-    labelEn: "Lecture Approvals",
-    roles: ["director", "admin"],
-  },
-  {
     // পরিচালকের Settings: চালু/বন্ধ বোতাম (শুধু পরিচালক বদলান)
     id: "settings",
     icon: "⚙️",
@@ -28428,9 +28410,6 @@ export default function App() {
           {view === "postponed" && <PostponedClassesView user={user} />}
           {view === "routine" && <RoutineView {...props} />}
           {view === "lectures" && <LecturePlan {...props} />}
-          {view === "approvals" && (user.role === "director" || user.role === "admin") && (
-            <Suspense fallback={<div style={{ padding: 20 }}>Loading…</div>}><ApprovalsView courses={courses} /></Suspense>
-          )}
           {view === "settings" && (user.role === "director" || user.role === "admin") && (
             <Suspense fallback={<div style={{ padding: 20 }}>Loading…</div>}><SettingsView user={user} /></Suspense>
           )}

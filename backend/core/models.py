@@ -160,7 +160,8 @@ class DeckPlay(models.Model):
 
 
 class LectureApproval(models.Model):
-    """এডমিন/পরিচালক দেখে অনুমোদন দিলেন: এই শিক্ষার্থীর লেকচার no ঠিকমতো শেষ — তাই লেকচার no+1 খোলে।"""
+    """⚠️ ২০২৬-১১-২৬ থেকে অব্যবহৃত — অনুমোদন ব্যবস্থা সরানো হয়েছে (মালিকের নির্দেশ)। পুরনো রেকর্ড হারাতে না দিতে
+    টেবিলটা রাখা। আগে: এডমিন/পরিচালক অনুমোদন দিলে এই শিক্ষার্থীর লেকচার no+1 খুলত।"""
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="lecture_approvals")
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="lecture_approvals")
     no = models.PositiveIntegerField()

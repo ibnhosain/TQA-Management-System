@@ -482,21 +482,10 @@ class LessonSectionSerializer(serializers.ModelSerializer):
     আর প্রতি হেডিংয়ে আলাদা কল করারও দরকার পড়ে না।
     """
     topics = serializers.SerializerMethodField()
-    lock = serializers.SerializerMethodField()
 
     class Meta:
         model = LessonSection
-        fields = ["id", "course", "name", "order", "is_trial", "topics", "lock"]
-
-    def get_lock(self, obj):
-        """🔒 তালার কারণ (না থাকলে null) — অনুমোদন ও আগের লেকচার কভার অনুযায়ী।"""
-        if obj.is_trial:
-            return None
-        from .app_settings_views import lecture_lock, lecture_no
-        req = self.context.get("request")
-        sid = self.context.get("student_id")
-        cache = self.context.setdefault("_lock_cache", {})
-        return lecture_lock(getattr(req, "user", None), obj.course, lecture_no(obj.name), sid if sid and sid > 0 else None, cache)
+        fields = ["id", "course", "name", "order", "is_trial", "topics"]
 
     def get_topics(self, obj):
         # prefetch করা topics থেকেই — প্রতি হেডিংয়ে আলাদা কোয়েরি হয় না

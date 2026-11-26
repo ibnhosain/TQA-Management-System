@@ -1,4 +1,4 @@
-/* পরিচালকের Settings পাতা — চালু/বন্ধ বোতাম (শুধু পরিচালক বদলান)। লেকচার খোলা হয় "Lecture Approvals" পাতা থেকে।
+/* পরিচালকের Settings পাতা — চালু/বন্ধ বোতাম (শুধু পরিচালক বদলান)। লেকচারের তালা/অনুমোদন ২০২৬-১১-২৬-এ সরানো হয়েছে।
    ২০২৬-১১-২২: মূল অ্যাপের প্রিমিয়াম চেহারায় (রং মূল অ্যাপের C-এর সাথে মেলানো)। প্রতিটি বোতাম
    বদলানোর সময় নিজের "Saving…" অবস্থা; "Saved" বার্তা নিজে থেকে মিলিয়ে যায়।
    ⚠️ মূল ফাইল থেকে import নেই — এই পাতা সেখান থেকেই lazy-load হয় (বৃত্তাকার নির্ভরতা এড়াতে)। */
@@ -8,7 +8,7 @@ import { Ico, withIcons } from "../icons";
 
 const G = "#1a5c3a", GL = "#2a7a50", MUTED = "#64748b", TEXT = "#14221b", LINE = "#e3e9e5", RED = "#c0392b";
 // প্রতিটি বোতামের পাশের ছবি — অচেনা নতুন কী হলে সাধারণ ⚙
-const ICON = { lecture_lock: "🔒", student_slides: "🎞", homework_notes: "📝", auto_cover_panel: "✅" };
+const ICON = { student_slides: "🎞", homework_notes: "📝", auto_cover_panel: "✅" };
 
 function Toggle({ on, disabled, busy, onChange, label }) {
   return (
@@ -82,7 +82,7 @@ export default function SettingsView({ user }) {
           <Ico e="⚙" style={{ color: GL }} /> Settings
         </h2>
         <div style={{ color: MUTED, fontSize: 13.5, marginTop: 4 }}>
-          Switch features on or off for the whole academy. Lectures are opened from <b>Lecture Approvals</b>.
+          Switch features on or off for the whole academy.
         </div>
       </div>
 

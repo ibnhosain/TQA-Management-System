@@ -1,7 +1,7 @@
 /* Lesson Plan-এ টপিকে ক্লিক → সেদিনের লেকচারের স্লাইড। উস্তাদ/এডমিন/পরিচালক পান উস্তাদের স্লাইড (শেষে টপিক-টিক),
    শিক্ষার্থী পায় তার পড়া ও প্র্যাকটিসের স্লাইড। কোনো সফটওয়্যার লাগে না — অ্যাপের ভেতরেই চলে। */
 import { useEffect, useRef, useState } from "react";
-import { approvalsApi, deckApi, fetchBinary, settingsApi } from "../api";
+import { deckApi, deckPlayApi, fetchBinary, settingsApi } from "../api";
 import DeckPlayer from "./DeckPlayer.jsx";
 import CoverPanel from "./CoverPanel.jsx";
 
@@ -23,11 +23,11 @@ export default function PlanPlayer({ course, no, part, topicId, student, forStud
   }, [course, no]);
   // উস্তাদ/এডমিন স্লাইড চালালে সময় রাখা (এডমিন অনুমোদনের আগে দেখেন) — প্রতি ৩০ সেকেন্ডে ও বন্ধ করলে
   const playRef = useRef({ id: null, t0: 0 });
-  const tick = () => { const p = playRef.current; if (p.id) approvalsApi.playTick(p.id, Math.round((Date.now() - p.t0) / 1000)).catch(() => {}); };
+  const tick = () => { const p = playRef.current; if (p.id) deckPlayApi.playTick(p.id, Math.round((Date.now() - p.t0) / 1000)).catch(() => {}); };
   useEffect(() => {
     if (!play || student) return undefined;
     let live = true;
-    approvalsApi.playStart(course, no, part?.key || "", forStudent).then((r) => { if (live && r?.id) playRef.current = { id: r.id, t0: Date.now() }; }).catch(() => {});
+    deckPlayApi.playStart(course, no, part?.key || "", forStudent).then((r) => { if (live && r?.id) playRef.current = { id: r.id, t0: Date.now() }; }).catch(() => {});
     const iv = setInterval(tick, 30000);
     return () => { live = false; clearInterval(iv); tick(); };
   }, [play]); // eslint-disable-line

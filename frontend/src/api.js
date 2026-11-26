@@ -634,12 +634,8 @@ export const settingsApi = {
   set: (key, enabled) => request("/app-settings/", { method: "POST", body: { key, enabled } }),
 };
 
-/* এডমিনের লেকচার অনুমোদন আর স্লাইড চালানোর সময় */
-export const approvalsApi = {
-  list: () => request("/lecture-approvals/"),
-  approve: (course, student, no) => request("/lecture-approvals/", { method: "POST", body: { course, student, no } }),
-  // একসাথে অনেক: student = id বা "all"; প্রত্যেকের এখনো-বন্ধ পরের `count`টি লেকচার খোলে
-  unlockMany: (course, student, count) => request("/lecture-approvals/", { method: "POST", body: { course, student, count } }),
+/* স্লাইড কত মিনিট চলল (লেকচারের অনুমোদন ব্যবস্থা ২০২৬-১১-২৬-এ সরানো হয়েছে) */
+export const deckPlayApi = {
   playStart: (course, no, part, student) => request("/deck-plays/", { method: "POST", body: { course, no, part, student } }),
   playTick: (id, seconds) => request("/deck-plays/", { method: "PATCH", body: { id, seconds } }),
 };
