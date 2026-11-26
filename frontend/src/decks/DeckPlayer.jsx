@@ -145,6 +145,9 @@ export default function DeckPlayer({ buffer, title, onClose, finish, part, autoF
   const [notes, setNotes] = useState(false);
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   const wrap = useRef(null);
+  // অ্যাপের "AA" লেখা-বড় পুরো পাতায় CSS zoom বসায় (<html>) — স্লাইডেও লাগত, ফলে স্লাইড স্ক্রিনের চেয়ে বড় হয়ে
+  // ডান ও নিচের অংশ কেটে যেত। প্লেয়ারে উল্টো zoom দিয়ে স্লাইড সবসময় স্বাভাবিক মাপে, পুরো স্ক্রিনে ধরে।
+  const [unzoom] = useState(() => 1 / (parseFloat(document.documentElement.style.zoom) || 1));
 
   useEffect(() => {
     let d;
@@ -195,7 +198,7 @@ export default function DeckPlayer({ buffer, title, onClose, finish, part, autoF
 
   const btn = { background: "rgba(255,255,255,.12)", color: "#fff", border: "1px solid rgba(255,255,255,.25)", borderRadius: 999, padding: "6px 14px", cursor: "pointer", font: "inherit", fontSize: 14 };
   return (
-    <div ref={wrap} onContextMenu={(e) => e.preventDefault()} style={{ position: "fixed", inset: 0, background: "#0d1f16", zIndex: 2000, display: "flex", flexDirection: "column", userSelect: "none" }}>
+    <div ref={wrap} onContextMenu={(e) => e.preventDefault()} style={{ position: "fixed", inset: 0, zoom: unzoom, background: "#0d1f16", zIndex: 2000, display: "flex", flexDirection: "column", userSelect: "none" }}>
       <div style={{ height: barH, display: "flex", alignItems: "center", gap: 8, padding: "0 12px", color: "#fff" }}>
         <b style={{ flex: 1, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{title}</b>
         {deck && <span style={{ opacity: 0.8, fontSize: 14 }}>{n - from + 1} / {to - from}</span>}

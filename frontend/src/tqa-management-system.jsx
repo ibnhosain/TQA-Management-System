@@ -5677,6 +5677,7 @@ function LecturePlan({ db, courses, user, refresh }) {
   // পরিচালক কোন টপিকগুলো আজকে পড়াবেন তা টিক করার মোড
   const [todayPlanMode, setTodayPlanMode] = useState(false);
   const [todayPlanSaving, setTodayPlanSaving] = useState(null); // টগল হচ্ছে এমন topic.id
+  const showToday = todayPlanMode || user.role === "teacher"; // উস্তাদ সবসময় আজকের পাঠ সোনালি দেখেন
 
   const hasGrant =
     user.role === "teacher" &&
@@ -5690,7 +5691,8 @@ function LecturePlan({ db, courses, user, refresh }) {
     if (!sel) return setLoading(false);
     const my = ++loadSeq.current;
     try {
-      let rows = await api.lessonSections(sel, forStudent?.id, trialTab, user.role === "teacher");
+      // ২০২৬-১১-২৬: উস্তাদও সব লেকচারের সব টপিক পান; "আজকের পাঠ" (📌) শুধু সোনালি রঙে আলাদা দেখায়
+      let rows = await api.lessonSections(sel, forStudent?.id, trialTab);
       // কোর্সে এখনো হেডিং না থাকলে সাতটি ডিফল্ট বানিয়ে নিই (কেবল পরিচালক)।
       // নিয়মিত ও ট্রায়াল — দুটোর হিসাব আলাদা, তাই একটির হেডিং থাকলেও
       // অন্যটির ডিফল্টগুলো ঠিকই তৈরি হবে।
@@ -5920,7 +5922,7 @@ function LecturePlan({ db, courses, user, refresh }) {
                 sm
                 kind={todayPlanMode ? "gold" : "soft"}
                 onClick={() => setTodayPlanMode((v) => !v)}
-                title="Mark which topics will be taught in today's class — only these will show in the teacher's portal."
+                title="Mark which topics will be taught in today's class — the teacher sees them highlighted in gold."
               >
                 📋 {todayPlanMode ? "Setting today's lesson…" : "Set today's lesson"}
               </Btn>
@@ -5940,7 +5942,7 @@ function LecturePlan({ db, courses, user, refresh }) {
               }}
             >
               <b style={{ color: C.gold }}><Ico e="📋" /> Today's-lesson mode is on.</b>{" "}
-              Press the <b style={{ color: C.gold }}><Ico e="📌" /></b> button on each topic to mark what will be taught in today's class. Only the marked topics show in the teacher's portal — students see everything.
+              Press the <b style={{ color: C.gold }}><Ico e="📌" /></b> button on each topic to mark what will be taught in today's class. The teacher sees every lecture, with the marked topics highlighted in gold.
             </div>
           )}
           {trialTab && (
@@ -5973,8 +5975,8 @@ function LecturePlan({ db, courses, user, refresh }) {
         ))}
       </div>
 
-      {/* উস্তাদের জন্য আজকের পাঠের ব্যানার */}
-      {user.role === "teacher" && (
+      {/* উস্তাদের জন্য আজকের পাঠের ব্যানার — সব লেকচার দেখা যায়, আজকেরগুলো সোনালি (থাকলে তবেই ব্যানার) */}
+      {user.role === "teacher" && allTopics.some((t) => t.today_plan) && (
         <div
           style={{
             padding: "10px 14px",
@@ -5987,12 +5989,7 @@ function LecturePlan({ db, courses, user, refresh }) {
             color: C.text,
           }}
         >
-          <Ico e="📋" style={{ color: C.gold }} /> <b>Today's class topics</b> — showing the topics the director has set for today.
-          {allTopics.length === 0 && (
-            <span style={{ color: C.muted, marginLeft: 6 }}>
-              (no topic assigned yet)
-            </span>
-          )}
+          <Ico e="📋" style={{ color: C.gold }} /> <b>Today's class topics</b> are highlighted in gold — every lecture is open.
         </div>
       )}
 
@@ -6264,10 +6261,10 @@ function LecturePlan({ db, courses, user, refresh }) {
                           padding: "10px 12px",
                           borderRadius: 12,
                           flexWrap: "wrap",
-                          // todayPlanMode চালু থাকলে আজকের পাঠ হলে সোনালি, কভার হলে সবুজ, বাদ পড়লে লাল, বাকি থাকলে সাদা
-                          background: todayPlanMode && isToday ? C.amberBg : isDone ? "#f1faf4" : isMissed ? "#fff6f4" : "#fff",
+                          // আজকের পাঠ (পরিচালকের todayPlanMode-এ, আর উস্তাদের কাছে সবসময়) সোনালি, কভার হলে সবুজ, বাদ পড়লে লাল, বাকি থাকলে সাদা
+                          background: showToday && isToday ? C.amberBg : isDone ? "#f1faf4" : isMissed ? "#fff6f4" : "#fff",
                           border: `1px solid ${
-                            todayPlanMode && isToday ? C.gold : isDone ? "#bfe1cb" : isMissed ? "#f3c7bd" : C.line
+                            showToday && isToday ? C.gold : isDone ? "#bfe1cb" : isMissed ? "#f3c7bd" : C.line
                           }`,
                         }}
                         className="lp-topic"
@@ -6319,6 +6316,11 @@ function LecturePlan({ db, courses, user, refresh }) {
                           }}
                         >
                           {tp.text}
+                          {user.role === "teacher" && isToday && (
+                            <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, color: C.gold, whiteSpace: "nowrap" }}>
+                              <Ico e="📌" /> Today
+                            </span>
+                          )}
                         </span>
                         {(canMark || isAdmin) && (
                           <span
