@@ -17518,43 +17518,37 @@ function CourseManagerView({ db, setDb, refresh }) {
   const PALETTE = [C.emerald, C.gold, C.blue, C.red, "#7c3aed", "#0f766e"];
   const [courses, setCourses] = useState(COURSES);
   const [teachers, setTeachers] = useState([]);
+  const [studentNames, setStudentNames] = useState({}); // id → নাম, কার্ডে কারা পড়ে দেখাতে
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [academicBooks, setAcademicBooks] = useState([]); // API থেকে লোড
   const [bookForm, setBookForm] = useState(null); // {name, fileObj, file} — ইনলাইন বই যোগ
+  const [bookBusy, setBookBusy] = useState(false);
+  const [q, setQ] = useState("");
+  const [bookQ, setBookQ] = useState("");
 
-  const BASE_MEDIA = (
-    import.meta.env?.VITE_API_URL || "http://localhost:8000/api"
-  ).replace(/\/api$/, "");
+  const BASE_MEDIA = (import.meta.env?.VITE_API_URL || "http://localhost:8000/api").replace(/\/api$/, "");
   const adaptBook = (b) => {
-    const fileUrl = b.file
-      ? b.file.startsWith("http")
-        ? b.file
-        : BASE_MEDIA + b.file
-      : null;
+    const fileUrl = b.file ? (b.file.startsWith("http") ? b.file : BASE_MEDIA + b.file) : null;
     const fname = fileUrl ? fileUrl.split("/").pop() : b.name + ".pdf";
-    return { id: b.id, name: b.name, file: { name: fname } };
+    return { id: b.id, name: b.name, file: { name: fname }, url: fileUrl || "" };
+  };
+  // বইয়ের ধরন — Drive-এর লিংকে ফাইলের নাম থাকে না ("…/view"), তাই আগে "VIEW" দেখাত
+  const bookKind = (b) => {
+    if (/drive\.google|docs\.google/i.test(b.url || "")) return "Drive";
+    const ext = String(b.file?.name || "").split("?")[0].split(".");
+    return ext.length > 1 && /^[a-z0-9]{2,5}$/i.test(ext[ext.length - 1]) ? ext[ext.length - 1].toUpperCase() : "File";
   };
 
   // ব্যাকএন্ড থেকে কোর্স + উস্তাদ + বই তালিকা লোড
+  // (আগে প্রতিটি কোর্সের লেকচারও আলাদা অনুরোধে আনা হতো — পাতায় কোথাও
+  // দেখানো হয় না, তাই বাদ; কোর্স যত বেশি, পাতা তত ধীরে খুলত)
   const loadCourses = async () => {
     setLoading(true);
     try {
-      const [cs, us, bks] = await Promise.all([
-        api.courses(),
-        api.allUsers(),
-        api.books(),
-      ]);
-      const lecLists = await Promise.all(
-        cs.map((c) =>
-          api
-            .lectures(c.id)
-            .then((d) => (d || []).map(adaptLecture))
-            .catch(() => []),
-        ),
-      );
+      const [cs, us, bks] = await Promise.all([api.courses(), api.allUsers(), api.books()]);
       setCourses(
-        cs.map((c, i) => ({
+        cs.map((c) => ({
           id: c.id,
           name: c.name,
           teacherId: c.teacher,
@@ -17563,17 +17557,15 @@ function CourseManagerView({ db, setDb, refresh }) {
           books: c.books || [],
           studentIds: c.students || [],
           studentCount: c.student_count,
-          lectures: lecLists[i],
         })),
       );
       setTeachers(
         us
           .filter((u) => u.role === "teacher")
-          .map((t) => ({
-            id: t.id,
-            name: t.name || t.name_bn,
-            sub: t.sub || t.sub_title || "",
-          })),
+          .map((t) => ({ id: t.id, name: t.name || t.name_bn, sub: t.sub || t.sub_title || "" })),
+      );
+      setStudentNames(
+        Object.fromEntries(us.filter((u) => u.role === "student").map((u) => [String(u.id), u.name || u.name_bn])),
       );
       setAcademicBooks(bks.map(adaptBook));
     } catch {
@@ -17589,37 +17581,28 @@ function CourseManagerView({ db, setDb, refresh }) {
   }, []);
 
   const save = async () => {
+    if (saving) return;
     if (!edit.name?.trim()) return notice("Please enter a course name.");
     // সার্ভার teacher হিসেবে কেবল role="teacher" ব্যবহারকারীকেই গ্রহণ করে, আর
     // books হিসেবে কেবল বিদ্যমান একাডেমিক বই। কোনো উস্তাদের রোল বদলে গেলে বা
     // কোনো বই মুছে গেলে কোর্সে তার পুরনো আইডি রয়ে যেত, আর সেভ করতে গেলে
     // দুর্বোধ্য 'Invalid pk "3" - object does not exist' আসত। এখন পাঠানোর
-    // আগেই যাচাই করে স্পষ্ট বাংলা বার্তা দেখানো হয়।
+    // আগেই যাচাই করে স্পষ্ট বার্তা দেখানো হয়।
     if (!teachers.some((t) => String(t.id) === String(edit.teacherId))) {
-      return notice(
-        "Choose the assigned teacher — the previous one is no longer in the teacher list (their role may have changed).",
-      );
+      return notice("Choose the assigned teacher — the previous one is no longer in the teacher list (their role may have changed).");
     }
     const validBookIds = new Set(academicBooks.map((b) => String(b.id)));
     const books = (edit.books || []).filter((id) => validBookIds.has(String(id)));
     setSaving(true);
     try {
-      const payload = {
-        name: edit.name,
-        teacher: edit.teacherId,
-        color: edit.color,
-        books,
-      };
-      await api.saveCourse(payload, edit.id || undefined);
+      await api.saveCourse({ name: edit.name.trim(), teacher: edit.teacherId, color: edit.color, books }, edit.id || undefined);
       await loadCourses();
       setEdit(null);
+      setBookForm(null);
       notice(edit.id ? "✔ Course updated." : "✔ Course created.");
       refresh();
     } catch (e) {
-      notice(
-        "Could not save course —" +
-          (e?.data?.error || e?.message || "Please check your server connection and try again"),
-      );
+      notice("Could not save course — " + (e?.data?.error || e?.message || "please check your server connection and try again"));
     } finally {
       setSaving(false);
     }
@@ -17627,9 +17610,10 @@ function CourseManagerView({ db, setDb, refresh }) {
 
   // ইনলাইন বই আপলোড → তালিকা রিলোড → নতুন বই অটো-নির্বাচন
   const saveNewBook = async () => {
+    if (bookBusy) return;
     if (!bookForm.name.trim()) return notice("Please enter the book name.");
-    if (!(bookForm.fileObj instanceof File))
-      return notice("Attach the book file from your device.");
+    if (!(bookForm.fileObj instanceof File)) return notice("Attach the book file from your device.");
+    setBookBusy(true);
     try {
       await api.uploadBook(bookForm.name.trim(), bookForm.fileObj);
       const bks = (await api.books()).map(adaptBook);
@@ -17643,17 +17627,21 @@ function CourseManagerView({ db, setDb, refresh }) {
         });
       }
       setBookForm(null);
-      notice("Book added and automatically selected.");
+      notice("Book added and selected.");
     } catch (e) {
-      notice(
-        "Failed to add book:" + (e?.data?.error || e?.message || "Unknown error"),
-      );
+      notice("Failed to add book: " + (e?.data?.error || e?.message || "unknown error"));
+    } finally {
+      setBookBusy(false);
     }
   };
 
-  const del = (c) =>
+  const studentsOf = (c) => (c.studentCount != null ? c.studentCount : c.studentIds?.length || 0);
+  const del = (c) => {
+    const n = studentsOf(c);
     askConfirm(
-      `Delete the "${c.name}" course? Its classes and routines will be removed too, and it will no longer appear anywhere.`,
+      `Delete the "${c.name}" course?\n\n` +
+        (n ? `${n} ${n === 1 ? "student is" : "students are"} enrolled — their accounts stay, but they will no longer be in this course. ` : "") +
+        "Its classes and routines are removed too, and it will no longer appear anywhere.",
       async () => {
         try {
           await api.deleteCourse(c.id);
@@ -17661,97 +17649,258 @@ function CourseManagerView({ db, setDb, refresh }) {
           notice(`✔ The "${c.name}" course has been deleted.`);
           refresh();
         } catch (e) {
-          notice(
-            "Could not delete course —" +
-              (e?.data?.error || e?.message || "Please check your server connection and try again"),
-          );
+          notice("Could not delete course — " + (e?.data?.error || e?.message || "please check your server connection and try again"));
         }
       },
+      { yes: "Yes, delete", no: "No, keep it" },
     );
+  };
+  const openNew = () => {
+    setBookQ("");
+    setBookForm(null);
+    setEdit({ name: "", teacherId: teachers[0]?.id, color: PALETTE[0], books: [] });
+  };
+  const openEdit = (c) => {
+    setBookQ("");
+    setBookForm(null);
+    setEdit({ id: c.id, name: c.name, teacherId: c.teacherId, color: c.color || C.emerald, books: [...(c.books || [])] });
+  };
+
+  const teacherOf = (c) => teachers.find((t) => String(t.id) === String(c.teacherId));
+  const bookName = Object.fromEntries(academicBooks.map((b) => [String(b.id), b.name]));
+  const enrolled = new Set(courses.flatMap((c) => (c.studentIds || []).map(String)));
+  const noTeacher = courses.filter((c) => !teacherOf(c));
+  const teaching = new Set(courses.map((c) => teacherOf(c)?.id).filter(Boolean));
+  const needle = q.trim().toLowerCase();
+  const shown = courses.filter(
+    (c) => !needle || [c.name, teacherOf(c)?.name || c.teacherName].some((x) => String(x || "").toLowerCase().includes(needle)),
+  );
+  const chip = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 5,
+    fontSize: 12,
+    fontWeight: 600,
+    padding: "3px 9px",
+    borderRadius: 99,
+    background: "#f1f5f3",
+    color: "#475569",
+    whiteSpace: "nowrap",
+  };
+
+  // এডিট ফর্মের সহায়ক
+  const eCol = edit?.color || C.emerald;
+  const eTeacher = edit ? teachers.find((t) => String(t.id) === String(edit.teacherId)) : null;
+  const bNeedle = bookQ.trim().toLowerCase();
+  const shownBooks = academicBooks.filter((b) => !bNeedle || b.name.toLowerCase().includes(bNeedle));
+  const toggleBook = (id) =>
+    setEdit((prev) => {
+      const cur = prev.books || [];
+      return { ...prev, books: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] };
+    });
+
   return (
     <Section
-      title="Course Management"
-      sub="Adding, editing and removing courses — director only; this list appears everywhere (routine, schedule, lecture plan, admission form)"
-      action={
-        <Btn
-          onClick={() =>
-            setEdit({
-              name: "",
-              teacherId: teachers[0]?.id,
-              color: PALETTE[0],
-              books: [],
-            })
-          }
-        >
-          + New course
-        </Btn>
-      }
+      title="Courses"
+      sub="Add, edit or remove courses — this list is used everywhere: routine, classes, lecture plan and the admission form"
+      action={<Btn onClick={openNew}>➕ New course</Btn>}
     >
-      {loading && <Loader text="Loading course list" />}
-      <div style={{ display: "grid", gap: 10 }}>
-        {courses.map((c) => (
-          <div
-            key={c.id}
-            style={{
-              ...S.card,
-              padding: 16,
-              borderLeft: `4px solid ${c.color || C.emerald}`,
-              display: "flex",
-              gap: 12,
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <div style={{ fontWeight: 800, fontSize: 15 }}>{c.name}</div>
-              <div style={{ fontSize: 12.5, color: C.muted }}>
-                Teacher: {c.teacherName || userById(c.teacherId).name || "—"} ·
-                Students:{" "}
-                {bn(
-                  c.studentCount != null
-                    ? c.studentCount
-                    : c.studentIds?.length || 0,
-                )}{" "}
-                 · Books: {bn((c.books || []).length)}
-                {/* "লেকচার: Nটি" সরানো হলো — দারস এখন কেবল লুকানো ধারক
-                    (কোর্স-প্রতি একটিই), তাই সংখ্যাটা সবসময় ১ দেখাত এবং
-                    কিছুই বোঝাত না। টপিকের হিসাব দারস পরিকল্পনা পাতাতেই আছে। */}
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              <Btn
-                sm
-                kind="soft"
-                onClick={() =>
-                  setEdit({
-                    id: c.id,
-                    name: c.name,
-                    teacherId: c.teacherId,
-                    color: c.color || C.emerald,
-                    books: [...(c.books || [])],
-                  })
-                }
-              >
-                ✏️ Edit
-              </Btn>
-              <Btn sm kind="danger" onClick={() => del(c)}>
-                🗑 Remove
-              </Btn>
-            </div>
+      {loading && <Loader text="Loading courses" />}
+
+      {!loading && courses.length === 0 && (
+        <EmptyState icon="📚" title="No courses yet" text="Create the first course — it then appears in the routine, classes and admission form." action={<Btn onClick={openNew}>➕ New course</Btn>} />
+      )}
+
+      {!loading && courses.length > 0 && (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10, marginBottom: 14 }}>
+            <Stat
+              icon="📚"
+              label="Courses"
+              value={String(courses.length)}
+              note={noTeacher.length ? `${noTeacher.length} without a teacher` : "All have a teacher"}
+              accent={noTeacher.length ? C.red : C.emerald}
+            />
+            <Stat icon="👥" label="Students enrolled" value={String(enrolled.size)} note="Across all courses" accent={C.blue} />
+            <Stat
+              icon="👳"
+              label="Teachers teaching"
+              value={String(teaching.size)}
+              note={`${teachers.length} ${teachers.length === 1 ? "teacher" : "teachers"} in total`}
+              accent={C.gold}
+            />
           </div>
-        ))}
-      </div>
+
+          {noTeacher.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                alignItems: "center",
+                padding: "10px 14px",
+                borderRadius: 12,
+                background: C.redBg,
+                border: `1px solid ${C.red}26`,
+                color: C.red,
+                fontSize: 13,
+                marginBottom: 14,
+              }}
+            >
+              <Ico e="⚠️" />
+              <span>
+                <b>{noTeacher.map((c) => c.name).join(", ")}</b> {noTeacher.length === 1 ? "has" : "have"} no teacher — classes for{" "}
+                {noTeacher.length === 1 ? "it" : "them"} will not reach anyone. Tap Edit to choose one.
+              </span>
+            </div>
+          )}
+
+          {courses.length > 4 && (
+            <input
+              style={{ ...S.input, maxWidth: 340, marginBottom: 14 }}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search course or teacher"
+            />
+          )}
+
+          {shown.length === 0 && <EmptyState icon="🔍" title="No match" text="Try another course or teacher name." />}
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 300px), 1fr))", gap: 12 }}>
+            {shown.map((c) => {
+              const col = c.color || C.emerald;
+              const tch = teacherOf(c);
+              const n = studentsOf(c);
+              const names = (c.studentIds || []).map((id) => studentNames[String(id)]).filter(Boolean);
+              const bks = (c.books || []).map((id) => bookName[String(id)]).filter(Boolean);
+              return (
+                <div key={c.id} style={{ ...S.card, padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", minWidth: 0 }}>
+                  <div style={{ height: 5, background: col }} />
+                  <div style={{ padding: 16, display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 12, flex: 1, alignContent: "start" }}>
+                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                      <span
+                        style={{
+                          width: 42,
+                          height: 42,
+                          borderRadius: 12,
+                          background: col + "16",
+                          border: `1px solid ${col}30`,
+                          color: col,
+                          display: "grid",
+                          placeItems: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <Ico e="📖" size={21} style={{ verticalAlign: 0 }} />
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 16, color: C.text, lineHeight: 1.3 }}>{c.name}</div>
+                        <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: C.text }}>
+                          {tch ? (
+                            <>
+                              <Initials name={tch.name} size={24} tone="#64748b" />
+                              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tch.name}</span>
+                            </>
+                          ) : (
+                            <Tag color={C.red} bg={C.redBg}>
+                              ⚠️ No teacher
+                            </Tag>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <span style={chip}>
+                        <Ico e="👥" size={14} style={{ verticalAlign: 0 }} /> {n} {n === 1 ? "student" : "students"}
+                      </span>
+                      <span style={chip}>
+                        <Ico e="📚" size={14} style={{ verticalAlign: 0 }} /> {(c.books || []).length} {(c.books || []).length === 1 ? "book" : "books"}
+                      </span>
+                    </div>
+
+                    {names.length > 0 && (
+                      <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>
+                        {names.slice(0, 4).join(", ")}
+                        {names.length > 4 && <b style={{ color: C.text, fontWeight: 600 }}> +{names.length - 4} more</b>}
+                      </div>
+                    )}
+
+                    {bks.length > 0 && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {bks.slice(0, 3).map((b, i) => (
+                          <span
+                            key={i}
+                            title={b}
+                            style={{
+                              fontSize: 12,
+                              padding: "3px 9px",
+                              borderRadius: 8,
+                              background: col + "0f",
+                              border: `1px solid ${col}26`,
+                              color: C.text,
+                              maxWidth: "100%",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {b}
+                          </span>
+                        ))}
+                        {bks.length > 3 && <span style={{ fontSize: 12, color: C.muted, alignSelf: "center" }}>+{bks.length - 3} more</span>}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, padding: "10px 16px", borderTop: `1px solid ${C.line}`, background: "#fafcfb" }}>
+                    <Btn sm kind="soft" onClick={() => openEdit(c)} style={{ flex: 1, justifyContent: "center" }}>
+                      ✏️ Edit
+                    </Btn>
+                    <Btn sm kind="danger" title={`Delete ${c.name}`} onClick={() => del(c)} style={{ padding: "6px 10px" }}>
+                      🗑
+                    </Btn>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       {edit && (
         <Modal
-          title={
-            edit.id ? `✏️ Edit course — ${edit.name}` : "+ Add new course"
-          }
+          title={edit.id ? "Edit course" : "New course"}
           onClose={() => {
+            if (saving) return;
             setEdit(null);
             setBookForm(null);
           }}
           wide
         >
+          {/* কার্ডটা কেমন দেখাবে — লেখার সাথে সাথে */}
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              alignItems: "center",
+              padding: 12,
+              borderRadius: 12,
+              background: eCol + "10",
+              border: `1px solid ${eCol}30`,
+              borderLeft: `5px solid ${eCol}`,
+              marginBottom: 16,
+            }}
+          >
+            <span style={{ width: 38, height: 38, borderRadius: 11, background: "#fff", color: eCol, display: "grid", placeItems: "center", flexShrink: 0 }}>
+              <Ico e="📖" size={19} style={{ verticalAlign: 0 }} />
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: edit.name?.trim() ? C.text : C.muted }}>{edit.name?.trim() || "Course name"}</div>
+              <div style={{ fontSize: 12.5, color: C.muted }}>
+                {eTeacher ? eTeacher.name : "No teacher chosen"} · {(edit.books || []).length} {(edit.books || []).length === 1 ? "book" : "books"}
+              </div>
+            </div>
+          </div>
+
           <label style={S.label}>Course name</label>
           <input
             style={S.input}
@@ -17759,103 +17908,86 @@ function CourseManagerView({ db, setDb, refresh }) {
             onChange={(e) => setEdit({ ...edit, name: e.target.value })}
             placeholder="e.g. Sahih Masnun Dua Course"
           />
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>Assigned teacher</label>
-            <select
-              style={S.input}
-              value={
-                // পুরনো উস্তাদ তালিকায় না থাকলে (রোল বদলে গেলে) ফাঁকা দেখাবে —
-                // নইলে ব্রাউজার প্রথম নামটা দেখাত অথচ ভেতরে পুরনো অবৈধ আইডিই
-                // থেকে যেত, আর সেভ করতে গিয়ে দুর্বোধ্য এরর আসত
-                teachers.some((t) => String(t.id) === String(edit.teacherId))
-                  ? edit.teacherId
-                  : ""
-              }
-              onChange={(e) => setEdit({ ...edit, teacherId: e.target.value })}
-            >
-              <option value="">— Choose —</option>
-              {teachers.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({t.sub})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>Colour</label>
-            <div style={{ display: "flex", gap: 8 }}>
-              {PALETTE.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setEdit({ ...edit, color: p })}
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 10,
-                    cursor: "pointer",
-                    background: p,
-                    border:
-                      edit.color === p ? "3px solid #1a1f2e" : "2px solid #fff",
-                    boxShadow: "0 1px 4px rgba(0,0,0,.2)",
-                  }}
-                />
-              ))}
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginTop: 12 }}>
+            <div>
+              <label style={S.label}>Teacher</label>
+              <select
+                style={S.input}
+                value={
+                  // পুরনো উস্তাদ তালিকায় না থাকলে (রোল বদলে গেলে) ফাঁকা দেখাবে —
+                  // নইলে ব্রাউজার প্রথম নামটা দেখাত অথচ ভেতরে পুরনো অবৈধ আইডিই
+                  // থেকে যেত, আর সেভ করতে গিয়ে দুর্বোধ্য এরর আসত
+                  teachers.some((t) => String(t.id) === String(edit.teacherId)) ? edit.teacherId : ""
+                }
+                onChange={(e) => setEdit({ ...edit, teacherId: e.target.value })}
+              >
+                <option value="">— Choose —</option>
+                {teachers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                    {t.sub ? ` (${t.sub})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={S.label}>Colour</label>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }} role="radiogroup" aria-label="Colour">
+                {/* কোর্সের বর্তমান রং তালিকায় না থাকলে সেটাও প্রথমে — নইলে কোনোটাই বাছাই দেখাত না */}
+                {(PALETTE.some((p) => p.toLowerCase() === String(edit.color || "").toLowerCase()) || !edit.color ? PALETTE : [edit.color, ...PALETTE]).map((p) => {
+                  const on = String(edit.color || "").toLowerCase() === p.toLowerCase();
+                  return (
+                    <button
+                      key={p}
+                      role="radio"
+                      aria-checked={on}
+                      aria-label={p}
+                      onClick={() => setEdit({ ...edit, color: p })}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        cursor: "pointer",
+                        background: p,
+                        color: "#fff",
+                        border: "none",
+                        boxShadow: on ? `0 0 0 2px #fff, 0 0 0 4px ${p}` : "0 1px 3px rgba(0,0,0,.18)",
+                        display: "grid",
+                        placeItems: "center",
+                        padding: 0,
+                      }}
+                    >
+                      {on && <Ico e="✔" size={17} strokeWidth={3} style={{ verticalAlign: 0 }} />}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
           {/* ── একাডেমিক বই সিলেকশন + ইনলাইন আপলোড ── */}
-          <div style={{ marginTop: 12 }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 6,
-              }}
-            >
+          <div style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
               <label style={{ ...S.label, marginBottom: 0 }}>
-                <Ico e="📚" /> Course books ({bn((edit.books || []).length)} selected)
+                Books <span style={{ color: C.muted, fontWeight: 500 }}>· {(edit.books || []).length} selected</span>
               </label>
               {!bookForm && (
-                <Btn
-                  sm
-                  kind="ghost"
-                  onClick={() =>
-                    setBookForm({ name: "", fileObj: null, file: null })
-                  }
-                >
-                  + Add new book
+                <Btn sm kind="ghost" onClick={() => setBookForm({ name: "", fileObj: null, file: null })}>
+                  ⬆ Upload a new book
                 </Btn>
               )}
             </div>
 
-            {/* ইনলাইন বই আপলোড ফর্ম */}
             {bookForm && (
-              <div
-                style={{
-                  background: C.amberBg,
-                  border: `1.5px solid ${C.goldL}`,
-                  borderRadius: 12,
-                  padding: 14,
-                  marginBottom: 10,
-                }}
-              >
-                <div
-                  style={{
-                    fontWeight: 700,
-                    fontSize: 13,
-                    marginBottom: 8,
-                    color: "#92400e",
-                  }}
-                >
-                  <Ico e="📤" /> Upload a new book
+              <div style={{ background: C.amberBg, border: `1px solid ${C.goldL}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: "#92400e" }}>
+                  <Ico e="⬆" /> Upload a new book
                 </div>
                 <input
                   style={S.input}
                   value={bookForm.name}
-                  onChange={(e) =>
-                    setBookForm({ ...bookForm, name: e.target.value })
-                  }
+                  onChange={(e) => setBookForm({ ...bookForm, name: e.target.value })}
                   placeholder="Book name (e.g. Noorani Qaida Revised)"
                 />
                 <label
@@ -17872,125 +18004,78 @@ function CourseManagerView({ db, setDb, refresh }) {
                     fontSize: 13,
                   }}
                 >
-                  <span style={{ fontSize: 20 }}>
-                    {withIcons(bookForm.file ? "✅" : "📁")}
-                  </span>
-                  <span>
-                    {bookForm.file
-                      ? bookForm.file.name
-                      : "Choose a file from your device (PDF, DOC, JPG…)"}
+                  <span style={{ fontSize: 20, color: bookForm.file ? C.green : C.muted }}>{withIcons(bookForm.file ? "✅" : "📁")}</span>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {bookForm.file ? bookForm.file.name : "Choose a file from your device (PDF, DOC, JPG…)"}
                   </span>
                   <input
                     type="file"
                     style={{ display: "none" }}
                     onChange={(e) => {
                       const f = e.target.files[0];
-                      if (f)
-                        setBookForm({
-                          ...bookForm,
-                          fileObj: f,
-                          file: { name: f.name },
-                        });
+                      if (f) setBookForm({ ...bookForm, fileObj: f, file: { name: f.name } });
                     }}
                   />
                 </label>
                 <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <Btn
-                    sm
-                    style={{ flex: 1, justifyContent: "center" }}
-                    onClick={saveNewBook}
-                  >
-                    Upload and select
+                  <Btn sm style={{ flex: 1, justifyContent: "center", opacity: bookBusy ? 0.6 : 1 }} onClick={saveNewBook}>
+                    {bookBusy ? "⏳ Uploading…" : "Upload and select"}
                   </Btn>
-                  <Btn sm kind="soft" onClick={() => setBookForm(null)}>
+                  <Btn sm kind="soft" onClick={() => !bookBusy && setBookForm(null)}>
                     Cancel
                   </Btn>
                 </div>
               </div>
             )}
 
-            {/* বই তালিকা চেকবক্স */}
             {academicBooks.length === 0 ? (
-              <div
-                style={{
-                  padding: "12px 14px",
-                  borderRadius: 10,
-                  background: C.cream,
-                  fontSize: 12.5,
-                  color: C.muted,
-                  border: `1px dashed ${C.line}`,
-                }}
-              >
-                <Ico e="📭" /> No academic books — click "+ Add new book" above to upload and select a book right here.
+              <div style={{ padding: "12px 14px", borderRadius: 10, background: C.cream, fontSize: 12.5, color: C.muted, border: `1px dashed ${C.line}` }}>
+                <Ico e="📭" /> No books yet — use "Upload a new book" above to add one and select it here.
               </div>
             ) : (
-              <div
-                style={{
-                  maxHeight: 190,
-                  overflowY: "auto",
-                  border: `1.5px solid ${C.line}`,
-                  borderRadius: 10,
-                  padding: 6,
-                  background: "#fff",
-                }}
-              >
-                {academicBooks.map((b) => {
-                  const on = (edit.books || []).includes(b.id);
-                  const full = false; // কোনো সীমা নেই — যত খুশি বই যোগ করা যাবে
-                  return (
-                    <label
-                      key={b.id}
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        alignItems: "center",
-                        padding: "7px 8px",
-                        fontSize: 13,
-                        cursor: full ? "not-allowed" : "pointer",
-                        borderRadius: 8,
-                        background: on ? C.greenBg : "transparent",
-                        opacity: full ? 0.45 : 1,
-                        transition: "background .12s",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        disabled={full}
-                        onChange={() =>
-                          setEdit({
-                            ...edit,
-                            books: on
-                              ? edit.books.filter((x) => x !== b.id)
-                              : [...edit.books, b.id],
-                          })
-                        }
-                      />
-                      <Ico e="📖" /> <b>{b.name}</b>&nbsp;
-                      <Tag color={C.blue} bg={C.blueBg}>
-                        {bookExt(b.file?.name)}
-                      </Tag>
-                    </label>
-                  );
-                })}
-              </div>
+              <>
+                {academicBooks.length > 6 && (
+                  <input
+                    style={{ ...S.input, marginBottom: 8 }}
+                    value={bookQ}
+                    onChange={(e) => setBookQ(e.target.value)}
+                    placeholder="Search books"
+                  />
+                )}
+                <div style={{ maxHeight: 240, overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 12, padding: 6, background: "#fff" }}>
+                  {shownBooks.length === 0 && <div style={{ padding: 10, fontSize: 12.5, color: C.muted }}>No book matches "{bookQ}".</div>}
+                  {shownBooks.map((b) => {
+                    const on = (edit.books || []).includes(b.id);
+                    return (
+                      <label
+                        key={b.id}
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          alignItems: "center",
+                          padding: "8px 10px",
+                          fontSize: 13.5,
+                          cursor: "pointer",
+                          borderRadius: 9,
+                          background: on ? C.greenBg : "transparent",
+                          transition: "background .12s",
+                        }}
+                      >
+                        <input type="checkbox" checked={on} onChange={() => toggleBook(b.id)} style={{ accentColor: C.emerald, width: 16, height: 16, flexShrink: 0 }} />
+                        <span style={{ flex: 1, minWidth: 0, fontWeight: on ? 600 : 500, color: C.text }}>{b.name}</span>
+                        <span style={{ fontSize: 10.5, fontWeight: 700, color: C.blue, background: C.blueBg, borderRadius: 6, padding: "2px 6px", flexShrink: 0 }}>
+                          {bookKind(b)}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
 
-          <Btn
-            style={{
-              marginTop: 16,
-              width: "100%",
-              justifyContent: "center",
-              opacity: saving ? 0.7 : 1,
-            }}
-            onClick={save}
-          >
-            {saving
-              ? "Saving…"
-              : edit.id
-                ? "✏️ Save"
-                : "+ Add course — visible everywhere"}
+          <Btn style={{ marginTop: 18, width: "100%", justifyContent: "center", opacity: saving ? 0.7 : 1 }} onClick={save}>
+            {saving ? "⏳ Saving…" : edit.id ? "💾 Save changes" : "➕ Create course"}
           </Btn>
         </Modal>
       )}
