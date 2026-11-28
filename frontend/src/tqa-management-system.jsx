@@ -405,7 +405,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
   // PNG হিসেবে সেইভ — HTML ফাইলের বদলে, যাতে WhatsApp-এ সরাসরি ছবি হিসেবে সহজে পাঠানো যায়
   // (html2canvas শুধু এই মুহূর্তেই ডাউনলোড হয় — dynamic import, তাই মূল বান্ডেলের সাইজ বাড়ে না)
   const doDownload = async () => {
-    const no2 = (p.id || uid()).slice(0, 6).toUpperCase();
+    const no2 = String(p.id || uid()).slice(0, 6).toUpperCase();
     const node = document.getElementById("tqa-receipt");
     try {
       const { default: html2canvas } = await import("html2canvas");
@@ -488,7 +488,7 @@ function ReceiptModal({ r, onClose, db, setDb, sender }) {
     setAsk(false);
     setDone(true);
   };
-  const no = (p.id || uid()).slice(0, 6).toUpperCase();
+  const no = String(p.id || uid()).slice(0, 6).toUpperCase();
   const row = (k, v) => (
     <div
       style={{
@@ -12811,18 +12811,99 @@ function LiveClassPopup({ k, course, user, onJoin, onLater }) {
 }
 
 /* ═══════════════ স্টুডেন্ট পেমেন্ট পেজ — হিস্টরি, রিসিট (চোখ), এখনই পেমেন্ট ═══════════════ */
+/* ═══════════════ পেমেন্টের ছোট সহায়ক — শিক্ষার্থীর Payments ও পরিচালকের Student Payments ═══════════════ */
+const curSym = (c) => ((c || "BDT") === "USD" ? "$" : "৳");
+const money = (amt, c) => `${curSym(c)}${(+amt || 0).toLocaleString("en")}`;
+// কয়েকটি মুদ্রা মিলিয়ে — "৳12,000 + $80"
+const moneyMix = (pairs) => {
+  const t = {};
+  pairs.forEach(([a, c]) => {
+    const k = c || "BDT";
+    t[k] = (t[k] || 0) + (+a || 0);
+  });
+  const s = Object.entries(t).filter(([, v]) => v).map(([k, v]) => money(v, k));
+  return s.length ? s.join(" + ") : money(0, pairs[0]?.[1]);
+};
+// "July 2026" → "2026-07" (monthLabelBn-এর উল্টো) — বকেয়া মাসে এক চাপে পেমেন্ট বসাতে
+const monthKeyOf = (label) => {
+  const [mn, y] = String(label || "").split(" ");
+  const i = MONTHS_BN.indexOf(mn);
+  return i >= 0 && +y ? `${y}-${String(i + 1).padStart(2, "0")}` : "";
+};
+// সার্ভারের মাধ্যম ("bkash") ↔ দেখানোর নাম
+const PAY_METHODS = [
+  ["Nagad", "nagad"],
+  ["bKash", "bkash"],
+  ["Bank transfer", "bank"],
+  ["Cash received (office)", "cash"],
+];
+const PAY_LABEL = { nagad: "Nagad", bkash: "bKash", bank: "Bank transfer", cash: "Cash (office)" };
+// API-র সারি → পাতার সারি (দুই পাতায় একই)
+const adaptFee = (p) => ({
+  id: p.id,
+  studentId: p.student,
+  studentName: p.student_name,
+  amount: +p.amount || 0,
+  currency: p.currency || "BDT",
+  month: p.month_label,
+  date: p.paid_at,
+  methodLabel: PAY_LABEL[p.method] || p.method || "—",
+  trx: p.trx_id || "",
+  // রিসিটে আগের মতোই "bkash (Trx: …)"
+  method: p.method + (p.trx_id ? ` (Trx: ${p.trx_id})` : ""),
+  shot: p.screenshot ? { data: p.screenshot, name: "screenshot" } : null,
+  status: p.status,
+});
+const nameInitials = (n) =>
+  String(n || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase() || "?";
+const Initials = ({ name, tone = C.emerald }) => (
+  <span
+    aria-hidden="true"
+    style={{
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      flexShrink: 0,
+      display: "grid",
+      placeItems: "center",
+      fontWeight: 700,
+      fontSize: 14,
+      background: tone + "14",
+      color: tone,
+      border: `1px solid ${tone}26`,
+    }}
+  >
+    {nameInitials(name)}
+  </span>
+);
+const PayStatus = ({ status }) =>
+  status === "pending" ? (
+    <Tag color="#a16207" bg={C.amberBg}>⏳ Waiting for check</Tag>
+  ) : (
+    <Tag color={C.green} bg={C.greenBg}>✔ Verified</Tag>
+  );
+const payRow = { ...S.card, padding: 14, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" };
+const monthChip = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "3px 10px",
+  borderRadius: 999,
+  fontSize: 12.5,
+  fontWeight: 600,
+  background: C.redBg,
+  color: C.red,
+  border: `1px solid ${C.red}26`,
+  whiteSpace: "nowrap",
+};
+
+/* ═══════════════ শিক্ষার্থীর Payments — বকেয়া, পেমেন্ট জমা, ইতিহাস ═══════════════ */
 function StudentPaymentsView({ db, setDb, user }) {
   const [payMonth, setPayMonth] = useState(null);
-  const [pf, setPf] = useState({
-    method: "bKash",
-    trx: "",
-    shot: null,
-    shotFile: null,
-  });
+  const [pf, setPf] = useState({ method: "bKash", trx: "", shot: null, shotFile: null });
+  const [sending, setSending] = useState(false);
   const [duaMsg, setDuaMsg] = useState(false);
-  const [fees, setFees] = useState(
-    db.feePayments.filter((p) => p.studentId === user.id),
-  );
+  const [fees, setFees] = useState(db.feePayments.filter((p) => p.studentId === user.id));
   const [dues, setDues] = useState(db.dueMonths[user.id] || []);
   const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
 
@@ -12830,21 +12911,7 @@ function StudentPaymentsView({ db, setDb, user }) {
     setLoading(true);
     try {
       const [fData, dData] = await Promise.all([api.myFees(), api.myDues()]);
-      setFees(
-        fData.map((p) => ({
-          id: p.id,
-          studentId: p.student,
-          amount: p.amount,
-          currency: p.currency || "BDT",
-          month: p.month_label,
-          date: p.paid_at,
-          method: p.method + (p.trx_id ? ` (Trx: ${p.trx_id})` : ""),
-          shot: p.screenshot
-            ? { data: p.screenshot, name: "screenshot" }
-            : null,
-          status: p.status,
-        })),
-      );
+      setFees(fData.map(adaptFee));
       setDues(dData.map((d) => d.month_label));
     } catch {
       /* mock ডেটা থাকবে */
@@ -12856,319 +12923,368 @@ function StudentPaymentsView({ db, setDb, user }) {
     loadData();
   }, []);
 
-  const paid = fees;
-  const totalPaid = paid
-    .filter((p) => p.status !== "pending")
-    .reduce((s, p) => s + p.amount, 0);
+  const verifiedList = fees.filter((p) => p.status !== "pending");
+  const pendingList = fees.filter((p) => p.status === "pending");
   const userFee = user.monthly_fee || user.fee || 0;
-  const userCurrSymbol = (user.fee_currency || "BDT") === "USD" ? "$" : "৳";
+  const cur = user.fee_currency || "BDT";
+  const totalPaid = moneyMix(verifiedList.map((p) => [p.amount, p.currency]));
+  // যে মাসের পেমেন্ট জমা দিয়ে যাচাইয়ের অপেক্ষায় — সেটা আর "Pay now" দেখাবে না
+  const waiting = new Set(pendingList.map((p) => p.month));
+  const openDues = dues.filter((m) => !waiting.has(m));
+  const history = [...fees].sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+
   const pickShot = (e) => {
     const f = e.target.files[0];
     if (!f) return;
     const r = new FileReader();
-    r.onload = () =>
-      setPf((x) => ({
-        ...x,
-        shot: { data: r.result, name: f.name },
-        shotFile: f,
-      }));
+    r.onload = () => setPf((x) => ({ ...x, shot: { data: r.result, name: f.name }, shotFile: f }));
     r.readAsDataURL(f);
   };
   const submitPay = async () => {
-    if (!pf.trx.trim() && !pf.shot)
-      return notice("Please add a screenshot or transaction ID.");
+    if (!pf.trx.trim() && !pf.shot) return notice("Please add a screenshot or transaction ID.");
+    setSending(true);
     try {
       await api.payFee({
         amount: userFee,
         month_label: payMonth,
-        method: pf.method
-          .toLowerCase()
-          .replace("bKash", "bkash")
-          .replace("Nagad", "nagad")
-          .replace("Bank transfer", "bank"),
+        method: (PAY_METHODS.find(([l]) => l === pf.method) || [, "bkash"])[1],
         trx_id: pf.trx,
         screenshot: pf.shotFile || undefined,
       });
       await loadData();
-      notice(`✔ Payment for ${payMonth} submitted — pending verification.`);
+      notice(`✔ Payment for ${payMonth} submitted — waiting for the director's check.`);
     } catch (e) {
-      notice(
-        "Failed to submit payment — " +
-          (e?.data?.error || e?.message || "check your connection and try again"),
-      );
+      notice("Failed to submit payment — " + (e?.data?.error || e?.message || "check your connection and try again"));
+      setSending(false);
       return;
     }
+    setSending(false);
     setPayMonth(null);
     setPf({ method: "bKash", trx: "", shot: null, shotFile: null });
     setDuaMsg(true);
   };
   const acct = {
-    bKash: {
-      icon: "📱",
-      name: "bKash",
-      line1: "bKash Personal (Send Money)",
-      line2: "Number: 01402-499027",
-    },
-    Nagad: {
-      icon: "🟠",
-      name: "Nagad",
-      line1: "Nagad Personal (Send Money)",
-      line2: "Number: 01402-499027",
-    },
+    bKash: { icon: "📱", name: "bKash", line1: "bKash Personal (Send Money)", label: "Number", copy: "01402-499027" },
+    Nagad: { icon: "🟠", name: "Nagad", line1: "Nagad Personal (Send Money)", label: "Number", copy: "01402-499027" },
     "Bank transfer": {
       icon: "🏦",
-      name: "Bank Transfer",
-      line1: "Islami Bank Bangladesh — Tarbiyatul Quran Academy",
-      line2: "Account No: 2050-1234-5678-901 (Dhaka Branch)",
+      name: "Bank",
+      line1: "Islami Bank Bangladesh — Tarbiyatul Quran Academy (Dhaka Branch)",
+      label: "Account No",
+      copy: "2050-1234-5678-901",
     },
   };
-  return (
-    <Section
-      title="Payments"
-      sub="All payment history, dues, and receipts from the start"
-    >
-      <div
+  const copy = (t) => {
+    navigator.clipboard?.writeText(t.replace(/-/g, "")).then(
+      () => notice("✔ Copied"),
+      () => notice(t),
+    );
+  };
+  const stepHead = (n, t) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "14px 0 8px" }}>
+      <span
         style={{
+          width: 22,
+          height: 22,
+          borderRadius: "50%",
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-          gap: 10,
-          marginBottom: 16,
+          placeItems: "center",
+          fontSize: 12,
+          fontWeight: 700,
+          color: "#fff",
+          background: `linear-gradient(135deg, ${C.emeraldL}, ${C.emerald})`,
+          flexShrink: 0,
         }}
       >
-        <Stat
-          icon="✅"
-          label="Total Paid (Verified)"
-          value={`${userCurrSymbol}${totalPaid.toLocaleString("en")}`}
-        />
-        <Stat
-          icon="⏳"
-          label="Due"
-          value={`${userCurrSymbol}${(dues.length * userFee).toLocaleString("en")}`}
-          /* ⚠️ বকেয়ার রেকর্ড না থাকলেই "no dues" বলা যায় না — বকেয়া তৈরি
-             হয় মাসিক cron চললে। কেউ কখনো কিছু না দিয়ে থাকলে সেটাই বলি,
-             নইলে "Alhamdulillah, no dues" দেখে ভুল বোঝার সুযোগ থাকত। */
-          accent={dues.length || totalPaid === 0 ? C.red : C.emerald}
-          note={
-            dues.join(", ") ||
-            (totalPaid === 0
-              ? "No payment recorded yet"
-              : "Alhamdulillah, no dues")
+        {n}
+      </span>
+      <b style={{ fontSize: 14 }}>{t}</b>
+    </div>
+  );
+
+  // উপরের অবস্থা-কার্ড — বকেয়া / যাচাইয়ের অপেক্ষা / সব পরিশোধ / এখনো কিছু নেই
+  const hero = loading
+    ? null
+    : openDues.length
+      ? {
+          tone: C.red,
+          bg: C.redBg,
+          icon: "⏳",
+          title: `${openDues.length} ${openDues.length === 1 ? "month" : "months"} due`,
+          big: money(openDues.length * userFee, cur),
+          text: "Pay from here — the director checks it and it turns Verified.",
+        }
+      : pendingList.length
+        ? {
+            tone: "#a16207",
+            bg: C.amberBg,
+            icon: "⏳",
+            title: "Waiting for the director's check",
+            big: `${pendingList.length} ${pendingList.length === 1 ? "payment" : "payments"}`,
+            text: "Your payment is submitted. It shows Verified once checked, InshaAllah.",
           }
-        />
-      </div>
-      {dues.length > 0 && (
+        : verifiedList.length
+          ? {
+              tone: C.green,
+              bg: C.greenBg,
+              icon: "✅",
+              title: "All paid — Alhamdulillah",
+              big: "No dues",
+              text: "Jazakumullahu khairan for paying on time.",
+            }
+          : {
+              tone: C.muted,
+              bg: C.cream,
+              icon: "💳",
+              title: "No payment recorded yet",
+              big: userFee ? `${money(userFee, cur)} / month` : "—",
+              text: "Your monthly dues will appear here.",
+            };
+
+  return (
+    <Section title="Payments" sub="Your fees, dues and payment history">
+      {loading && <Loader text="Loading payments" />}
+      {hero && (
         <div
           style={{
             ...S.card,
+            padding: "18px 20px",
             marginBottom: 14,
-            borderLeft: `4px solid ${C.red}`,
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            flexWrap: "wrap",
+            background: `linear-gradient(90deg, ${hero.bg}, #fff 70%)`,
+            borderLeft: `4px solid ${hero.tone}`,
           }}
         >
-          <div style={{ fontWeight: 800, marginBottom: 10 }}><Ico e="⏳" /> Due Fees</div>
-          {dues.map((m) => (
-            <div
-              key={m}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "10px 12px",
-                borderRadius: 10,
-                background: C.redBg,
-                marginBottom: 8,
-                flexWrap: "wrap",
-              }}
-            >
-              <span
-                style={{
-                  flex: 1,
-                  fontWeight: 700,
-                  fontSize: 14,
-                  minWidth: 140,
-                }}
-              >
-                {m} — {userCurrSymbol}{userFee.toLocaleString("en")}
-              </span>
-              <Btn sm kind="gold" onClick={() => setPayMonth(m)}>
-                ⚡ Pay Now
-              </Btn>
-            </div>
-          ))}
+          <span
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 14,
+              flexShrink: 0,
+              display: "grid",
+              placeItems: "center",
+              background: "#fff",
+              color: hero.tone,
+              border: `1px solid ${hero.tone}33`,
+            }}
+          >
+            <Ico e={hero.icon} size={24} style={{ verticalAlign: 0 }} />
+          </span>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: hero.tone }}>{hero.title}</div>
+            <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", color: C.text, lineHeight: 1.2 }}>{hero.big}</div>
+            <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>{hero.text}</div>
+          </div>
+          {openDues.length > 0 && (
+            <Btn kind="gold" onClick={() => setPayMonth(openDues[0])}>
+              ⚡ Pay {openDues[0]}
+            </Btn>
+          )}
         </div>
       )}
-      <div style={{ ...S.card }}>
-        <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          <Ico e="📜" /> Payment History
+
+      {!loading && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 16 }}>
+          <Stat icon="✅" label="Total paid (verified)" value={totalPaid} />
+          <Stat icon="⏳" label="Waiting for check" value={String(pendingList.length)} accent={C.gold} />
+          <Stat icon="💳" label="Monthly fee" value={userFee ? money(userFee, cur) : "—"} accent={C.blue} />
         </div>
-        <Table
-          loading={loading}
-          head={["Month", "Amount", "Date", "Method", "Status"]}
-          rows={paid.map((p) => [
-            p.month,
-            `${(p.currency || "BDT") === "USD" ? "$" : "৳"}${(+p.amount).toLocaleString("en")}`,
-            fmtDate(p.date),
-            p.method,
-            p.status === "pending" ? (
-              <span
-                key="s"
-                style={{
-                  background: C.amberBg,
-                  color: "#a16207",
-                  border: "1.5px solid #f0c355",
-                  fontSize: 11.5,
-                  fontWeight: 800,
-                  padding: "4px 12px",
-                  borderRadius: 99,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <Ico e="⏳" /> Pending
-              </span>
-            ) : (
-              <span
-                key="s"
-                style={{
-                  background: C.greenBg,
-                  color: C.green,
-                  border: `1.5px solid ${C.green}`,
-                  fontSize: 11.5,
-                  fontWeight: 800,
-                  padding: "4px 12px",
-                  borderRadius: 99,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <Ico e="✔" /> Verified
-              </span>
-            ),
-          ])}
-          empty="No payments yet"
-        />
-      </div>
-      {payMonth && (
-        <Modal
-          title={`Pay Now — ${payMonth}`}
-          onClose={() => setPayMonth(null)}
-        >
-          <div
-            style={{
-              padding: "10px 12px",
-              borderRadius: 10,
-              background: C.greenBg,
-              fontSize: 13.5,
-              fontWeight: 700,
-              marginBottom: 12,
-            }}
-          >
-            Amount: ৳{userFee.toLocaleString("en")}
+      )}
+
+      {!loading && openDues.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, margin: "0 0 8px" }}>
+            Due fees <CountPill n={openDues.length} />
           </div>
-          <label style={S.label}>Payment Method</label>
+          <div style={{ display: "grid", gap: 8 }}>
+            {openDues.map((m) => (
+              <div key={m} style={{ ...payRow, borderLeft: `4px solid ${C.red}` }}>
+                <span
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    flexShrink: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    background: C.redBg,
+                    color: C.red,
+                  }}
+                >
+                  <Ico e="📅" size={19} style={{ verticalAlign: 0 }} />
+                </span>
+                <div style={{ flex: 1, minWidth: 140 }}>
+                  <b style={{ fontSize: 15 }}>{m}</b>
+                  <div style={{ fontSize: 12.5, color: C.muted }}>Monthly fee</div>
+                </div>
+                <b style={{ fontSize: 17, fontVariantNumeric: "tabular-nums" }}>{money(userFee, cur)}</b>
+                <Btn sm kind="gold" onClick={() => setPayMonth(m)}>
+                  ⚡ Pay now
+                </Btn>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!loading && (
+        <>
+          <div style={{ fontWeight: 700, fontSize: 15, margin: "0 0 8px" }}>
+            Payment history <CountPill n={history.length} />
+          </div>
+          {history.length === 0 ? (
+            <EmptyState icon="📜" title="No payments yet" text="Every payment you make will be listed here." />
+          ) : (
+            <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+              {history.map((p, i) => {
+                const ok = p.status !== "pending";
+                return (
+                  <div
+                    key={p.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      padding: "12px 16px",
+                      borderTop: i ? `1px solid ${C.line}` : "none",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: "50%",
+                        flexShrink: 0,
+                        display: "grid",
+                        placeItems: "center",
+                        background: ok ? C.greenBg : C.amberBg,
+                        color: ok ? C.green : "#a16207",
+                      }}
+                    >
+                      <Ico e={ok ? "✔" : "⏳"} size={16} style={{ verticalAlign: 0 }} />
+                    </span>
+                    <div style={{ flex: 1, minWidth: 150 }}>
+                      <b style={{ fontSize: 14.5 }}>{p.month}</b>
+                      <div style={{ fontSize: 12.5, color: C.muted }}>
+                        {p.methodLabel}
+                        {p.trx && ` · Trx ${p.trx}`} · {compactDate(p.date)}
+                      </div>
+                    </div>
+                    <b style={{ fontSize: 15, fontVariantNumeric: "tabular-nums" }}>{money(p.amount, p.currency)}</b>
+                    <PayStatus status={p.status} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {payMonth && (
+        <Modal title={`Pay for ${payMonth}`} onClose={() => !sending && setPayMonth(null)}>
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
+              padding: "12px 14px",
+              borderRadius: 12,
+              background: C.greenBg,
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
               gap: 8,
-              marginBottom: 10,
             }}
           >
+            <span style={{ fontSize: 13, color: C.muted, fontWeight: 600 }}>Amount to pay</span>
+            <b style={{ fontSize: 22, letterSpacing: "-0.02em", color: C.emeraldD }}>{money(userFee, cur)}</b>
+          </div>
+
+          {stepHead(1, "Send the money")}
+          <div className="tqa-seg" role="tablist" aria-label="Payment method" style={{ display: "flex" }}>
             {Object.keys(acct).map((m) => (
               <button
                 key={m}
+                className={pf.method === m ? "on" : ""}
                 onClick={() => setPf({ ...pf, method: m })}
-                style={{
-                  padding: "11px 6px",
-                  borderRadius: 10,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  fontWeight: 700,
-                  fontSize: 12.5,
-                  border: `2px solid ${pf.method === m ? C.emerald : C.line}`,
-                  background: pf.method === m ? C.greenBg : "#fff",
-                  color: pf.method === m ? C.emerald : C.text,
-                }}
+                style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
               >
-                {withIcons(acct[m].icon, { size: 20 })}
-                <br />
-                {acct[m].name}
+                <Ico e={acct[m].icon} size={15} style={{ verticalAlign: 0 }} /> {acct[m].name}
               </button>
             ))}
           </div>
           <div
             style={{
+              marginTop: 8,
               padding: "10px 12px",
               borderRadius: 10,
               background: C.cream,
+              border: `1px solid ${C.line}`,
               fontSize: 13,
-              marginBottom: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
             }}
           >
-            <b>{acct[pf.method].line1}</b>
-            <br />
-            {acct[pf.method].line2}
+            <div style={{ flex: 1, minWidth: 180 }}>
+              <div style={{ color: C.muted, fontSize: 12.5 }}>{acct[pf.method].line1}</div>
+              <div style={{ fontWeight: 700, fontSize: 15, fontVariantNumeric: "tabular-nums" }}>
+                {acct[pf.method].label}: {acct[pf.method].copy}
+              </div>
+            </div>
+            <Btn sm kind="soft" onClick={() => copy(acct[pf.method].copy)}>
+              📋 Copy
+            </Btn>
           </div>
-          <label style={S.label}>Transaction ID</label>
+
+          {stepHead(2, "Tell us the transaction ID")}
           <input
             style={S.input}
             value={pf.trx}
             onChange={(e) => setPf({ ...pf, trx: e.target.value })}
             placeholder="e.g. 9HX2K7QM"
           />
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>Payment Screenshot</label>
-            <label
-              style={{
-                display: "grid",
-                placeItems: "center",
-                gap: 4,
-                padding: "18px 12px",
-                border: `2px dashed ${pf.shot ? C.emerald : C.line}`,
-                borderRadius: 12,
-                cursor: "pointer",
-                background: pf.shot ? C.greenBg : C.cream,
-                textAlign: "center",
-              }}
-            >
-              <span style={{ fontSize: 24 }}>{withIcons(pf.shot ? "✅" : "🖼️")}</span>
-              <span style={{ fontSize: 12.5, fontWeight: 700 }}>
-                {pf.shot ? pf.shot.name : "Add a screenshot / photo"}
-              </span>
-              <input
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={pickShot}
-              />
-            </label>
-            {pf.shot && (
-              <img
-                src={pf.shot.data}
-                alt="Screenshot"
-                style={{
-                  width: "100%",
-                  borderRadius: 10,
-                  marginTop: 8,
-                  border: `1px solid ${C.line}`,
-                }}
-              />
-            )}
-          </div>
-          <div
+
+          {stepHead(3, "Add a screenshot (if you have one)")}
+          <label
             style={{
-              fontSize: 12.5,
-              color: C.muted,
-              marginTop: 10,
-              textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              padding: "14px 12px",
+              border: `2px dashed ${pf.shot ? C.emerald : C.line}`,
+              borderRadius: 12,
+              cursor: "pointer",
+              background: pf.shot ? C.greenBg : "#fff",
+              color: pf.shot ? C.emerald : C.muted,
+              fontSize: 13,
+              fontWeight: 600,
             }}
           >
-            Please complete the payment, then add a screenshot or transaction
-            ID and verify.
-          </div>
+            <Ico e={pf.shot ? "✅" : "🖼"} size={18} style={{ verticalAlign: 0 }} />
+            {pf.shot ? pf.shot.name : "Choose a screenshot / photo"}
+            <input type="file" accept="image/*" style={{ display: "none" }} onChange={pickShot} />
+          </label>
+          {pf.shot && (
+            <img
+              src={pf.shot.data}
+              alt="Screenshot"
+              style={{ width: "100%", maxHeight: 260, objectFit: "contain", borderRadius: 10, marginTop: 8, border: `1px solid ${C.line}` }}
+            />
+          )}
+
           <Btn
-            style={{ marginTop: 12, width: "100%", justifyContent: "center" }}
-            onClick={submitPay}
+            style={{ marginTop: 16, width: "100%", justifyContent: "center", opacity: sending ? 0.6 : 1 }}
+            onClick={() => !sending && submitPay()}
           >
-            ✔ Verify
+            {sending ? "⏳ Sending…" : "✔ Submit payment"}
           </Btn>
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 8, textAlign: "center" }}>
+            The director checks it, then it shows Verified in your history.
+          </div>
         </Modal>
       )}
       {duaMsg && (
@@ -13183,17 +13299,10 @@ function StudentPaymentsView({ db, setDb, user }) {
             padding: 16,
           }}
         >
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: 20,
-              maxWidth: 430,
-              width: "100%",
-              padding: 28,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 40 }}><Ico e="🤲" /></div>
+          <div style={{ background: "#fff", borderRadius: 20, maxWidth: 430, width: "100%", padding: 28, textAlign: "center" }}>
+            <div style={{ fontSize: 40, color: C.emerald }}>
+              <Ico e="🤲" />
+            </div>
             <div
               style={{
                 fontFamily: "'Amiri', serif",
@@ -13203,16 +13312,13 @@ function StudentPaymentsView({ db, setDb, user }) {
                 margin: "10px 0 6px",
               }}
             >
-              باركَ الله لك في أهلِكَ ومالِكَ، إنَّما جزاءُ السَّلفِ الوفاءُ
-              والحمدُ
+              باركَ الله لك في أهلِكَ ومالِكَ، إنَّما جزاءُ السَّلفِ الوفاءُ والحمدُ
             </div>
             <div style={{ fontSize: 13.5, color: C.text, marginBottom: 6 }}>
-              "May Allah bless you in your family and wealth. The reward for a
-              debt repaid is nothing but full payment and gratitude."
+              "May Allah bless you in your family and wealth. The reward for a debt repaid is nothing but full payment and
+              gratitude."
             </div>
-            <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 14 }}>
-              — Sunan al-Nasa'i and Ibn Majah
-            </div>
+            <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 14 }}>— Sunan al-Nasa'i and Ibn Majah</div>
             <div
               style={{
                 padding: "10px 12px",
@@ -13223,13 +13329,10 @@ function StudentPaymentsView({ db, setDb, user }) {
                 fontSize: 13.5,
               }}
             >
-              <Ico e="✔" /> Your payment has been submitted! It will show "Verified" once
-              the director confirms it, InshaAllah.
+              <Ico e="✔" /> Your payment has been submitted! It will show "Verified" once the director confirms it,
+              InshaAllah.
             </div>
-            <Btn
-              style={{ marginTop: 14, width: "100%", justifyContent: "center" }}
-              onClick={() => setDuaMsg(false)}
-            >
+            <Btn style={{ marginTop: 14, width: "100%", justifyContent: "center" }} onClick={() => setDuaMsg(false)}>
               Alhamdulillah
             </Btn>
           </div>
@@ -13427,44 +13530,25 @@ function ReceiptMaker({ onClose, user }) {
   );
 }
 
-/* ═══════════════ পরিচালকের স্টুডেন্ট পেমেন্ট — ভেরিফাই (কেবল পরিচালক) + WhatsApp রিমাইন্ডার ═══════════════ */
+/* ═══════════════ পরিচালকের Student Payments — যাচাই, বকেয়া (WhatsApp/মওকুফ), পরিশোধিত, হাতে পেমেন্ট বসানো ═══════════════ */
 function DirectorPaymentsView({ db, setDb, user }) {
   const [viewShot, setViewShot] = useState(null);
   const [maker, setMaker] = useState(false);
   const [fees, setFees] = useState(db.feePayments);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
-  const [mp, setMp] = useState({
-    studentId: "",
-    month: "",
-    method: "Nagad",
-  });
-  const [mpBusy, setMpBusy] = useState(false);
+  const [tab, setTab] = useState(null); // verify | dues | paid — প্রথমে যেখানে কাজ আছে
+  const [q, setQ] = useState("");
+  // হাতে পেমেন্ট বসানো — { studentId, month: "2026-07", method }
+  const [rec, setRec] = useState(null);
+  const [recBusy, setRecBusy] = useState(false);
+  const [verifying, setVerifying] = useState(null);
   const [genDuesBusy, setGenDuesBusy] = useState(false);
 
   const loadData = async () => {
-    setLoading(true);
     try {
-      const [fData, sData] = await Promise.all([
-        api.myFees(),
-        api.allStudents(),
-      ]);
-      setFees(
-        fData.map((p) => ({
-          id: p.id,
-          studentId: p.student,
-          studentName: p.student_name,
-          amount: p.amount,
-          currency: p.currency || "BDT",
-          month: p.month_label,
-          date: p.paid_at,
-          method: p.method + (p.trx_id ? ` (Trx: ${p.trx_id})` : ""),
-          shot: p.screenshot
-            ? { data: p.screenshot, name: "screenshot" }
-            : null,
-          status: p.status,
-        })),
-      );
+      const [fData, sData] = await Promise.all([api.myFees(), api.allStudents()]);
+      setFees(fData.map(adaptFee));
       setStudents(
         sData.map((s) => ({
           id: s.id,
@@ -13488,63 +13572,75 @@ function DirectorPaymentsView({ db, setDb, user }) {
     loadData();
   }, []);
 
+  const studentById = (id) => students.find((s) => s.id === id) || userById(id);
   const pending = fees.filter((p) => p.status === "pending");
-  const verified = fees.filter((p) => p.status !== "pending");
-  const verify = async (pid) => {
-    const paySnap = fees.find((p) => String(p.id) === String(pid));
+  const verified = fees
+    .filter((p) => p.status !== "pending")
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+  const dueStudents = students.filter((s) => (s.dueMonths || []).length > 0);
+  const dueAmount = (s) => (s.dueMonths || []).length * (s.fee || 0);
+  const thisMonth = todayISO().slice(0, 7);
+  const paidThisMonth = verified.filter((p) => String(p.date || "").slice(0, 7) === thisMonth);
+  const shownTab = tab || (pending.length ? "verify" : dueStudents.length ? "dues" : "paid");
+  const needle = q.trim().toLowerCase();
+  const hit = (...xs) => !needle || xs.some((x) => String(x || "").toLowerCase().includes(needle));
+
+  const receiptFor = (p) => {
+    const st = studentById(p.studentId);
+    printReceipt(
+      {
+        ...p,
+        id: String(p.id),
+        method: p.methodLabel + (p.trx ? ` (Trx: ${p.trx})` : ""),
+        status: "verified",
+        currency: curSym(p.currency || st?.fee_currency),
+      },
+      { name: p.studentName || st?.name || "", id: p.studentId, phone: st?.phone, email: st?.email },
+      "Fee Payment Receipt",
+    );
+  };
+  const verify = async (p) => {
+    setVerifying(p.id);
     try {
-      await api.verifyFee(pid);
+      await api.verifyFee(p.id);
       await loadData();
       notice("✔ Payment verified.");
-      if (paySnap) {
-        const st = studentById(paySnap.studentId);
-        const currSymbol = (st?.fee_currency || paySnap.currency || "BDT") === "USD" ? "$" : "৳";
-        printReceipt(
-          { ...paySnap, status: "verified", currency: currSymbol },
-          { name: paySnap.studentName || st?.name || "", id: paySnap.studentId, phone: st?.phone, email: st?.email },
-          "Fee Payment Receipt",
-        );
-      }
+      receiptFor(p);
     } catch (e) {
       // আগে ব্যর্থ হলেও স্ক্রিনে "ভেরিফাইড" দেখানো হতো, সার্ভারে আসলে হতো না —
       // এখন স্পষ্ট এরর দেখাচ্ছে, স্ক্রিনে ভুয়া স্ট্যাটাস বসাচ্ছে না
-      notice(
-        "Could not verify —" +
-          (e?.data?.error || e?.message || "Please check your server connection and try again"),
-      );
+      notice("Could not verify —" + (e?.data?.error || e?.message || "Please check your server connection and try again"));
     }
+    setVerifying(null);
   };
-  const studentById = (id) => students.find((s) => s.id === id) || userById(id);
 
   // পরিচালক/এডমিন সরাসরি যেকোনো স্টুডেন্টের যেকোনো মাসের (সামনে বা পিছনের) পেমেন্ট
   // "Paid" হিসেবে সরাসরি সেভ করতে পারেন — স্টুডেন্টের নিজে জমা দেওয়ার অপেক্ষা ছাড়াই
+  const openRecord = (s, monthLabel) =>
+    setRec({ studentId: s ? String(s.id) : "", month: monthLabel ? monthKeyOf(monthLabel) : "", method: "Nagad" });
+  const recStudent = rec ? students.find((s) => String(s.id) === String(rec.studentId)) : null;
   const markPaid = async () => {
-    const st = students.find((s) => String(s.id) === String(mp.studentId));
+    const st = recStudent;
     if (!st) return notice("Please choose a student.");
-    if (!mp.month) return notice("Please choose a month and year.");
-    const label = monthLabelBn(mp.month); // "2026-07" → "জুলাই ২০২৬" — backend-এর DueMonth লেবেলের সাথে হুবহু মিলতে হবে, নইলে বকেয়া মুছবে না
-    setMpBusy(true);
+    if (!rec.month) return notice("Please choose a month and year.");
+    const label = monthLabelBn(rec.month); // "2026-07" → "July 2026" — সার্ভারের বকেয়া-মাসের লেবেলের সাথে হুবহু মিলতে হবে, নইলে বকেয়া মুছবে না
+    setRecBusy(true);
     try {
       await api.recordPayment({
         student_id: st.id,
         month_label: label,
         amount: st.fee || 0,
-        method: mp.method
-          .toLowerCase()
-          .replace("bKash", "bkash")
-          .replace("Cash received (office)", "cash")
-          .replace("Nagad", "nagad")
-          .replace("Bank transfer", "bank"),
+        // ⚠️ সার্ভার নেয় কেবল bkash/nagad/bank/cash — আগে "bank transfer"/"cash received (office)" যেত, সেভ হতো না
+        method: (PAY_METHODS.find(([l]) => l === rec.method) || [, "cash"])[1],
       });
-      notice(`✔ Payment for ${st.name} for "${label}" saved as paid.`);
-      setMp((prev) => ({ ...prev, month: "" }));
+      notice(`✔ ${st.name} — "${label}" saved as paid.`);
+      setRec(null);
       await loadData();
     } catch (e) {
       notice("Could not save —" + (e?.data?.error || e?.message || "Verify"));
     }
-    setMpBusy(false);
+    setRecBusy(false);
   };
-  const dueStudents = students.filter((s) => (s.dueMonths || []).length > 0);
   // ছুটির মাসের বকেয়া মওকুফ — সরিয়ে দিয়ে তালিকা নতুন করে আনি
   const waiveDueHere = async (studentId, monthLabel, reason) => {
     try {
@@ -13552,29 +13648,21 @@ function DirectorPaymentsView({ db, setDb, user }) {
       await loadData();
       notice(`✔ Dues for "${monthLabel}" have been waived.`);
     } catch (e) {
-      notice(
-        "Could not waive —" +
-          (e?.data?.error || e?.message || "Please try again"),
-      );
+      notice("Could not waive —" + (e?.data?.error || e?.message || "Please try again"));
     }
   };
 
   const waMsg = (s) => {
     const dues = s.dueMonths || db.dueMonths[s.id] || [];
-    return `Assalamu Alaikum wa Rahmatullahi wa Barakatuh.\n\nRespected ${s.guardian || "Guardian"},\nWarm greetings and duas from Tarbiyatul Quran Academy. May Allah bless your child's knowledge and practice.\n\nThis is a gentle reminder that the fee for ${s.name} for ${dues.join(", ")} (total ৳${(dues.length * (s.fee || 0)).toLocaleString("en")}) is still outstanding. We would be grateful if you could settle it at your convenience, insha'Allah.\n\nJazakumullahu Khairan.\n— Tarbiyatul Quran Academy`;
+    return `Assalamu Alaikum wa Rahmatullahi wa Barakatuh.\n\nRespected ${s.guardian || "Guardian"},\nWarm greetings and duas from Tarbiyatul Quran Academy. May Allah bless your child's knowledge and practice.\n\nThis is a gentle reminder that the fee for ${s.name} for ${dues.join(", ")} (total ${money(dues.length * (s.fee || 0), s.fee_currency)}) is still outstanding. We would be grateful if you could settle it at your convenience, insha'Allah.\n\nJazakumullahu Khairan.\n— Tarbiyatul Quran Academy`;
   };
   const sendAll = () => {
     const full = dueStudents
-      .map((s) => {
-        const dm = s.dueMonths || [];
-        return `• ${s.name} (${s.guardian || ""}): ${dm.join(", ")} — ৳${(dm.length * (s.fee || 0)).toLocaleString("en")}`;
-      })
+      .map((s) => `• ${s.name} (${s.guardian || ""}): ${(s.dueMonths || []).join(", ")} — ${money(dueAmount(s), s.fee_currency)}`)
       .join("\n");
     const msg = `Assalamu Alaikum wa Rahmatullah.\nRespected guardians, this is a gentle reminder about the outstanding fees, insha'Allah:\n${full}\nJazakumullahu Khairan. — Tarbiyatul Quran Academy`;
-    navigator.clipboard?.writeText(msg.replace(/\\n/g, "\n"));
-    notice(
-      "All reminder messages copied ✔ — paste and send them in your WhatsApp group or broadcast list.",
-    );
+    navigator.clipboard?.writeText(msg);
+    notice("All reminder messages copied ✔ — paste and send them in your WhatsApp group or broadcast list.");
   };
   // এখানকার বাটন শুধু স্টুডেন্টদের বকেয়া তৈরি করে (roles=["student"]) — উস্তাদদের
   // বকেয়া তৈরি হয় "Accounts" পেজের বাটন থেকে, দুটো আলাদা রাখা হয়েছে
@@ -13589,17 +13677,38 @@ function DirectorPaymentsView({ db, setDb, user }) {
     }
     setGenDuesBusy(false);
   };
+  const delPayment = (p) => {
+    const name = p.studentName || studentById(p.studentId)?.name || "";
+    askConfirm(
+      `Delete this payment record for ${name} for "${p.month}"? Only delete wrong or duplicate entries — if there is no other verified payment, that month’s due will come back.`,
+      async () => {
+        try {
+          await api.deleteFee(p.id);
+          await loadData();
+          notice("✔ Payment record deleted.");
+        } catch (e) {
+          notice("Could not delete —" + (e?.data?.error || e?.message || "Verify"));
+        }
+      },
+    );
+  };
+
+  const tabs = [
+    ["verify", "To verify", pending.length],
+    ["dues", "Dues", dueStudents.length],
+    ["paid", "Paid", verified.length],
+  ];
+  const shownDues = dueStudents.filter((s) => hit(s.name, s.guardian, s.phone, ...(s.dueMonths || [])));
+  const shownPaid = verified.filter((p) => hit(p.studentName || studentById(p.studentId)?.name, p.month, p.methodLabel, p.trx));
+
   return (
     <Section
       title="Student Payments"
-      sub="Who has paid and who hasn't — reconcile and verify (only the director can verify)"
+      sub="Check new payments, follow up on dues, and see who has paid — only the director can verify"
       action={
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Btn
-            kind="soft"
-            onClick={genDuesNow}
-            style={{ opacity: genDuesBusy ? 0.6 : 1 }}
-          >
+          <Btn onClick={() => openRecord(null)}>➕ Record payment</Btn>
+          <Btn kind="soft" onClick={genDuesNow} style={{ opacity: genDuesBusy ? 0.6 : 1 }}>
             {genDuesBusy ? "⏳ Creating…" : "🔄 Create this month's dues"}
           </Btn>
           <Btn kind="gold" onClick={() => setMaker(true)}>
@@ -13609,324 +13718,297 @@ function DirectorPaymentsView({ db, setDb, user }) {
       }
     >
       {maker && <ReceiptMaker user={user} onClose={() => setMaker(false)} />}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-          gap: 10,
-          marginBottom: 16,
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10, marginBottom: 16 }}>
         <Stat
           icon="⏳"
-          label="Pending verification"
-          value={bn(pending.length)}
+          label="Waiting to verify"
+          value={String(pending.length)}
+          note={pending.length ? moneyMix(pending.map((p) => [p.amount, p.currency])) : "All checked"}
           accent={C.gold}
+          onClick={() => setTab("verify")}
         />
-        <Stat icon="✅" label="Verified payments" value={bn(verified.length)} />
         <Stat
           icon="📵"
-          label="Has dues"
-          value={`${bn(dueStudents.length)}`}
+          label="Students with dues"
+          value={String(dueStudents.length)}
+          note={dueStudents.length ? moneyMix(dueStudents.map((s) => [dueAmount(s), s.fee_currency])) + " due" : "Nobody owes"}
           accent={C.red}
+          onClick={() => setTab("dues")}
+        />
+        <Stat
+          icon="✅"
+          label="Paid this month"
+          value={String(paidThisMonth.length)}
+          note={paidThisMonth.length ? moneyMix(paidThisMonth.map((p) => [p.amount, p.currency])) : "None yet"}
+          onClick={() => setTab("paid")}
         />
       </div>
-      <div
-        style={{
-          ...S.card,
-          marginBottom: 14,
-          borderLeft: `4px solid ${C.green}`,
-        }}
-      >
-        <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          <Ico e="✅" /> Complete any month's payment directly
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+        <div className="tqa-seg" role="tablist" aria-label="Payments">
+          {tabs.map(([k, l, n]) => (
+            <button key={k} className={shownTab === k ? "on" : ""} onClick={() => setTab(k)}>
+              {l} <span style={{ opacity: 0.7 }}>{n}</span>
+            </button>
+          ))}
         </div>
-        <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>
-          Even if the student has not submitted anything, you can save any month's payment (past or future) directly as "Paid" from here — any dues for that month are cleared automatically.
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1.4fr 1fr 1fr auto",
-            gap: 8,
-            alignItems: "end",
-          }}
-        >
-          <div>
-            <label style={S.label}>Student</label>
-            <select
-              style={S.input}
-              value={mp.studentId}
-              onChange={(e) => setMp({ ...mp, studentId: e.target.value })}
-            >
-              <option value="">Choose</option>
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={S.label}>Month & year</label>
-            <input
-              type="month"
-              style={S.input}
-              value={mp.month}
-              onChange={(e) => setMp({ ...mp, month: e.target.value })}
-            />
-          </div>
-          <div>
-            <label style={S.label}>Method</label>
-            <select
-              style={S.input}
-              value={mp.method}
-              onChange={(e) => setMp({ ...mp, method: e.target.value })}
-            >
-              <option>Nagad</option>
-              <option>bKash</option>
-              <option>Bank transfer</option>
-              <option>Cash received (office)</option>
-            </select>
-          </div>
-          <Btn
-            kind="gold"
-            onClick={markPaid}
-            style={{ opacity: mpBusy ? 0.6 : 1 }}
-          >
-            {mpBusy ? "⏳ Saving…" : "✔ Complete"}
-          </Btn>
-        </div>
-      </div>
-      <div
-        style={{
-          ...S.card,
-          marginBottom: 14,
-          borderLeft: `4px solid ${C.gold}`,
-        }}
-      >
-        <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          <Ico e="⏳" /> Awaiting verification — check and click
-        </div>
-        {loading && <Loader text="Loading payments" />}
-        {!loading && pending.length === 0 && (
-          <div
-            style={{
-              color: C.muted,
-              fontSize: 13,
-              textAlign: "center",
-              padding: 8,
-            }}
-          >
-            No pending payments, Alhamdulillah.
-          </div>
+        {shownTab !== "verify" && (
+          <input
+            style={{ ...S.input, flex: 1, minWidth: 180, maxWidth: 320 }}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search name, guardian or month"
+          />
         )}
-        {pending.map((p) => {
-          const s = studentById(p.studentId);
-          return (
-            <div
-              key={p.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "10px 12px",
-                borderRadius: 12,
-                background: C.amberBg,
-                marginBottom: 8,
-                flexWrap: "wrap",
-              }}
-            >
+        {shownTab === "dues" && dueStudents.length > 0 && (
+          <Btn sm kind="soft" onClick={sendAll} style={{ marginLeft: "auto" }}>
+            📋 Copy reminder for everyone
+          </Btn>
+        )}
+      </div>
+
+      {loading && <Loader text="Loading payments" />}
+
+      {/* ── যাচাইয়ের অপেক্ষায় ── */}
+      {!loading && shownTab === "verify" && (
+        <div style={{ display: "grid", gap: 8 }}>
+          {pending.length === 0 && (
+            <EmptyState icon="✅" title="Nothing to verify" text="New payments from students will appear here, Alhamdulillah." />
+          )}
+          {pending.map((p) => {
+            const s = studentById(p.studentId);
+            return (
+              <div key={p.id} style={{ ...payRow, borderLeft: `4px solid ${C.gold}` }}>
+                <Initials name={p.studentName || s?.name} tone={C.gold} />
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <b style={{ fontSize: 15 }}>{p.studentName || s?.name}</b>
+                  <span style={{ color: C.muted, fontSize: 13 }}> · {p.month}</span>
+                  <div style={{ fontSize: 12.5, color: C.muted }}>
+                    {p.methodLabel}
+                    {p.trx && (
+                      <>
+                        {" "}
+                        · Trx <b style={{ color: C.text, fontWeight: 600 }}>{p.trx}</b>
+                      </>
+                    )}{" "}
+                    · {compactDate(p.date)}
+                  </div>
+                </div>
+                {p.shot && (
+                  <button
+                    onClick={() => setViewShot(p.shot)}
+                    title="See the screenshot"
+                    style={{ border: `1px solid ${C.line}`, borderRadius: 10, padding: 0, width: 46, height: 46, overflow: "hidden", cursor: "zoom-in", background: "#fff" }}
+                  >
+                    <img src={p.shot.data} alt="Screenshot" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </button>
+                )}
+                <b style={{ fontSize: 17, fontVariantNumeric: "tabular-nums", minWidth: 80, textAlign: "right" }}>
+                  {money(p.amount, p.currency || s?.fee_currency)}
+                </b>
+                <Btn sm onClick={() => verifying == null && verify(p)} style={{ opacity: verifying === p.id ? 0.6 : 1 }}>
+                  {verifying === p.id ? "⏳ Verifying…" : "✔ Verify"}
+                </Btn>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── বকেয়া ── */}
+      {!loading && shownTab === "dues" && (
+        <div style={{ display: "grid", gap: 8 }}>
+          {dueStudents.length === 0 && <EmptyState icon="✅" title="Nobody has dues" text="Alhamdulillah — every student is paid up." />}
+          {dueStudents.length > 0 && shownDues.length === 0 && <EmptyState icon="🔍" title="No match" text="Try another name or month." />}
+          {shownDues.map((s) => (
+            <div key={s.id} style={{ ...payRow, alignItems: "flex-start", borderLeft: `4px solid ${C.red}` }}>
+              <Initials name={s.name} tone={C.red} />
               <div style={{ flex: 1, minWidth: 200 }}>
-                <b style={{ fontSize: 14 }}>{p.studentName || s.name}</b> —{" "}
-                {p.month} · {(p.currency || s?.fee_currency || "BDT") === "USD" ? "$" : "৳"}{bn((+p.amount).toLocaleString("en"))}
-                <div style={{ fontSize: 12, color: C.muted }}>
-                  {p.method} · {fmtDate(p.date)}
+                <b style={{ fontSize: 15 }}>{s.name}</b>
+                <div style={{ fontSize: 12.5, color: C.muted }}>
+                  Guardian: {s.guardian || "—"}
+                  {s.phone ? ` · ${s.phone}` : ""}
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                  {(s.dueMonths || []).map((m) => (
+                    <span key={m} style={monthChip}>
+                      {m}
+                      <button
+                        title={`Record ${m} as paid`}
+                        onClick={() => openRecord(s, m)}
+                        style={{ border: "none", borderLeft: `1px solid ${C.red}33`, background: "transparent", padding: "0 0 0 7px", cursor: "pointer", color: C.green, fontWeight: 700, font: "inherit", fontSize: 12 }}
+                      >
+                        Mark paid
+                      </button>
+                      {/* ছুটি বা অন্য কারণে যাঁর কাছ থেকে ফি নেওয়া হবে না — মাস ধরে মওকুফ */}
+                      {isDir(user) && (
+                        <button
+                          title={`Waive dues for ${m}`}
+                          onClick={() =>
+                            askConfirm(
+                              `Waive ${s.name}'s dues for "${m}"?\n\n` +
+                                `Do this when they are on leave or the fee is not being collected for some other reason. ` +
+                                `The due will be removed from the list.`,
+                              () => waiveDueHere(s.id, m, "Leave/Waiver"),
+                            )
+                          }
+                          style={{ border: "none", background: "transparent", padding: 0, cursor: "pointer", color: "#64748b", fontWeight: 600, font: "inherit", fontSize: 12 }}
+                        >
+                          Waive
+                        </button>
+                      )}
+                    </span>
+                  ))}
                 </div>
               </div>
-              {p.shot && (
-                <Btn sm kind="soft" onClick={() => setViewShot(p.shot)}>
-                  🖼️ Screenshot
-                </Btn>
-              )}
-              <span
-                style={{
-                  background: "#fff",
-                  color: "#a16207",
-                  border: "1.5px solid #f0c355",
-                  fontSize: 11.5,
-                  fontWeight: 800,
-                  padding: "4px 12px",
-                  borderRadius: 99,
-                }}
-              >
-                <Ico e="⏳" /> Pending
-              </span>
-              <Btn sm onClick={() => verify(p.id)}>
-                ✔ Verify
-              </Btn>
-            </div>
-          );
-        })}
-      </div>
-      <div
-        style={{
-          ...S.card,
-          marginBottom: 14,
-          borderLeft: `4px solid ${C.red}`,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 8,
-            marginBottom: 10,
-          }}
-        >
-          <div style={{ fontWeight: 800 }}>
-            <Ico e="📵" /> Students with outstanding fees — WhatsApp reminder
-          </div>
-          {dueStudents.length > 0 && (
-            <Btn sm kind="gold" onClick={sendAll}>
-              📋 Everyone at once (copy message)
-            </Btn>
-          )}
-        </div>
-        {!loading && dueStudents.length === 0 && (
-          <div
-            style={{
-              color: C.muted,
-              fontSize: 13,
-              textAlign: "center",
-              padding: 8,
-            }}
-          >
-            Nobody has dues, Alhamdulillah.
-          </div>
-        )}
-        {dueStudents.map((s) => (
-          <div
-            key={s.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "10px 12px",
-              borderRadius: 12,
-              background: C.redBg,
-              marginBottom: 8,
-              flexWrap: "wrap",
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <b style={{ fontSize: 14 }}>{s.name}</b>
-              <div style={{ fontSize: 12, color: C.muted }}>
-                Dues: {(s.dueMonths || []).join(", ")} — {(s.fee_currency || "BDT") === "USD" ? "$" : "৳"}
-                {bn(
-                  ((s.dueMonths || []).length * (s.fee || 0)).toLocaleString(
-                    "en",
-                  ),
-                )}{" "}
-                · Guardian: {s.guardian || "—"}
+              <div style={{ textAlign: "right", minWidth: 90 }}>
+                <b style={{ fontSize: 17, color: C.red, fontVariantNumeric: "tabular-nums" }}>{money(dueAmount(s), s.fee_currency)}</b>
+                <div style={{ fontSize: 12, color: C.muted }}>
+                  {(s.dueMonths || []).length} {(s.dueMonths || []).length === 1 ? "month" : "months"}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                {s.phone ? (
+                  <a
+                    href={`https://wa.me/${s.phone}?text=${encodeURIComponent(waMsg(s))}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ textDecoration: "none" }}
+                  >
+                    <Btn sm style={{ background: "#25D366", color: "#fff" }}>
+                      📱 WhatsApp
+                    </Btn>
+                  </a>
+                ) : (
+                  <Tag color={C.muted} bg={C.cream}>
+                    No number
+                  </Tag>
+                )}
               </div>
             </div>
-            {s.phone ? (
-              <a
-                href={`https://wa.me/${s.phone}?text=${encodeURIComponent(waMsg(s).replace(/\\n/g, "\n"))}`}
-                target="_blank"
-                rel="noreferrer"
-                style={{ textDecoration: "none" }}
-              >
-                <Btn sm style={{ background: "#25D366", color: "#fff" }}>
-                  📱 WhatsApp reminder
-                </Btn>
-              </a>
-            ) : (
-              <Tag color={C.muted} bg={C.cream}>
-                No number
-              </Tag>
-            )}
-            {/* ছুটি বা অন্য কারণে যাঁর কাছ থেকে ফি নেওয়া হবে না — এখান
-                থেকেই মাস ধরে মওকুফ করা যায়। আগে এটা কেবল বিস্তারিত পাতায়
-                ছিল, তাই এই তালিকা দেখতে দেখতে সরানো যেত না। */}
-            {isDir(user) &&
-              (s.dueMonths || []).map((m) => (
-                <Btn
-                  key={m}
-                  sm
-                  kind="soft"
-                  title={`Waive dues for ${m}`}
-                  onClick={() =>
-                    askConfirm(
-                      `Waive ${s.name}'s dues for "${m}"?\n\n` +
-                        `Do this when they are on leave or the fee is not being collected for some other reason. ` +
-                        `The due will be removed from the list.`,
-                      () => waiveDueHere(s.id, m, "Leave/Waiver"),
-                    )
-                  }
-                >
-                  🏝️ Waive {m}
-                </Btn>
-              ))}
-          </div>
-        ))}
-      </div>
-      <div style={{ ...S.card }}>
-        <div style={{ fontWeight: 800, marginBottom: 10 }}>
-          <Ico e="✅" /> Verified payments
+          ))}
         </div>
+      )}
+
+      {/* ── পরিশোধিত ── */}
+      {!loading && shownTab === "paid" && (
         <Table
-          head={["Student", "Month", "Amount", "Method", "Date", "Status", ""]}
-          rows={verified.map((p) => {
+          minWidth={680}
+          head={["Student", "Month", "Amount", "Method", "Date", ""]}
+          empty={verified.length ? "No match" : "No verified payments yet"}
+          rows={shownPaid.map((p) => {
             const s = studentById(p.studentId);
             return [
-              p.studentName || s.name,
+              <span key="n" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 600 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: C.green }} />
+                {p.studentName || s?.name}
+              </span>,
               p.month,
-              `৳${bn(p.amount.toLocaleString("en"))}`,
-              p.method,
-              fmtDate(p.date),
-              <Tag key="s">✅ Verified</Tag>,
-              <Btn
-                key="d"
-                sm
-                kind="danger"
-                onClick={() =>
-                  askConfirm(
-                    `Delete this payment record for ${p.studentName || s.name} for "${p.month}"? Only delete wrong or duplicate entries — if there is no other verified payment, that month’s due will come back.`,
-                    async () => {
-                      try {
-                        await api.deleteFee(p.id);
-                        await loadData();
-                        notice("✔ Payment record deleted.");
-                      } catch (e) {
-                        notice(
-                          "Could not delete —" + (e?.data?.error || e?.message || "Verify"),
-                        );
-                      }
-                    },
-                  )
-                }
-              >
-                🗑️ Delete
-              </Btn>,
+              <b key="a" style={{ fontVariantNumeric: "tabular-nums" }}>
+                {money(p.amount, p.currency || s?.fee_currency)}
+              </b>,
+              <span key="m">
+                {p.methodLabel}
+                {p.trx && <div style={{ fontSize: 11.5, color: C.muted }}>Trx {p.trx}</div>}
+              </span>,
+              compactDate(p.date),
+              <span key="x" style={{ display: "inline-flex", gap: 6, justifyContent: "flex-end", width: "100%" }}>
+                <Btn sm kind="soft" title="Open the receipt" onClick={() => receiptFor(p)}>
+                  🧾 Receipt
+                </Btn>
+                <Btn sm kind="danger" title="Delete a wrong or duplicate record" onClick={() => delPayment(p)} style={{ padding: "6px 9px" }}>
+                  🗑
+                </Btn>
+              </span>,
             ];
           })}
         />
-      </div>
+      )}
+
+      {rec && (
+        <Modal title="Record a payment" onClose={() => !recBusy && setRec(null)}>
+          <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 12 }}>
+            Save any month (past or future) as paid — even if the student has not submitted anything. That month's due is cleared
+            automatically.
+          </div>
+          <label style={S.label}>Student</label>
+          <select style={S.input} value={rec.studentId} onChange={(e) => setRec({ ...rec, studentId: e.target.value, month: "" })}>
+            <option value="">Choose</option>
+            {students.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          {recStudent && (recStudent.dueMonths || []).length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <label style={S.label}>Months due — tap one</label>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {recStudent.dueMonths.map((m) => {
+                  const on = monthKeyOf(m) === rec.month;
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => setRec({ ...rec, month: monthKeyOf(m) })}
+                      style={{
+                        ...monthChip,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        ...(on ? { background: C.emerald, color: "#fff", borderColor: C.emerald } : {}),
+                      }}
+                    >
+                      {m}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>Month & year</label>
+            <input type="month" style={S.input} value={rec.month} onChange={(e) => setRec({ ...rec, month: e.target.value })} />
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>Method</label>
+            <div className="tqa-seg" role="tablist" aria-label="Method" style={{ display: "flex" }}>
+              {PAY_METHODS.map(([l]) => (
+                <button key={l} className={rec.method === l ? "on" : ""} onClick={() => setRec({ ...rec, method: l })} style={{ flex: 1 }}>
+                  {l === "Cash received (office)" ? "Cash" : l === "Bank transfer" ? "Bank" : l}
+                </button>
+              ))}
+            </div>
+          </div>
+          {recStudent && rec.month && (
+            <div
+              style={{
+                marginTop: 14,
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: C.greenBg,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              <span style={{ fontSize: 13, color: C.text }}>
+                <b>{recStudent.name}</b> · {monthLabelBn(rec.month)}
+              </span>
+              <b style={{ fontSize: 18, color: C.emeraldD }}>{money(recStudent.fee || 0, recStudent.fee_currency)}</b>
+            </div>
+          )}
+          <Btn
+            style={{ marginTop: 14, width: "100%", justifyContent: "center", opacity: recBusy ? 0.6 : 1 }}
+            onClick={() => !recBusy && markPaid()}
+          >
+            {recBusy ? "⏳ Saving…" : "✔ Save as paid"}
+          </Btn>
+        </Modal>
+      )}
       {viewShot && (
         <Modal title="Payment screenshot" onClose={() => setViewShot(null)}>
-          <img
-            src={viewShot.data}
-            alt="Screenshot"
-            style={{
-              width: "100%",
-              borderRadius: 12,
-              border: `1px solid #e5e9e5`,
-            }}
-          />
+          <img src={viewShot.data} alt="Screenshot" style={{ width: "100%", borderRadius: 12, border: `1px solid #e5e9e5` }} />
         </Modal>
       )}
     </Section>
