@@ -10702,29 +10702,58 @@ function RatingPopup({ courseName, onSubmit, onSkip }) {
 }
 
 /* ═══════════════ টিচার রিপোর্ট — উপস্থিতি · ক্লাসের মান · পেমেন্ট ═══════════════ */
+// বেতনের মাধ্যম — সার্ভারে লেখা হিসেবেই জমা থাকে (TeacherPayment.method)
+const SALARY_METHODS = ["Bank", "bKash", "Nagad", "Cash"];
+// পুরনো রেকর্ডে ডিফল্ট "ব্যাংক" লেখা আছে
+const salaryMethodLabel = (m) => (/ব্যাংক|^bank$/i.test(String(m || "").trim()) ? "Bank" : m || "—");
+const RatingStars = ({ n, size = 14 }) => (
+  <span style={{ display: "inline-flex", gap: 1, color: C.gold, verticalAlign: "-0.15em" }} aria-label={`${n} of 5`}>
+    {[1, 2, 3, 4, 5].map((i) => (
+      <Ico key={i} e="⭐" size={size} fill={i <= n ? "currentColor" : "none"} style={{ opacity: i <= n ? 1 : 0.3, verticalAlign: 0 }} />
+    ))}
+  </span>
+);
+
 function TeacherReportView({ db, setDb, courses, user }) {
+  const isT = user.role === "teacher";
+  // বেতন দেওয়া/মোছা ও বেতনের ইতিহাস — সার্ভারে কেবল পরিচালকের (এডমিনের তালিকা খালি আসে)
+  const canPay = isDir(user);
+  const showSalary = isT || canPay;
   const [loading, setLoading] = useState(true); // প্রথম লোড শেষ হওয়ার আগে "কিছু নেই" না দেখাতে
   const [allTeachers, setAllTeachers] = useState([]);
-  const [sel, setSel] = useState(
-    user.role === "teacher" ? user.id : allTeachers[0]?.id,
-  );
+  // উস্তাদের নিজের সর্বশেষ তথ্য — লগইনের সময়ের user-এ বকেয়া মাস পুরনো থাকতে পারে
+  const [me, setMe] = useState(null);
+  const [sel, setSel] = useState(null);
+  const [tab, setTab] = useState(showSalary ? "salary" : "attendance");
   const [ratingSummary, setRatingSummary] = useState(null);
   const [allRatings, setAllRatings] = useState(db.ratings || []);
   const [salaries, setSalaries] = useState(db.teacherPayments || []);
-  // আগে এখানে stale mock db.attendance/db.classes/db.dueMonths ব্যবহার হতো —
-  // তাই হাজিরা, ক্লাস নেওয়ার সংখ্যা ও বকেয়া কখনো আসল ডাটা দেখাত না
   const [attendance, setAttendance] = useState([]);
   const [classes, setClasses] = useState([]);
+  // রেটিংয়ের সারিতে শুধু শিক্ষার্থীর id আসে — নাম দেখাতে (কেবল এডমিন/পরিচালক)
+  const [studentNames, setStudentNames] = useState({});
+  const [maker, setMaker] = useState(false);
+  const [pm, setPm] = useState(null); // বেতন দেওয়ার ফর্ম: {teacherId, month, amount, method}
+  const [pmBusy, setPmBusy] = useState(false);
 
-  const tid = user.role === "teacher" ? user.id : sel || allTeachers[0]?.id;
-  const t =
-    allTeachers.find((x) => String(x.id) === String(tid)) || userById(tid);
-  const tCourses = courses.filter(
-    (c) => String(c.teacherId || c.teacher) === String(tid),
-  );
-  const att = attendance.filter((a) => String(a.user) === String(tid));
-  const present = att.filter((a) => (a.present ?? a.minutes >= 20)).length;
-  const short = att.filter((a) => !(a.present ?? a.minutes >= 20)).length;
+  const tid = isT ? user.id : sel || allTeachers[0]?.id;
+  const t = isT
+    ? {
+        ...user,
+        due_months: me?.due_months ?? user.due_months,
+        monthly_salary: me?.monthly_salary ?? user.monthly_salary ?? user.salary,
+        phone: me?.phone ?? user.phone,
+      }
+    : allTeachers.find((x) => String(x.id) === String(tid)) || {};
+  const salaryOf = (x) => +(x?.monthly_salary || x?.salary || 0);
+  const salary = salaryOf(t);
+  const tCourses = courses.filter((c) => String(c.teacherId || c.teacher) === String(tid));
+  const att = attendance
+    .filter((a) => String(a.user) === String(tid))
+    .sort((a, b) => String(b.class_date || "").localeCompare(String(a.class_date || "")));
+  const isPresent = (a) => a.present ?? a.minutes >= 20;
+  const present = att.filter(isPresent).length;
+  const short = att.length - present;
   // উস্তাদ নিজে শেষ করে দেওয়া ক্লাসও গোনা হয় — কর্তৃপক্ষের যাচাইয়ের অপেক্ষায়
   // থাকলেও ক্লাসটা তিনি নিয়েছেন। আগে শুধু status="done" বা বিগত তারিখ দেখা
   // হতো, তাই আজকের নেওয়া ক্লাস আজ গণনায় আসত না — পরদিন গিয়ে আসত।
@@ -10735,120 +10764,158 @@ function TeacherReportView({ db, setDb, courses, user }) {
   ).length;
 
   const avg = ratingSummary ? ratingSummary.avg || 0 : 0;
-  const ratingCount = ratingSummary
-    ? ratingSummary.count
-    : allRatings.filter((r) => String(r.teacher || r.teacherId) === String(tid))
-        .length;
+  const myRatings = allRatings
+    .filter((r) => String(r.teacher || r.teacherId) === String(tid))
+    .sort((a, b) => String(b.rated_at || b.date || "").localeCompare(String(a.rated_at || a.date || "")));
+  const ratingCount = ratingSummary ? ratingSummary.count : myRatings.length;
   const quality = !ratingCount
-    ? ["—", C.muted, C.cream]
+    ? ["No ratings yet", C.muted, C.cream]
     : avg >= 4.5
       ? ["Excellent", C.green, C.greenBg]
       : avg >= 4
         ? ["Very good", C.emerald, C.greenBg]
         : avg >= 3
-          ? ["Good", C.gold, C.amberBg]
+          ? ["Good", "#a16207", C.amberBg]
           : ["Needs improvement", C.red, C.redBg];
-  const dist = ratingSummary
-    ? [5, 4, 3, 2, 1].map((n) => ({
-        n,
-        c: ratingSummary.distribution?.[n] || 0,
-      }))
-    : [5, 4, 3, 2, 1].map((n) => ({
-        n,
-        c: allRatings.filter(
-          (r) =>
-            String(r.teacher || r.teacherId) === String(tid) && r.stars === n,
-        ).length,
-      }));
-  const pays = salaries.filter(
-    (p) => String(p.teacher || p.teacherId) === String(tid),
-  );
-  const dues = t?.due_months || [];
+  const dist = [5, 4, 3, 2, 1].map((n) => ({
+    n,
+    c: ratingSummary ? ratingSummary.distribution?.[n] || 0 : myRatings.filter((r) => r.stars === n).length,
+  }));
 
   // কোনো মাসে ইতিমধ্যে আংশিক পেমেন্ট হয়ে থাকলে কত জমা পড়েছে তা হিসাব — যতক্ষণ
   // না সব মিলিয়ে পূর্ণ বেতনের সমান হয়, ততক্ষণ ব্যাকএন্ডে বকেয়া থেকেই যায়
   const paidSoFar = (teacherId, month) =>
     salaries
-      .filter(
-        (p) =>
-          String(p.teacher || p.teacherId) === String(teacherId) &&
-          (p.month_label || p.month) === month,
-      )
+      .filter((p) => String(p.teacher || p.teacherId) === String(teacherId) && (p.month_label || p.month) === month)
       .reduce((s, p) => s + (+p.amount || 0), 0);
-  const [maker, setMaker] = useState(false);
-  const [payModal, setPayModal] = useState(false);
-  const [pm, setPm] = useState({ teacherId: "", month: "", amount: "" });
-  const [pmBusy, setPmBusy] = useState(false);
-  const payTeacher = async (teacher, month, amount) => {
-    if (!month) return;
-    if (!amount || amount <= 0) return notice("Please enter a valid amount.");
+  const leftFor = (x, month) => Math.max(0, salaryOf(x) - paidSoFar(x.id, month));
+  const dueOf = (x) => (x?.due_months || []).reduce((s, m) => s + leftFor(x, m), 0);
+  // বকেয়া মাস পুরনো থেকে নতুন — সার্ভার তৈরির ক্রমে পাঠায়
+  const byMonth = (xs) => [...(xs || [])].sort((a, b) => monthKeyOf(a).localeCompare(monthKeyOf(b)));
+  const dues = byMonth(t.due_months);
+  const pays = salaries
+    .filter((p) => String(p.teacher || p.teacherId) === String(tid))
+    .sort((a, b) => String(b.paid_at || "").localeCompare(String(a.paid_at || "")) || (b.id || 0) - (a.id || 0));
+
+  // পরিচালকের সারসংক্ষেপ — সব উস্তাদ মিলিয়ে
+  const thisMonth = todayISO().slice(0, 7);
+  const dueTeachers = allTeachers.filter((x) => (x.due_months || []).length > 0);
+  const paidThisMonth = salaries.filter((p) => String(p.paid_at || "").slice(0, 7) === thisMonth);
+
+  const voucherFor = (p, person = t) =>
+    printReceipt(
+      {
+        id: String(p.id || ""),
+        month: p.month_label || p.month,
+        amount: +p.amount || 0,
+        date: fmtDate(p.paid_at || todayISO()),
+        method: salaryMethodLabel(p.method),
+        status: "verified",
+        currency: "৳",
+        // পোর্টালে আগেই পাঠানো হয়েছে — এখান থেকে শুধু দেখা/ডাউনলোড/WhatsApp
+        noSend: true,
+      },
+      // উস্তাদ নিজের ভাউচার দেখলে নিজের নম্বরে WhatsApp-এর বোতাম অর্থহীন
+      isT ? { name: person.name, id: person.id } : { name: person.name, id: person.id, phone: person.phone, email: person.email },
+      "Salary Payment Voucher",
+    );
+
+  const pmTeacher = pm ? allTeachers.find((x) => String(x.id) === String(pm.teacherId)) : null;
+  const pmSalary = salaryOf(pmTeacher);
+  const pmMonthLabel = pm?.month ? monthLabelBn(pm.month) : "";
+  const pmPaid = pmTeacher && pmMonthLabel ? paidSoFar(pmTeacher.id, pmMonthLabel) : 0;
+  const pmRemaining = Math.max(0, pmSalary - pmPaid);
+  const pmAmount = pm?.amount ? +pm.amount : pmRemaining;
+  const openPay = (x, monthLabel) =>
+    setPm({
+      teacherId: x?.id ? String(x.id) : "",
+      month: monthLabel ? monthKeyOf(monthLabel) : "",
+      amount: "",
+      method: "Bank",
+    });
+  const submitPay = async () => {
+    if (pmBusy) return;
+    if (!pmTeacher) return notice("Please choose a teacher.");
+    if (!pm.month) return notice("Please choose a month and year.");
+    if (!pmAmount || pmAmount <= 0) return notice("Please enter a valid amount.");
+    setPmBusy(true);
     // পেমেন্ট সেভ ও রিসিট পাঠানো — আলাদা try/catch, নইলে পেমেন্ট আসলে সফল
     // হয়ে গেলেও শুধু রিসিট পাঠাতে ব্যর্থ হলে সেটাকে "পেমেন্ট ব্যর্থ" দেখানো
     // হতো, ফলে পরিচালক আবার পেমেন্ট দিলে ডুপ্লিকেট বেতন সেভ হয়ে যেতে পারত
+    let saved;
     try {
-      await api.payTeacherSalary({
-        teacher: teacher.id,
-        amount,
-        month_label: month,
-        method: "Bank",
+      saved = await api.payTeacherSalary({
+        teacher: pmTeacher.id,
+        amount: pmAmount,
+        month_label: pmMonthLabel,
+        method: pm.method,
       });
     } catch (e) {
-      notice("Could not save payment —" + (e?.data?.error || e?.message || "Verify"));
-      return;
+      setPmBusy(false);
+      return notice("Could not save payment — " + (e?.data?.error || e?.message || "please try again"));
     }
-    await loadSalaries();
+    // বকেয়া মাসও নতুন করে আনা — আগে শুধু পেমেন্টের তালিকা আসত, তাই পাতা
+    // রিফ্রেশ না করা পর্যন্ত পরিশোধিত মাসটি বকেয়াতেই দেখাত
+    await Promise.all([loadSalaries(), loadTeachers()]);
     try {
       await api.sendReceipt({
-        to_user: teacher.id,
+        to_user: pmTeacher.id,
         kind: "Salary Payment Voucher",
-        month_label: month,
-        amount,
-        method: "Bank",
+        month_label: pmMonthLabel,
+        amount: pmAmount,
+        method: pm.method,
       });
-      notice("✔ Salary payment saved and voucher sent.");
+      notice("✔ Salary saved and the voucher sent to the teacher's portal.");
     } catch (e) {
       notice(
-        "✔ Salary payment saved — but the voucher could not be sent —" +
-          (e?.data?.error || e?.message || "Verify") +
+        "✔ Salary saved — but the voucher could not be sent — " +
+          (e?.data?.error || e?.message || "please try again") +
           " (do not pay again — just resend the voucher later)",
       );
     }
-  };
-  const pmTeacher = allTeachers.find((x) => String(x.id) === String(pm.teacherId));
-  const pmSalary = pmTeacher?.monthly_salary || pmTeacher?.salary || 0;
-  const pmMonthLabel = pm.month ? monthLabelBn(pm.month) : "";
-  const pmRemaining = pmTeacher
-    ? Math.max(0, pmSalary - (pmMonthLabel ? paidSoFar(pmTeacher.id, pmMonthLabel) : 0))
-    : 0;
-  const submitPayModal = async () => {
-    if (!pmTeacher) return notice("Please choose a teacher.");
-    if (!pm.month) return notice("Please choose a month and year.");
-    const amount = pm.amount ? +pm.amount : pmRemaining;
-    if (!amount || amount <= 0) return notice("Please enter a valid amount.");
-    setPmBusy(true);
-    await payTeacher(pmTeacher, pmMonthLabel, amount);
     setPmBusy(false);
-    setPayModal(false);
-    setPm({ teacherId: "", month: "", amount: "" });
+    setPm(null);
+    setSel(pmTeacher.id);
+    voucherFor(
+      { id: saved?.id, month_label: pmMonthLabel, amount: pmAmount, paid_at: saved?.paid_at, method: pm.method },
+      pmTeacher,
+    );
   };
+  const delSalary = (p) =>
+    askConfirm(
+      `Delete this salary record — ${money(p.amount)} for "${p.month_label || p.month}"?\n\n` +
+        "Use this only for a wrong or duplicate entry. If the month is no longer fully paid, it goes back to the dues list.",
+      async () => {
+        try {
+          await api.deleteSalary(p.id);
+          await Promise.all([loadSalaries(), loadTeachers()]);
+          notice("🗑️ Salary record deleted");
+        } catch (e) {
+          notice("Could not delete — " + (e?.data?.error || e?.data?.detail || e?.message || "please try again"));
+        }
+      },
+      { yes: "Yes, delete", no: "No, cancel" },
+    );
 
   const loadTeachers = async () => {
+    if (isT) {
+      try {
+        setMe(await getMe());
+      } catch {
+        /* লগইনের সময়ের তথ্যই থাকুক */
+      }
+      return;
+    }
     try {
-      const data = await api.allUsers();
-      const ts = data.filter((u) => u.role === "teacher");
-      setAllTeachers(
-        ts.length ? ts : USERS.filter((u) => u.role === "teacher"),
-      );
+      // /users/ কেবল পরিচালকের — এডমিনও যেন দেখতে পান, তাই উস্তাদদের আলাদা তালিকা
+      setAllTeachers((await api.allTeachers()).filter((u) => u.role === "teacher"));
     } catch {
-      /* keep mock */
+      setAllTeachers(USERS.filter((u) => u.role === "teacher"));
     }
   };
   const loadRatings = async () => {
     try {
-      const [summary, rData] = await Promise.all([
-        api.teacherRatingSummary(tid),
-        api.ratings(),
-      ]);
+      const [summary, rData] = await Promise.all([api.teacherRatingSummary(tid), api.ratings()]);
       setRatingSummary(summary);
       setAllRatings(rData);
     } catch {
@@ -10856,6 +10923,7 @@ function TeacherReportView({ db, setDb, courses, user }) {
     }
   };
   const loadSalaries = async () => {
+    if (!showSalary) return;
     try {
       setSalaries(await api.salaries());
     } catch {
@@ -10876,361 +10944,522 @@ function TeacherReportView({ db, setDb, courses, user }) {
       /* keep empty */
     }
   };
+  const loadStudentNames = async () => {
+    if (!isAdm(user)) return;
+    try {
+      setStudentNames(Object.fromEntries((await api.allStudents()).map((s) => [String(s.id), s.name || s.name_bn])));
+    } catch {
+      /* নাম না পেলে "Student" দেখাবে */
+    }
+  };
   useEffect(() => {
     // সব লোড শেষ হওয়ার আগে "No records" না দেখাতে
-    Promise.all([
-      loadTeachers(),
-      loadSalaries(),
-      loadAttendance(),
-      loadClasses(),
-    ]).finally(() => setLoading(false));
+    Promise.all([loadTeachers(), loadSalaries(), loadAttendance(), loadClasses(), loadStudentNames()]).finally(() => setLoading(false));
   }, []);
   useEffect(() => {
-    loadRatings();
+    if (tid) loadRatings();
   }, [tid]);
+
+  const tabs = [
+    ...(showSalary ? [["salary", "Salary", dues.length ? `${dues.length} due` : ""]] : []),
+    ["attendance", "Attendance", att.length],
+    ["ratings", "Ratings", ratingCount || ""],
+  ];
+  const sectionTitle = (text) => (
+    <div style={{ fontSize: 13, fontWeight: 700, color: C.muted, margin: "18px 0 8px", textTransform: "uppercase", letterSpacing: 0.4 }}>
+      {text}
+    </div>
+  );
+
   return (
     <Section
       title="Teacher Report & Payment"
-      sub="Attendance · Class quality (student evaluation) · Salary — shown marked"
+      sub={isT ? "Your classes, attendance, student ratings and salary" : "Each teacher's classes, attendance, student ratings and salary"}
       action={
         isAdm(user) && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {canPay && (
+              <Btn kind="gold" onClick={() => openPay(t)}>
+                💵 Pay salary
+              </Btn>
+            )}
             <Btn kind="soft" onClick={() => setMaker(true)}>
               🧾 Create receipt
-            </Btn>
-            <Btn
-              kind="gold"
-              onClick={() => {
-                setPm((prev) => ({ ...prev, teacherId: String(tid) }));
-                setPayModal(true);
-              }}
-            >
-              💵 Complete payment
             </Btn>
           </div>
         )
       }
     >
-      {loading && <Loader text="Loading report" />}
       {maker && <ReceiptMaker user={user} onClose={() => setMaker(false)} />}
-      {payModal && (
-        <Modal
-          title="Complete teacher payment"
-          onClose={() => setPayModal(false)}
-        >
-          <div>
-            <label style={S.label}>Teacher</label>
-            <select
-              style={S.input}
-              value={pm.teacherId}
-              onChange={(e) => setPm({ ...pm, teacherId: e.target.value })}
-            >
-              <option value="">Choose</option>
-              {allTeachers.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>Monthly salary</label>
-            <div
-              style={{
-                ...S.input,
-                background: C.cream,
-                fontWeight: 800,
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              ৳{bn(pmSalary.toLocaleString("en"))}
-            </div>
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>Payment for which month</label>
-            <input
-              type="month"
-              style={S.input}
-              value={pm.month}
-              onChange={(e) => setPm({ ...pm, month: e.target.value })}
-            />
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <label style={S.label}>How much are you paying (leave blank for full payment)</label>
-            <input
-              type="number"
-              style={S.input}
-              value={pm.amount}
-              onChange={(e) => setPm({ ...pm, amount: e.target.value })}
-              placeholder={pmTeacher && pm.month ? `${pmRemaining}` : ""}
-            />
-          </div>
-          <Btn
-            style={{ marginTop: 14, width: "100%", justifyContent: "center" }}
-            kind="gold"
-            onClick={submitPayModal}
-          >
-            {pmBusy ? "⏳ Saving…" : "✔ Make payment"}
-          </Btn>
-        </Modal>
+      {loading && <Loader text="Loading report" />}
+
+      {!loading && !isT && allTeachers.length === 0 && (
+        <EmptyState icon="👳" title="No teachers yet" text="Teachers added in Users will appear here." />
       )}
-      {isAdm(user) && (
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            flexWrap: "wrap",
-            marginBottom: 14,
-          }}
-        >
-          {allTeachers.map((x) => (
-            <Btn
-              key={x.id}
-              sm
-              kind={tid === x.id ? "primary" : "soft"}
-              onClick={() => setSel(x.id)}
-            >
-              {x.name}
-            </Btn>
-          ))}
-        </div>
-      )}
-      <div
-        style={{
-          ...S.card,
-          display: "flex",
-          gap: 14,
-          alignItems: "center",
-          flexWrap: "wrap",
-          marginBottom: 14,
-          borderLeft: `4px solid ${quality[1]}`,
-        }}
-      >
-        <div
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: 14,
-            background: C.greenBg,
-            display: "grid",
-            placeItems: "center",
-            fontSize: 26,
-          }}
-        >
-          <Ico e="👳" />
-        </div>
-        <div style={{ flex: 1, minWidth: 180 }}>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>{t.name}</div>
-          <div style={S.sub}>
-            {t.sub} · Courses: {tCourses.map((c) => c.name).join(", ") || "—"}
-          </div>
-        </div>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 24, fontWeight: 900, color: quality[1] }}>
-            {ratingCount ? "★ " + bn(avg.toFixed(1)) : "★ —"}
-          </div>
-          <Tag color={quality[1]} bg={quality[2]}>
-            Class quality: {quality[0]}
-          </Tag>
-        </div>
-      </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-          gap: 10,
-          marginBottom: 14,
-        }}
-      >
-        <Stat icon="🎥" label="Classes taught" value={bn(taken)} />
-        <Stat
-          icon="✅"
-          label="Full attendance"
-          value={bn(present)}
-          note="20+ minutes"
-        />
-        <Stat
-          icon="⚠️"
-          label="Incomplete attendance"
-          value={bn(short)}
-          accent={C.red}
-          note="Under 20 minutes"
-        />
-        <Stat
-          icon="🌟"
-          label="Total evaluations"
-          value={bn(ratingCount)}
-          accent={C.gold}
-        />
-      </div>
-      <div style={{ display: "grid", gap: 14 }}>
-        <div style={{ ...S.card }}>
-          <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            <Ico e="🌟" /> Class quality — student evaluation
-          </div>
-          {dist.map(({ n, c }) => (
-            <div
-              key={n}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                marginBottom: 6,
-                fontSize: 12.5,
-              }}
-            >
-              <span style={{ width: 34, fontWeight: 700 }}>{bn(n)} ★</span>
-              <div
-                style={{
-                  flex: 1,
-                  height: 9,
-                  background: C.cream,
-                  borderRadius: 99,
-                }}
-              >
-                <div
-                  style={{
-                    width: ratingCount ? (c / ratingCount) * 100 + "%" : 0,
-                    height: "100%",
-                    background: C.gold,
-                    borderRadius: 99,
-                  }}
-                />
-              </div>
-              <span style={{ width: 26, textAlign: "right", color: C.muted }}>
-                {bn(c)}
-              </span>
-            </div>
-          ))}
-          {isAdm(user) ? (
-            <div style={{ marginTop: 12 }}>
-              <div
-                style={{
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  color: C.muted,
-                  marginBottom: 6,
-                }}
-              >
-                Who evaluated what (visible to admin/director only):
-              </div>
-              <Table
-                head={["Student", "Course", "Rating", "Remarks", "Date"]}
-                rows={allRatings
-                  .filter(
-                    (r) => String(r.teacher || r.teacherId) === String(tid),
-                  )
-                  .map((r) => [
-                    r.student_name || userById(r.student || r.studentId).name,
-                    courseById(courses, r.course || r.courseId).name,
-                    "★".repeat(r.stars),
-                    r.comment || "—",
-                    fmtDate(r.rated_at || r.date),
-                  ])}
-                empty="No evaluations yet"
-                loading={loading}
+
+      {!loading && (isT || allTeachers.length > 0) && (
+        <>
+          {/* ── পরিচালক: সব উস্তাদের বেতনের সারসংক্ষেপ ── */}
+          {canPay && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10, marginBottom: 14 }}>
+              <Stat
+                icon="💰"
+                label="Salary due"
+                value={dueTeachers.length ? money(dueTeachers.reduce((s, x) => s + dueOf(x), 0)) : "None"}
+                note={
+                  dueTeachers.length
+                    ? `${dueTeachers.length} ${dueTeachers.length === 1 ? "teacher" : "teachers"}`
+                    : "Every teacher is paid"
+                }
+                accent={C.red}
+                onClick={
+                  dueTeachers.length
+                    ? () => {
+                        if (!(t.due_months || []).length) setSel(dueTeachers[0].id);
+                        setTab("salary");
+                      }
+                    : undefined
+                }
+              />
+              <Stat
+                icon="✅"
+                label="Paid this month"
+                value={money(paidThisMonth.reduce((s, p) => s + (+p.amount || 0), 0))}
+                note={paidThisMonth.length ? `${paidThisMonth.length} ${paidThisMonth.length === 1 ? "payment" : "payments"}` : "None yet"}
+              />
+              <Stat
+                icon="👥"
+                label="Monthly payroll"
+                value={money(allTeachers.reduce((s, x) => s + salaryOf(x), 0))}
+                note={`${allTeachers.length} ${allTeachers.length === 1 ? "teacher" : "teachers"}`}
+                accent={C.gold}
               />
             </div>
-          ) : (
-            <div
-              style={{
-                marginTop: 10,
-                padding: "10px 12px",
-                borderRadius: 10,
-                background: C.cream,
-                fontSize: 12,
-                color: C.muted,
-              }}
-            >
-              <Ico e="🔒" /> Which student gave which rating or comment is private — only admins can see it. You are seeing the overall report only.
+          )}
+
+          {/* ── উস্তাদ বাছাই ── */}
+          {!isT && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }} role="tablist" aria-label="Teachers">
+              {allTeachers.map((x) => {
+                const on = String(x.id) === String(tid);
+                const nd = (x.due_months || []).length;
+                return (
+                  <button
+                    key={x.id}
+                    role="tab"
+                    aria-selected={on}
+                    onClick={() => setSel(x.id)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "5px 12px 5px 5px",
+                      borderRadius: 12,
+                      border: `1px solid ${on ? C.emerald : C.line}`,
+                      background: on ? C.greenBg : "#fff",
+                      boxShadow: on ? `0 0 0 2px ${C.emerald}22` : "none",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      fontSize: 13.5,
+                      fontWeight: on ? 700 : 600,
+                      color: on ? C.emeraldD : C.text,
+                      maxWidth: "100%",
+                    }}
+                  >
+                    <Initials name={x.name} size={30} tone={on ? C.emerald : "#64748b"} />
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.name}</span>
+                    {canPay && nd > 0 && (
+                      <span
+                        style={{ fontSize: 11, fontWeight: 700, color: C.red, background: C.redBg, borderRadius: 99, padding: "1px 7px", whiteSpace: "nowrap" }}
+                      >
+                        {nd} due
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
-        </div>
-        <div style={{ ...S.card }}>
-          <div style={{ fontWeight: 800, marginBottom: 10 }}>
-            <Ico e="🗓" /> My attendance record
-          </div>
-          <Table
-            head={[
-              "Course",
-              "Date",
-              // কত মিনিট ক্লাস হয়েছে তা কেবল পরিচালকই দেখবেন
-              ...(isDir(user) ? ["Attendance"] : []),
-              "Status",
-            ]}
-            rows={att.map((a) => {
-              return [
-                a.course_name || "—",
-                a.class_date ? fmtDate(a.class_date) : "—",
-                ...(isDir(user) ? [`${bn(a.minutes)} min`] : []),
-                (a.present ?? a.minutes >= 20) ? (
-                  <Tag key="t">Present ✔</Tag>
+
+          {/* ── উস্তাদের পরিচয় ও ক্লাসের মান ── */}
+          <div style={{ ...S.card, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+            <Initials name={t.name} size={54} />
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontWeight: 700, fontSize: 17, color: C.text }}>{t.name || "—"}</div>
+              <div style={{ fontSize: 12.5, color: C.muted }}>
+                {t.sub || "Ustadh / Ustadha"}
+                {t.phone ? ` · ${t.phone}` : ""}
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                {tCourses.length ? (
+                  tCourses.map((c) => (
+                    <span
+                      key={c.id}
+                      style={{ fontSize: 12, fontWeight: 600, color: C.emeraldD, background: C.greenBg, border: `1px solid ${C.emerald}22`, borderRadius: 99, padding: "2px 10px" }}
+                    >
+                      {c.name}
+                    </span>
+                  ))
                 ) : (
-                  <Tag key="t" color={C.red} bg={C.redBg}>
-                    Incomplete ✘
-                  </Tag>
-                ),
-              ];
-            })}
-            empty="No records"
-            loading={loading}
-          />
-        </div>
-        <div style={{ ...S.card }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 8,
-              marginBottom: 10,
-            }}
-          >
-            <div style={{ fontWeight: 800 }}><Ico e="💰" /> My Salary & Payments</div>
-            <div style={{ fontSize: 13 }}>
-              Monthly salary:{" "}
-              <b>
-                ৳{bn((t.monthly_salary || t.salary || 0).toLocaleString("en"))}
-              </b>{" "}
-              · Dues:{" "}
-              {dues.length ? (
-                <Tag color={C.red} bg={C.redBg}>
-                  {dues.join(", ")}
-                </Tag>
-              ) : (
-                <Tag>None ✔</Tag>
+                  <span style={{ fontSize: 12, color: C.muted }}>No course assigned yet</span>
+                )}
+              </div>
+            </div>
+            <div style={{ textAlign: "center", minWidth: 130, padding: "8px 12px", borderRadius: 14, background: quality[2] }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 26, fontWeight: 800, color: quality[1], lineHeight: 1.1 }}>
+                <Ico e="⭐" size={22} fill={ratingCount ? "currentColor" : "none"} style={{ verticalAlign: 0 }} />
+                {ratingCount ? avg.toFixed(1) : "—"}
+              </div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: quality[1], marginTop: 2 }}>{quality[0]}</div>
+              {ratingCount > 0 && (
+                <div style={{ fontSize: 11.5, color: C.muted }}>
+                  {ratingCount} {ratingCount === 1 ? "rating" : "ratings"}
+                </div>
               )}
             </div>
           </div>
-          <Table
-            head={["Month", "Amount", "Date", "Method", "Status"]}
-            rows={pays.map((p) => {
-              const monthLbl = p.month_label || p.month;
-              const salary = t.monthly_salary || t.salary || 0;
-              const totalPaid = pays
-                .filter((x) => (x.month_label || x.month) === monthLbl)
-                .reduce((s, x) => s + (+x.amount || 0), 0);
-              const remaining = Math.max(0, salary - totalPaid);
-              return [
-                monthLbl,
-                `৳${bn((p.amount || 0).toLocaleString("en"))}`,
-                fmtDate(p.paid_at || p.date),
-                p.method,
-                remaining > 0 ? (
-                  <Tag key="s" color={C.gold} bg={C.amberBg}>
-                    ⚠️ Partial — ৳{bn(remaining.toLocaleString("en"))} remaining
-                  </Tag>
-                ) : (
-                  <Tag key="s">✅ Verified</Tag>
-                ),
-              ];
-            })}
-            empty="No payments yet"
-            loading={loading}
-          />
-        </div>
-      </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, marginBottom: 16 }}>
+            <Stat icon="🎥" label="Classes taught" value={String(taken)} />
+            <Stat icon="✅" label="Full attendance" value={String(present)} note="20+ minutes" onClick={() => setTab("attendance")} />
+            <Stat icon="⚠️" label="Short attendance" value={String(short)} accent={C.red} note="Under 20 minutes" onClick={() => setTab("attendance")} />
+            {showSalary ? (
+              <Stat
+                icon="💰"
+                label={dues.length ? "Salary due" : "Monthly salary"}
+                value={dues.length ? money(dueOf(t)) : money(salary)}
+                note={dues.length ? `${dues.length} ${dues.length === 1 ? "month" : "months"}` : "Paid up"}
+                accent={dues.length ? C.red : C.emerald}
+                onClick={() => setTab("salary")}
+              />
+            ) : (
+              <Stat icon="🌟" label="Ratings" value={String(ratingCount || 0)} accent={C.gold} onClick={() => setTab("ratings")} />
+            )}
+          </div>
+
+          <div className="tqa-seg" role="tablist" aria-label="Report" style={{ marginBottom: 4 }}>
+            {tabs.map(([k, l, n]) => (
+              <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
+                {l} {n !== "" && n != null && <span style={{ opacity: 0.7 }}>{n}</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* ── বেতন ── */}
+          {tab === "salary" && showSalary && (
+            <>
+              {sectionTitle(dues.length ? "Salary due" : "This month")}
+              {dues.length === 0 ? (
+                <div
+                  style={{
+                    ...payRow,
+                    background: C.greenBg,
+                    border: `1px solid ${C.green}33`,
+                  }}
+                >
+                  <span style={{ width: 40, height: 40, borderRadius: 12, display: "grid", placeItems: "center", background: "#fff", color: C.green, flexShrink: 0 }}>
+                    <Ico e="✅" size={22} />
+                  </span>
+                  <div style={{ flex: 1, minWidth: 180 }}>
+                    <b style={{ fontSize: 15, color: C.emeraldD }}>{isT ? "Your salary is paid up" : "Salary paid up"}</b>
+                    <div style={{ fontSize: 12.5, color: C.muted }}>
+                      Monthly salary {money(salary)} — no month is waiting, Alhamdulillah.
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gap: 8 }}>
+                  {dues.map((m) => {
+                    const paid = paidSoFar(tid, m);
+                    const left = Math.max(0, salary - paid);
+                    return (
+                      <div key={m} style={{ ...payRow, borderLeft: `4px solid ${C.red}` }}>
+                        <div style={{ flex: 1, minWidth: 180 }}>
+                          <b style={{ fontSize: 15 }}>{m}</b>
+                          <div style={{ fontSize: 12.5, color: C.muted }}>
+                            {paid > 0 ? `Paid ${money(paid)} of ${money(salary)}` : `Not paid yet · salary ${money(salary)}`}
+                          </div>
+                          {paid > 0 && salary > 0 && (
+                            <div style={{ height: 6, background: C.cream, borderRadius: 99, marginTop: 6, maxWidth: 260, overflow: "hidden" }}>
+                              <div style={{ width: `${Math.min(100, (paid / salary) * 100)}%`, height: "100%", background: C.gold, borderRadius: 99 }} />
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ textAlign: "right", minWidth: 90 }}>
+                          <b style={{ fontSize: 17, color: C.red, fontVariantNumeric: "tabular-nums" }}>{money(left)}</b>
+                          <div style={{ fontSize: 12, color: C.muted }}>{paid > 0 ? "left to pay" : "due"}</div>
+                        </div>
+                        {canPay && (
+                          <Btn sm kind="gold" onClick={() => openPay(t, m)}>
+                            💵 Pay
+                          </Btn>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {sectionTitle("Payment history")}
+              {pays.length === 0 ? (
+                <EmptyState icon="🧾" title="No payments yet" text={isT ? "Your salary payments will appear here." : "Salary payments for this teacher will appear here."} />
+              ) : (
+                <div style={{ display: "grid", gap: 8 }}>
+                  {pays.map((p) => {
+                    const monthLbl = p.month_label || p.month;
+                    const left = Math.max(0, salary - paidSoFar(tid, monthLbl));
+                    return (
+                      <div key={p.id} style={payRow}>
+                        <span style={{ width: 40, height: 40, borderRadius: 12, display: "grid", placeItems: "center", background: C.greenBg, color: C.green, flexShrink: 0 }}>
+                          <Ico e="💵" size={20} />
+                        </span>
+                        <div style={{ flex: 1, minWidth: 160 }}>
+                          <b style={{ fontSize: 15 }}>{monthLbl}</b>
+                          <div style={{ fontSize: 12.5, color: C.muted }}>
+                            {compactDate(p.paid_at)} · {salaryMethodLabel(p.method)}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right", minWidth: 110 }}>
+                          <b style={{ fontSize: 16, fontVariantNumeric: "tabular-nums" }}>{money(p.amount)}</b>
+                          <div style={{ marginTop: 2 }}>
+                            {left > 0 ? (
+                              <Tag color="#a16207" bg={C.amberBg}>
+                                Part — {money(left)} left
+                              </Tag>
+                            ) : (
+                              <Tag color={C.green} bg={C.greenBg}>
+                                ✔ Month paid
+                              </Tag>
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <Btn sm kind="soft" title="Open the voucher" onClick={() => voucherFor(p)}>
+                            🧾 Voucher
+                          </Btn>
+                          {canPay && (
+                            <Btn sm kind="danger" title="Delete a wrong or duplicate record" onClick={() => delSalary(p)} style={{ padding: "6px 9px" }}>
+                              🗑
+                            </Btn>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── হাজিরা ── */}
+          {tab === "attendance" && (
+            <>
+              {sectionTitle(isT ? "My attendance" : "Attendance")}
+              <Table
+                minWidth={isDir(user) ? 520 : 420}
+                head={[
+                  "Course",
+                  "Date",
+                  // কত মিনিট ক্লাস হয়েছে তা কেবল পরিচালকই দেখবেন
+                  ...(isDir(user) ? ["Time in class"] : []),
+                  "Status",
+                ]}
+                rows={att.map((a) => [
+                  <b key="c" style={{ fontWeight: 600 }}>
+                    {a.course_name || "—"}
+                  </b>,
+                  a.class_date ? compactDate(a.class_date) : "—",
+                  ...(isDir(user) ? [`${+a.minutes || 0} min`] : []),
+                  isPresent(a) ? (
+                    <Tag key="t" color={C.green} bg={C.greenBg}>
+                      ✔ Present
+                    </Tag>
+                  ) : (
+                    <Tag key="t" color={C.red} bg={C.redBg}>
+                      ✘ Short
+                    </Tag>
+                  ),
+                ])}
+                empty="No attendance records yet"
+              />
+            </>
+          )}
+
+          {/* ── রেটিং ── */}
+          {tab === "ratings" && (
+            <>
+              {sectionTitle("Student ratings")}
+              <div style={{ ...S.card, display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
+                <div style={{ textAlign: "center", minWidth: 110 }}>
+                  <div style={{ fontSize: 34, fontWeight: 800, color: C.text, lineHeight: 1 }}>{ratingCount ? avg.toFixed(1) : "—"}</div>
+                  <div style={{ margin: "6px 0 2px" }}>
+                    <RatingStars n={Math.round(avg)} size={15} />
+                  </div>
+                  <div style={{ fontSize: 12, color: C.muted }}>
+                    {ratingCount || 0} {ratingCount === 1 ? "rating" : "ratings"}
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 200, display: "grid", gap: 6 }}>
+                  {dist.map(({ n, c }) => (
+                    <div key={n} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5 }}>
+                      <span style={{ width: 30, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 3, color: C.text }}>
+                        {n}
+                        <Ico e="⭐" size={12} fill="currentColor" style={{ color: C.gold, verticalAlign: 0 }} />
+                      </span>
+                      <div style={{ flex: 1, height: 9, background: C.cream, borderRadius: 99, overflow: "hidden" }}>
+                        <div style={{ width: ratingCount ? (c / ratingCount) * 100 + "%" : 0, height: "100%", background: C.gold, borderRadius: 99 }} />
+                      </div>
+                      <span style={{ width: 26, textAlign: "right", color: C.muted, fontVariantNumeric: "tabular-nums" }}>{c}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {isAdm(user) ? (
+                <>
+                  {sectionTitle("Who rated what — only admin and director see this")}
+                  {myRatings.length === 0 ? (
+                    <EmptyState icon="🌟" title="No ratings yet" text="Students rate the class when it ends — their ratings will appear here." />
+                  ) : (
+                    <div style={{ display: "grid", gap: 8 }}>
+                      {myRatings.map((r, i) => {
+                        const who = r.student_name || studentNames[String(r.student || r.studentId)] || userById(r.student || r.studentId).name || "Student";
+                        return (
+                          <div key={r.id || i} style={{ ...payRow, alignItems: "flex-start" }}>
+                            <Initials name={who} tone={C.gold} />
+                            <div style={{ flex: 1, minWidth: 180 }}>
+                              <b style={{ fontSize: 14.5 }}>{who}</b>
+                              <span style={{ color: C.muted, fontSize: 12.5 }}> · {courseById(courses, r.course || r.courseId).name || "—"}</span>
+                              <div style={{ fontSize: 12, color: C.muted, display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                                <RatingStars n={r.stars} />
+                                {compactDate(r.rated_at || r.date)}
+                              </div>
+                              {r.comment && (
+                                <div style={{ marginTop: 8, fontSize: 13.5, color: C.text, background: C.cream, padding: "8px 11px", borderRadius: 10, lineHeight: 1.55 }}>
+                                  {r.comment}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, background: C.cream, fontSize: 12.5, color: C.muted, lineHeight: 1.6 }}>
+                  <Ico e="🔒" /> Which student gave which rating or comment is private — only the admin and director see it. You see the overall result only.
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* ── বেতন দেওয়ার ফর্ম ── */}
+      {pm && (
+        <Modal title="Pay salary" onClose={() => !pmBusy && setPm(null)}>
+          <label style={S.label}>Teacher</label>
+          <select style={S.input} value={pm.teacherId} onChange={(e) => setPm({ ...pm, teacherId: e.target.value, month: "", amount: "" })}>
+            <option value="">Choose</option>
+            {allTeachers.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+          {pmTeacher && (pmTeacher.due_months || []).length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <label style={S.label}>Salary due — tap one</label>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {byMonth(pmTeacher.due_months).map((m) => {
+                  const on = monthKeyOf(m) === pm.month;
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => setPm({ ...pm, month: monthKeyOf(m), amount: "" })}
+                      style={{
+                        ...monthChip,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        ...(on ? { background: C.emerald, color: "#fff", borderColor: C.emerald } : {}),
+                      }}
+                    >
+                      {m} · {money(leftFor(pmTeacher, m))}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>Month & year</label>
+            <input type="month" style={S.input} value={pm.month} onChange={(e) => setPm({ ...pm, month: e.target.value })} />
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>Amount (৳)</label>
+            <input
+              type="number"
+              min="1"
+              inputMode="numeric"
+              style={S.input}
+              value={pm.amount}
+              onChange={(e) => setPm({ ...pm, amount: e.target.value })}
+              placeholder={pmTeacher && pm.month ? String(pmRemaining) : ""}
+            />
+            {pmTeacher && pm.month && (
+              <div style={{ fontSize: 12, marginTop: 5, color: pmRemaining === 0 ? "#a16207" : C.muted }}>
+                {pmRemaining === 0
+                  ? "This month is already fully paid — enter an amount only if you are paying extra."
+                  : pmPaid > 0
+                    ? `${money(pmPaid)} already paid for this month — leave blank to pay the remaining ${money(pmRemaining)}.`
+                    : `Leave blank to pay the full salary (${money(pmSalary)}).`}
+              </div>
+            )}
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>Method</label>
+            <div className="tqa-seg" role="tablist" aria-label="Method" style={{ display: "flex" }}>
+              {SALARY_METHODS.map((l) => (
+                <button key={l} className={pm.method === l ? "on" : ""} onClick={() => setPm({ ...pm, method: l })} style={{ flex: 1 }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          {pmTeacher && pm.month && pmAmount > 0 && (
+            <div
+              style={{
+                marginTop: 14,
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: C.greenBg,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 13, color: C.text }}>
+                  <b>{pmTeacher.name}</b> · {pmMonthLabel}
+                </span>
+                <b style={{ fontSize: 18, color: C.emeraldD }}>{money(pmAmount)}</b>
+              </div>
+              {pmAmount < pmRemaining && (
+                <div style={{ fontSize: 12, color: "#a16207", marginTop: 4 }}>
+                  Part payment — {money(pmRemaining - pmAmount)} stays due for this month.
+                </div>
+              )}
+            </div>
+          )}
+          <Btn
+            kind="gold"
+            style={{ marginTop: 14, width: "100%", justifyContent: "center", opacity: pmBusy ? 0.6 : 1 }}
+            onClick={submitPay}
+          >
+            {pmBusy ? "⏳ Saving…" : "✔ Pay & send voucher"}
+          </Btn>
+          <div style={{ fontSize: 11.5, color: C.muted, marginTop: 8, textAlign: "center" }}>
+            The voucher goes to the teacher's portal — you can also download it or send it on WhatsApp.
+          </div>
+        </Modal>
+      )}
     </Section>
   );
 }
@@ -12856,18 +13085,18 @@ const adaptFee = (p) => ({
 });
 const nameInitials = (n) =>
   String(n || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase() || "?";
-const Initials = ({ name, tone = C.emerald }) => (
+const Initials = ({ name, tone = C.emerald, size = 40 }) => (
   <span
     aria-hidden="true"
     style={{
-      width: 40,
-      height: 40,
-      borderRadius: 12,
+      width: size,
+      height: size,
+      borderRadius: Math.round(size * 0.3),
       flexShrink: 0,
       display: "grid",
       placeItems: "center",
       fontWeight: 700,
-      fontSize: 14,
+      fontSize: Math.round(size * 0.35),
       background: tone + "14",
       color: tone,
       border: `1px solid ${tone}26`,

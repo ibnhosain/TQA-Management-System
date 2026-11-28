@@ -342,6 +342,7 @@ export const api = {
   recordPayment: (d) => request("/fees/record_payment/", { method: "POST", body: d }), // পরিচালক/এডমিন সরাসরি যেকোনো স্টুডেন্টের যেকোনো মাসের পেমেন্ট "পরিশোধিত" হিসেবে সেভ করেন
   salaries: () => request("/salaries/"),
   payTeacherSalary: (d) => request("/salaries/", { method: "POST", body: d }), // বেতন পরিশোধের আসল রেকর্ড — সেই মাসের বকেয়া অটো বাদ যায়
+  deleteSalary: (id) => request(`/salaries/${id}/`, { method: "DELETE" }), // ভুল/ডুপ্লিকেট বেতন মুছা — কেবল পরিচালক; মাস অপূর্ণ হলে বকেয়া ফেরে
   myReceipts: () => request("/receipts/"),
   sendReceipt: (d) => request("/receipts/", { method: "POST", body: d }),
 
