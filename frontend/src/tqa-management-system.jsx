@@ -16989,7 +16989,9 @@ function TeacherWiseBoard({ db, setDb, user }) {
    মেসেজ। API বসানো থাকলে সার্ভার নিজেই পাঠায়; না থাকলে এখান থেকে wa.me দিয়ে।
    ⚠️ আগের "backend URL / auto-send" সেটিং সরানো হয়েছে — সেটা সার্ভারে সংরক্ষিত
    হতো না (রিফ্রেশে মুছে যেত) আর পুরনো, অব্যবহৃত Node সার্ভারে পাঠাত। এখন
-   "Send via API" বাটন দেখায় সার্ভার বলে দিলে (চাবি বসানো আছে কিনা)। */
+   "Send via API" বাটন দেখায় সার্ভার বলে দিলে (চাবি বসানো আছে কিনা)।
+   ২০২৬-১১-২৮ নতুন সাজ: ট্যাব (To send / Missed / Sent), খোঁজা, ক্লাস কত মিনিট পরে,
+   মেসেজ ছোট করে দেখানো (চাপলে পুরোটা), Copy। */
 const WA_REASON = {
   reminder: { label: "Class reminder", color: C.gold, bg: C.amberBg },
   postpone: { label: "Class postponed", color: C.red, bg: C.redBg },
@@ -17002,7 +17004,21 @@ const isClassReminder = (m) =>
 // রিমাইন্ডার তৈরি হয় ক্লাসের ১০ মিনিট আগে — ৩০ মিনিট পেরোলে ক্লাস শুরু হয়ে
 // গেছে, তখন পাঠানোর আর মানে নেই
 const REMINDER_STALE_MIN = 30;
+const REMINDER_LEAD_MIN = 10;
 const waDigits = (p) => String(p || "").replace(/\D/g, "");
+// "just now" / "5 min ago" / "3 h ago" — নইলে বাংলাদেশের তারিখ-সময়
+const agoText = (iso) => {
+  const min = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (isNaN(min)) return "";
+  if (min < 1) return "just now";
+  if (min < 60) return `${min} min ago`;
+  if (min < 24 * 60) return `${Math.floor(min / 60)} h ago`;
+  return bdWhen(iso);
+};
+const waReasonOf = (m) =>
+  m.reason === "reminder" && !isClassReminder(m)
+    ? { label: "Message", color: C.blue, bg: C.blueBg }
+    : WA_REASON[m.reason] || { label: m.reason, color: C.muted, bg: C.cream };
 
 function WaOutboxView({ user }) {
   const [list, setList] = useState([]);
@@ -17010,8 +17026,10 @@ function WaOutboxView({ user }) {
   const [loadErr, setLoadErr] = useState("");
   const [apiOn, setApiOn] = useState(null);
   const [busy, setBusy] = useState(null);
-  const [showMissed, setShowMissed] = useState(false);
-  const [showSent, setShowSent] = useState(false);
+  const [tab, setTab] = useState("send");
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState({}); // কোন মেসেজের পুরো লেখা খোলা
+  const [, tick] = useState(0); // "৫ মিনিট আগে" / "ক্লাস ৩ মিনিট পরে" নিজে থেকে বদলাতে
   const load = async () => {
     try {
       setList(await api.waOutbox());
@@ -17027,8 +17045,13 @@ function WaOutboxView({ user }) {
       .waConfig()
       .then((d) => setApiOn(!!d.whatsapp_configured))
       .catch(() => setApiOn(false));
+    const t = setInterval(() => tick((x) => x + 1), 30000);
     // নতুন রিমাইন্ডার প্রতি মিনিটে তৈরি হতে পারে — পাতা খোলা থাকলেও আসে
-    return visiblePoll(load, 30000);
+    const stop = visiblePoll(load, 30000);
+    return () => {
+      clearInterval(t);
+      stop && stop();
+    };
   }, []);
   const act = async (m, fn) => {
     setBusy(m.id);
@@ -17040,36 +17063,58 @@ function WaOutboxView({ user }) {
     await load();
     setBusy(null);
   };
-  const stale = (m) =>
-    isClassReminder(m) &&
-    Date.now() - new Date(m.created_at).getTime() > REMINDER_STALE_MIN * 60000;
+  const copyText = (m) =>
+    navigator.clipboard?.writeText(m.text).then(
+      () => notice("✔ Message copied"),
+      () => notice("Could not copy — select the text and copy it yourself."),
+    );
+  const ageMin = (m) => (Date.now() - new Date(m.created_at).getTime()) / 60000;
+  const stale = (m) => isClassReminder(m) && ageMin(m) > REMINDER_STALE_MIN;
   const toSend = list.filter((m) => m.status !== "sent" && !stale(m));
   const missed = list.filter((m) => m.status !== "sent" && stale(m));
   const sent = list.filter((m) => m.status === "sent");
+  const tabs = [
+    ["send", "To send", toSend],
+    ["missed", "Missed", missed],
+    ["sent", "Sent", sent],
+  ];
+  const needle = q.trim().toLowerCase();
+  const shown = (tabs.find(([k]) => k === tab) || tabs[0])[2].filter(
+    (m) => !needle || [m.to_name, m.phone, m.text, waReasonOf(m).label].some((x) => String(x || "").toLowerCase().includes(needle)),
+  );
 
-  const row = (m, withButtons) => {
-    const r =
-      m.reason === "reminder" && !isClassReminder(m)
-        ? { label: "Message", color: C.blue, bg: C.blueBg }
-        : WA_REASON[m.reason] || { label: m.reason, color: C.muted, bg: C.cream };
+  const card = (m) => {
+    const r = waReasonOf(m);
+    const canSend = tab !== "sent";
+    const isOpen = !!open[m.id];
+    const long = String(m.text || "").length > 170 || String(m.text || "").split("\n").length > 3;
+    // রিমাইন্ডার ক্লাসের ১০ মিনিট আগে তৈরি — ক্লাস কত মিনিট পরে
+    const left = isClassReminder(m) ? Math.round(REMINDER_LEAD_MIN - ageMin(m)) : null;
     return (
       <div
         key={m.id}
         style={{
           ...S.card,
           padding: 14,
-          borderLeft: `4px solid ${m.status === "sent" ? C.green : r.color}`,
-          opacity: withButtons || m.status === "sent" ? 1 : 0.7,
+          display: "flex",
+          gap: 12,
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+          borderLeft: `4px solid ${m.status === "sent" ? C.green : m.status === "failed" ? C.red : r.color}`,
+          opacity: tab === "missed" ? 0.85 : 1,
         }}
       >
-        <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <b style={{ fontSize: 13.5 }}>{m.to_name}</b>{" "}
+        <Initials name={m.to_name} tone={m.status === "sent" ? C.green : r.color} />
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+            <b style={{ fontSize: 15 }}>{m.to_name}</b>
             <Tag color={r.color} bg={r.bg}>
               {r.label}
-            </Tag>{" "}
+            </Tag>
             {m.status === "sent" && (
-              <Tag>Sent ✔ {m.provider_ref === "manual" ? "(wa.me)" : "(API)"}</Tag>
+              <Tag color={C.green} bg={C.greenBg}>
+                ✔ Sent {m.provider_ref === "manual" ? "by hand" : "by API"}
+              </Tag>
             )}
             {m.status === "sending" && (
               <Tag color={C.blue} bg={C.blueBg}>
@@ -17078,125 +17123,160 @@ function WaOutboxView({ user }) {
             )}
             {m.status === "failed" && (
               <Tag color={C.red} bg={C.redBg}>
-                API failed — check the number, or send with WhatsApp below
+                ⚠ API failed — send by hand
               </Tag>
             )}
-            <div style={{ fontSize: 11.5, color: C.muted }}>
-              To: {m.to_name} · +{waDigits(m.phone)} · {bdWhen(m.created_at)}
-            </div>
+            {left != null && tab === "send" && (
+              <span style={{ fontSize: 12, fontWeight: 600, color: left > 0 ? "#a16207" : C.red }}>
+                {left > 0 ? `Class in ${left} min` : "Class has started"}
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>
+            +{waDigits(m.phone)} · {agoText(m.created_at)}
+          </div>
+          <div
+            onClick={() => long && setOpen((o) => ({ ...o, [m.id]: !o[m.id] }))}
+            style={{
+              marginTop: 8,
+              background: "#f6f9f7",
+              border: `1px solid ${C.line}`,
+              padding: "9px 12px",
+              borderRadius: "4px 12px 12px 12px",
+              cursor: long ? "pointer" : "default",
+            }}
+          >
+            {/* ছোট করে দেখানো ভেতরের ঘরে — নইলে ফাঁকা জায়গায় পরের লাইনের অর্ধেক উঁকি দিত */}
             <div
               style={{
-                fontSize: 12.5,
-                marginTop: 6,
-                background: C.cream,
-                padding: "8px 10px",
-                borderRadius: 8,
+                fontSize: 13,
+                lineHeight: 1.55,
                 whiteSpace: "pre-line",
+                color: C.text,
+                ...(isOpen || !long
+                  ? {}
+                  : { display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }),
               }}
             >
               {m.text}
             </div>
+            {long && (
+              <div style={{ fontSize: 12, fontWeight: 600, color: C.emeraldL, marginTop: 4 }}>
+                {isOpen ? "Show less" : "Show full message"}
+              </div>
+            )}
           </div>
-          {withButtons && (
-            <span style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {apiOn && (
-                <Btn sm onClick={() => act(m, api.waSendNow)} disabled={busy === m.id}>
-                  {busy === m.id ? "⏳ Sending…" : "🚀 Send via API"}
-                </Btn>
-              )}
-              {/* খোলার সাথে সাথে সার্ভারে "পাঠানো হয়েছে" — আগে কেবল এই
-                  ব্রাউজারে মনে থাকত, রিফ্রেশে আবার "পাঠানো হয়নি" দেখাত */}
-              <a
-                href={`https://wa.me/${waDigits(m.phone)}?text=${encodeURIComponent(m.text)}`}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => act(m, api.waMarkSent)}
-                style={{ textDecoration: "none" }}
-              >
-                <Btn sm style={{ background: "#25D366", color: "#fff" }}>
-                  📱 Send on WhatsApp
-                </Btn>
-              </a>
-            </span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 150 }}>
+          {canSend && (
+            /* খোলার সাথে সাথে সার্ভারে "পাঠানো হয়েছে" — আগে কেবল এই
+               ব্রাউজারে মনে থাকত, রিফ্রেশে আবার "পাঠানো হয়নি" দেখাত */
+            <a
+              href={`https://wa.me/${waDigits(m.phone)}?text=${encodeURIComponent(m.text)}`}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => act(m, api.waMarkSent)}
+              style={{ textDecoration: "none" }}
+            >
+              <Btn sm style={{ background: "#25D366", color: "#fff", width: "100%", justifyContent: "center" }}>
+                📱 Send on WhatsApp
+              </Btn>
+            </a>
           )}
+          {canSend && apiOn && (
+            <Btn sm onClick={() => act(m, api.waSendNow)} disabled={busy === m.id} style={{ justifyContent: "center" }}>
+              {busy === m.id ? "⏳ Sending…" : "🚀 Send via API"}
+            </Btn>
+          )}
+          <Btn sm kind="soft" onClick={() => copyText(m)} style={{ justifyContent: "center" }}>
+            📋 Copy message
+          </Btn>
         </div>
       </div>
     );
   };
 
+  const empty = {
+    send: ["✅", "Nothing waiting to be sent", "New reminders appear here 10 minutes before each class."],
+    missed: ["✅", "No missed reminders", "Reminders that were not sent before the class started show here."],
+    sent: ["📤", "Nothing sent yet", "Messages you send will be listed here."],
+  }[tab];
+
   return (
     <Section
       title="WhatsApp Messages"
-      sub="Class reminders (10 minutes before), postponement and admission messages are created automatically — the server sends them when the WhatsApp API is connected; otherwise send them from here"
+      sub="Class reminders, postponements and admission messages are made for you — send them from here"
     >
       {apiOn !== null && (
         <div
           style={{
             ...S.card,
+            padding: "12px 16px",
             marginBottom: 14,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            background: `linear-gradient(90deg, ${apiOn ? C.greenBg : C.amberBg}, #fff 70%)`,
             borderLeft: `4px solid ${apiOn ? C.green : C.gold}`,
-            fontSize: 13,
           }}
         >
-          {apiOn ? (
-            <>
-              <Ico e="✅" /> <b>WhatsApp API connected</b> — the server sends messages by itself. Use the
-              buttons below only to retry a failed one.
-            </>
-          ) : (
-            <>
-              <Ico e="⚠" /> <b>WhatsApp API not connected yet</b> — press the green button: WhatsApp opens
-              with the message ready, and it is marked as sent.
-              {isDir(user) && (
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
-                  To send automatically, add the Meta keys in Render → tqa-backend → Environment.
-                </div>
-              )}
-            </>
-          )}
+          <span
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              flexShrink: 0,
+              display: "grid",
+              placeItems: "center",
+              background: "#fff",
+              color: apiOn ? C.green : C.gold,
+              border: `1px solid ${apiOn ? C.green : C.gold}33`,
+            }}
+          >
+            <Ico e={apiOn ? "✅" : "📱"} size={19} style={{ verticalAlign: 0 }} />
+          </span>
+          <div style={{ flex: 1, minWidth: 220, fontSize: 13 }}>
+            <b style={{ fontSize: 14 }}>{apiOn ? "WhatsApp API connected" : "Sending by hand"}</b>
+            <div style={{ color: C.muted }}>
+              {apiOn
+                ? "The server sends messages by itself. Use the buttons only to retry a failed one."
+                : "Press the green button — WhatsApp opens with the message ready, and it is marked as sent."}
+              {!apiOn && isDir(user) && " To send automatically, add the Meta keys in Render → tqa-backend → Environment."}
+            </div>
+          </div>
         </div>
       )}
+
       {loading && <Loader text="Loading messages" />}
       {loadErr && <div style={{ color: C.red, fontSize: 13, marginBottom: 8 }}>{loadErr}</div>}
       {!loading && (
         <>
-          <div style={{ fontWeight: 800, margin: "4px 0 8px" }}><Ico e="📤" /> To send ({toSend.length})</div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+            <div className="tqa-seg" role="tablist" aria-label="Messages">
+              {tabs.map(([k, l, arr]) => (
+                <button key={k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
+                  {l} <span style={{ opacity: 0.7 }}>{arr.length}</span>
+                </button>
+              ))}
+            </div>
+            <input
+              style={{ ...S.input, flex: 1, minWidth: 180, maxWidth: 320 }}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search name, number or text"
+            />
+          </div>
           <div style={{ display: "grid", gap: 10 }}>
-            {toSend.length === 0 && (
-              <div style={{ ...S.card, color: C.muted, textAlign: "center" }}>
-                Nothing waiting to be sent.
-              </div>
-            )}
-            {toSend.map((m) => row(m, true))}
+            {shown.length === 0 &&
+              (needle ? (
+                <EmptyState icon="🔍" title="No match" text="Try another name or number." />
+              ) : (
+                <EmptyState icon={empty[0]} title={empty[1]} text={empty[2]} />
+              ))}
+            {shown.map(card)}
           </div>
-          {missed.length > 0 && (
-            <div style={{ marginTop: 14 }}>
-              <Btn sm kind="soft" onClick={() => setShowMissed((x) => !x)}>
-                ⌛ {missed.length} reminder(s) not sent before the class started —{" "}
-                {showMissed ? "hide" : "show"}
-              </Btn>
-              {showMissed && (
-                <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
-                  {missed.map((m) => row(m, false))}
-                </div>
-              )}
-            </div>
-          )}
-          {sent.length > 0 && (
-            <div style={{ marginTop: 14 }}>
-              <Btn sm kind="soft" onClick={() => setShowSent((x) => !x)}>
-                ✔ {sent.length} sent — {showSent ? "hide" : "show"}
-              </Btn>
-              {showSent && (
-                <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
-                  {sent.map((m) => row(m, false))}
-                </div>
-              )}
-            </div>
-          )}
-          <div style={{ fontSize: 11.5, color: C.muted, marginTop: 12 }}>
-            Messages from the last 30 days are shown.
-          </div>
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 12 }}>Messages from the last 30 days are shown.</div>
         </>
       )}
     </Section>
